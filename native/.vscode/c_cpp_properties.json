@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/allxu/code/raft/cpp/include/**",
+                "/home/allxu/miniconda3/include/**",
+                "/usr/local/cuda/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/g++-9",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

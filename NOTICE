@@ -1,0 +1,23 @@
+RAPIDS ML for Apache Spark
+Copyright (c) 2021, NVIDIA CORPORATION
+
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for
+// ------------------------------------------------------------------
+
+Apache Spark
+Copyright 2014 and onwards The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+---------------------------------------------------------------------
+
+raft - RAPIDS Analytics Frameworks Toolset
+Copyright 2020 NVIDIA Corporation
+
+---------------------------------------------------------------------
+
+cuML - RAPIDS Machine Learning Library
+Copyright 2018 NVIDIA CORPORATION
