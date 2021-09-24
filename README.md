@@ -1,6 +1,6 @@
-# RAPIDS ML
+# RAPIDS Accelerator for Apache Spark ML
 
-RAPIDS Machine Learning Library on Spark
+The RAPIDS Accelerator for Apache Spark ML provides a set of GPU accelerated Spark ML algorithms.
 
 
 ## API change
@@ -40,21 +40,30 @@ val pca = new com.nvidia.spark.ml.feature.PCA()
     - [ninja(>=1.10)](https://github.com/ninja-build/ninja/releases),
     - [gcc(>=9.3)](https://gcc.gnu.org/releases.html)
 2. [CUDA Toolkit(>=11.0)](https://developer.nvidia.com/cuda-toolkit)
-3. conda: use [miniconda](https://docs.conda.io/en/latest/miniconda.html) to maintain all header files and cmake dependecies
+3. conda: use [miniconda](https://docs.conda.io/en/latest/miniconda.html) to maintain header files and cmake dependecies
 4. [RMM](https://github.com/rapidsai/rmm):
     - we need all header files and some extra cmake dependencies, build instructions:
     ```bash
     $ git clone --recurse-submodules https://github.com/rapidsai/rmm.git
-    $ cd rmm  
+    $ cd rmm
     $ mkdir build                                       # make a build directory
     $ cd build                                          # enter the build directory
     $ cmake .. -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX     # configure cmake ... use $CONDA_PREFIX if you're using Anaconda
     $ make -j                                           # compile the library librmm.so ... '-j' will start a parallel job using the number of physical cores available on your system
     $ make install                                      # install the library librmm.so to '/install/path'
     ```
-
+5. [RAFT](https://github.com/rapidsai/raft):
+    - raft provides only header files, so not build instructions for it.
+    ```bash
+    $ git clone https://github.com/rapidsai/raft.git
+    ```
+6. export RMM_PATH and RAFT_PATH:
+    ```bash
+    export RAFT_PATH=PATH_TO_YOUR_RAFT_FOLDER
+    export RMM_PATH=PATH_TO_YOUR_RMM_FOLDER
+    ```
 ### Build target jar
-User can build it directly in the _project root path_ with :
+User can build it directly in the _project root path_ with:
 ```
 mvn clean package
 ```
@@ -64,7 +73,7 @@ _Note_: This module contains both native and Java/Scala code. The native library
 
 ## How to use
 
-Add the artifact jar built from this module to the Spark, for example:
+Add the artifact jar to the Spark, for example:
 ```bash
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
