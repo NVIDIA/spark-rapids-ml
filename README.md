@@ -53,7 +53,7 @@ val pca = new com.nvidia.spark.ml.feature.PCA()
     $ make install                                      # install the library librmm.so to '/install/path'
     ```
 5. [RAFT](https://github.com/rapidsai/raft):
-    - raft provides only header files, so not build instructions for it.
+    - raft provides only header files, so no build instructions for it.
     ```bash
     $ git clone https://github.com/rapidsai/raft.git
     ```
