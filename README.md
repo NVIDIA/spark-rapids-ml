@@ -28,7 +28,7 @@ val pca = new com.nvidia.spark.ml.feature.PCA()
 ...
 ```
 
-Besides, we provide some switch APIs to allow users to highly customize their training process
+Besides, we provide some switch APIs to allow users to highly customize their training process:
 
 ```scala
   .useGemm(true) // or false, default: true. Switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
