@@ -21,17 +21,20 @@ val pca = new org.apache.spark.ml.feature.PCA()
   .fit(vectorDf)
 ```
 
-We used a customized class and add some extra API switches:
+We used a customized class and user will need to do `no code change` to enjoy the GPU acceleration:
 
 ```scala
 val pca = new com.nvidia.spark.ml.feature.PCA()
 ...
-  .useGemm(true) // or false, switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
-  .useCuSolverSVD(true) // or false, switch to use cuSolver to compute SVD
-  .meanCentering(true) // or false, switch to do mean centering before computing covariance matrix
-...
 ```
 
+Besides, we provide some switch APIs to allow users to highly customize their training process
+
+```scala
+  .useGemm(true) // or false, default: true. Switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
+  .useCuSolverSVD(true) // or false, default: true. Switch to use original LAPack solver or cuSolver to compute SVD
+  .meanCentering(true) // or false, default: true. Wwitch to do mean centering or not before computing covariance matrix
+```
 ## Build
 
 ### Prerequisites:
