@@ -70,7 +70,7 @@ User can build it directly in the _project root path_ with:
 ```
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-21.10.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-21.10-SNAPSHOT.jar` will be generated under `target` folder.
 
 _Note_: This module contains both native and Java/Scala code. The native library build instructions has been added to the pom.xml file so that maven build command will help build native library all the way. Make sure the prerequisites are all met, or the build will fail with error messages accordingly such as "cmake not found" or "ninja not found" etc. 
 
@@ -82,7 +82,7 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
  --executor-memory 30G \
  --conf spark.driver.maxResultSize=8G \
- --jars target/rapids-4-spark-ml_2.12-21.10.0-SNAPSHOT.jar \
+ --jars target/rapids-4-spark-ml_2.12-21.10-SNAPSHOT.jar \
  --conf spark.task.resource.gpu.amount=0.08 \
  --conf spark.executor.resource.gpu.amount=1 \
  --conf spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh \
