@@ -33,6 +33,34 @@
         </license>
     </licenses>
 
+    <scm>
+        <connection>scm:git:https://github.com/NVIDIA/spark-rapids-ml.git</connection>
+        <developerConnection>scm:git:git@github.com:NVIDIA/spark-rapids-ml.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/NVIDIA/spark-rapids-ml</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>wjxiz1992</id>
+            <name>Allen Xu</name>
+            <email>wjxiz1992@gmail.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>+8</timezone>
+        </developer>
+        <developer>
+            <id>rongou</id>
+            <name>Rong Ou</name>
+            <email>rong.ou@gmail.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-6</timezone>
+        </developer>
+    </developers>
+
     <properties>
         <encoding>UTF-8</encoding>
         <java.version>1.8</java.version>
