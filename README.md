@@ -21,17 +21,20 @@ val pca = new org.apache.spark.ml.feature.PCA()
   .fit(vectorDf)
 ```
 
-We used a customized class and add some extra API switches:
+We used a customized class and user will need to do `no code change` to enjoy the GPU acceleration:
 
 ```scala
 val pca = new com.nvidia.spark.ml.feature.PCA()
 ...
-  .useGemm(true) // or false, switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
-  .useCuSolverSVD(true) // or false, switch to use cuSolver to compute SVD
-  .meanCentering(true) // or false, switch to do mean centering before computing covariance matrix
-...
 ```
 
+Besides, we provide some switch APIs to allow users to highly customize their training process:
+
+```scala
+  .useGemm(true) // or false, default: true. Switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
+  .useCuSolverSVD(true) // or false, default: true. Switch to use original LAPack solver or cuSolver to compute SVD
+  .meanCentering(true) // or false, default: true. Wwitch to do mean centering or not before computing covariance matrix
+```
 ## Build
 
 ### Prerequisites:
@@ -41,10 +44,10 @@ val pca = new com.nvidia.spark.ml.feature.PCA()
     - [gcc(>=9.3)](https://gcc.gnu.org/releases.html)
 2. [CUDA Toolkit(>=11.0)](https://developer.nvidia.com/cuda-toolkit)
 3. conda: use [miniconda](https://docs.conda.io/en/latest/miniconda.html) to maintain header files and cmake dependecies
-4. [RMM](https://github.com/rapidsai/rmm):
+4. [RMM(21.10))](https://github.com/rapidsai/rmm):
     - we need all header files and some extra cmake dependencies, build instructions:
     ```bash
-    $ git clone --recurse-submodules https://github.com/rapidsai/rmm.git
+    $ git clone --recurse-submodules -b branch-21.10 https://github.com/rapidsai/rmm.git
     $ cd rmm
     $ mkdir build                                       # make a build directory
     $ cd build                                          # enter the build directory
@@ -52,10 +55,10 @@ val pca = new com.nvidia.spark.ml.feature.PCA()
     $ make -j                                           # compile the library librmm.so ... '-j' will start a parallel job using the number of physical cores available on your system
     $ make install                                      # install the library librmm.so to '/install/path'
     ```
-5. [RAFT](https://github.com/rapidsai/raft):
-    - raft provides only header files, so not build instructions for it.
+5. [RAFT(21.10)](https://github.com/rapidsai/raft):
+    - raft provides only header files, so no build instructions for it.
     ```bash
-    $ git clone https://github.com/rapidsai/raft.git
+    $ git clone -b branch-21.10 https://github.com/rapidsai/raft.git
     ```
 6. export RMM_PATH and RAFT_PATH:
     ```bash
@@ -85,3 +88,6 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --conf spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh \
  --files ${SPARK_HOME}/examples/src/main/scripts/getGpusResources.sh
 ```
+### PCA examples
+
+Please refer to [PCA examples](https://github.com/NVIDIA/spark-rapids-examples/tree/branch-21.10/examples/pca) for more details about example code.
