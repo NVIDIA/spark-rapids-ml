@@ -88,3 +88,6 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --conf spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh \
  --files ${SPARK_HOME}/examples/src/main/scripts/getGpusResources.sh
 ```
+### PCA examples
+
+Please refer to [PCA examples](https://github.com/NVIDIA/spark-rapids-examples/tree/branch-21.10/examples/pca) for more details about example code.
