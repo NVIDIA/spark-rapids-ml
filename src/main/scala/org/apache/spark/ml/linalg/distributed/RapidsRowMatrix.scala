@@ -192,7 +192,8 @@ class RapidsRowMatrix(
 
         val nvtxRangeGemm = new NvtxRange("cublas gemm", NvtxColor.GREEN)
         try {
-          RAPIDSML.gemm(B, C, gpu)
+          RAPIDSML.gemm(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id, RAPIDSML.CublasOperationT.CUBLAS_OP_T.id, B.numCols, B.numCols,
+            B.numRows, 1.0, B, B.numCols, B, B.numCols, 0.0, C, B.numCols, gpu)
         } finally  {
           nvtxRangeGemm.close()
         }

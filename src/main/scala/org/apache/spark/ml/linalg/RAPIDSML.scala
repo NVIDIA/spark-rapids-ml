@@ -21,6 +21,7 @@ import com.nvidia.spark.ml.linalg.JniRAPIDSML
 /**
  * BLAS routines for MLlib's vectors and matrices.
  */
+
 private[spark] object RAPIDSML extends Serializable {
 
   @transient private var _jniRAPIDSML: JniRAPIDSML = _
@@ -30,6 +31,14 @@ private[spark] object RAPIDSML extends Serializable {
       _jniRAPIDSML = JniRAPIDSML.getInstance
     }
     _jniRAPIDSML
+  }
+
+  object CublasOperationT extends Enumeration {
+    type CublasOperationT = Value
+    val CUBLAS_OP_N = Value(0)
+    val CUBLAS_OP_T = Value(1)
+    val CUBLAS_OP_C = Value(2)
+    val CUBLAS_OP_CONJG = Value(3)
   }
 
   /**
@@ -47,21 +56,9 @@ private[spark] object RAPIDSML extends Serializable {
    * @param B the matrix B that will be left multiplied by its transpose. Size of m x n.
    * @param C the resulting matrix C. Size of n x n.
    */
-  def gemm(B: DenseMatrix, C: DenseMatrix, deviceID: Int): Unit = {
-    val rows = B.numRows
-    val cols = B.numCols
-    require(B.isTransposed, "B is not transposed")
-    require(C.numRows == cols, s"The rows of C don't match the columns of B. C: ${C.numRows}, B: $cols")
-    require(C.numCols == cols, s"The columns of C don't match the columns of B. C: ${C.numCols}, B: $cols")
-    // Since B is transposed, we treat it as A in JNI.
-    jniRAPIDSML.dgemm(rows, cols, B.values, C.values, deviceID)
-  }
-
-  def gemm_b(A: DenseMatrix, B: DenseMatrix, C: DenseMatrix, deviceID: Int): Unit = {
-
-    require(C.numRows == A.numRows, s"The rows of C don't match the columns of B. C: ${C.numRows}, B: ${A.numRows}")
-    require(C.numCols == B.numCols, s"The columns of C don't match the columns of B. C: ${C.numCols}, B: ${B.numCols}")
-    jniRAPIDSML.dgemm_b(A.numRows, B.numCols, A.numCols, A.values, B.values, C.values, deviceID)
+  def gemm(transa: Int, transb: Int, m: Int, n: Int, k: Int, alpha: Double, A: DenseMatrix, lda: Int,
+           B: DenseMatrix, ldb: Int,beta: Double,C: DenseMatrix, ldc: Int, deviceID: Int): Unit = {
+    jniRAPIDSML.dgemm(transa, transb, m, n, k, alpha, A.values, lda, B.values, ldb, beta, C.values, ldc, deviceID)
   }
 
   def calSVD(m: Int, A: DenseMatrix, U: DenseMatrix, S: DenseMatrix, deviceID: Int): Unit = {

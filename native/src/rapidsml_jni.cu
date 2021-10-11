@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <jni.h>
 #include <cusolverDn.h>
 #include <assert.h>
 #include <iostream>
+#include <raft/linalg/cublas_wrappers.h>
 #include <raft/linalg/eig.cuh>
 #include <raft/linalg/svd.cuh>
 #include <raft/matrix/matrix.cuh>
@@ -61,6 +61,21 @@ void signFlip(
       }
     }
   });
+}
+
+cublasOperation_t convertToCublasOpEnum(int int_type)
+{
+  if (int_type == 0) {
+    return CUBLAS_OP_N;
+  } else if (int_type == 1) {
+    return CUBLAS_OP_T;
+  } else if (int_type == 2) {
+    return CUBLAS_OP_C;
+  } else if (int_type == 3) {
+    return CUBLAS_OP_CONJG;
+  } else {
+    throw "Invalid type enum: " + std::to_string(int_type);
+  }
 }
 } // anonymous namespace
 
@@ -156,17 +171,30 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dspr(JNIEnv* 
   env->ReleaseDoubleArrayElements(A, host_A, 0);
 }
 
-JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv* env, jclass, jint rows, jint cols,
-                                                                       jdoubleArray A, jdoubleArray C, jint deviceID) {
+JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv* env, jclass, jint transa, jint transb,
+                                                                        jint m, jint n, jint k, jdouble alpha,
+                                                                        jdoubleArray A, jint lda, jdoubleArray B,
+                                                                        jint ldb, jdouble beta, jdoubleArray C, jint ldc, jint deviceID) {
   cudaSetDevice(deviceID);
   jclass jlexception = env->FindClass("java/lang/Exception");
+
+  raft::handle_t raft_handle;
+  cudaStream_t stream = raft_handle.get_stream();
+
   auto size_A = env->GetArrayLength(A);
+  auto size_B = env->GetArrayLength(B);
   auto size_C = env->GetArrayLength(C);
 
   double* dev_A;
   auto cuda_error = cudaMalloc((void**)&dev_A, size_A * sizeof(double));
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error allocating device memory for A");
+  }
+
+  double* dev_B;
+  cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error allocating device memory for B");
   }
 
   double* dev_C;
@@ -181,17 +209,21 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error copying A to device");
   }
 
+  auto* host_B = env->GetDoubleArrayElements(B, nullptr);
+  cuda_error = cudaMemcpyAsync(dev_B, host_B, size_B * sizeof(double), cudaMemcpyDefault);
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error copying B to device");
+  }
+
   cublasHandle_t handle;
   auto status = cublasCreate(&handle);
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error creating cuBLAS handle");
   }
 
-  double alpha = 1.0;
-  double beta = 0.0;
-  status = cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, cols, cols, rows, &alpha, dev_A, cols, dev_A, cols, &beta,
-                       dev_C, cols);
-  cudaSetDevice(deviceID);
+  status = raft::linalg::cublasgemm(handle, convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
+                       dev_C, ldc, stream);
+
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
   }
@@ -207,6 +239,11 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error freeing A from device");
   }
 
+    cuda_error = cudaFree(dev_B);
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error freeing B from device");
+  }
+
   cuda_error = cudaFree(dev_C);
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error freeing C from device");
@@ -218,6 +255,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
   }
 
   env->ReleaseDoubleArrayElements(A, host_A, JNI_ABORT);
+  env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
   env->ReleaseDoubleArrayElements(C, host_C, 0);
 }
 
