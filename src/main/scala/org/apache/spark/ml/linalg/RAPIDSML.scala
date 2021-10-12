@@ -59,7 +59,7 @@ private[spark] object RAPIDSML extends Serializable {
 
   def gemm_b(A: DenseMatrix, B: DenseMatrix, C: DenseMatrix, deviceID: Int): Unit = {
 
-    require(C.numRows == A.numRows, s"The rows of C don't match the columns of B. C: ${C.numRows}, B: ${A.numRows}")
+    require(C.numRows == A.numRows, s"The rows of C don't match the rows of A. C: ${C.numRows}, A: ${A.numRows}")
     require(C.numCols == B.numCols, s"The columns of C don't match the columns of B. C: ${C.numCols}, B: ${B.numCols}")
     jniRAPIDSML.dgemm_b(A.numRows, B.numCols, A.numCols, A.values, B.values, C.values, deviceID)
   }

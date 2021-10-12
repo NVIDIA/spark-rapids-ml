@@ -16,8 +16,9 @@
 
 package org.apache.spark.ml.feature
 
+import com.nvidia.spark.ml.linalg.{NvtxColor, NvtxRange}
 import org.apache.hadoop.fs.Path
-
+//import org.apache.spark.TaskContext
 import org.apache.spark.ml._
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.linalg.distributed.RapidsRowMatrix
@@ -25,7 +26,7 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, udf}
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{ArrayType, DoubleType, StructField, StructType}
 
 trait RapidsPCAParams extends PCAParams {
   /**
@@ -170,24 +171,67 @@ class RapidsPCAModel(
     val outputSchema = transformSchema(dataset.schema, logging = true)
 
     // TODO(rongou): make this faster and re-enable.
-    //    if (getUseGemm) {
-    //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
-    //        val gpuID = TaskContext.get().resources()("gpu").addresses(0)
-    //        val partition = iterator.toList
-    //        val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
-    //        val C = Matrices.zeros(partition.length, getK).toDense
-    //        CUBLAS.gemm_b(A, pc, C, gpuID)
-    //        C.rowIter.zip(partition.iterator).map { case (v, r) =>
-    //          Row.fromSeq(r.toSeq ++ Seq(v))
-    //        }
-    //      })
-    //      dataset.sparkSession.createDataFrame(transformed, outputSchema)
-    //    }
-    //    else {
+        if (getUseGemm) {
+//          val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
+////            val gpuID = TaskContext.get().resources()("gpu").addresses(0).toInt
+//
+//            val partition = iterator.toList
+//            val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
+//            val C = Matrices.zeros(partition.length, getK).toDense
+//            RAPIDSML.gemm_b(A, pc, C, 0)
+//            C.rowIter.zip(partition.iterator).map { case (v, r) =>
+//              Row.fromSeq(r.toSeq ++ Seq(v))
+//            }
+//          })
+//          dataset.sparkSession.createDataFrame(transformed, outputSchema)
+
+
+
+          val input = dataset.select($(inputCol)).rdd.map {
+            case Row(v: Vector) => v
+          }
+          val n = input.first().size
+
+          val transformed = input.mapPartitions(iterator => {
+//            val gpuID = TaskContext.get().resources()("gpu").addresses(0).toInt
+            val partition = iterator.toList
+            val bas = partition.map(v => v.asBreeze.toArray)
+            val nvtxRangeConcat = new NvtxRange("concat before cov", NvtxColor.PURPLE)
+
+            val A = try {
+              new DenseMatrix(bas.length, n, Array.concat(bas: _*), isTransposed = true)
+            } finally {
+              nvtxRangeConcat.close()
+            }
+
+            val C = DenseMatrix.zeros(partition.length, getK)
+            RAPIDSML.gemm_b(A, pc, C, 0)
+            Iterator.single(C.asBreeze)
+          })
+
+          val vRDD = transformed.map((m => {
+            val columns = m.toDenseMatrix.toArray.grouped(getK)
+            val rows = columns.toSeq.transpose
+            val dv = rows.map(row => new DenseVector(row.toArray))
+            dv
+          }))
+
+
+          val vrdd2 = vRDD.flatMap(s => s.map(dv => Vectors.dense(dv.values)))
+          val rrdd = vrdd2.map( v => {
+            Row.fromSeq(Seq(v))
+          })
+          val schema = StructType(Array(
+            StructField($(outputCol), ArrayType(DoubleType), true)
+          ))
+          val dfSchema = dataset.sparkSession.createDataFrame(rrdd, schema)
+          dfSchema
+        }
+        else {
     val transposed = pc.transpose
     val transformer = udf { vector: Vector => transposed.multiply(vector) }
     dataset.withColumn($(outputCol), transformer(col($(inputCol))), outputSchema($(outputCol)).metadata)
-    //    }
+        }
   }
 
   override def transformSchema(schema: StructType): StructType = {
