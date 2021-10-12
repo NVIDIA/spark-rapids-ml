@@ -217,9 +217,9 @@ class RapidsPCAModel(
           }))
 
 
-          val vrdd2 = vRDD.flatMap(s => s.map(dv => Vectors.dense(dv.values)))
+          val vrdd2 = vRDD.flatMap(s => s)
           val rrdd = vrdd2.map( v => {
-            Row.fromSeq(Seq(v))
+            Row.fromSeq(v.toArray.toSeq)
           })
           val schema = StructType(Array(
             StructField($(outputCol), ArrayType(DoubleType), true)
