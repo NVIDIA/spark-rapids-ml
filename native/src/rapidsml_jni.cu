@@ -65,16 +65,14 @@ void signFlip(
 
 cublasOperation_t convertToCublasOpEnum(int int_type)
 {
-  if (int_type == 0) {
-    return CUBLAS_OP_N;
-  } else if (int_type == 1) {
-    return CUBLAS_OP_T;
-  } else if (int_type == 2) {
-    return CUBLAS_OP_C;
-  } else if (int_type == 3) {
-    return CUBLAS_OP_CONJG;
-  } else {
-    throw "Invalid type enum: " + std::to_string(int_type);
+  switch(int_type) {
+    case 0: return CUBLAS_OP_N;
+    case 1: return CUBLAS_OP_T;
+    case 2: return CUBLAS_OP_C;
+    case 3: return CUBLAS_OP_CONJG;
+    default:
+      throw "Invalid type enum: " + std::to_string(int_type);
+      break;
   }
 }
 } // anonymous namespace
