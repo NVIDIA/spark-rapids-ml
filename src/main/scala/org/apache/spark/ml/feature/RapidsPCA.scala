@@ -209,7 +209,7 @@ class RapidsPCAModel(
 
       val seqOfArray = transformed.flatMap(toSeqOfArray)
       // Return df that only contains transform result column.
-      // This is fast, 16 seconds.
+      // This is faster, but a hack.
       //      val rrdd = seqOfArray.map( v => {
       //        Row.fromSeq(Seq(v))
       //      })
