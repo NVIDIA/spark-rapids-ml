@@ -187,7 +187,7 @@ class RapidsPCAModel(
           gpuIdBC.value
         }
         val partition = iterator.toList
-        val bas = partition.map(v => v.asBreeze.toArray)
+        val bas = partition.map(v => v.toArray)
         val nvtxRangeConcat = new NvtxRange("concat before transform", NvtxColor.PURPLE)
 
         val A = try {
@@ -232,10 +232,20 @@ class RapidsPCAModel(
       resultDf
     }
     else {
+      val accum = dataset.rdd.context.longAccumulator("udf count time")
       val transposed = pc.transpose
-      val transformer = udf { vector: Vector => transposed.multiply(vector) }
+      val transformer = udf {
+        vector: Vector => {
+          val start = System.currentTimeMillis()
+          val ret = transposed.multiply(vector)
+          accum.add(System.currentTimeMillis() - start)
+          println(accum.value)
+          ret
+        }
+      }
       dataset.withColumn($(outputCol), transformer(col($(inputCol))), outputSchema($(outputCol)).metadata)
     }
+
   }
 
   override def transformSchema(schema: StructType): StructType = {
