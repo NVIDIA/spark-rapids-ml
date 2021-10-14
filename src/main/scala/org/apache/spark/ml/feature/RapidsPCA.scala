@@ -171,6 +171,7 @@ class RapidsPCAModel(
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
+    val gpuIdBC = dataset.rdd.context.broadcast(getGpuId)
 
     // TODO(rongou): make this faster and re-enable.
     if (getUseGemm) {
@@ -180,7 +181,11 @@ class RapidsPCAModel(
       val n = input.first().size
 
       val transformed = input.mapPartitions(iterator => {
-        val gpuID = TaskContext.get().resources()("gpu").addresses(0).toInt
+        val gpu = if (gpuIdBC.value == -1) {
+          TaskContext.get().resources()("gpu").addresses(0).toInt
+        } else {
+          gpuIdBC.value
+        }
         val partition = iterator.toList
         val bas = partition.map(v => v.asBreeze.toArray)
         val nvtxRangeConcat = new NvtxRange("concat before transform", NvtxColor.PURPLE)
@@ -194,7 +199,7 @@ class RapidsPCAModel(
         val C = DenseMatrix.zeros(partition.length, getK)
         val nvtxRangeGemm = new NvtxRange("cublas gemm transform", NvtxColor.GREEN)
         try {
-          RAPIDSML.gemm_b(A, pc, C, 0)
+          RAPIDSML.gemm_b(A, pc, C, gpu)
         } finally {
           nvtxRangeGemm.close()
         }
