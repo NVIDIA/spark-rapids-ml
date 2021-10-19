@@ -54,6 +54,7 @@ trait RapidsPCAParams extends PCAParams {
 
   /** @group getParam */
   def getUseGemm: Boolean = $(useGemm)
+
   /**
    * Whether to use cuSolver for SVD computation.
    *
@@ -173,8 +174,12 @@ class RapidsPCAModel(
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
     val cols_A = dataset.select($(inputCol)).first.size
+
+    /**
+     * UDF class to speedup transform process of PCA
+     */
     class gpuTransform extends Function[Array[Double], Array[Double]] with RapidsUDF with Serializable {
-      override def evaluateColumnar(args: ColumnVector*): ColumnVector ={
+      override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
         val rows_A = input.getRowCount.toInt
@@ -184,7 +189,7 @@ class RapidsPCAModel(
         C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0)
-        val dmb = buildDeviceMemoryBuffer(C, (rows_A*pc.numCols*8).toLong)
+        val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
         val childColumn = new ColumnVector(DType.FLOAT64, rows_A.toLong, Optional.of(0), dmb,
           null, null)
         val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A)
@@ -197,25 +202,29 @@ class RapidsPCAModel(
 
       override def apply(v1: Array[Double]): Array[Double] = ???
     }
-    // TODO(rongou): make this faster and re-enable.
-    //    if (getUseGemm) {
-    //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
-    //        val gpuID = TaskContext.get().resources()("gpu").addresses(0)
-    //        val partition = iterator.toList
-//            val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
-    //        val C = Matrices.zeros(partition.length, getK).toDense
-    //        CUBLAS.gemm_b(A, pc, C, gpuID)
-    //        C.rowIter.zip(partition.iterator).map { case (v, r) =>
-    //          Row.fromSeq(r.toSeq ++ Seq(v))
-    //        }
-    //      })
-    //      dataset.sparkSession.createDataFrame(transformed, outputSchema)
-    //    }
-    //    else {
-    val transposed = pc.transpose
-    val transformer = udf { vector: Vector => transposed.multiply(vector) }
-    dataset.withColumn($(outputCol), transformer(col($(inputCol))), outputSchema($(outputCol)).metadata)
-    //    }
+
+    if (getUseGemm) {
+      val transform_udf = dataset.sparkSession.udf.register("transform", new gpuTransform())
+      dataset.select(transform_udf(col($(inputCol))))
+      // TODO(rongou): make this faster and re-enable.
+      //    if (getUseGemm) {
+      //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
+      //        val gpuID = TaskContext.get().resources()("gpu").addresses(0)
+      //        val partition = iterator.toList
+      //            val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
+      //        val C = Matrices.zeros(partition.length, getK).toDense
+      //        CUBLAS.gemm_b(A, pc, C, gpuID)
+      //        C.rowIter.zip(partition.iterator).map { case (v, r) =>
+      //          Row.fromSeq(r.toSeq ++ Seq(v))
+      //        }
+      //      })
+      //      dataset.sparkSession.createDataFrame(transformed, outputSchema)
+    }
+    else {
+      val transposed = pc.transpose
+      val transformer = udf { vector: Vector => transposed.multiply(vector) }
+      dataset.withColumn($(outputCol), transformer(col($(inputCol))), outputSchema($(outputCol)).metadata)
+    }
   }
 
   override def transformSchema(schema: StructType): StructType = {
