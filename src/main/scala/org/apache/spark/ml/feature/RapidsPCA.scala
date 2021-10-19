@@ -16,8 +16,8 @@
 
 package org.apache.spark.ml.feature
 
+import com.nvidia.spark.RapidsUDF
 import org.apache.hadoop.fs.Path
-
 import org.apache.spark.ml._
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.linalg.distributed.RapidsRowMatrix
@@ -26,6 +26,9 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.StructType
+import ai.rapids.cudf.{ColumnVector, Cuda, DType, DeviceMemoryBuffer, Scalar}
+
+import java.util.Optional
 
 trait RapidsPCAParams extends PCAParams {
   /**
@@ -168,13 +171,34 @@ class RapidsPCAModel(
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
+    val cols_A = dataset.select($(inputCol)).first.size
+    class gpuTransform extends Function[Array[Double], Array[Double]] with RapidsUDF with Serializable {
+      override def evaluateColumnar(args: ColumnVector*): ColumnVector ={
+        require(args.length == 1, s"Unexpected argument count: ${args.length}")
+        val input = args.head
+        val rows_A = input.getRowCount.toInt
+        val AdevAddr = input.getData.getAddress
+        var C: Long = 0
+        // A: raw data, B: pc, C: output, deviceID= 0 for test
+        val lengthInBytes = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
+          RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
+          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0)
+        val dmb = new DeviceMemoryBuffer(C, (rows_A*pc.numCols*8).toLong, Cuda.DEFAULT_STREAM)
+        val childColumn = new ColumnVector(DType.FLOAT64, rows_A.toLong, Optional.of(0), dmb,
+          null, null)
+        val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A)
+        val toClose = List(dmb)
+        val childHandles = Array(childColumn.getNativeView)
 
+        new ColumnVector(DType.LIST, rows_A, Optional.of(0), null, null, offsetCV.getData, toClose, childHandles)
+      }
+    }
     // TODO(rongou): make this faster and re-enable.
     //    if (getUseGemm) {
     //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
     //        val gpuID = TaskContext.get().resources()("gpu").addresses(0)
     //        val partition = iterator.toList
-    //        val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
+//            val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
     //        val C = Matrices.zeros(partition.length, getK).toDense
     //        CUBLAS.gemm_b(A, pc, C, gpuID)
     //        C.rowIter.zip(partition.iterator).map { case (v, r) =>

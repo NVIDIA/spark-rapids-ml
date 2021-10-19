@@ -89,6 +89,20 @@
     </repositories>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark -->
+        <dependency>
+            <groupId>com.nvidia</groupId>
+            <artifactId>rapids-4-spark_2.12</artifactId>
+            <version>21.08.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/ai.rapids/cudf -->
+        <dependency>
+            <groupId>ai.rapids</groupId>
+            <artifactId>cudf</artifactId>
+            <version>21.08.2</version>
+        </dependency>
+
+
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>

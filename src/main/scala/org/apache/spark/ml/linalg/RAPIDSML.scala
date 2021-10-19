@@ -72,6 +72,10 @@ private[spark] object RAPIDSML extends Serializable {
            B: DenseMatrix, ldb: Int,beta: Double,C: DenseMatrix, ldc: Int, deviceID: Int): Unit = {
     jniRAPIDSML.dgemm(transa, transb, m, n, k, alpha, A.values, lda, B.values, ldb, beta, C.values, ldc, deviceID)
   }
+  def gemm_test(transa: Int, transb: Int, m: Int, n: Int, k: Int, alpha: Double, A: Long, lda: Int,
+                B: DenseMatrix, ldb: Int,beta: Double,C: Long, ldc: Int, deviceID: Int): Unit = {
+    jniRAPIDSML.dgemm_test(transa, transb, m, n, k, alpha, A, lda, B.values, ldb, beta, C, ldc, deviceID)
+  }
 
   /**
    *
