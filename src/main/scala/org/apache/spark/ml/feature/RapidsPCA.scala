@@ -192,12 +192,20 @@ class RapidsPCAModel(
         val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
         val childColumn = new ColumnVector(DType.FLOAT64, rows_A.toLong, Optional.of(0), dmb,
           null, null)
-        val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A)
-        val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
-        toClose.add(dmb)
-        val childHandles = Array(childColumn.getNativeView)
-        val offsetDMB = offsetCV.getData.sliceWithCopy(0, offsetCV.getRowCount * 4)
-        new ColumnVector(DType.LIST, rows_A, Optional.of(0), null, null, offsetDMB, toClose, childHandles)
+        try {
+          val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A)
+          val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
+          val childHandles = Array(childColumn.getNativeView)
+          val offsetDMB = offsetCV.getData.sliceWithCopy(0, offsetCV.getRowCount * 4)
+          try {
+            new ColumnVector(DType.LIST, rows_A, Optional.of(0), null, null, offsetDMB,
+              toClose, childHandles)
+          } finally {
+            offsetCV.close()
+          }
+        } finally {
+          childColumn.close()
+        }
       }
 
       override def apply(v1: Array[Double]): Array[Double] = ???
@@ -205,7 +213,7 @@ class RapidsPCAModel(
 
     if (getUseGemm) {
       val transform_udf = dataset.sparkSession.udf.register("transform", new gpuTransform())
-      dataset.select(transform_udf(col($(inputCol))))
+      dataset.withColumn("transformed", transform_udf(col($(inputCol))))
       // TODO(rongou): make this faster and re-enable.
       //    if (getUseGemm) {
       //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
