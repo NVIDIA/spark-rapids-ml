@@ -16,6 +16,7 @@
 
 package org.apache.spark.ml.feature
 
+import ai.rapids.cudf.CudfUtil.buildDeviceMemoryBuffer
 import com.nvidia.spark.RapidsUDF
 import org.apache.hadoop.fs.Path
 import org.apache.spark.ml._
@@ -26,7 +27,7 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.StructType
-import ai.rapids.cudf.{ColumnVector, Cuda, DType, DeviceMemoryBuffer, Scalar}
+import ai.rapids.cudf.{ColumnVector, DType, DeviceMemoryBuffer, Scalar}
 
 import java.util.Optional
 
@@ -180,18 +181,21 @@ class RapidsPCAModel(
         val AdevAddr = input.getData.getAddress
         var C: Long = 0
         // A: raw data, B: pc, C: output, deviceID= 0 for test
-        val lengthInBytes = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
+        C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0)
-        val dmb = new DeviceMemoryBuffer(C, (rows_A*pc.numCols*8).toLong, Cuda.DEFAULT_STREAM)
+        val dmb = buildDeviceMemoryBuffer(C, (rows_A*pc.numCols*8).toLong)
         val childColumn = new ColumnVector(DType.FLOAT64, rows_A.toLong, Optional.of(0), dmb,
           null, null)
         val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A)
-        val toClose = List(dmb)
+        val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
+        toClose.add(dmb)
         val childHandles = Array(childColumn.getNativeView)
-
-        new ColumnVector(DType.LIST, rows_A, Optional.of(0), null, null, offsetCV.getData, toClose, childHandles)
+        val offsetDMB = offsetCV.getData.sliceWithCopy(0, offsetCV.getRowCount * 4)
+        new ColumnVector(DType.LIST, rows_A, Optional.of(0), null, null, offsetDMB, toClose, childHandles)
       }
+
+      override def apply(v1: Array[Double]): Array[Double] = ???
     }
     // TODO(rongou): make this faster and re-enable.
     //    if (getUseGemm) {

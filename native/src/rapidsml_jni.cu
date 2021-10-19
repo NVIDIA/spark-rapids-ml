@@ -257,6 +257,66 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
   env->ReleaseDoubleArrayElements(C, host_C, 0);
 }
 
+
+JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* env, jclass,  jint transa, jint transb, jint m, jint n,
+                                                                       jint k, jdouble alpha, jlong A, jint lda, jdoubleArray B,
+                                                                       jint ldb, jdouble beta, jlong C, jint ldc, jint deviceID) {
+  cudaSetDevice(deviceID);
+  raft::handle_t raft_handle;
+  cudaStream_t stream = raft_handle.get_stream();
+  jclass jlexception = env->FindClass("java/lang/Exception");
+  double *dev_A = reinterpret_cast<double *> (A);
+
+  auto size_B = env->GetArrayLength(B);
+  double* dev_B;
+  auto cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error allocating device memory for B");
+  }
+
+  auto* host_B = env->GetDoubleArrayElements(B, nullptr);
+  cuda_error = cudaMemcpyAsync(dev_B, host_B, size_B * sizeof(double), cudaMemcpyDefault);
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error copying B to device");
+  }
+
+  double* dev_C;
+  auto size_C = m * n;
+  cuda_error = cudaMalloc((void**)&dev_C, size_C * sizeof(double));
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error allocating device memory for C");
+  }
+
+
+  cublasHandle_t handle;
+  auto status = cublasCreate(&handle);
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    env->ThrowNew(jlexception, "Error creating cuBLAS handle");
+  }
+
+  status = raft::linalg::cublasgemm(handle, convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
+                       dev_C, ldc, stream);
+
+  
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    env->ThrowNew(jlexception, "Error calling cublasDgemm");
+  }
+
+  cuda_error = cudaFree(dev_B);
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error freeing B from device");
+  }
+
+  status = cublasDestroy(handle);
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    env->ThrowNew(jlexception, "Error destroying cuBLAS handle");
+  }
+
+  env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
+
+  return reinterpret_cast<long> (dev_C);
+}
+
 JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1b(JNIEnv* env, jclass, jint rows_a, jint cols_b, jint cols_a,
                                                                        jdoubleArray A, jdoubleArray B, jdoubleArray C, jint deviceID) {
 
