@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-find_package(rmm 21.10.00)
+find_package(rmm 21.12.00)
 find_package(Thrust)
 
 set (CMAKE_CUDA_FLAGS "--extended-lambda")
