@@ -44,10 +44,10 @@ Besides, we provide some switch APIs to allow users to highly customize their tr
     - [gcc(>=9.3)](https://gcc.gnu.org/releases.html)
 2. [CUDA Toolkit(>=11.0)](https://developer.nvidia.com/cuda-toolkit)
 3. conda: use [miniconda](https://docs.conda.io/en/latest/miniconda.html) to maintain header files and cmake dependecies
-4. [RMM(21.10))](https://github.com/rapidsai/rmm):
+4. [RMM(21.12))](https://github.com/rapidsai/rmm):
     - we need all header files and some extra cmake dependencies, build instructions:
     ```bash
-    $ git clone --recurse-submodules -b branch-21.10 https://github.com/rapidsai/rmm.git
+    $ git clone --recurse-submodules -b branch-21.12 https://github.com/rapidsai/rmm.git
     $ cd rmm
     $ mkdir build                                       # make a build directory
     $ cd build                                          # enter the build directory
@@ -55,10 +55,10 @@ Besides, we provide some switch APIs to allow users to highly customize their tr
     $ make -j                                           # compile the library librmm.so ... '-j' will start a parallel job using the number of physical cores available on your system
     $ make install                                      # install the library librmm.so to '/install/path'
     ```
-5. [RAFT(21.10)](https://github.com/rapidsai/raft):
+5. [RAFT(21.12)](https://github.com/rapidsai/raft):
     - raft provides only header files, so no build instructions for it.
     ```bash
-    $ git clone -b branch-21.10 https://github.com/rapidsai/raft.git
+    $ git clone -b branch-21.12 https://github.com/rapidsai/raft.git
     ```
 6. export RMM_PATH and RAFT_PATH:
     ```bash
