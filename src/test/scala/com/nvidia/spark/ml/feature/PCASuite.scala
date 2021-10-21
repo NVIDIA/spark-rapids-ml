@@ -63,6 +63,7 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
 
     val pcaModel = pca.fit(df)
     val transformed = pcaModel.transform(df)
+    transformed.collect()
     checkVectorSizeOnDF(transformed, "pca_features", pcaModel.getK)
 
     MLTestingUtils.checkCopyAndUids(pca, pcaModel)
@@ -73,23 +74,37 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
     }
   }
 
+  // cannot run with transform as the output column is not vector now.
   test("pca using gemm") {
-    val data = Array(
+    val data = Seq(
       Vectors.dense(2.0, 0.0, 3.0, 4.0, 5.0),
       Vectors.sparse(5, Seq((1, 1.0), (3, 7.0))),
       Vectors.dense(4.0, 0.0, 0.0, 6.0, 7.0)
     )
 
+    val data_transform = Seq(
+      Array(2.0, 0.0, 3.0, 4.0, 5.0),
+      Array(0.0, 1.0, 0.0, 7.0, 0.0),
+      Array(4.0, 0.0, 0.0, 6.0, 7.0)
+    )
+
     val dataRDD = sc.parallelize(data, 2)
+    val dataRDD_transform = sc.parallelize(data_transform,2)
+    dataRDD_transform.toDF().printSchema()
 
     val mat = new RowMatrix(dataRDD.map(OldVectors.fromML))
     val pc = mat.computePrincipalComponents(3)
     val expected = mat.multiply(pc).rows.map(_.asML)
 
-    val df = dataRDD.zip(expected).toDF("features", "expected")
+    val test  = dataRDD_transform.zip(dataRDD)
+//    test.printSchema()
+    val df = test.zip(expected).map( x => {
+      (x._1._1, x._1._2, x._2)
+    }).toDF("transform_features", "features", "expected")
 
     val pca = new PCA()
         .setInputCol("features")
+        .setTransformInputCol("transform_features")
         .setOutputCol("pca_features")
         .setK(3)
         .setUseGemm(true)

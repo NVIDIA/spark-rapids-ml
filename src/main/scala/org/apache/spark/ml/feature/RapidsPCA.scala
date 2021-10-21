@@ -30,6 +30,7 @@ import org.apache.spark.sql.types.StructType
 import ai.rapids.cudf.{ColumnVector, DType, DeviceMemoryBuffer, Scalar}
 
 import java.util.Optional
+import scala.collection.mutable
 
 trait RapidsPCAParams extends PCAParams {
   /**
@@ -54,6 +55,15 @@ trait RapidsPCAParams extends PCAParams {
 
   /** @group getParam */
   def getUseGemm: Boolean = $(useGemm)
+
+  /**
+   * Set the non-vector input column only for transform usage
+   */
+  final val transformInputCol: StringArrayParam =
+    new StringArrayParam(this, "transformInputCol",
+      "Non-vector input column only for transform usage")
+      setDefault(transformInputCol, Array(""))
+  def getTransformInputCol: String = $(transformInputCol).head
 
   /**
    * Whether to use cuSolver for SVD computation.
@@ -90,6 +100,9 @@ class RapidsPCA(override val uid: String)
 
   /** @group setParam */
   def setInputCol(value: String): this.type = set(inputCol, value)
+
+  /** @group setTransformInpuCol */
+  def setTransformInputCol(value: String): this.type = set(transformInputCol, Array(value))
 
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
@@ -173,13 +186,15 @@ class RapidsPCAModel(
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
-    val cols_A = dataset.select($(inputCol)).first.size
+    val cols_A = dataset.select($(transformInputCol).head).first.get(0)
+      .asInstanceOf[mutable.WrappedArray[Double]].size
 
     /**
      * UDF class to speedup transform process of PCA
      */
-    class gpuTransform extends Function[Array[Double], Array[Double]] with RapidsUDF with Serializable {
+    class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]] with RapidsUDF with Serializable {
       override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
+        println(" =============== using GPU udf transform ===============")
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
         val rows_A = input.getRowCount.toInt
@@ -208,12 +223,14 @@ class RapidsPCAModel(
         }
       }
 
-      override def apply(v1: Array[Double]): Array[Double] = ???
+      override def apply(v1: mutable.WrappedArray[Double]): Array[Double] = {
+        pc.transpose.multiply(Vectors.dense(v1.toArray)).toArray
+      }
     }
 
     if (getUseGemm) {
       val transform_udf = dataset.sparkSession.udf.register("transform", new gpuTransform())
-      dataset.withColumn("transformed", transform_udf(col($(inputCol))))
+      dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol).head)))
       // TODO(rongou): make this faster and re-enable.
       //    if (getUseGemm) {
       //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
