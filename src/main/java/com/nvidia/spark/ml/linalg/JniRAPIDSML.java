@@ -66,7 +66,7 @@ public final class JniRAPIDSML {
   public native void dgemm(int transa, int transb, int m, int n, int k, double alpha, double[] A, int lda, double[] B,
                            int ldb, double beta, double[] C, int ldc, int deviceID);
   public native long dgemm_test(int transa, int transb, int m, int n, int k, double alpha, long A, int lda, double[] B,
-                                int ldb, double beta, long C, int ldc, int deviceID);
+                                int ldb, double beta, long C, int ldc, int deviceID, int ALength);
   public native void dgemm_b(int m, int n, int k, double[] A, double[] B, double[] C, int deviceID);
 
   public native void calSVD(int m, double[] A, double[] U, double[] S, int deviceID);

@@ -260,16 +260,33 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 
 JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* env, jclass,  jint transa, jint transb, jint m, jint n,
                                                                        jint k, jdouble alpha, jlong A, jint lda, jdoubleArray B,
-                                                                       jint ldb, jdouble beta, jlong C, jint ldc, jint deviceID) {
+                                                                       jint ldb, jdouble beta, jlong C, jint ldc, jint deviceID, jint ALength) {
   cudaSetDevice(deviceID);
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
   jclass jlexception = env->FindClass("java/lang/Exception");
-  double *dev_A = reinterpret_cast<double *> (A);
+  std::cout << "====== raw A: ";
+  std::cout << A << std::endl;
+  // double *dev_A = reinterpret_cast<double *> (A);
+  const double* AA = reinterpret_cast<double *> (A);
+  double *cp_dev_A;
+  // std::cout << "====== dev_A after cast:  ";
+  // std::cout << *dev_A << std::endl;
+
+
+  auto cuda_error = cudaMalloc((void**)&cp_dev_A, ALength);
+
+  std::cout << "after cudaMalloc: " + std::to_string(cuda_error) << std::endl;
+  cuda_error = cudaMemcpyAsync(cp_dev_A, AA, ALength, cudaMemcpyDeviceToDevice);
+  std::cout << cuda_error << std::endl;
+  if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error copying AA to device");
+  }
+
 
   auto size_B = env->GetArrayLength(B);
   double* dev_B;
-  auto cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
+  cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error allocating device memory for B");
   }
@@ -294,7 +311,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
     env->ThrowNew(jlexception, "Error creating cuBLAS handle");
   }
 
-  status = raft::linalg::cublasgemm(handle, convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
+  status = raft::linalg::cublasgemm(handle, convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, cp_dev_A, lda, dev_B, ldb, &beta,
                        dev_C, ldc, stream);
 
   

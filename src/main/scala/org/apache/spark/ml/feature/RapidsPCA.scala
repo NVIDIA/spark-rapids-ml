@@ -198,12 +198,17 @@ class RapidsPCAModel(
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
         val rows_A = input.getRowCount.toInt
-        val AdevAddr = input.getData.getAddress
+        val resChildCView = input.getChildColumnView(0)
+        val childData = resChildCView.getData
+        val AdevAddr = childData.getAddress
+        val AdevLength = childData.getLength.toInt
+        println("=======AdevLength: ", AdevLength, "=========")
+        println("======= AdevAddr: ", AdevAddr, "========")
         var C: Long = 0
         // A: raw data, B: pc, C: output, deviceID= 0 for test
         C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
-          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0)
+          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0, AdevLength)
         val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
         val childColumn = new ColumnVector(DType.FLOAT64, rows_A.toLong, Optional.of(0), dmb,
           null, null)
