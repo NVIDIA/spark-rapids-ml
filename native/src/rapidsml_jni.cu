@@ -76,6 +76,15 @@ cublasOperation_t convertToCublasOpEnum(int int_type)
       break;
   }
 }
+
+// TODO: optimize for GPU
+__global__ void transposeData(double* in, double* out, int rows, int cols){
+  for (auto i=0; i < rows; i++) {
+    for (auto j = 0; j < cols; j++) {
+      out[i*cols + j] = in[j*rows + i];
+    }
+  }
+}
 } // anonymous namespace
 
 extern "C" {
@@ -332,11 +341,19 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
   }
 
   // TODO dev_C is columnar, need to convert it to row-wise for ColumnVector construction
+  double* trans_dev_C;
+  cuda_error = cudaMalloc((void**)&trans_dev_C, size_C * sizeof(double));
+    if (cuda_error != cudaSuccess) {
+    env->ThrowNew(jlexception, "Error allocating device memory for C");
+  }
+
+  transposeData<<<1, 1>>>(dev_C, trans_dev_C, m, n);
+
 
   // debug print gemm output : dev_C
   double *host_C;
   host_C = (double *)malloc(size_C * sizeof(double));
-  cuda_error = cudaMemcpyAsync(host_C, dev_C, size_C * sizeof(double), cudaMemcpyDeviceToHost);
+  cuda_error = cudaMemcpyAsync(host_C, trans_dev_C, size_C * sizeof(double), cudaMemcpyDeviceToHost);
   std::cout << "first 10 values of C: ";
   for (int i = 0; i< 10; i++) {
     std::cout << host_C[i] ;
@@ -352,7 +369,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
 
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
 
-  auto longC = reinterpret_cast<long> (dev_C);
+  auto longC = reinterpret_cast<long> (trans_dev_C);
   std::cout << "long C to return: " << longC << std::endl;
 
   return longC;

@@ -214,6 +214,7 @@ class RapidsPCAModel(
         val childColumn = new ColumnVector(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
           null, null)
         try {
+          // 1 more row for offset CV
           val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A + 1)
           val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
           val childHandles = Array(childColumn.getNativeView)
