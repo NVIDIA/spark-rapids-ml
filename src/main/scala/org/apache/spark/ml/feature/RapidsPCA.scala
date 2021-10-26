@@ -59,11 +59,11 @@ trait RapidsPCAParams extends PCAParams {
   /**
    * Set the non-vector input column only for transform usage
    */
-  final val transformInputCol: StringArrayParam =
-    new StringArrayParam(this, "transformInputCol",
+  final val transformInputCol: Param[String] =
+    new Param(this, "transformInputCol",
       "Non-vector input column only for transform usage")
-      setDefault(transformInputCol, Array(""))
-  def getTransformInputCol: String = $(transformInputCol).head
+      setDefault(transformInputCol, "")
+  def getTransformInputCol: String = $(transformInputCol)
 
   /**
    * Whether to use cuSolver for SVD computation.
@@ -102,7 +102,7 @@ class RapidsPCA(override val uid: String)
   def setInputCol(value: String): this.type = set(inputCol, value)
 
   /** @group setTransformInpuCol */
-  def setTransformInputCol(value: String): this.type = set(transformInputCol, Array(value))
+  def setTransformInputCol(value: String): this.type = set(transformInputCol, value)
 
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
@@ -186,7 +186,7 @@ class RapidsPCAModel(
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
-    val cols_A = dataset.select($(transformInputCol).head).first.get(0)
+    val cols_A = dataset.select($(transformInputCol)).first.get(0)
       .asInstanceOf[mutable.WrappedArray[Double]].size
 
     /**
@@ -206,14 +206,15 @@ class RapidsPCAModel(
         println("======= AdevAddr: ", AdevAddr, "========")
         var C: Long = 0
         // A: raw data, B: pc, C: output, deviceID= 0 for test
-        C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
+        C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0, AdevLength)
         val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
-        val childColumn = new ColumnVector(DType.FLOAT64, rows_A.toLong, Optional.of(0), dmb,
+        // child column with rows: rows_A * pc.numCols
+        val childColumn = new ColumnVector(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
           null, null)
         try {
-          val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A)
+          val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A + 1)
           val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
           val childHandles = Array(childColumn.getNativeView)
           val offsetDMB = offsetCV.getData.sliceWithCopy(0, offsetCV.getRowCount * 4)
@@ -235,7 +236,7 @@ class RapidsPCAModel(
 
     if (getUseGemm) {
       val transform_udf = dataset.sparkSession.udf.register("transform", new gpuTransform())
-      dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol).head)))
+      dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol))))
       // TODO(rongou): make this faster and re-enable.
       //    if (getUseGemm) {
       //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {

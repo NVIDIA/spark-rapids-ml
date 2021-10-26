@@ -28,6 +28,7 @@
 #include <thrust/execution_policy.h>
 #include <rmm/exec_policy.hpp>
 #include <nvtx3.hpp>
+#include <stdlib.h>
 
 struct java_domain {
   static constexpr char const *name{"Java"};
@@ -178,6 +179,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
+  // raft_handle.get_cublas_handle();
 
   auto size_A = env->GetArrayLength(A);
   auto size_B = env->GetArrayLength(B);
@@ -213,13 +215,13 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error copying B to device");
   }
 
-  cublasHandle_t handle;
-  auto status = cublasCreate(&handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error creating cuBLAS handle");
-  }
+  // cublasHandle_t handle;
+  // auto status = cublasCreate(&handle);
+  // if (status != CUBLAS_STATUS_SUCCESS) {
+  //   env->ThrowNew(jlexception, "Error creating cuBLAS handle");
+  // }
 
-  status = raft::linalg::cublasgemm(handle, convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
                        dev_C, ldc, stream);
 
   if (status != CUBLAS_STATUS_SUCCESS) {
@@ -247,10 +249,10 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error freeing C from device");
   }
 
-  status = cublasDestroy(handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error destroying cuBLAS handle");
-  }
+  // status = cublasDestroy(handle);
+  // if (status != CUBLAS_STATUS_SUCCESS) {
+  //   env->ThrowNew(jlexception, "Error destroying cuBLAS handle");
+  // }
 
   env->ReleaseDoubleArrayElements(A, host_A, JNI_ABORT);
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
@@ -275,10 +277,27 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
 
 
   auto cuda_error = cudaMalloc((void**)&cp_dev_A, ALength);
-
   std::cout << "after cudaMalloc: " + std::to_string(cuda_error) << std::endl;
   cuda_error = cudaMemcpyAsync(cp_dev_A, AA, ALength, cudaMemcpyDeviceToDevice);
-  std::cout << cuda_error << std::endl;
+  std::cout << "after cp A to cp_dev_A: " + std::to_string(cuda_error) << std::endl;
+
+
+  // debug part to see data layout
+  // rowsA: 1403
+  // pc cols: 3
+  // cols A : 2048
+  // lda: cols_A
+  double *host_A;
+  host_A = (double *)malloc(ALength);
+  cuda_error = cudaMemcpyAsync(host_A, cp_dev_A, ALength, cudaMemcpyDeviceToHost);
+  std::cout << "first 10 values: ";
+  for (int i = 0; i< 10; i++) {
+    std::cout << host_A[i] ;
+    std::cout << " ";
+  }
+  std::cout << "" << std::endl;
+
+
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error copying AA to device");
   }
@@ -304,14 +323,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
     env->ThrowNew(jlexception, "Error allocating device memory for C");
   }
 
-
-  cublasHandle_t handle;
-  auto status = cublasCreate(&handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error creating cuBLAS handle");
-  }
-
-  status = raft::linalg::cublasgemm(handle, convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, cp_dev_A, lda, dev_B, ldb, &beta,
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, cp_dev_A, lda, dev_B, ldb, &beta,
                        dev_C, ldc, stream);
 
   
@@ -319,19 +331,31 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
   }
 
+  // TODO dev_C is columnar, need to convert it to row-wise for ColumnVector construction
+
+  // debug print gemm output : dev_C
+  double *host_C;
+  host_C = (double *)malloc(size_C * sizeof(double));
+  cuda_error = cudaMemcpyAsync(host_C, dev_C, size_C * sizeof(double), cudaMemcpyDeviceToHost);
+  std::cout << "first 10 values of C: ";
+  for (int i = 0; i< 10; i++) {
+    std::cout << host_C[i] ;
+    std::cout << " ";
+  }
+  std::cout << "" << std::endl;
+
+
   cuda_error = cudaFree(dev_B);
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error freeing B from device");
   }
 
-  status = cublasDestroy(handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error destroying cuBLAS handle");
-  }
-
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
 
-  return reinterpret_cast<long> (dev_C);
+  auto longC = reinterpret_cast<long> (dev_C);
+  std::cout << "long C to return: " << longC << std::endl;
+
+  return longC;
 }
 
 JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1b(JNIEnv* env, jclass, jint rows_a, jint cols_b, jint cols_a,
