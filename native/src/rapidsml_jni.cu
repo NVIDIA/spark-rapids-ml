@@ -78,10 +78,12 @@ cublasOperation_t convertToCublasOpEnum(int int_type)
 }
 
 // TODO: optimize for GPU
-__global__ void transposeData(double* in, double* out, int rows, int cols){
+__global__ void transposeData(void* in, void* out, int rows, int cols){
+  double* d_in = (double*) in;
+  double* d_out = (double*) out;
   for (auto i=0; i < rows; i++) {
     for (auto j = 0; j < cols; j++) {
-      out[i*cols + j] = in[j*rows + i];
+      d_out[i*cols + j] = d_in[j*rows + i];
     }
   }
 }
@@ -276,45 +278,15 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
   jclass jlexception = env->FindClass("java/lang/Exception");
-  std::cout << "====== raw A: ";
-  std::cout << A << std::endl;
-  // double *dev_A = reinterpret_cast<double *> (A);
+
   const double* AA = reinterpret_cast<double *> (A);
-  double *cp_dev_A;
-  // std::cout << "====== dev_A after cast:  ";
-  // std::cout << *dev_A << std::endl;
 
-
-  auto cuda_error = cudaMalloc((void**)&cp_dev_A, ALength);
-  std::cout << "after cudaMalloc: " + std::to_string(cuda_error) << std::endl;
-  cuda_error = cudaMemcpyAsync(cp_dev_A, AA, ALength, cudaMemcpyDeviceToDevice);
-  std::cout << "after cp A to cp_dev_A: " + std::to_string(cuda_error) << std::endl;
-
-
-  // debug part to see data layout
-  // rowsA: 1403
-  // pc cols: 3
-  // cols A : 2048
-  // lda: cols_A
-  double *host_A;
-  host_A = (double *)malloc(ALength);
-  cuda_error = cudaMemcpyAsync(host_A, cp_dev_A, ALength, cudaMemcpyDeviceToHost);
-  std::cout << "first 10 values: ";
-  for (int i = 0; i< 10; i++) {
-    std::cout << host_A[i] ;
-    std::cout << " ";
-  }
-  std::cout << "" << std::endl;
-
-
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error copying AA to device");
-  }
-
+  rmm::mr::device_memory_resource *mr = rmm::mr::get_current_device_resource();
+  auto c_stream = rmm::cuda_stream_view(reinterpret_cast<cudaStream_t>(stream));
 
   auto size_B = env->GetArrayLength(B);
   double* dev_B;
-  cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
+  auto cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error allocating device memory for B");
   }
@@ -325,42 +297,21 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* 
     env->ThrowNew(jlexception, "Error copying B to device");
   }
 
-  double* dev_C;
+  void* dev_C;
   auto size_C = m * n;
-  cuda_error = cudaMalloc((void**)&dev_C, size_C * sizeof(double));
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error allocating device memory for C");
-  }
+  dev_C = mr->allocate(size_C * sizeof(double), c_stream);
 
-  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, cp_dev_A, lda, dev_B, ldb, &beta,
-                       dev_C, ldc, stream);
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, AA, lda, dev_B, ldb, &beta,
+                       (double *)dev_C, ldc, stream);
 
-  
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
   }
 
-  // TODO dev_C is columnar, need to convert it to row-wise for ColumnVector construction
-  double* trans_dev_C;
-  cuda_error = cudaMalloc((void**)&trans_dev_C, size_C * sizeof(double));
-    if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error allocating device memory for C");
-  }
+  void* trans_dev_C;
+  trans_dev_C = mr->allocate(size_C * sizeof(double), c_stream);
 
   transposeData<<<1, 1>>>(dev_C, trans_dev_C, m, n);
-
-
-  // debug print gemm output : dev_C
-  double *host_C;
-  host_C = (double *)malloc(size_C * sizeof(double));
-  cuda_error = cudaMemcpyAsync(host_C, trans_dev_C, size_C * sizeof(double), cudaMemcpyDeviceToHost);
-  std::cout << "first 10 values of C: ";
-  for (int i = 0; i< 10; i++) {
-    std::cout << host_C[i] ;
-    std::cout << " ";
-  }
-  std::cout << "" << std::endl;
-
 
   cuda_error = cudaFree(dev_B);
   if (cuda_error != cudaSuccess) {

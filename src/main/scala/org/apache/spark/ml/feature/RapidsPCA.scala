@@ -27,7 +27,9 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.StructType
-import ai.rapids.cudf.{ColumnVector, DType, DeviceMemoryBuffer, Scalar}
+import ai.rapids.cudf.{ColumnVector, ColumnView, DType, DeviceMemoryBuffer, Scalar}
+import com.nvidia.spark.rapids.Arm
+import org.apache.spark.TaskContext
 
 import java.util.Optional
 import scala.collection.mutable
@@ -188,13 +190,19 @@ class RapidsPCAModel(
     val outputSchema = transformSchema(dataset.schema, logging = true)
     val cols_A = dataset.select($(transformInputCol)).first.get(0)
       .asInstanceOf[mutable.WrappedArray[Double]].size
+    val gpuIdBC = dataset.rdd.context.broadcast(getGpuId)
 
     /**
      * UDF class to speedup transform process of PCA
      */
-    class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]] with RapidsUDF with Serializable {
+    class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]]
+      with RapidsUDF with Serializable with Arm {
       override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
-        println(" =============== using GPU udf transform ===============")
+        val gpu = if (gpuIdBC.value == -1) {
+          TaskContext.get().resources()("gpu").addresses(0).toInt
+        } else {
+          gpuIdBC.value
+        }
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
         val rows_A = input.getRowCount.toInt
@@ -202,31 +210,30 @@ class RapidsPCAModel(
         val childData = resChildCView.getData
         val AdevAddr = childData.getAddress
         val AdevLength = childData.getLength.toInt
-        println("=======AdevLength: ", AdevLength, "=========")
-        println("======= AdevAddr: ", AdevAddr, "========")
+
         var C: Long = 0
         // A: raw data, B: pc, C: output, deviceID= 0 for test
         C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
-          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, 0, AdevLength)
+          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, gpu, AdevLength)
         val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
         // child column with rows: rows_A * pc.numCols
-        val childColumn = new ColumnVector(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
-          null, null)
-        try {
-          // 1 more row for offset CV
-          val offsetCV = ColumnVector.sequence(Scalar.fromInt(0), Scalar.fromInt(pc.numCols), rows_A + 1)
-          val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
-          val childHandles = Array(childColumn.getNativeView)
-          val offsetDMB = offsetCV.getData.sliceWithCopy(0, offsetCV.getRowCount * 4)
-          try {
-            new ColumnVector(DType.LIST, rows_A, Optional.of(0), null, null, offsetDMB,
-              toClose, childHandles)
-          } finally {
-            offsetCV.close()
+        withResource(new ColumnView(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
+          null)) { childColumnView =>
+          withResource(Scalar.fromInt(0)) { initValue =>
+            withResource(Scalar.fromInt(pc.numCols)) { stepValue =>
+              // 1 more row for offset CV
+              withResource(ColumnVector.sequence(initValue, stepValue, rows_A +1)) { offsetCV =>
+                val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
+                toClose.add(dmb)
+                val childHandles = Array(childColumnView.getNativeView)
+                val offsetDMB = offsetCV.getData.sliceWithCopy(0,
+                  offsetCV.getRowCount * DType.INT32.getSizeInBytes)
+                new ColumnVector(DType.LIST, rows_A.toLong, Optional.of(0), null, null,
+                  offsetDMB, toClose, childHandles)
+              }
+            }
           }
-        } finally {
-          childColumn.close()
         }
       }
 
