@@ -226,12 +226,6 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error copying B to device");
   }
 
-  // cublasHandle_t handle;
-  // auto status = cublasCreate(&handle);
-  // if (status != CUBLAS_STATUS_SUCCESS) {
-  //   env->ThrowNew(jlexception, "Error creating cuBLAS handle");
-  // }
-
   auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
                        dev_C, ldc, stream);
 
@@ -285,29 +279,26 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffe
   auto c_stream = rmm::cuda_stream_view(reinterpret_cast<cudaStream_t>(stream));
 
   auto size_B = env->GetArrayLength(B);
-  double* dev_B;
-  auto cuda_error = cudaMalloc((void**)&dev_B, size_B * sizeof(double));
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error allocating device memory for B");
-  }
+
+  void* dev_B = mr->allocate(size_B * sizeof(double), c_stream);
 
   auto* host_B = env->GetDoubleArrayElements(B, nullptr);
-  cuda_error = cudaMemcpyAsync(dev_B, host_B, size_B * sizeof(double), cudaMemcpyDefault);
+  auto cuda_error = cudaMemcpyAsync(dev_B, host_B, size_B * sizeof(double), cudaMemcpyDefault);
   if (cuda_error != cudaSuccess) {
     env->ThrowNew(jlexception, "Error copying B to device");
   }
 
-  void* dev_C;
   auto size_C = m * n;
-  dev_C = mr->allocate(size_C * sizeof(double), c_stream);
+  void* dev_C = mr->allocate(size_C * sizeof(double), c_stream);
 
-  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, AA, lda, dev_B, ldb, &beta,
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, AA, lda, (double *)dev_B, ldb, &beta,
                        (double *)dev_C, ldc, stream);
 
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
   }
 
+  // size of C is small, it's fine to do the copy
   void* trans_dev_C;
   trans_dev_C = mr->allocate(size_C * sizeof(double), c_stream);
 
@@ -320,10 +311,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffe
 
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
 
-  auto longC = reinterpret_cast<long> (trans_dev_C);
-  std::cout << "long C to return: " << longC << std::endl;
-
-  return longC;
+  return reinterpret_cast<long> (trans_dev_C);
 }
 
 JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1b(JNIEnv* env, jclass, jint rows_a, jint cols_b, jint cols_a,
