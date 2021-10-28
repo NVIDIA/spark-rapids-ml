@@ -212,8 +212,8 @@ class RapidsPCAModel(
         val AdevLength = childData.getLength.toInt
 
         var C: Long = 0
-        // A: raw data, B: pc, C: output, deviceID= 0 for test
-        C = RAPIDSML.gemm_test(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
+        // A: Device buffer address with raw data, B: pc, C: output, deviceID= 0 for test
+        C = RAPIDSML.gemmWithDeviceBuffer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
           rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, gpu, AdevLength)
         val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
@@ -245,19 +245,6 @@ class RapidsPCAModel(
     if (getUseGemm) {
       val transform_udf = dataset.sparkSession.udf.register("transform", new gpuTransform())
       dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol))))
-      // TODO(rongou): make this faster and re-enable.
-      //    if (getUseGemm) {
-      //      val transformed = dataset.toDF().rdd.mapPartitions(iterator => {
-      //        val gpuID = TaskContext.get().resources()("gpu").addresses(0)
-      //        val partition = iterator.toList
-      //            val A = Matrices.fromVectors(partition.map(_.getAs[Vector]($(inputCol)))).toDense
-      //        val C = Matrices.zeros(partition.length, getK).toDense
-      //        CUBLAS.gemm_b(A, pc, C, gpuID)
-      //        C.rowIter.zip(partition.iterator).map { case (v, r) =>
-      //          Row.fromSeq(r.toSeq ++ Seq(v))
-      //        }
-      //      })
-      //      dataset.sparkSession.createDataFrame(transformed, outputSchema)
     }
     else {
       val transposed = pc.transpose

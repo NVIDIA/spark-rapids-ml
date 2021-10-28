@@ -271,7 +271,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 }
 
 
-JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1test(JNIEnv* env, jclass,  jint transa, jint transb, jint m, jint n,
+JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffer(JNIEnv* env, jclass,  jint transa, jint transb, jint m, jint n,
                                                                        jint k, jdouble alpha, jlong A, jint lda, jdoubleArray B,
                                                                        jint ldb, jdouble beta, jlong C, jint ldc, jint deviceID, jint ALength) {
   cudaSetDevice(deviceID);
