@@ -20,4 +20,8 @@ object CudfUtil {
   def buildDeviceMemoryBuffer(address: Long, lengthInBytes: Long): DeviceMemoryBuffer = {
    new DeviceMemoryBuffer(address, lengthInBytes, Cuda.DEFAULT_STREAM)
   }
+
+  def buildRmmMemoryBuffer(address: Long, lengthInBytes: Long, rmmBufferAddress: Long): DeviceMemoryBuffer = {
+    DeviceMemoryBuffer.fromRmm(address, lengthInBytes, rmmBufferAddress)
+  }
 }

@@ -16,7 +16,7 @@
 
 package org.apache.spark.ml.feature
 
-import ai.rapids.cudf.CudfUtil.buildDeviceMemoryBuffer
+import ai.rapids.cudf.CudfUtil.buildRmmMemoryBuffer
 import com.nvidia.spark.RapidsUDF
 import org.apache.hadoop.fs.Path
 import org.apache.spark.ml._
@@ -209,15 +209,16 @@ class RapidsPCAModel(
         val resChildCView = input.getChildColumnView(0)
         val childData = resChildCView.getData
         val AdevAddr = childData.getAddress
-        val AdevLength = childData.getLength.toInt
-
-        var C: Long = 0
-        // A: Device buffer address with raw data, B: pc, C: output, deviceID= 0 for test
-        C = RAPIDSML.gemmWithDeviceBuffer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
+        // first value: device address, seconds value: host rmm buffer address
+        val CandRmmBuffer: Array[Long] = Array(0, 0)
+        // A: Device buffer address with raw data, B: pc, C: output
+        RAPIDSML.gemmWithDeviceBuffer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
-          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, C, rows_A, gpu, AdevLength)
-        val dmb = buildDeviceMemoryBuffer(C, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong)
+          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, CandRmmBuffer, rows_A, gpu)
+        val dmb = buildRmmMemoryBuffer(CandRmmBuffer.head, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong,
+          CandRmmBuffer.last)
         // child column with rows: rows_A * pc.numCols
+
         withResource(new ColumnView(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
           null)) { childColumnView =>
           withResource(Scalar.fromInt(0)) { initValue =>

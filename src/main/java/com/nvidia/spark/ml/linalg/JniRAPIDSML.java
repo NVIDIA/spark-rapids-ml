@@ -65,7 +65,8 @@ public final class JniRAPIDSML {
 
   public native void dgemm(int transa, int transb, int m, int n, int k, double alpha, double[] A, int lda, double[] B,
                            int ldb, double beta, double[] C, int ldc, int deviceID);
-  public native long dgemmWithDeviceBuffer(int transa, int transb, int m, int n, int k, double alpha, long A, int lda, double[] B,
-                                int ldb, double beta, long C, int ldc, int deviceID, int ALength);
+  // CandRmmBuffer contains 2 long, first long value is the device data address, seconds value is the host rmm buffer address
+  public native void dgemmWithDeviceBuffer(int transa, int transb, int m, int n, int k, double alpha, long A, int lda, double[] B,
+                                int ldb, double beta, long[] CandRmmBuffer, int ldc, int deviceID);
   public native void calSVD(int m, double[] A, double[] U, double[] S, int deviceID);
 }

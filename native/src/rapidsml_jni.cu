@@ -265,9 +265,9 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 }
 
 
-JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffer(JNIEnv* env, jclass,  jint transa, jint transb, jint m, jint n,
+JNIEXPORT void Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffer(JNIEnv* env, jclass,  jint transa, jint transb, jint m, jint n,
                                                                        jint k, jdouble alpha, jlong A, jint lda, jdoubleArray B,
-                                                                       jint ldb, jdouble beta, jlong C, jint ldc, jint deviceID, jint ALength) {
+                                                                       jint ldb, jdouble beta, jlongArray rmmBufferC, jint ldc, jint deviceID) {
   cudaSetDevice(deviceID);
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
@@ -298,11 +298,18 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffe
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
   }
 
+  auto* host_C = env->GetLongArrayElements(rmmBufferC, nullptr);
+
   // size of C is small, it's fine to do the copy
   void* trans_dev_C;
   trans_dev_C = mr->allocate(size_C * sizeof(double), c_stream);
 
   transposeData<<<1, 1>>>(dev_C, trans_dev_C, m, n);
+
+  rmm::device_buffer rmmDB_C = rmm::device_buffer(trans_dev_C, size_C*sizeof(double), c_stream, mr);
+
+  host_C[0] = (jlong)trans_dev_C;
+  host_C[1] = (jlong)&rmmDB_C;
 
   cuda_error = cudaFree(dev_B);
   if (cuda_error != cudaSuccess) {
@@ -311,7 +318,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffe
 
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
 
-  return reinterpret_cast<long> (trans_dev_C);
+  env->ReleaseLongArrayElements(rmmBufferC, host_C, 0);
 }
 
 JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm_1b(JNIEnv* env, jclass, jint rows_a, jint cols_b, jint cols_a,

@@ -73,8 +73,8 @@ private[spark] object RAPIDSML extends Serializable {
     jniRAPIDSML.dgemm(transa, transb, m, n, k, alpha, A.values, lda, B.values, ldb, beta, C.values, ldc, deviceID)
   }
   def gemmWithDeviceBuffer(transa: Int, transb: Int, m: Int, n: Int, k: Int, alpha: Double, A: Long, lda: Int,
-                B: DenseMatrix, ldb: Int,beta: Double,C: Long, ldc: Int, deviceID: Int, ALength: Int): Long = {
-    jniRAPIDSML.dgemmWithDeviceBuffer(transa, transb, m, n, k, alpha, A, lda, B.values, ldb, beta, C, ldc, deviceID, ALength)
+                B: DenseMatrix, ldb: Int,beta: Double, CandRmmBuffer: Array[Long], ldc: Int, deviceID: Int): Unit = {
+    jniRAPIDSML.dgemmWithDeviceBuffer(transa, transb, m, n, k, alpha, A, lda, B.values, ldb, beta, CandRmmBuffer, ldc, deviceID)
   }
 
   /**
