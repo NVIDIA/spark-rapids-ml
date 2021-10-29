@@ -218,7 +218,6 @@ class RapidsPCAModel(
         val dmb = buildRmmMemoryBuffer(CandRmmBuffer.head, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong,
           CandRmmBuffer.last)
         // child column with rows: rows_A * pc.numCols
-
         withResource(new ColumnView(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
           null)) { childColumnView =>
           withResource(Scalar.fromInt(0)) { initValue =>

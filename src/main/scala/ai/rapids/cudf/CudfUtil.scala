@@ -16,6 +16,8 @@
 
 package ai.rapids.cudf
 
+// This hack should be removed after cuDF 21.12 is released.
+// More details: https://github.com/rapidsai/cudf/commit/28d9a5569c411f202680d27c3b4e5b8adb5ad882
 object CudfUtil {
   def buildDeviceMemoryBuffer(address: Long, lengthInBytes: Long): DeviceMemoryBuffer = {
    new DeviceMemoryBuffer(address, lengthInBytes, Cuda.DEFAULT_STREAM)

@@ -274,25 +274,18 @@ JNIEXPORT void Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffer
   jclass jlexception = env->FindClass("java/lang/Exception");
 
   const double* AA = reinterpret_cast<double *> (A);
-
-  rmm::mr::device_memory_resource *mr = rmm::mr::get_current_device_resource();
+  // init cuda stream view from rmm
   auto c_stream = rmm::cuda_stream_view(reinterpret_cast<cudaStream_t>(stream));
 
   auto size_B = env->GetArrayLength(B);
-
-  void* dev_B = mr->allocate(size_B * sizeof(double), c_stream);
-
   auto* host_B = env->GetDoubleArrayElements(B, nullptr);
-  auto cuda_error = cudaMemcpyAsync(dev_B, host_B, size_B * sizeof(double), cudaMemcpyDefault);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error copying B to device");
-  }
+  rmm::device_buffer dev_buff_B = rmm::device_buffer(host_B ,size_B * sizeof(double), c_stream);
 
   auto size_C = m * n;
-  void* dev_C = mr->allocate(size_C * sizeof(double), c_stream);
+  rmm::device_buffer rmmDB_C = rmm::device_buffer(size_C * sizeof(double), c_stream);
 
-  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, AA, lda, (double *)dev_B, ldb, &beta,
-                       (double *)dev_C, ldc, stream);
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb),
+                                         m, n, k, &alpha, AA, lda, (double *)dev_buff_B.data(), ldb, &beta, (double *)rmmDB_C.data(), ldc, stream);
 
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
@@ -300,24 +293,14 @@ JNIEXPORT void Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithDeviceBuffer
 
   auto* host_C = env->GetLongArrayElements(rmmBufferC, nullptr);
 
-  // size of C is small, it's fine to do the copy
-  void* trans_dev_C;
-  trans_dev_C = mr->allocate(size_C * sizeof(double), c_stream);
+  auto rmmDB_C_trans = std::make_unique<rmm::device_buffer>(size_C * sizeof(double), c_stream);
 
-  transposeData<<<1, 1>>>(dev_C, trans_dev_C, m, n);
+  transposeData<<<1, 1>>>(rmmDB_C.data(), rmmDB_C_trans.get()->data(), m, n);
 
-  rmm::device_buffer rmmDB_C = rmm::device_buffer(trans_dev_C, size_C*sizeof(double), c_stream, mr);
-
-  host_C[0] = (jlong)trans_dev_C;
-  host_C[1] = (jlong)&rmmDB_C;
-
-  cuda_error = cudaFree(dev_B);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error freeing B from device");
-  }
+  host_C[0] = (jlong)rmmDB_C_trans.get()->data();
+  host_C[1] = reinterpret_cast<jlong> (rmmDB_C_trans.release());
 
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
-
   env->ReleaseLongArrayElements(rmmBufferC, host_C, 0);
 }
 
