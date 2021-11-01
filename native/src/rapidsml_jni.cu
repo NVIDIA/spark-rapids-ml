@@ -254,11 +254,6 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error freeing C from device");
   }
 
-  // status = cublasDestroy(handle);
-  // if (status != CUBLAS_STATUS_SUCCESS) {
-  //   env->ThrowNew(jlexception, "Error destroying cuBLAS handle");
-  // }
-
   env->ReleaseDoubleArrayElements(A, host_A, JNI_ABORT);
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
   env->ReleaseDoubleArrayElements(C, host_C, 0);
