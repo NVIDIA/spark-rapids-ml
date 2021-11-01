@@ -15,7 +15,15 @@
 #=============================================================================
 cmake_minimum_required(VERSION 3.20)
 
+file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-21.10/RAPIDS.cmake
+     ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+
+include(rapids-cuda)
+
 project(CUML_JNI LANGUAGES CXX CUDA C)
+
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w --expt-extended-lambda --expt-relaxed-constexpr")
 
 # Build options.
 option(PER_THREAD_DEFAULT_STREAM "Build with per-thread default stream" ON)
