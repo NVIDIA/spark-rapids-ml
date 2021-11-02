@@ -206,35 +206,12 @@ class RapidsPCAModel(
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
         val rows_A = input.getRowCount.toInt
-        val resChildCView = input.getChildColumnView(0)
-        val childData = resChildCView.getData
-        val AdevAddr = childData.getAddress
-        // first value: device address, seconds value: host rmm buffer address
-        val CandRmmBuffer: Array[Long] = Array(0, 0)
-        // A: Device buffer address with raw data, B: pc, C: output
-        RAPIDSML.gemmWithDeviceBuffer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
-          RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,
-          rows_A, pc.numCols, cols_A, 1.0, AdevAddr, cols_A, pc, cols_A, 0.0, CandRmmBuffer, rows_A, gpu)
-        val dmb = buildRmmMemoryBuffer(CandRmmBuffer.head, (rows_A * pc.numCols * DType.FLOAT64.getSizeInBytes).toLong,
-          CandRmmBuffer.last)
-        // child column with rows: rows_A * pc.numCols
-        withResource(new ColumnView(DType.FLOAT64, rows_A * pc.numCols, Optional.of(0), dmb,
-          null)) { childColumnView =>
-          withResource(Scalar.fromInt(0)) { initValue =>
-            withResource(Scalar.fromInt(pc.numCols)) { stepValue =>
-              // 1 more row for offset CV
-              withResource(ColumnVector.sequence(initValue, stepValue, rows_A +1)) { offsetCV =>
-                val toClose = new java.util.ArrayList[DeviceMemoryBuffer]()
-                toClose.add(dmb)
-                val childHandles = Array(childColumnView.getNativeView)
-                val offsetDMB = offsetCV.getData.sliceWithCopy(0,
-                  offsetCV.getRowCount * DType.INT32.getSizeInBytes)
-                new ColumnVector(DType.LIST, rows_A.toLong, Optional.of(0), null, null,
-                  offsetDMB, toClose, childHandles)
-              }
-            }
-          }
-        }
+        val childCViewNative = input.getChildColumnView(0).getNativeView
+        val C : Array[Long] =  Array(0);
+        RAPIDSML.gemmWithColumnViewPointer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
+          RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,rows_A, pc.numCols, cols_A, 1.0, childCViewNative, cols_A, pc,
+          cols_A, 0.0, C, rows_A, gpu)
+        new ColumnVector(C.head)
       }
 
       override def apply(v1: mutable.WrappedArray[Double]): Array[Double] = {
