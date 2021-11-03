@@ -31,6 +31,11 @@
 #include <stdlib.h>
 #include <cudf/column/column.hpp>
 #include <cudf/column/column_view.hpp>
+#include <cudf/scalar/scalar_factories.hpp>
+#include <cudf/utilities/type_dispatcher.hpp>
+#include <cudf/lists/lists_column_view.hpp>
+#include <cudf/column/column_factories.hpp>
+#include <cudf/detail/sequence.hpp>
 
 struct java_domain {
   static constexpr char const *name{"Java"};
@@ -319,29 +324,31 @@ JNIEXPORT void Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewPo
   auto size_C = m * n;
   rmm::device_buffer rmmDB_C = rmm::device_buffer(size_C * sizeof(double), c_stream);
 
+  //create child column that will own the computation result
+  auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
+  auto child_mutable_view = child_column-> mutable_view();
   auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb),
-                                         m, n, k, &alpha, A_cv_ptr->data<double>(), lda, (double *)dev_buff_B.data(), ldb, &beta, (double *)rmmDB_C.data(), ldc, stream);
+                                         m, n, k, &alpha, A_cv_ptr->data<double>(), lda, (double *)child_mutable_view.data<double>(),
+                                         ldb, &beta, (double *)rmmDB_C.data(), ldc, stream);
 
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
   }
 
-  auto child_view = std::make_unique<cudf::column_view>(cudf::type_id::FLOAT64, size_C, rmmDB_C.data());
-  auto child_column = std::make_unique<cudf::column>(child_view, c_stream);
   // create offset column
   auto zero = cudf::make_numeric_scalar(cudf::data_type(cudf::type_id::INT32));
   zero->set_valid_async(true);
+  using ScalarType = cudf::scalar_type_t<cudf::size_type>;
   static_cast<ScalarType *>(zero.get())->set_value(0);
   auto step = cudf::make_numeric_scalar(cudf::data_type(cudf::type_id::INT32));
   step->set_valid_async(true);
   static_cast<ScalarType *>(zero.get())->set_value(n);
-  std::unique_ptr<cudf::column> offset_column = cudf::sequence(m+1, initial_val, step, rmm::mr::get_current_device_resource());
+  std::unique_ptr<cudf::column> offset_column = cudf::sequence(m+1, *zero.get(), *step.get(), rmm::mr::get_current_device_resource());
 
   auto target_column = cudf::make_lists_column(m, std::move(offset_column), std::move(child_column), 0, rmm::device_buffer());
 
   auto* host_C = env->GetLongArrayElements(C, nullptr);
   host_C[0] = reinterpret_cast<jlong> (target_column.release());
-  // auto target_column = std::make_unique<cudf::column>(cudf::type_id::LIST, m, nullptr, child_column_vec);
 
   env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
   env->ReleaseLongArrayElements(C, host_C, 0);

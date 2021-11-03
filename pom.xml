@@ -365,7 +365,7 @@
                                     <arg line="-S ${basedir}/native/ -B ${project.build.directory}/native -GNinja"/>
                                 </exec>
                                 <exec executable="ninja" dir="${project.build.directory}/native" failonerror="true">
-                                    <arg line="-v"/>
+                                    <arg line="-v -j 2"/>
                                 </exec>
                             </target>
                         </configuration>

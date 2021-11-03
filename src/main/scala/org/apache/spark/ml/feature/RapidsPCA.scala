@@ -16,7 +16,6 @@
 
 package org.apache.spark.ml.feature
 
-import ai.rapids.cudf.CudfUtil.buildRmmMemoryBuffer
 import com.nvidia.spark.RapidsUDF
 import org.apache.hadoop.fs.Path
 import org.apache.spark.ml._
@@ -27,11 +26,9 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.StructType
-import ai.rapids.cudf.{ColumnVector, ColumnView, DType, DeviceMemoryBuffer, Scalar}
-import com.nvidia.spark.rapids.Arm
+import ai.rapids.cudf.ColumnVector
 import org.apache.spark.TaskContext
 
-import java.util.Optional
 import scala.collection.mutable
 
 trait RapidsPCAParams extends PCAParams {
@@ -196,7 +193,7 @@ class RapidsPCAModel(
      * UDF class to speedup transform process of PCA
      */
     class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]]
-      with RapidsUDF with Serializable with Arm {
+      with RapidsUDF with Serializable {
       override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
         val gpu = if (gpuIdBC.value == -1) {
           TaskContext.get().resources()("gpu").addresses(0).toInt
