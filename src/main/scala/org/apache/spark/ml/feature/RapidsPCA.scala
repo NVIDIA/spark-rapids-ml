@@ -26,8 +26,8 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.StructType
-import ai.rapids.cudf.ColumnVector
 import org.apache.spark.TaskContext
+import ai.rapids.cudf.ColumnVector
 
 import scala.collection.mutable
 
