@@ -31,11 +31,11 @@
 #include <stdlib.h>
 #include <cudf/column/column.hpp>
 #include <cudf/column/column_view.hpp>
-#include <cudf/scalar/scalar_factories.hpp>
-#include <cudf/utilities/type_dispatcher.hpp>
-#include <cudf/lists/lists_column_view.hpp>
 #include <cudf/column/column_factories.hpp>
 #include <cudf/detail/sequence.hpp>
+#include <cudf/lists/lists_column_view.hpp>
+#include <cudf/scalar/scalar_factories.hpp>
+#include <cudf/utilities/type_dispatcher.hpp>
 
 struct java_domain {
   static constexpr char const *name{"Java"};
