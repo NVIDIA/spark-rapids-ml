@@ -73,10 +73,9 @@ private[spark] object RAPIDSML extends Serializable {
     jniRAPIDSML.dgemm(transa, transb, m, n, k, alpha, A.values, lda, B.values, ldb, beta, C.values, ldc, deviceID)
   }
 
-  def gemmWithColumnViewPointer(transa: Int, transb: Int, m: Int, n: Int, k: Int, alpha: Double, A: Long, lda: Int,
-                                B: DenseMatrix, ldb: Int,beta: Double, C: Array[Long], ldc: Int,
-                                deviceID: Int): Unit = {
-    jniRAPIDSML.dgemmWithColumnViewPointer(transa, transb, m, n, k, alpha, A, lda, B.values, ldb, beta, C, ldc, deviceID)
+  def gemmWithColumnViewPointer(transa: Int, transb: Int, m: Int, n: Int, k: Int, alpha: Double, A: DenseMatrix,
+                                lda: Int, B: Long, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
+    jniRAPIDSML.dgemmWithColumnViewPointer(transa, transb, m, n, k, alpha, A.values, lda, B, ldb, beta, ldc, deviceID)
   }
 
   /**

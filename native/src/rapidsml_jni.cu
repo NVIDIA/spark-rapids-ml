@@ -103,17 +103,6 @@ cublasOperation_t convertToCublasOpEnum(int int_type)
       break;
   }
 }
-
-// TODO: optimize for GPU
-__global__ void transposeData(void* in, void* out, int rows, int cols){
-  double* d_in = (double*) in;
-  double* d_out = (double*) out;
-  for (auto i=0; i < rows; i++) {
-    for (auto j = 0; j < cols; j++) {
-      d_out[i*cols + j] = d_in[j*rows + i];
-    }
-  }
-}
 } // anonymous namespace
 
 extern "C" {
@@ -217,7 +206,6 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
-  // raft_handle.get_cublas_handle();
 
   auto size_A = env->GetArrayLength(A);
   auto size_B = env->GetArrayLength(B);
@@ -286,54 +274,44 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
   env->ReleaseDoubleArrayElements(C, host_C, 0);
 }
 
-JNIEXPORT void Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewPointer(JNIEnv *env, jclass, jint transa, jint transb, jint m, jint n,
-                                                                                      jint k, jdouble alpha, jlong A, jint lda, jdoubleArray B,
-                                                                                      jint ldb, jdouble beta, jlongArray C, jint ldc, jint deviceID)
+JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewPointer(JNIEnv *env, jclass, jint transa, jint transb, jint m, jint n,
+                                                                                      jint k, jdouble alpha, jdoubleArray A, jint lda, jlong B,
+                                                                                      jint ldb, jdouble beta, jint ldc, jint deviceID)
 {
   cudaSetDevice(deviceID);
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
-  jclass jlexception = env->FindClass("java/lang/Exception");
 
   try {
-    cudf::column_view *A_cv_ptr = reinterpret_cast<cudf::column_view *>(A);
+    cudf::column_view *B_cv_ptr = reinterpret_cast<cudf::column_view *>(B);
     // init cuda stream view from rmm
     auto c_stream = rmm::cuda_stream_view(reinterpret_cast<cudaStream_t>(stream));
 
-    auto size_B = env->GetArrayLength(B);
-    auto *host_B = env->GetDoubleArrayElements(B, nullptr);
-    rmm::device_buffer dev_buff_B = rmm::device_buffer(host_B, size_B * sizeof(double), c_stream);
+    auto size_A = env->GetArrayLength(A);
+    auto *host_A = env->GetDoubleArrayElements(A, nullptr);
+    rmm::device_buffer dev_buff_A = rmm::device_buffer(host_A, size_A * sizeof(double), c_stream);
     auto size_C = m * n;
-    rmm::device_buffer rmmDB_C = rmm::device_buffer(size_C * sizeof(double), c_stream);
-
     //create child column that will own the computation result
     auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
     auto child_mutable_view = child_column->mutable_view();
     auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb),
-                                           m, n, k, &alpha, A_cv_ptr->data<double>(), lda, (double *)child_mutable_view.data<double>(),
-                                           ldb, &beta, (double *)rmmDB_C.data(), ldc, stream);
+                                           m, n, k, &alpha, (double *)dev_buff_A.data(), lda, (double *)B_cv_ptr->data<double>(),
+                                           ldb, &beta, (double *)child_mutable_view.data<double>(), ldc, stream);
 
     if (status != CUBLAS_STATUS_SUCCESS) {
-      env->ThrowNew(jlexception, "Error calling cublasDgemm");
+      throw_java_exception(env, RUNTIME_ERROR_CLASS, "cublasgemm failed");
     }
 
     // create offset column
-    auto zero = cudf::make_numeric_scalar(cudf::data_type(cudf::type_id::INT32));
-    zero->set_valid_async(true);
-    using ScalarType = cudf::scalar_type_t<cudf::size_type>;
-    static_cast<ScalarType *>(zero.get())->set_value(0);
-    auto step = cudf::make_numeric_scalar(cudf::data_type(cudf::type_id::INT32));
-    step->set_valid_async(true);
-    static_cast<ScalarType *>(zero.get())->set_value(n);
-    std::unique_ptr<cudf::column> offset_column = cudf::sequence(m + 1, *zero.get(), *step.get(), rmm::mr::get_current_device_resource());
+    auto zero = cudf::numeric_scalar<int32_t>(0, true, c_stream);
+	  auto step = cudf::numeric_scalar<int32_t>(m, true, c_stream);
+    std::unique_ptr<cudf::column> offset_column = cudf::sequence(n + 1, zero, step, rmm::mr::get_current_device_resource());
 
-    auto target_column = cudf::make_lists_column(m, std::move(offset_column), std::move(child_column), 0, rmm::device_buffer());
+    auto target_column = cudf::make_lists_column(n, std::move(offset_column), std::move(child_column), 0, rmm::device_buffer());
 
-    auto *host_C = env->GetLongArrayElements(C, nullptr);
-    host_C[0] = reinterpret_cast<jlong>(target_column.release());
+    env->ReleaseDoubleArrayElements(A, host_A, JNI_ABORT);
 
-    env->ReleaseDoubleArrayElements(B, host_B, JNI_ABORT);
-    env->ReleaseLongArrayElements(C, host_C, 0);
+    return reinterpret_cast<jlong>(target_column.release());
   }
   catch (std::bad_alloc const &e) {
     auto msg = std::string("Unable to allocate native memory: ") +

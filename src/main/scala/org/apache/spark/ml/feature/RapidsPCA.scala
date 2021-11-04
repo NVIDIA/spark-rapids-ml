@@ -195,6 +195,7 @@ class RapidsPCAModel(
     class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]]
       with RapidsUDF with Serializable {
       override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
+        logDebug("==========using GPU transform==========")
         val gpu = if (gpuIdBC.value == -1) {
           TaskContext.get().resources()("gpu").addresses(0).toInt
         } else {
@@ -204,14 +205,29 @@ class RapidsPCAModel(
         val input = args.head
         val rows_A = input.getRowCount.toInt
         val childCViewNative = input.getChildColumnView(0).getNativeView
-        val C : Array[Long] =  Array(0);
-        RAPIDSML.gemmWithColumnViewPointer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
-          RAPIDSML.CublasOperationT.CUBLAS_OP_N.id,rows_A, pc.numCols, cols_A, 1.0, childCViewNative, cols_A, pc,
-          cols_A, 0.0, C, rows_A, gpu)
-        new ColumnVector(C.head)
+        // Due to the layout of LIST type ColumnVecotr, cublas gemm function should return the transposed result matrix
+        // for compatibility. e.g. an expected output matrix(actually a columnar vector)
+        // [1,2]
+        // [3,4]
+        // [5,6]
+        // it's memory data layout from Cublas GEMM is [1,3,5,2,4,6]. It will be displayed in LIST ColumnVector as :
+        // [1,3]
+        // [5,2]
+        // [4,6]
+        // To fill the gap between native memory and CV data storage, we consider the following nature:
+        // when A * B = C, we get BT * AT = CT. (T means transpose). In this case the output matrix becomes:
+        // [1,3,5]
+        // [2,4,6]
+        // whose memory data layout is [1,2,3,4,5,6]. Then it can be comsumed by CV directly.
+        //
+        val C = RAPIDSML.gemmWithColumnViewPointer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
+          RAPIDSML.CublasOperationT.CUBLAS_OP_N.id, pc.numCols, rows_A, cols_A, 1.0, pc,
+          cols_A, childCViewNative, cols_A, 0.0, pc.numCols, gpu)
+        new ColumnVector(C)
       }
 
       override def apply(v1: mutable.WrappedArray[Double]): Array[Double] = {
+        logDebug("==========using CPU transform==========")
         pc.transpose.multiply(Vectors.dense(v1.toArray)).toArray
       }
     }

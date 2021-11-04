@@ -65,7 +65,7 @@ public final class JniRAPIDSML {
 
   public native void dgemm(int transa, int transb, int m, int n, int k, double alpha, double[] A, int lda, double[] B,
                            int ldb, double beta, double[] C, int ldc, int deviceID);
-  public native void dgemmWithColumnViewPointer(int transa, int transb, int m, int n, int k, double alpha, long A, int lda, double[] B,
-                                           int ldb, double beta, long[] C, int ldc, int deviceID);
+  public native long dgemmWithColumnViewPointer(int transa, int transb, int m, int n, int k, double alpha, double[] A,
+                                                int lda, long B, int ldb, double beta, int ldc, int deviceID);
   public native void calSVD(int m, double[] A, double[] U, double[] S, int deviceID);
 }
