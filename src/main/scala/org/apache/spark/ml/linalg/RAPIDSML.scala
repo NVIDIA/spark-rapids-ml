@@ -73,6 +73,23 @@ private[spark] object RAPIDSML extends Serializable {
     jniRAPIDSML.dgemm(transa, transb, m, n, k, alpha, A.values, lda, B.values, ldb, beta, C.values, ldc, deviceID)
   }
 
+  /**
+   *
+   * @param transa int type representing the operation op(A) that is non- or (conj.) transpose.
+   * @param transb int type representing the operation op(B) that is non- or (conj.) transpose.
+   * @param m number of rows of matrix op(A) and C.
+   * @param n number of columns of matrix op(B) and C.
+   * @param k number of columns of op(A) and rows of op(B).
+   * @param alpha scalar used for multiplication.
+   * @param A array of dimensions lda x k with lda>=max(1,m) if transa == CUBLAS_OP_N and lda x m with lda>=max(1,k) otherwise.
+   * @param lda leading dimension of two-dimensional array used to store the matrix A.
+   * @param B array of dimension ldb x n with ldb>=max(1,k) if transb == CUBLAS_OP_N and ldb x k with ldb>=max(1,n) otherwise.
+   * @param ldb leading dimension of two-dimensional array used to store matrix B.
+   * @param beta scalar used for multiplication. If beta==0, C does not have to be a valid input.
+   * @param ldc leading dimension of a two-dimensional array used to store the matrix C.
+   * @param deviceID the device that will run the computation
+   * @return handle to the output LIST type ColumnVector
+   */
   def gemmWithColumnViewPointer(transa: Int, transb: Int, m: Int, n: Int, k: Int, alpha: Double, A: DenseMatrix,
                                 lda: Int, B: Long, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
     jniRAPIDSML.dgemmWithColumnViewPointer(transa, transb, m, n, k, alpha, A.values, lda, B, ldb, beta, ldc, deviceID)

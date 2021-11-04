@@ -219,7 +219,6 @@ class RapidsPCAModel(
         // [1,3,5]
         // [2,4,6]
         // whose memory data layout is [1,2,3,4,5,6]. Then it can be comsumed by CV directly.
-        //
         val C = RAPIDSML.gemmWithColumnViewPointer(RAPIDSML.CublasOperationT.CUBLAS_OP_T.id,
           RAPIDSML.CublasOperationT.CUBLAS_OP_N.id, pc.numCols, rows_A, cols_A, 1.0, pc,
           cols_A, childCViewNative, cols_A, 0.0, pc.numCols, gpu)
