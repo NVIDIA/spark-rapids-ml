@@ -185,8 +185,6 @@ class RapidsPCAModel(
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
-    val cols_A = dataset.select($(transformInputCol)).first.get(0)
-      .asInstanceOf[mutable.WrappedArray[Double]].size
     val gpuIdBC = dataset.rdd.context.broadcast(getGpuId)
 
     /**
@@ -203,14 +201,13 @@ class RapidsPCAModel(
         }
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
-        val rows_A = input.getRowCount.toInt
-        val childCViewNative = input.getChildColumnView(0).getNativeView
-        // Due to the layout of LIST type ColumnVecotr, cublas gemm function should return the transposed result matrix
-        // for compatibility. e.g. an expected output matrix(actually a columnar vector)
+        val input_rows = input.getRowCount.toInt
+        // Due to the layout of LIST type ColumnVector, cublas gemm function should return the transposed result matrix
+        // for compatibility. e.g. an expected output matrix(actually a columnar vector of LIST type)
         // [1,2]
         // [3,4]
         // [5,6]
-        // it's memory data layout from Cublas GEMM is [1,3,5,2,4,6]. It will be displayed in LIST ColumnVector as :
+        // its memory data layout from Cublas GEMM is [1,3,5,2,4,6]. However, it will be displayed in LIST ColumnVector as :
         // [1,3]
         // [5,2]
         // [4,6]
@@ -219,9 +216,7 @@ class RapidsPCAModel(
         // [1,3,5]
         // [2,4,6]
         // whose memory data layout is [1,2,3,4,5,6]. Then it can be comsumed by CV directly.
-        val C = RAPIDSML.gemmWithColumnViewPointer(RAPIDSML.CublasOperationT.CUBLAS_OP_T,
-          RAPIDSML.CublasOperationT.CUBLAS_OP_N, pc.numCols, rows_A, cols_A, 1.0, pc.values,
-          cols_A, childCViewNative, cols_A, 0.0, pc.numCols, gpu)
+        val C = RAPIDSML.gemmWithColumnViewPointer(pc, input, input_rows ,gpu)
         new ColumnVector(C)
       }
 

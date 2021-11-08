@@ -19,11 +19,12 @@ file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-21.
      ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
 include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
 
+include(rapids-cmake)
 include(rapids-cuda)
+include(rapids-find)
+
 rapids_cuda_init_architectures(SPARK_RAPIDS_ML)
 project(SPARK_RAPIDS_ML LANGUAGES CXX CUDA C)
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w --expt-extended-lambda --expt-relaxed-constexpr")
 
 # Build options.
 option(PER_THREAD_DEFAULT_STREAM "Build with per-thread default stream" ON)

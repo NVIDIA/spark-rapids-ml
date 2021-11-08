@@ -16,6 +16,9 @@
 find_package(rmm 21.12.00)
 find_package(Thrust)
 
+# Install cuDF nightly via Conda, only for local development, will remove in CI.
+find_package(cudf)
+
 set (CMAKE_CUDA_FLAGS "--extended-lambda")
 
 if(DEFINED ENV{RAFT_PATH})
@@ -52,34 +55,15 @@ if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
 endif()
 
 include(${CPM_DOWNLOAD_LOCATION})
+#################################################################################################
 
-###################################################################################################
-
-####################################################################################################
-# - cudf -------------------------------------------------------------------------------------------
-
-# Ensure CUDA runtime is dynamic despite statically linking Arrow in libcudf
-set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
-
-CPMAddPackage(NAME  cudf
+# pull cuDF sources, to use jni_utils.hpp
+# cmake options should be added here for CI build.
+CPMAddPackage(NAME cudf
         VERSION         "21.12.00"
         GIT_REPOSITORY  https://github.com/rapidsai/cudf.git
         GIT_TAG         branch-21.12
-        GIT_SHALLOW     TRUE
-        SOURCE_SUBDIR   cpp
-        OPTIONS         "BUILD_TESTS OFF"
-                        "BUILD_BENCHMARKS OFF"
-                        "CUDF_USE_ARROW_STATIC ON"
-                        "JITIFY_USE_CACHE ON"
-                        "CUDA_STATIC_RUNTIME OFF"
-                        "DISABLE_DEPRECATION_WARNING ON"
-                        "AUTO_DETECT_CUDA_ARCHITECTURES OFF"
-                        "CMAKE_CUDA_ARCHITECTURES ALL"
-                        "CUDF_ENABLE_ARROW_S3 OFF"
-    )
-
-###################################################################################################
-
+)
 
 add_library(rapidsml_jni SHARED rapidsml_jni.cu)
 target_include_directories(rapidsml_jni PRIVATE "$ENV{RMM_PATH}/include/rmm"
@@ -87,6 +71,7 @@ target_include_directories(rapidsml_jni PRIVATE "$ENV{RMM_PATH}/include/rmm"
                                     "${CUDAToolkit_INCLUDE_DIRS}"
                                     "$ENV{RAFT_PATH}/cpp/include"
                                     "${CMAKE_SOURCE_DIR}/src/utils"
+                                    "${cudf_SOURCE_DIR}/java/src/main/native/include"
                                     )
 
 target_link_libraries(rapidsml_jni PRIVATE CUDA::cusolver CUDA::cudart CUDA::cublas rmm::rmm cudf::cudf)

@@ -36,6 +36,7 @@
 #include <cudf/lists/lists_column_view.hpp>
 #include <cudf/scalar/scalar_factories.hpp>
 #include <cudf/utilities/type_dispatcher.hpp>
+// #include "jni_utils.hpp"
 
 struct java_domain {
   static constexpr char const *name{"Java"};
@@ -283,7 +284,8 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewP
   cudaStream_t stream = raft_handle.get_stream();
 
   try {
-    cudf::column_view const *B_cv_ptr = reinterpret_cast<cudf::column_view const *>(B);
+    auto const *B_cv_ptr = reinterpret_cast<cudf::lists_column_view const *>(B);
+    auto const child_column_view = B_cv_ptr->child();
     // init cuda stream view from rmm
     auto c_stream = rmm::cuda_stream_view(reinterpret_cast<cudaStream_t>(stream));
 
@@ -295,7 +297,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewP
     auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
     auto child_mutable_view = child_column->mutable_view();
     auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb),
-                                           m, n, k, &alpha, (double const *)dev_buff_A.data(), lda, B_cv_ptr->data<double>(),
+                                           m, n, k, &alpha, (double const *)dev_buff_A.data(), lda, child_column_view.data<double>(),
                                            ldb, &beta, child_mutable_view.data<double>(), ldc, stream);
 
     if (status != CUBLAS_STATUS_SUCCESS) {
