@@ -33,7 +33,7 @@ Besides, we provide some switch APIs to allow users to highly customize their tr
 ```scala
   .useGemm(true) // or false, default: true. Switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
   .useCuSolverSVD(true) // or false, default: true. Switch to use original LAPack solver or cuSolver to compute SVD
-  .meanCentering(true) // or false, default: true. Wwitch to do mean centering or not before computing covariance matrix
+  .meanCentering(true) // or false, default: true. Switch to do mean centering or not before computing covariance matrix
 ```
 ## Build
 
