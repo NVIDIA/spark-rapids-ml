@@ -24,7 +24,8 @@ import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.mllib.random.RandomRDDs
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Row, functions}
+import org.apache.spark.sql.functions.col
 
 class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
 
@@ -36,42 +37,6 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
     val explainedVariance = Vectors.dense(0.5, 0.5).asInstanceOf[DenseVector]
     val model = new RapidsPCAModel("pca", mat, explainedVariance)
     ParamsSuite.checkParams(model)
-  }
-
-  test("pca using spr") {
-    val data = Array(
-      Vectors.dense(2.0, 0.0, 3.0, 4.0, 5.0),
-      Vectors.sparse(5, Seq((1, 1.0), (3, 7.0))),
-      Vectors.dense(4.0, 0.0, 0.0, 6.0, 7.0)
-    )
-
-    val dataRDD = sc.parallelize(data, 2)
-
-    val mat = new RowMatrix(dataRDD.map(OldVectors.fromML))
-    val pc = mat.computePrincipalComponents(3)
-    val expected = mat.multiply(pc).rows.map(_.asML)
-
-    val df = dataRDD.zip(expected).toDF("features", "expected")
-
-    val pca = new PCA()
-        .setInputCol("features")
-        .setOutputCol("pca_features")
-        .setK(3)
-        .setUseGemm(false)
-      .setUseCuSolverSVD(false)
-        .setGpuId(0)
-
-    val pcaModel = pca.fit(df)
-    val transformed = pcaModel.transform(df)
-    transformed.collect()
-    checkVectorSizeOnDF(transformed, "pca_features", pcaModel.getK)
-
-    MLTestingUtils.checkCopyAndUids(pca, pcaModel)
-    testTransformer[(Vector, Vector)](df, pcaModel, "pca_features", "expected") {
-      case Row(result: Vector, expected: Vector) =>
-        assert(result ~== expected absTol 1e-5,
-          "Transformed vector is different with expected vector.")
-    }
   }
 
   // cannot run with transform as the output column is not vector now.
@@ -90,14 +55,12 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
 
     val dataRDD = sc.parallelize(data, 2)
     val dataRDD_transform = sc.parallelize(data_transform,2)
-    dataRDD_transform.toDF().printSchema()
 
     val mat = new RowMatrix(dataRDD.map(OldVectors.fromML))
     val pc = mat.computePrincipalComponents(3)
     val expected = mat.multiply(pc).rows.map(_.asML)
 
     val test  = dataRDD_transform.zip(dataRDD)
-//    test.printSchema()
     val df = test.zip(expected).map( x => {
       (x._1._1, x._1._2, x._2)
     }).toDF("transform_features", "features", "expected")
@@ -113,14 +76,19 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
 
     val pcaModel = pca.fit(df)
     val transformed = pcaModel.transform(df)
-    checkVectorSizeOnDF(transformed, "pca_features", pcaModel.getK)
-
     MLTestingUtils.checkCopyAndUids(pca, pcaModel)
-    testTransformer[(Vector, Vector)](df, pcaModel, "pca_features", "expected") {
-      case Row(result: Vector, expected: Vector) =>
-        assert(result ~== expected absTol 1e-5,
-          "Transformed vector is different with expected vector.")
+    val convertToVector = functions.udf((array: Seq[Float]) => {
+      Vectors.dense(array.map(_.toDouble).toArray)
+    })
+    val vectorDf = transformed.withColumn("pca_features_vec", convertToVector(col("pca_features")))
+    vectorDf.collect()
+    val vec_col = vectorDf.select("pca_features_vec").rdd.map {
+      case Row(v: Vector) => v
     }
+    vec_col.zip(expected).map(tuple =>{
+      assert(tuple._1 ~== tuple._2 absTol 1e-5,
+        "Transformed vector is different with expected vector.")
+    })
   }
 
   test("pca using cuSolver") {
@@ -148,23 +116,17 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
     checkVectorSizeOnDF(transformed, "pca_features", pcaModel.getK)
 
     MLTestingUtils.checkCopyAndUids(pca, pcaModel)
-    testTransformer[(Vector, Vector)](df, pcaModel, "pca_features", "expected") {
-      case Row(result: Vector, expected: Vector) =>
-        assert(
-          Vectors.dense(result.toArray.map(x=> x.abs))
-          ~==
-          Vectors.dense(expected.toArray.map(x=> x.abs)) absTol 1e-5,
-          "Transformed vector is different with expected vector.")
+
+    val vec_col = transformed.select("pca_features").rdd.map {
+      case Row(v: Vector) => v
     }
-
-    // Use the tolerance for absolute value for each column. Due to the difference output from GPU
-    // TODO:(Allen Xu) update when there's a solution for this
-//    testTransformer[(Vector, Vector)](df, pcaModel, "pca_features", "expected") {
-//      case Row(result: Vector, expected: Vector) =>
-//        assert(result ~== expected absTol 1e-5,
-//          "Transformed vector is different with expected vector.")
-//    }
-
+    vec_col.zip(expected).map(tuple =>{
+      assert(
+        Vectors.dense(tuple._1.toArray.map(x=> x.abs))
+          ~==
+          Vectors.dense(tuple._2.toArray.map(x=> x.abs)) absTol 1e-5,
+        "Transformed vector is different with expected vector.")
+    })
   }
 
   test("dataset with dense vectors and sparse vectors should produce same results") {

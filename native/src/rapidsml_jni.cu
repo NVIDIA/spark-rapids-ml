@@ -21,7 +21,6 @@
 #include <iostream>
 #include <raft/linalg/cublas_wrappers.h>
 #include <raft/linalg/eig.cuh>
-#include <raft/linalg/svd.cuh>
 #include <raft/matrix/matrix.cuh>
 #include <raft/matrix/math.cuh>
 #include <thrust/device_vector.h>
@@ -133,72 +132,8 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_NvtxRange_pop(JNIEnv *env
   // CATCH_STD(env, );
 }
 
-JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dspr(JNIEnv* env, jclass, jint n, jdoubleArray x,
-                                                                      jdoubleArray A) {
-  jclass jlexception = env->FindClass("java/lang/Exception");
-  auto size_A = env->GetArrayLength(A);
-
-  double* dev_x;
-  auto cuda_error = cudaMalloc((void**)&dev_x, n * sizeof(double));
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error allocating device memory for x");
-  }
-
-  double* dev_A;
-  cuda_error = cudaMalloc((void**)&dev_A, size_A * sizeof(double));
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error allocating device memory for A");
-  }
-
-  auto* host_x = env->GetDoubleArrayElements(x, nullptr);
-  cuda_error = cudaMemcpyAsync(dev_x, host_x, n * sizeof(double), cudaMemcpyDefault);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error copying x to device");
-  }
-
-  auto* host_A = env->GetDoubleArrayElements(A, nullptr);
-  cuda_error = cudaMemcpyAsync(dev_A, host_A, size_A * sizeof(double), cudaMemcpyDefault);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error copying A to device");
-  }
-
-  cublasHandle_t handle;
-  auto status = cublasCreate(&handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error creating cuBLAS handle");
-  }
-
-  double alpha = 1.0;
-  status = cublasDspr(handle, CUBLAS_FILL_MODE_UPPER, n, &alpha, dev_x, 1, dev_A);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error calling cublasDspr");
-  }
-
-  cuda_error = cudaMemcpyAsync(host_A, dev_A, size_A * sizeof(double), cudaMemcpyDefault);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error copying A from device");
-  }
-
-  cuda_error = cudaFree(dev_x);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error freeing x from device");
-  }
-
-  cuda_error = cudaFree(dev_A);
-  if (cuda_error != cudaSuccess) {
-    env->ThrowNew(jlexception, "Error freeing A from device");
-  }
-
-  status = cublasDestroy(handle);
-  if (status != CUBLAS_STATUS_SUCCESS) {
-    env->ThrowNew(jlexception, "Error destroying cuBLAS handle");
-  }
-
-  env->ReleaseDoubleArrayElements(x, host_x, JNI_ABORT);
-  env->ReleaseDoubleArrayElements(A, host_A, 0);
-}
-
-JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv* env, jclass, jint transa, jint transb,
+JNIEXPORT void JNICALL JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm__IIIIID_3DI_3DID_3DII(
+                                                                        JNIEnv* env, jclass, jint transa, jint transb,
                                                                         jint m, jint n, jint k, jdouble alpha,
                                                                         jdoubleArray A, jint lda, jdoubleArray B,
                                                                         jint ldb, jdouble beta, jdoubleArray C, jint ldc, jint deviceID) {
@@ -275,7 +210,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
   env->ReleaseDoubleArrayElements(C, host_C, 0);
 }
 
-JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewPointer(JNIEnv *env, jclass, jint transa, jint transb, jint m, jint n,
+JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm__IIIIID_3DIJIDII(JNIEnv *env, jclass, jint transa, jint transb, jint m, jint n,
                                                                                       jint k, jdouble alpha, jdoubleArray A, jint lda, jlong B,
                                                                                       jint ldb, jdouble beta, jint ldc, jint deviceID)
 {
@@ -287,7 +222,7 @@ JNIEXPORT jlong Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewP
     auto const *B_cv_ptr = reinterpret_cast<cudf::lists_column_view const *>(B);
     auto const child_column_view = B_cv_ptr->child();
     // init cuda stream view from rmm
-    auto c_stream = rmm::cuda_stream_view(reinterpret_cast<cudaStream_t>(stream));
+    auto c_stream = rmm::cuda_stream_view(stream);
 
     auto size_A = env->GetArrayLength(A);
     auto *host_A = env->GetDoubleArrayElements(A, nullptr);

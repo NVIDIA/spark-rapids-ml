@@ -100,9 +100,10 @@ private[spark] object RAPIDSML extends Serializable {
    * @return value of Long type that represents the handle of a LIST type `cudf::column_view *` which is holding the computation output.
    *         It can be used to construct ColumnVector.
    */
-  def gemmWithColumnViewPointer(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: Array[Double],
+  def gemm(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: Array[Double],
                                 lda: Int, B: ColumnView, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
-    jniRAPIDSML.dgemmWithColumnViewPointer(transa.id, transb.id, m, n, k, alpha, A, lda, B.getNativeView, ldb, beta, ldc, deviceID)
+    jniRAPIDSML.dgemm(transa.id, transb.id, m, n, k, alpha, A, lda, B.getNativeView, ldb, beta,
+      ldc, deviceID)
   }
 
   /**
@@ -119,10 +120,9 @@ private[spark] object RAPIDSML extends Serializable {
    * @return value of Long type that represents the handle of a LIST type `cudf::column_view *` which is holding the computation output.
    *         It can be used to construct ColumnVector.
    */
-  def gemmWithColumnViewPointer(A: DenseMatrix, B: ColumnView, n: Int, deviceID: Int): Long = {
-    gemmWithColumnViewPointer(
-      RAPIDSML.CublasOperationT.CUBLAS_OP_T, RAPIDSML.CublasOperationT.CUBLAS_OP_N, A.numCols, n, A.numRows,
-      1.0, A.values, A.numRows, B, A.numRows, 0.0, A.numCols, deviceID)
+  def gemm(A: DenseMatrix, B: ColumnView, deviceID: Int): Long = {
+    gemm(RAPIDSML.CublasOperationT.CUBLAS_OP_T, RAPIDSML.CublasOperationT.CUBLAS_OP_N, A.numCols, B.getRowCount.toInt,
+      A.numRows, 1.0, A.values, A.numRows, B, A.numRows, 0.0, A.numCols, deviceID)
   }
 
   /**

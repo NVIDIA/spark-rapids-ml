@@ -211,12 +211,12 @@ class RapidsPCAModel(
         // [1,3]
         // [5,2]
         // [4,6]
-        // To fill the gap between native memory and CV data storage, we consider the following nature:
-        // when A * B = C, we get BT * AT = CT. (T means transpose). In this case the output matrix becomes:
+        // To fill the gap between native memory and CV(ColumnVector) data storage, we consider the following nature:
+        // if A * B = C, then BT * AT = CT. (T means transpose). In this case the output matrix becomes:
         // [1,3,5]
         // [2,4,6]
-        // whose memory data layout is [1,2,3,4,5,6]. Then it can be comsumed by CV directly.
-        val C = RAPIDSML.gemmWithColumnViewPointer(pc, input, input_rows ,gpu)
+        // whose memory data layout is [1,2,3,4,5,6]. Then it can be consumed by CV directly.
+        val C = RAPIDSML.gemm(pc, input ,gpu)
         new ColumnVector(C)
       }
 
@@ -227,8 +227,9 @@ class RapidsPCAModel(
     }
 
     if (getUseGemm) {
-      val transform_udf = dataset.sparkSession.udf.register("transform", new gpuTransform())
+      val transform_udf = dataset.sparkSession.udf.register("pca_transform", new gpuTransform())
       dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol))))
+
     }
     else {
       val transposed = pc.transpose
