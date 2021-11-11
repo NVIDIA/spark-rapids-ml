@@ -8,7 +8,7 @@
 #include <thrust/execution_policy.h>
 #include <rmm/exec_policy.hpp>
 #include <jni.h>
-#include "ml_utils.cu"
+#include "ml_utils.hpp"
 
 extern "C" {
 

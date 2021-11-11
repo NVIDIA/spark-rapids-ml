@@ -29,11 +29,6 @@
 #include "ml_utils.hpp"
 #include "jni_utils.hpp"
 
-struct java_domain {
-  static constexpr char const *name{"Java"};
-};
-
-
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewPtr(JNIEnv *env, jclass, jint transa, jint transb, jint m, jint n,
