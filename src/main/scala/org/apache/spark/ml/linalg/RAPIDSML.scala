@@ -44,15 +44,6 @@ private[spark] object RAPIDSML extends Serializable {
   }
 
   /**
-   * Adds alpha * v * v.t to a matrix in-place. This is the same as BLAS's ?SPR.
-   *
-   * @param U the upper triangular part of the matrix packed in an array (column major)
-   */
-  def spr(v: DenseVector, U: Array[Double]): Unit = {
-    jniRAPIDSML.dspr(v.size, v.values, U)
-  }
-
-  /**
    * Wrapper of Cublas gemm function. More details: https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-gemm
    *
    * @param transa int type representing the operation op(A) that is non- or (conj.) transpose.
@@ -102,17 +93,13 @@ private[spark] object RAPIDSML extends Serializable {
    */
   def gemm(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: Array[Double],
                                 lda: Int, B: ColumnView, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
-    jniRAPIDSML.dgemm(transa.id, transb.id, m, n, k, alpha, A, lda, B.getNativeView, ldb, beta,
+    jniRAPIDSML.dgemmWithColumnViewPtr(transa.id, transb.id, m, n, k, alpha, A, lda, B.getNativeView, ldb, beta,
       ldc, deviceID)
   }
 
   /**
    * Wrapper for cuBLAS GEMM routine used for PCA transform but with fewer input parameters.
    * Detailed parameters can be inferred from input DenseMatrix.
-   * This wrapper method can be used directly only if:
-   * 1. your A is a LIST type ColumnVector that represents the Matrix A for normal GEMM
-   * 2. your B is a non-transposed DenseMatrix that represents the Matrix B for normal GEMM
-   * 3. You are calculating A * B
    *
    * @param A input DenseMatrix, Here it's the principal components model from PCA training.
    * @param B ColumnView that holds B matrix data on device. Here it's raw data to be transformed by PCA.

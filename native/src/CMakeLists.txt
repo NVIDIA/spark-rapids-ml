@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-find_package(rmm 21.12.00)
-find_package(Thrust)
+
 
 # Install cuDF nightly via Conda, only for local development, will remove in CI.
 find_package(cudf)
@@ -65,8 +64,11 @@ CPMAddPackage(NAME cudf
         GIT_TAG         branch-21.12
 )
 
-add_library(rapidsml_jni SHARED rapidsml_jni.cu)
-target_include_directories(rapidsml_jni PRIVATE "$ENV{RMM_PATH}/include/rmm"
+add_library(rapidsml_jni SHARED rapidsmlJni.cpp
+                                rapidsmlJniRemain.cu
+                                ml_utils.cu
+                                )
+target_include_directories(rapidsml_jni PRIVATE
                                     "${JNI_INCLUDE_DIRS}"
                                     "${CUDAToolkit_INCLUDE_DIRS}"
                                     "$ENV{RAFT_PATH}/cpp/include"
@@ -74,7 +76,7 @@ target_include_directories(rapidsml_jni PRIVATE "$ENV{RMM_PATH}/include/rmm"
                                     "${cudf_SOURCE_DIR}/java/src/main/native/include"
                                     )
 
-target_link_libraries(rapidsml_jni PRIVATE CUDA::cusolver CUDA::cudart CUDA::cublas rmm::rmm cudf::cudf)
+target_link_libraries(rapidsml_jni PRIVATE CUDA::cusolver CUDA::cudart CUDA::cublas cudf::cudf)
 if(PER_THREAD_DEFAULT_STREAM)
   target_compile_definitions(rapidsml_jni PUBLIC CUDA_API_PER_THREAD_DEFAULT_STREAM)
 endif()
