@@ -42,7 +42,7 @@ JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithCol
 {
   try {
     cudf::jni::native_jdoubleArray native_A(env, A);
-    auto ret_column = dgemmWithColumnViewPtr(transa, transb, m, n, k, alpha, native_A.data(), native_A.size(), lda, B, ldb, beta, ldc, deviceID);
+    auto ret_column = dgemm(transa, transb, m, n, k, alpha, native_A.data(), native_A.size(), lda, B, ldb, beta, ldc, deviceID);
     return ret_column;
   }
   catch (std::bad_alloc const &e) {
