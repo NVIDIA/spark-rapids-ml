@@ -50,7 +50,7 @@ void signFlip(
   });
 }
 
-long dgemmWithColumnViewPtr(int transa, int transb, int m, int n,
+long dgemm(int transa, int transb, int m, int n,
                             int k, double alpha, double* A, int size_A, int lda, long B,
                             int ldb, double beta, int ldc, int deviceID) {
     cudaSetDevice(deviceID);
