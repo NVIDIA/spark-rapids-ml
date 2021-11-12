@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <iostream>
 #include <stdlib.h>
+
 #include <cudf/column/column.hpp>
 #include <cudf/column/column_view.hpp>
 #include <cudf/detail/sequence.hpp>
@@ -26,7 +27,7 @@
 #include <cudf/scalar/scalar_factories.hpp>
 #include <cudf/utilities/type_dispatcher.hpp>
 
-#include "ml_utils.hpp"
+#include "rapidsml_jni.hpp"
 #include "jni_utils.hpp"
 
 extern "C" {

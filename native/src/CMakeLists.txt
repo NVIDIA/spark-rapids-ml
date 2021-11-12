@@ -65,8 +65,7 @@ CPMAddPackage(NAME cudf
 )
 
 add_library(rapidsml_jni SHARED rapidsmlJni.cpp
-                                rapidsmlJniRemain.cu
-                                ml_utils.cu
+                                rapidsml_jni.cu
                                 )
 target_include_directories(rapidsml_jni PRIVATE
                                     "${JNI_INCLUDE_DIRS}"
