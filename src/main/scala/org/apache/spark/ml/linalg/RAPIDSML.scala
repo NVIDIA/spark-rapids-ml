@@ -92,9 +92,9 @@ private[spark] object RAPIDSML extends Serializable {
    *         It can be used to construct ColumnVector.
    */
   def gemm(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: Array[Double],
-                                lda: Int, B: ColumnView, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
-    jniRAPIDSML.dgemmWithColumnViewPtr(transa.id, transb.id, m, n, k, alpha, A, lda, B.getNativeView, ldb, beta,
-      ldc, deviceID)
+           lda: Int, B: ColumnView, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
+    jniRAPIDSML.dgemmWithColumnViewPtr(transa.id, transb.id, m, n, k, alpha, A, lda, B.getNativeView, ldb, beta, ldc,
+      deviceID)
   }
 
   /**

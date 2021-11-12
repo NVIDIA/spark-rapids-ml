@@ -70,7 +70,7 @@ public final class JniRAPIDSML {
    * 2. B is a long value that represeents the `cudf::lists_column_view *` holding the matrix data on device
    * 3. an extra deviceID to indicate which GPU device will perform this computation
    */
-  public native long dgemmWithColumnViewPtr(int transa, int transb, int m, int n, int k, double alpha, double[] A, int lda, long B,
-                           int ldb, double beta, int ldc, int deviceID);
+  public native long dgemmWithColumnViewPtr(int transa, int transb, int m, int n, int k, double alpha, double[] A,
+                                            int lda, long B, int ldb, double beta, int ldc, int deviceID);
   public native void calSVD(int m, double[] A, double[] U, double[] S, int deviceID);
 }
