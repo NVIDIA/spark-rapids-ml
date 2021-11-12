@@ -27,8 +27,6 @@
 #include <raft/matrix/matrix.hpp>
 #include <raft/matrix/math.hpp>
 
-#include <rmm/exec_policy.hpp>
-
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 
