@@ -54,6 +54,3 @@ JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithCol
   }
 }
 }  // extern "C"
-
-
-

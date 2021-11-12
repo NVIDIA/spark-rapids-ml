@@ -36,18 +36,6 @@
 
 #include "rapidsml_jni.hpp"
 
-cublasOperation_t convertToCublasOpEnum(int int_type) {
-  switch(int_type) {
-    case 0: return CUBLAS_OP_N;
-    case 1: return CUBLAS_OP_T;
-    case 2: return CUBLAS_OP_C;
-    case 3: return CUBLAS_OP_CONJG;
-    default:
-      throw "Invalid type enum: " + std::to_string(int_type);
-      break;
-  }
-}
-
 void signFlip(
   double* input, int n_rows, int n_cols, double* components, int n_cols_comp, cudaStream_t stream) {
   auto counting = thrust::make_counting_iterator(0);
@@ -74,6 +62,18 @@ void signFlip(
       }
     }
   });
+}
+
+cublasOperation_t convertToCublasOpEnum(int int_type) {
+  switch(int_type) {
+    case 0: return CUBLAS_OP_N;
+    case 1: return CUBLAS_OP_T;
+    case 2: return CUBLAS_OP_C;
+    case 3: return CUBLAS_OP_CONJG;
+    default:
+      throw "Invalid type enum: " + std::to_string(int_type);
+      break;
+  }
 }
 
 long dgemm(int transa, int transb, int m, int n,
