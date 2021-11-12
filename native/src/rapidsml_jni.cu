@@ -76,9 +76,8 @@ cublasOperation_t convertToCublasOpEnum(int int_type) {
   }
 }
 
-long dgemm(int transa, int transb, int m, int n,
-                            int k, double alpha, double* A, int size_A, int lda, long B,
-                            int ldb, double beta, int ldc, int deviceID) {
+long dgemm(int transa, int transb, int m, int n,int k, double alpha, double* A, int size_A, int lda,
+           long B, int ldb, double beta, int ldc, int deviceID) {
     cudaSetDevice(deviceID);
     raft::handle_t raft_handle;
     cudaStream_t stream = raft_handle.get_stream();
@@ -93,15 +92,20 @@ long dgemm(int transa, int transb, int m, int n,
     //create child column that will own the computation result
     auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
     auto child_mutable_view = child_column->mutable_view();
-    auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb),
-                                           m, n, k, &alpha, (double const *)dev_buff_A.data(), lda, child_column_view.data<double>(),
-                                           ldb, &beta, child_mutable_view.data<double>(), ldc, stream);
+    auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
+                                           convertToCublasOpEnum(transa),
+                                           convertToCublasOpEnum(transb),
+                                           m, n, k, &alpha, (double const *)dev_buff_A.data(), lda,
+                                           child_column_view.data<double>(),ldb, &beta,
+                                           child_mutable_view.data<double>(), ldc, stream);
     // create offset column
     auto zero = cudf::numeric_scalar<int32_t>(0, true, c_stream);
     auto step = cudf::numeric_scalar<int32_t>(m, true, c_stream);
-    std::unique_ptr<cudf::column> offset_column = cudf::sequence(n + 1, zero, step, rmm::mr::get_current_device_resource());
+    auto offset_column = cudf::sequence(n + 1, zero, step,
+                                        rmm::mr::get_current_device_resource());
 
-    auto target_column = cudf::make_lists_column(n, std::move(offset_column), std::move(child_column), 0, rmm::device_buffer());
+    auto target_column = cudf::make_lists_column(n, std::move(offset_column),
+                                                 std::move(child_column), 0, rmm::device_buffer());
 
     return reinterpret_cast<long>(target_column.release());
 }
@@ -109,10 +113,14 @@ long dgemm(int transa, int transb, int m, int n,
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv* env, jclass, jint transa, jint transb,
-                                                                        jint m, jint n, jint k, jdouble alpha,
-                                                                        jdoubleArray A, jint lda, jdoubleArray B,
-                                                                        jint ldb, jdouble beta, jdoubleArray C, jint ldc, jint deviceID) {
+JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv* env, jclass,
+                                                                         jint transa, jint transb,
+                                                                         jint m, jint n, jint k,
+                                                                         jdouble alpha,
+                                                                         jdoubleArray A, jint lda,
+                                                                         jdoubleArray B,jint ldb,
+                                                                         jdouble beta, jdoubleArray C,
+                                                                         jint ldc, jint deviceID) {
   cudaSetDevice(deviceID);
   jclass jlexception = env->FindClass("java/lang/Exception");
 
@@ -153,8 +161,10 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error copying B to device");
   }
 
-  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(), convertToCublasOpEnum(transa), convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda, dev_B, ldb, &beta,
-                       dev_C, ldc, stream);
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
+                                         convertToCublasOpEnum(transa),
+                                         convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda,
+                                         dev_B, ldb, &beta, dev_C, ldc, stream);
 
   if (status != CUBLAS_STATUS_SUCCESS) {
     env->ThrowNew(jlexception, "Error calling cublasDgemm");
