@@ -24,8 +24,8 @@
 
 #include <raft/linalg/cublas_wrappers.h>
 #include <raft/linalg/eig.cuh>
-#include <raft/matrix/matrix.cuh>
-#include <raft/matrix/math.cuh>
+#include <raft/matrix/matrix.hpp>
+#include <raft/matrix/math.hpp>
 
 #include <rmm/exec_policy.hpp>
 
