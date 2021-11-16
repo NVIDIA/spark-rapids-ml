@@ -64,7 +64,7 @@ CPMAddPackage(NAME cudf
         GIT_TAG         branch-21.12
 )
 
-add_library(rapidsml_jni SHARED rapidsmlJni.cpp
+add_library(rapidsml_jni SHARED rapidsml_jni.cpp
                                 rapidsml_jni.cu
                                 )
 target_include_directories(rapidsml_jni PRIVATE

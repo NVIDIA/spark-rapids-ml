@@ -44,39 +44,6 @@ trait RapidsPCAParams extends PCAParams {
   def getMeanCentering: Boolean = $(meanCentering)
 
   /**
-   * Whether to use GEMM to compute the covariance matrix.
-   *
-   * @group param
-   */
-  final val useGemm: BooleanParam =
-    new BooleanParam(this, "useGemm", "whether to use GEMM to compute the covariance matrix")
-  setDefault(useGemm, true)
-
-  /** @group getParam */
-  def getUseGemm: Boolean = $(useGemm)
-
-  /**
-   * Set the non-vector input column only for transform usage
-   */
-  final val transformInputCol: Param[String] =
-    new Param(this, "transformInputCol",
-      "Non-vector input column only for transform usage")
-      setDefault(transformInputCol, "")
-  def getTransformInputCol: String = $(transformInputCol)
-
-  /**
-   * Whether to use cuSolver for SVD computation.
-   *
-   * @group param
-   */
-  final val useCuSolverSVD: BooleanParam = new BooleanParam(this, "useCuSolverSVD", "whether to use cuSolver for svd")
-  setDefault(useCuSolverSVD, true)
-
-  /** @group getParam */
-  def getUseCuSolverSVD: Boolean = $(useCuSolverSVD)
-
-
-  /**
    * The GPU ID to use.
    *
    * @group param
@@ -100,9 +67,6 @@ class RapidsPCA(override val uid: String)
   /** @group setParam */
   def setInputCol(value: String): this.type = set(inputCol, value)
 
-  /** @group setTransformInpuCol */
-  def setTransformInputCol(value: String): this.type = set(transformInputCol, value)
-
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
@@ -113,13 +77,6 @@ class RapidsPCA(override val uid: String)
   def setMeanCentering(value: Boolean): this.type = set(meanCentering, value)
 
   /** @group setParam */
-  def setUseGemm(value: Boolean): this.type = set(useGemm, value)
-
-  /** @group setParam */
-  def setUseCuSolverSVD(value: Boolean): this.type = set(useCuSolverSVD, value)
-
-
-  /** @group setParam */
   def setGpuId(value: Int): this.type = set(gpuId, value)
 
   /**
@@ -128,14 +85,9 @@ class RapidsPCA(override val uid: String)
   override def fit(dataset: Dataset[_]): RapidsPCAModel = {
     transformSchema(dataset.schema, logging = true)
 
-    val input = dataset.select($(inputCol)).rdd.map {
-      case Row(v: Vector) => v
-    }
-    val numFeatures = input.first().size
-    require(getK <= numFeatures,
-      s"source vector size $numFeatures must be no less than k=$k")
+    val input = dataset.select($(inputCol))
 
-    val mat = new RapidsRowMatrix(input, $(meanCentering), getUseGemm, getUseCuSolverSVD, $(gpuId))
+    val mat = new RapidsRowMatrix(input, $(meanCentering), $(gpuId))
     val (pc, explainedVariance) = mat.computePrincipalComponentsAndExplainedVariance(getK)
     val model = new RapidsPCAModel(uid, pc, explainedVariance)
     copyValues(model.setParent(this))
@@ -173,9 +125,6 @@ class RapidsPCAModel(
 
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
-
-  /** @group setParam */
-  def setUseGemm(value: Boolean): this.type = set(useGemm, value)
 
   /**
    * Transform a vector by computed Principal Components.
@@ -226,16 +175,9 @@ class RapidsPCAModel(
       }
     }
 
-    if (getUseGemm) {
-      val transform_udf = dataset.sparkSession.udf.register("pca_transform", new gpuTransform())
-      dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol))))
 
-    }
-    else {
-      val transposed = pc.transpose
-      val transformer = udf { vector: Vector => transposed.multiply(vector) }
-      dataset.withColumn($(outputCol), transformer(col($(inputCol))), outputSchema($(outputCol)).metadata)
-    }
+    val transform_udf = dataset.sparkSession.udf.register("pca_transform", new gpuTransform())
+    dataset.withColumn($(outputCol), transform_udf(col($(inputCol))))
   }
 
   override def transformSchema(schema: StructType): StructType = {
