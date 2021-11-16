@@ -16,16 +16,16 @@
 
 package org.apache.spark.ml.linalg.distributed
 
-import ai.rapids.cudf.{ColumnVector, ColumnView, NvtxColor, NvtxRange}
+import ai.rapids.cudf.{ColumnVector, ColumnView, NvtxColor, NvtxRange, Table}
 
 import java.util.{Arrays => JavaArrays}
 import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, svd => brzSvd}
 import breeze.linalg.Matrix._
 import com.nvidia.spark.RapidsUDF
+import com.nvidia.spark.rapids.ColumnarRdd
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.linalg._
 import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
-import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
@@ -48,7 +48,7 @@ class RapidsRowMatrix(
   /** Gets or computes the number of rows. */
   def numRows(): Long = {
     if (nRows <= 0L) {
-      nRows = rows.count()
+      nRows = listColumn.count()
       if (nRows == 0L) {
         sys.error("Cannot determine the number of rows because it is not specified in the " +
             "constructor and the rows RDD is empty.")
@@ -56,8 +56,6 @@ class RapidsRowMatrix(
     }
     nRows
   }
-
-  def num
 
   /**
    * Computes the top k principal components and a vector of proportions of
@@ -113,7 +111,8 @@ class RapidsRowMatrix(
 
   /** Gets or computes the number of columns. */
   def numCols(): Long = {
-    listColumn.first().size
+    nCols = listColumn.first().size
+    nCols
   }
 
   /**
@@ -131,31 +130,21 @@ class RapidsRowMatrix(
     }
     val gpuIdBC = listColumn.rdd.context.broadcast(gpuId)
 
-    class gpuTrain extends Function[mutable.WrappedArray[Double], Array[Double]] with RapidsUDF with Serializable {
-      override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
-        logDebug("==========using GPU train==========")
-        val gpu = if (gpuIdBC.value == -1) {
-          TaskContext.get().resources()("gpu").addresses(0).toInt
-        } else {
-          gpuIdBC.value
-        }
-
-        require(args.length == 1, s"Unexpected argument count: ${args.length}")
-        val input = args.head
-        RAPIDSML.cov(input, numCols().toInt, gpu)
-
-
-
+    val columnarRdd = ColumnarRdd(listColumn)
+    columnarRdd.mapPartitions( iterator => {
+      val gpu = if (gpuIdBC.value == -1) {
+        TaskContext.get().resources()("gpu").addresses(0).toInt
+      } else {
+        gpuIdBC.value
       }
+      // only input column in this table
+      val partition = iterator.toList
+      val bigTable = Table.concatenate(partition: _*)
+      val inputCol = bigTable.getColumn(0)
+      RAPIDSML.cov(inputCol, numCols().toInt, gpu)
 
-      override def apply(v1: mutable.WrappedArray[Double]): Array[Double] = ???
-    }
-
-    val M = {
-
-    }
+    })
 
     gpuIdBC.destroy()
-    M
   }
 }
