@@ -16,9 +16,13 @@
 
 package org.apache.spark.ml.util
 
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.DataFrame
 
 trait RapidsMLTest extends MLTest {
+  override def sparkConf: SparkConf = {
+    super.sparkConf.set("spark.rapids.sql.enabled", "true")
+  }
 
   override def checkVectorSizeOnDF(
       dataframe: DataFrame,

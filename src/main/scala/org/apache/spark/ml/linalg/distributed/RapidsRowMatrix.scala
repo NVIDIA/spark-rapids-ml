@@ -16,10 +16,11 @@
 
 package org.apache.spark.ml.linalg.distributed
 
+import ai.rapids.cudf.{NvtxColor, NvtxRange}
+
 import java.util.{Arrays => JavaArrays}
 import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, svd => brzSvd}
 import breeze.linalg.Matrix._
-import com.nvidia.spark.ml.linalg.{NvtxColor, NvtxRange}
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.linalg._
 import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
