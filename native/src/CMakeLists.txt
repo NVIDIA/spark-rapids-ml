@@ -64,7 +64,8 @@ CPMAddPackage(NAME cudf
         GIT_TAG         branch-21.12
 )
 
-add_library(rapidsml_jni SHARED rapidsmlJni.cpp
+
+add_library(rapidsml_jni SHARED rapidsml_jni.cpp
                                 rapidsml_jni.cu
                                 )
 target_include_directories(rapidsml_jni PRIVATE
@@ -83,6 +84,7 @@ target_link_libraries(rapidsml_jni PRIVATE
                       liblapack_static.a
                       CUDA::cublas
                       cudf::cudf)
+
 if(PER_THREAD_DEFAULT_STREAM)
   target_compile_definitions(rapidsml_jni PUBLIC CUDA_API_PER_THREAD_DEFAULT_STREAM)
 endif()
