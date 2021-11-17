@@ -75,7 +75,15 @@ target_include_directories(rapidsml_jni PRIVATE
                                     "${cudf_SOURCE_DIR}/java/src/main/native/include"
                                     )
 
-target_link_libraries(rapidsml_jni PRIVATE CUDA::cusolver CUDA::cudart CUDA::cublas cudf::cudf)
+target_link_libraries(rapidsml_jni PRIVATE
+                      libcudart_static.a
+                      libcusparse_static.a
+                      libcusolver_static.a
+                      libculibos.a
+                      liblapack_static.a
+                      CUDA::cublas
+                      cudf::cudf)
+
 if(PER_THREAD_DEFAULT_STREAM)
   target_compile_definitions(rapidsml_jni PUBLIC CUDA_API_PER_THREAD_DEFAULT_STREAM)
 endif()

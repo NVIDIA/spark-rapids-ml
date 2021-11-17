@@ -15,7 +15,6 @@
  */
 
 #include <cuda_runtime.h>
-#include <cusolverDn.h>
 
 #include <cudf/column/column_factories.hpp>
 #include <cudf/detail/sequence.hpp>
