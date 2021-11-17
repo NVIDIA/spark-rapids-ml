@@ -29,6 +29,7 @@ import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
+import org.omg.CosNaming.BindingIteratorOperations
 
 import scala.collection.mutable
 
@@ -121,7 +122,7 @@ class RapidsRowMatrix(
    * @return a ColumnView of LIST type, size n x n
    *
    */
-  private def computeCovariance(): ColumnView = {
+  private def computeCovariance(): Long = {
     val meanBC = if (meanCentering) {
       val nvtxRangeMean = new NvtxRange("mean center", NvtxColor.ORANGE)
       // TODO: add proper solution for this
@@ -131,20 +132,24 @@ class RapidsRowMatrix(
     val gpuIdBC = listColumn.rdd.context.broadcast(gpuId)
 
     val columnarRdd = ColumnarRdd(listColumn)
-    columnarRdd.mapPartitions( iterator => {
-      val gpu = if (gpuIdBC.value == -1) {
-        TaskContext.get().resources()("gpu").addresses(0).toInt
-      } else {
-        gpuIdBC.value
-      }
-      // only input column in this table
-      val partition = iterator.toList
-      val bigTable = Table.concatenate(partition: _*)
-      val inputCol = bigTable.getColumn(0)
-      RAPIDSML.cov(inputCol, numCols().toInt, gpu)
-
+    val cov = {
+      columnarRdd.mapPartitions( iterator => {
+        val gpu = if (gpuIdBC.value == -1) {
+          TaskContext.get().resources()("gpu").addresses(0).toInt
+        } else {
+          gpuIdBC.value
+        }
+        // only input column in this table
+        val partition = iterator.toList
+        val bigTable = Table.concatenate(partition: _*)
+        val inputCol = bigTable.getColumn(0)
+        Iterator.single(RAPIDSML.cov(inputCol, numCols().toInt, gpu))
+      })
+    }
+    val accumulatedCov = cov.reduce((a, b) => {
+      RAPIDSML.accumulateCov(a, b)
     })
-
     gpuIdBC.destroy()
+    accumulatedCov
   }
 }

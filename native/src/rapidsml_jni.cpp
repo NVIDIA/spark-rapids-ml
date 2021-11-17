@@ -43,12 +43,20 @@ JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithCol
   CATCH_STD(env, 0);
 }
 
-JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv *env, jclass,
+JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmCov(JNIEnv *env, jclass,
   jint transa, jint transb, jint m, jint n, jint k, jdouble alpha, jlong A, jint lda, jlong B,
   jint ldb, jdouble beta, jint ldc, jint deviceID) {
     try {
-
+      auto ret_column = dgemmCov(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, ldc,
+                                deviceID);
     }
     CATCH_STD(env, 0);
-  }
+}
+
+JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_accumulateCov(JNIEnv *env,
+ jclass, jlong a, jlong b) {
+  auto const *a_cv_ptr = reinterpret_cast<cudf::lists_column_view const *>(A);
+
+
+ }
 }  // extern "C"

@@ -107,6 +107,26 @@ long dgemm(int transa, int transb, int m, int n,int k, double alpha, double* A, 
     return reinterpret_cast<long>(target_column.release());
 }
 
+long dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, int lda,long B, 
+              int ldb, double beta, int ldc, int deviceID) {
+  cudaSetDevice(deviceID);
+  raft::handle_t raft_handle;
+  cudaStream_t stream = raft_handle.get_stream();
+  auto const *cv_ptr = reinterpret_cast<cudf::lists_column_view const *>(A);
+  auto const child_column_view = cv_ptr->child();
+  auto c_stream = rmm::cuda_stream_view(stream);
+  auto size_C = m * n;
+  // create child column that will own the computation result
+  auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
+  auto child_mutable_view = child_column->mutable_view();
+  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
+                                         convertToCublasOpEnum(transa),
+                                         convertToCublasOpEnum(transb),
+                                         m, n, k, &alpha, child_column_view.data<double>(), lda,
+                                         child_column_view.data<double>(),ldb, &beta,
+                                         child_mutable_view.data<double>(), ldc, stream);
+  return reinterpret_cast<long>(child_column.release());
+}
 
 extern "C" {
 
@@ -249,5 +269,4 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
     env->ReleaseDoubleArrayElements(U, host_U, 0);
     env->ReleaseDoubleArrayElements(S, host_S, 0);
   }
-
 }// extern "C"

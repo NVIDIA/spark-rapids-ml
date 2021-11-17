@@ -43,15 +43,57 @@ private[spark] object RAPIDSML extends Serializable {
     val CUBLAS_OP_CONJG = Value(3)
   }
 
-
+  /**
+   * Wrapper of cuBLAS GEMM routine to do matrix computation on GPU but with fewer parameters. This gemm is used to
+   * calculate covariance of a matrix.
+   * @param A Input ColumnView of LIST type, holding the input data on device.
+   * @param cols_A number of columns of A.
+   * @param deviceID the device that will run the computation.
+   * @return value of Long type that represents the handle of a numeric type `cudf::column_view *` which is holding the
+   *         computation output. Note it's a numeric column, not the LIST type because its device data will be used to
+   *         do SVD, so no need to construct LIST type column.
+   */
   def cov(A: ColumnView, cols_A: Int, deviceID: Int): Long = {
-    cov(CUBLAS_OP_N, CUBLAS_OP_T, cols_A, cols_A, A.getRowCount.toInt, 1.0, A.getNativeView, cols_A,
-      A.getNativeView, cols_A, 0.0, cols_A, deviceID)
+    cov(CUBLAS_OP_N, CUBLAS_OP_T, cols_A, cols_A, A.getRowCount.toInt, 1.0, A, cols_A,
+      A, cols_A, 0.0, cols_A, deviceID)
   }
 
-  def cov(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: Long,
-          lda: Int, B: Long, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
-    jniRAPIDSML.dgemm(transa.id, transb.id, m,n,k, alpha, A, lda, B, ldb, beta, ldc, deviceID)
+  /**
+   * Wrapper of cuBLAS GEMM routine to do matrix computation on GPU. This gemm is used to calculate covariance of a
+   * matrix.
+   * @param transa CublasOperationT enum value representing the operation op(A) that is non- or (conj.) transpose.
+   * @param transb CublasOperationT enum value representing the operation op(B) that is non- or (conj.) transpose.
+   * @param m number of rows of matrix op(A) and C.
+   * @param n number of columns of matrix op(B) and C.
+   * @param k number of columns of op(A) and rows of op(B).
+   * @param alpha scalar used for multiplication.
+   * @param A ColumnView that holds the device matrix data.
+   *          (array of dimensions lda x k with lda>=max(1,m) if transa == CUBLAS_OP_N and lda x m with lda>=max(1,k) otherwise.)
+   * @param lda leading dimension of two-dimensional array used to store the matrix A.
+   * @param B ColumnView that holds the device matrix data
+   *          (Array of dimension ldb x n with ldb>=max(1,k) if transb == CUBLAS_OP_N and ldb x k with ldb>=max(1,n) otherwise.)
+   * @param ldb leading dimension of two-dimensional array used to store matrix B.
+   * @param beta scalar used for multiplication. If beta==0, C does not have to be a valid input.
+   * @param ldc leading dimension of a two-dimensional array used to store the matrix C.
+   * @param deviceID the device that will run the computation
+   * @return value of Long type that represents the handle of a numeric type `cudf::column_view *` which is holding the
+   *         computation output. Note it's a numeric column, not the LIST type because its device data will be used to
+   *         do SVD, so no need to construct LIST type column.
+   */
+  def cov(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: ColumnView,
+          lda: Int, B: ColumnView, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
+    jniRAPIDSML.dgemmCov(transa.id, transb.id, m, n, k, alpha, A.getNativeView, lda, B.getNativeView, ldb, beta, ldc,
+      deviceID)
+  }
+
+  /**
+   *
+   * @param a
+   * @param b
+   * @return
+   */
+  def accumulateCov(a: Long, b: Long): Long = {
+    jniRAPIDSML.accumulateCov(a, b)
   }
 
   /**
