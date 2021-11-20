@@ -142,6 +142,7 @@ class RapidsRowMatrix(
         // only input column in this table
         val partition = iterator.toList
         val bigTable = Table.concatenate(partition: _*)
+        assert(bigTable.getNumberOfColumns == 1)
         val inputCol = bigTable.getColumn(0)
         Iterator.single(RAPIDSML.cov(inputCol, numCols().toInt, gpu))
       })

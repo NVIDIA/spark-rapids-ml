@@ -117,15 +117,15 @@ long dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, 
   auto c_stream = rmm::cuda_stream_view(stream);
   auto size_C = m * n;
   // create child column that will own the computation result
-  auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
-  auto child_mutable_view = child_column->mutable_view();
+  auto data_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
+  auto data_mutable_view = data_column->mutable_view();
   auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
                                          convertToCublasOpEnum(transa),
                                          convertToCublasOpEnum(transb),
                                          m, n, k, &alpha, child_column_view.data<double>(), lda,
                                          child_column_view.data<double>(),ldb, &beta,
-                                         child_mutable_view.data<double>(), ldc, stream);
-  return reinterpret_cast<long>(child_column.release());
+                                         data_mutable_view.data<double>(), ldc, stream);
+  return reinterpret_cast<long>(data_column.release());
 }
 
 extern "C" {
