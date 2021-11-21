@@ -67,6 +67,9 @@ class RapidsPCA(override val uid: String)
   /** @group setParam */
   def setInputCol(value: String): this.type = set(inputCol, value)
 
+  /** @group setTransformInpuCol */
+  def setTransformInputCol(value: String): this.type = set(transformInputCol, value)
+
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
@@ -135,6 +138,7 @@ class RapidsPCAModel(
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
     val gpuIdBC = dataset.rdd.context.broadcast(getGpuId)
+<<<<<<< HEAD
 
     /**
      * UDF class to speedup transform process of PCA
@@ -178,6 +182,58 @@ class RapidsPCAModel(
 
     val transform_udf = dataset.sparkSession.udf.register("pca_transform", new gpuTransform())
     dataset.withColumn($(outputCol), transform_udf(col($(inputCol))))
+=======
+
+    /**
+     * UDF class to speedup transform process of PCA
+     */
+    class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]]
+      with RapidsUDF with Serializable {
+      override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
+        logDebug("==========using GPU transform==========")
+        val gpu = if (gpuIdBC.value == -1) {
+          TaskContext.get().resources()("gpu").addresses(0).toInt
+        } else {
+          gpuIdBC.value
+        }
+        require(args.length == 1, s"Unexpected argument count: ${args.length}")
+        val input = args.head
+        val input_rows = input.getRowCount.toInt
+        // Due to the layout of LIST type ColumnVector, cublas gemm function should return the transposed result matrix
+        // for compatibility. e.g. an expected output matrix(actually a columnar vector of LIST type)
+        // [1,2]
+        // [3,4]
+        // [5,6]
+        // its memory data layout from Cublas GEMM is [1,3,5,2,4,6]. However, it will be displayed in LIST ColumnVector as :
+        // [1,3]
+        // [5,2]
+        // [4,6]
+        // To fill the gap between native memory and CV(ColumnVector) data storage, we consider the following nature:
+        // if A * B = C, then BT * AT = CT. (T means transpose). In this case the output matrix becomes:
+        // [1,3,5]
+        // [2,4,6]
+        // whose memory data layout is [1,2,3,4,5,6]. Then it can be consumed by CV directly.
+        val C = RAPIDSML.gemm(pc, input ,gpu)
+        new ColumnVector(C)
+      }
+
+      override def apply(v1: mutable.WrappedArray[Double]): Array[Double] = {
+        logDebug("==========using CPU transform==========")
+        pc.transpose.multiply(Vectors.dense(v1.toArray)).toArray
+      }
+    }
+
+    if (getUseGemm) {
+      val transform_udf = dataset.sparkSession.udf.register("pca_transform", new gpuTransform())
+      dataset.withColumn($(outputCol), transform_udf(col($(transformInputCol))))
+
+    }
+    else {
+      val transposed = pc.transpose
+      val transformer = udf { vector: Vector => transposed.multiply(vector) }
+      dataset.withColumn($(outputCol), transformer(col($(inputCol))), outputSchema($(outputCol)).metadata)
+    }
+>>>>>>> origin/branch-21.12
   }
 
   override def transformSchema(schema: StructType): StructType = {

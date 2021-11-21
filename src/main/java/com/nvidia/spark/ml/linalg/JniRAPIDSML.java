@@ -74,5 +74,5 @@ public final class JniRAPIDSML {
    */
   public native long dgemmWithColumnViewPtr(int transa, int transb, int m, int n, int k, double alpha, double[] A,
                                             int lda, long B, int ldb, double beta, int ldc, int deviceID);
-  public native void calSVD(int m, long A, double[] U, double[] S, int deviceID);
+  public native void calSVD(int m, double[] A, double[] U, double[] S, int deviceID);
 }
