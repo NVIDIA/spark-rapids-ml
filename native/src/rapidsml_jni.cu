@@ -107,7 +107,7 @@ long dgemm(int transa, int transb, int m, int n,int k, double alpha, double* A, 
     return reinterpret_cast<long>(target_column.release());
 }
 
-long dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, int lda,long B, 
+long dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, int lda,long B,
               int ldb, double beta, int ldc, int deviceID) {
   cudaSetDevice(deviceID);
   raft::handle_t raft_handle;
