@@ -215,32 +215,23 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 
 
 JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
-  (JNIEnv * env, jclass, jint m, jdoubleArray A, jdoubleArray U, jdoubleArray S, jint deviceID) {
+  (JNIEnv * env, jclass, jint m, jlong A, jdoubleArray U, jdoubleArray S, jint deviceID) {
     cudaSetDevice(deviceID);
     raft::handle_t handle;
     cudaStream_t stream = handle.get_stream();
 
     cudaError_t cudaStat1 = cudaSuccess;
     cudaError_t cudaStat2 = cudaSuccess;
-    cudaError_t cudaStat3 = cudaSuccess;
 
-    double *d_A = NULL;
     double *d_S = NULL;
     double *d_U = NULL;
 
-    cudaStat1 = cudaMalloc ((void**)&d_A  , sizeof(double)*m*m);
-    cudaStat2 = cudaMalloc ((void**)&d_S  , sizeof(double)*m);
-    cudaStat3 = cudaMalloc ((void**)&d_U  , sizeof(double)*m*m);
+    auto const *A_cv_ptr = reinterpret_cast<cudf::column_view const *>(A);
+    cudaStat1 = cudaMalloc ((void**)&d_S  , sizeof(double)*m);
+    cudaStat2 = cudaMalloc ((void**)&d_U  , sizeof(double)*m*m);
 
     assert(cudaSuccess == cudaStat1);
     assert(cudaSuccess == cudaStat2);
-    assert(cudaSuccess == cudaStat3);
-
-    auto size_A = env->GetArrayLength(A);
-    jdouble* host_A = env->GetDoubleArrayElements(A, JNI_FALSE);
-
-    cudaStat1 = cudaMemcpy(d_A, host_A, sizeof(double)*m*m, cudaMemcpyHostToDevice);
-    assert(cudaSuccess == cudaStat1);
 
     auto* host_U = env->GetDoubleArrayElements(U, nullptr);
     auto cuda_error = cudaMemcpyAsync(host_U, d_U, m * m * sizeof(double), cudaMemcpyDefault);
@@ -250,7 +241,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
     cuda_error = cudaMemcpyAsync(host_S, d_S, m * sizeof(double), cudaMemcpyDefault);
     assert(cudaSuccess == cuda_error);
 
-    raft::linalg::eigDC(handle, d_A, m, m, d_U, d_S, stream);
+    raft::linalg::eigDC(handle, A_cv_ptr->data<double>(), m, m, d_U, d_S, stream);
     raft::matrix::colReverse(d_U, m, m, stream);
     raft::matrix::rowReverse(d_S, m, 1, stream);
     raft::matrix::seqRoot(d_S, d_S, 1.0, m, stream, true);
@@ -262,10 +253,8 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
     assert(cudaSuccess == cudaStat1);
     assert(cudaSuccess == cudaStat2);
 
-    if (d_A    ) cudaFree(d_A);
     if (d_S    ) cudaFree(d_S);
     if (d_U    ) cudaFree(d_U);
-    env->ReleaseDoubleArrayElements(A, host_A, JNI_ABORT);
     env->ReleaseDoubleArrayElements(U, host_U, 0);
     env->ReleaseDoubleArrayElements(S, host_S, 0);
   }

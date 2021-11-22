@@ -83,6 +83,7 @@ target_link_libraries(rapidsml_jni PRIVATE
                       liblapack_static.a
                       CUDA::cublas
                       cudf::cudf)
+
 if(PER_THREAD_DEFAULT_STREAM)
   target_compile_definitions(rapidsml_jni PUBLIC CUDA_API_PER_THREAD_DEFAULT_STREAM)
 endif()

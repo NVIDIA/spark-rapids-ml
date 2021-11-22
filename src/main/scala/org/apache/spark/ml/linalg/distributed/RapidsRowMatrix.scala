@@ -16,20 +16,16 @@
 
 package org.apache.spark.ml.linalg.distributed
 
-import ai.rapids.cudf.{ColumnVector, ColumnView, NvtxColor, NvtxRange, Table}
+import ai.rapids.cudf.{NvtxColor, NvtxRange, Table}
 
 import java.util.{Arrays => JavaArrays}
-import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, svd => brzSvd}
-import breeze.linalg.Matrix._
-import com.nvidia.spark.RapidsUDF
+import breeze.linalg.{DenseMatrix => BDM}
 import com.nvidia.spark.rapids.ColumnarRdd
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.linalg._
 import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
-import org.apache.spark.rdd.RDD
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
-import org.omg.CosNaming.BindingIteratorOperations
 
 import scala.collection.mutable
 
@@ -112,7 +108,8 @@ class RapidsRowMatrix(
 
   /** Gets or computes the number of columns. */
   def numCols(): Long = {
-    nCols = listColumn.first().size
+    val first = listColumn.first().get(0)
+    nCols = first.asInstanceOf[mutable.WrappedArray[Double]].length
     nCols
   }
 
@@ -147,8 +144,8 @@ class RapidsRowMatrix(
         Iterator.single(RAPIDSML.cov(inputCol, numCols().toInt, gpu))
       })
     }
-    val accumulatedCov = cov.reduce((a, b) => {
-      RAPIDSML.accumulateCov(a, b)
+    val accumulatedCov = cov.reduce((lhs, rhs) => {
+      RAPIDSML.accumulateCov(lhs, rhs)
     })
     gpuIdBC.destroy()
     accumulatedCov

@@ -24,7 +24,7 @@ import org.apache.spark.ml.linalg.distributed.RapidsRowMatrix
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
 import org.apache.spark.sql._
-import org.apache.spark.sql.functions.{col, udf}
+import org.apache.spark.sql.functions.{col}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.TaskContext
 import ai.rapids.cudf.ColumnVector
@@ -67,9 +67,6 @@ class RapidsPCA(override val uid: String)
   /** @group setParam */
   def setInputCol(value: String): this.type = set(inputCol, value)
 
-  /** @group setTransformInpuCol */
-  def setTransformInputCol(value: String): this.type = set(transformInputCol, value)
-
   /** @group setParam */
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
@@ -86,7 +83,7 @@ class RapidsPCA(override val uid: String)
    * Computes a [[RapidsPCAModel]] that contains the principal components of the input vectors.
    */
   override def fit(dataset: Dataset[_]): RapidsPCAModel = {
-    transformSchema(dataset.schema, logging = true)
+//    transformSchema(dataset.schema, logging = true)
 
     val input = dataset.select($(inputCol))
 
@@ -136,7 +133,6 @@ class RapidsPCAModel(
    *       `PCA.fit()`.
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
-    val outputSchema = transformSchema(dataset.schema, logging = true)
     val gpuIdBC = dataset.rdd.context.broadcast(getGpuId)
 
     /**
