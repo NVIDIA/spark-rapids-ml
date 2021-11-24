@@ -77,7 +77,7 @@ repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-21.10.0-SNAPSHOT.jar"
+ML_JAR="target/rapids-4-spark-ml_2.12-21.12.0-SNAPSHOT.jar"
 CUDF_JAR="~/.m2/repository/ai/rapids/cudf/21.12.0-SNAPSHOT/cudf-21.12.0-SNAPSHOT.jar"
 PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/21.12.0-SNAPSHOT/rapids-4-spark_2.12-21.12.0-SNAPSHOT.jar"
 
