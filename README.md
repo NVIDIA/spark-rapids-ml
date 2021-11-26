@@ -15,7 +15,7 @@ Comparing to the original PCA training API:
 
 ```scala
 val pca = new org.apache.spark.ml.feature.PCA()
-  .setInputCol("feature")
+  .setInputCol("feature_vector_type")
   .setOutputCol("feature_value_3d")
   .setK(3)
   .fit(vectorDf)
@@ -35,6 +35,14 @@ Besides, we provide some switch APIs to allow users to highly customize their tr
   .useCuSolverSVD(true) // or false, default: true. Switch to use original LAPack solver or cuSolver to compute SVD
   .meanCentering(true) // or false, default: true. Switch to do mean centering or not before computing covariance matrix
 ```
+
+To speedup the transform process, it's required to add an extra setting:
+```scala
+  .setTransformInputCol("feature_array_type")
+```
+Note: The `setInputCol` is targeting the input column of `Vector` type for training process, while
+ the `setTransformInputCol` is for column of ArrayType.
+
 ## Build
 
 ### Prerequisites:
@@ -96,5 +104,5 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
 ### PCA examples
 
 Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/tree/branch-21.10/examples/pca) for
- more details about example code.
+[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/pca/main.scala) for
+more details about example code.
