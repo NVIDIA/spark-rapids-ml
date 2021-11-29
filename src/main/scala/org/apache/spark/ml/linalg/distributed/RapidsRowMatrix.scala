@@ -27,32 +27,18 @@ import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
 import org.apache.spark.TaskContext
 import org.apache.spark.sql.DataFrame
 
-import scala.collection.mutable
-
-class RapidsRowMatrix(
+class RapidsRowMatrix (
     val listColumn: DataFrame,
     val meanCentering: Boolean,
     val gpuId: Int,
-    private var nRows: Long,
-    private var nCols: Int) extends Logging {
+    private var nCols: Int) extends Logging with Serializable {
 
   /** Alternative constructor leaving matrix dimensions to be determined automatically. */
   def this(listColumn: DataFrame,
+           numCols: Int,
            meanCentering: Boolean = true,
            gpuId: Int = -1) =
-    this(listColumn, meanCentering,gpuId, 0L, 0)
-
-  /** Gets or computes the number of rows. */
-  def numRows(): Long = {
-    if (nRows <= 0L) {
-      nRows = listColumn.count()
-      if (nRows == 0L) {
-        sys.error("Cannot determine the number of rows because it is not specified in the " +
-            "constructor and the rows RDD is empty.")
-      }
-    }
-    nRows
-  }
+    this(listColumn, meanCentering,gpuId, numCols)
 
   /**
    * Computes the top k principal components and a vector of proportions of
@@ -71,7 +57,7 @@ class RapidsRowMatrix(
    *         explains
    */
   def computePrincipalComponentsAndExplainedVariance(k: Int): (DenseMatrix, DenseVector) = {
-    val n = numCols().toInt
+    val n = nCols
     require(k > 0 && k <= n, s"k = $k out of range (0, n = $n]")
     val nvtxRangeCov = new NvtxRange("compute cov", NvtxColor.RED)
 
@@ -106,13 +92,6 @@ class RapidsRowMatrix(
 
   }
 
-  /** Gets or computes the number of columns. */
-  def numCols(): Long = {
-    val first = listColumn.first().get(0)
-    nCols = first.asInstanceOf[mutable.WrappedArray[Double]].length
-    nCols
-  }
-
   /**
    * Computes the covariance matrix, treating each row as an observation.
    *
@@ -138,10 +117,15 @@ class RapidsRowMatrix(
         }
         // only input column in this table
         val partition = iterator.toList
-        val bigTable = Table.concatenate(partition: _*)
+
+        val bigTable = if (partition.length > 1) {
+          Table.concatenate(partition: _*)
+        } else {
+          partition.head
+        }
         assert(bigTable.getNumberOfColumns == 1)
         val inputCol = bigTable.getColumn(0)
-        Iterator.single(RAPIDSML.cov(inputCol, numCols().toInt, gpu))
+        Iterator.single(RAPIDSML.cov(inputCol, nCols, gpu))
       })
     }
     val accumulatedCov = cov.reduce((lhs, rhs) => {

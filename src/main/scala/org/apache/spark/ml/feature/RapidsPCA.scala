@@ -86,8 +86,9 @@ class RapidsPCA(override val uid: String)
 //    transformSchema(dataset.schema, logging = true)
 
     val input = dataset.select($(inputCol))
+    val numCols = input.first().get(0).asInstanceOf[mutable.WrappedArray[Any]].length
 
-    val mat = new RapidsRowMatrix(input, $(meanCentering), $(gpuId))
+    val mat = new RapidsRowMatrix(input, $(meanCentering), $(gpuId), numCols)
     val (pc, explainedVariance) = mat.computePrincipalComponentsAndExplainedVariance(getK)
     val model = new RapidsPCAModel(uid, pc, explainedVariance)
     copyValues(model.setParent(this))
