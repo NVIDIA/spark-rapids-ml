@@ -98,10 +98,11 @@ class RapidsRowMatrix (
    * @return a ColumnView of LIST type, size n x n
    *
    */
-  private def computeCovariance(): Long = {
+  private def computeCovariance(): DenseMatrix = {
     val meanBC = if (meanCentering) {
-      val nvtxRangeMean = new NvtxRange("mean center", NvtxColor.ORANGE)
-      // TODO: add proper solution for this
+      // val nvtxRangeMean = new NvtxRange("mean center", NvtxColor.ORANGE)
+      // TODO: add proper solution for this.
+      // Now the mean centering is done as a ETL preprocess in PCA application
     } else {
       listColumn.rdd.context.broadcast(OldVectors.zeros(0))
     }
@@ -124,14 +125,13 @@ class RapidsRowMatrix (
           partition.head
         }
         assert(bigTable.getNumberOfColumns == 1)
+        val C = DenseMatrix.zeros(nCols, nCols)
         val inputCol = bigTable.getColumn(0)
-        Iterator.single(RAPIDSML.cov(inputCol, nCols, gpu))
+        RAPIDSML.cov(inputCol, nCols, C, gpu)
+        Iterator.single(C.asBreeze)
       })
     }
-    val accumulatedCov = cov.reduce((lhs, rhs) => {
-      RAPIDSML.accumulateCov(lhs, rhs)
-    })
-    gpuIdBC.destroy()
-    accumulatedCov
+    val M = cov.reduce((a, b) => a + b)
+    Matrices.fromBreeze(M).toDense
   }
 }

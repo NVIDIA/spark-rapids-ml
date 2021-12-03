@@ -53,9 +53,9 @@ private[spark] object RAPIDSML extends Serializable {
    *         computation output. Note it's a numeric column, not the LIST type because its device data will be used to
    *         do SVD, so no need to construct LIST type column.
    */
-  def cov(A: ColumnView, cols_A: Int, deviceID: Int): Long = {
+  def cov(A: ColumnView, cols_A: Int, C: DenseMatrix, deviceID: Int): Unit = {
     cov(CUBLAS_OP_N, CUBLAS_OP_T, cols_A, cols_A, A.getRowCount.toInt, 1.0, A, cols_A,
-      A, cols_A, 0.0, cols_A, deviceID)
+      A, cols_A, 0.0, C, cols_A, deviceID)
   }
 
   /**
@@ -81,9 +81,9 @@ private[spark] object RAPIDSML extends Serializable {
    *         do SVD, so no need to construct LIST type column.
    */
   def cov(transa: CublasOperationT, transb: CublasOperationT, m: Int, n: Int, k: Int, alpha: Double, A: ColumnView,
-          lda: Int, B: ColumnView, ldb: Int,beta: Double, ldc: Int, deviceID: Int): Long = {
-    jniRAPIDSML.dgemmCov(transa.id, transb.id, m, n, k, alpha, A.getNativeView, lda, B.getNativeView, ldb, beta, ldc,
-      deviceID)
+          lda: Int, B: ColumnView, ldb: Int,beta: Double, C: DenseMatrix, ldc: Int, deviceID: Int): Unit = {
+    jniRAPIDSML.dgemmCov(transa.id, transb.id, m, n, k, alpha, A.getNativeView, lda, B.getNativeView, ldb, beta,
+      C.values, ldc, deviceID)
   }
 
   /**
@@ -150,8 +150,8 @@ private[spark] object RAPIDSML extends Serializable {
    * @param S middle vector after decomposition
    * @param deviceID the device that will run the computation
    */
-  def calSVD(m: Int, A: Long, U: DenseMatrix, S: DenseMatrix, deviceID: Int): Unit = {
-    jniRAPIDSML.calSVD(m, A, U.values, S.values, deviceID);
+  def calSVD(m: Int, A: DenseMatrix, U: DenseMatrix, S: DenseMatrix, deviceID: Int): Unit = {
+    jniRAPIDSML.calSVD(m, A.values, U.values, S.values, deviceID);
   }
   
 }

@@ -46,25 +46,12 @@ JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithCol
 
 JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmCov(JNIEnv *env, jclass,
   jint transa, jint transb, jint m, jint n, jint k, jdouble alpha, jlong A, jint lda, jlong B,
-  jint ldb, jdouble beta, jint ldc, jint deviceID) {
+  jint ldb, jdouble beta, jdoubleArray C, jint ldc, jint deviceID) {
   try {
-    auto ret_column = dgemmCov(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, ldc,
-                               deviceID);
+    cudf::jni::native_jdoubleArray native_C(env, C);
+    dgemmCov(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, native_C.data(), ldc, deviceID);
   }
   CATCH_STD(env, 0);
 }
 
-JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_accumulateCov(JNIEnv *env,
- jclass, jlong lhs, jlong rhs) {
-  try {
-    auto const *lhs_cv_ptr = reinterpret_cast<cudf::column_view const *>(lhs);
-    auto const *rhs_cv_ptr = reinterpret_cast<cudf::column_view const *>(rhs);
-    cudf::data_type n_data_type = cudf::data_type{cudf::type_id::FLOAT64};
-    cudf::binary_operator op = cudf::binary_operator::ADD;
-    std::unique_ptr<cudf::column> result = cudf::binary_operation(*lhs_cv_ptr, *rhs_cv_ptr, op,
-      n_data_type);
-    return reinterpret_cast<jlong>(result.release());
-  }
-  CATCH_STD(env, 0);
- }
 }  // extern "C"

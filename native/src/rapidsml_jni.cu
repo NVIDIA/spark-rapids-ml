@@ -107,8 +107,8 @@ long dgemm(int transa, int transb, int m, int n,int k, double alpha, double* A, 
     return reinterpret_cast<long>(target_column.release());
 }
 
-long dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, int lda,long B,
-              int ldb, double beta, int ldc, int deviceID) {
+void dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, int lda,long B,
+              int ldb, double beta, double* C, int ldc, int deviceID) {
   cudaSetDevice(deviceID);
   raft::handle_t raft_handle;
   cudaStream_t stream = raft_handle.get_stream();
@@ -117,15 +117,13 @@ long dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, 
   auto c_stream = rmm::cuda_stream_view(stream);
   auto size_C = m * n;
   // create child column that will own the computation result
-  auto data_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
-  auto data_mutable_view = data_column->mutable_view();
+  rmm::device_buffer dev_buff_C = rmm::device_buffer(C, size_C * sizeof(double), c_stream);
   auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
                                          convertToCublasOpEnum(transa),
                                          convertToCublasOpEnum(transb),
                                          m, n, k, &alpha, child_column_view.data<double>(), lda,
                                          child_column_view.data<double>(),ldb, &beta,
-                                         data_mutable_view.data<double>(), ldc, stream);
-  return reinterpret_cast<long>(data_column.release());
+                                         (double*)dev_buff_C.data(), ldc, stream);
 }
 
 extern "C" {
@@ -215,23 +213,32 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
 
 
 JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
-  (JNIEnv * env, jclass, jint m, jlong A, jdoubleArray U, jdoubleArray S, jint deviceID) {
+  (JNIEnv * env, jclass, jint m, jdoubleArray A, jdoubleArray U, jdoubleArray S, jint deviceID) {
     cudaSetDevice(deviceID);
     raft::handle_t handle;
     cudaStream_t stream = handle.get_stream();
 
     cudaError_t cudaStat1 = cudaSuccess;
     cudaError_t cudaStat2 = cudaSuccess;
+    cudaError_t cudaStat3 = cudaSuccess;
 
+    double *d_A = NULL;
     double *d_S = NULL;
     double *d_U = NULL;
 
-    auto const *A_cv_ptr = reinterpret_cast<cudf::column_view const *>(A);
-    cudaStat1 = cudaMalloc ((void**)&d_S  , sizeof(double)*m);
-    cudaStat2 = cudaMalloc ((void**)&d_U  , sizeof(double)*m*m);
+    cudaStat1 = cudaMalloc ((void**)&d_A  , sizeof(double)*m*m);
+    cudaStat2 = cudaMalloc ((void**)&d_S  , sizeof(double)*m);
+    cudaStat3 = cudaMalloc ((void**)&d_U  , sizeof(double)*m*m);
 
     assert(cudaSuccess == cudaStat1);
     assert(cudaSuccess == cudaStat2);
+    assert(cudaSuccess == cudaStat3);
+
+    auto size_A = env->GetArrayLength(A);
+    jdouble* host_A = env->GetDoubleArrayElements(A, JNI_FALSE);
+
+    cudaStat1 = cudaMemcpy(d_A, host_A, sizeof(double)*m*m, cudaMemcpyHostToDevice);
+    assert(cudaSuccess == cudaStat1);
 
     auto* host_U = env->GetDoubleArrayElements(U, nullptr);
     auto cuda_error = cudaMemcpyAsync(host_U, d_U, m * m * sizeof(double), cudaMemcpyDefault);
@@ -241,7 +248,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
     cuda_error = cudaMemcpyAsync(host_S, d_S, m * sizeof(double), cudaMemcpyDefault);
     assert(cudaSuccess == cuda_error);
 
-    raft::linalg::eigDC(handle, A_cv_ptr->data<double>(), m, m, d_U, d_S, stream);
+    raft::linalg::eigDC(handle, d_A, m, m, d_U, d_S, stream);
     raft::matrix::colReverse(d_U, m, m, stream);
     raft::matrix::rowReverse(d_S, m, 1, stream);
     raft::matrix::seqRoot(d_S, d_S, 1.0, m, stream, true);
@@ -253,8 +260,10 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_calSVD
     assert(cudaSuccess == cudaStat1);
     assert(cudaSuccess == cudaStat2);
 
+    if (d_A    ) cudaFree(d_A);
     if (d_S    ) cudaFree(d_S);
     if (d_U    ) cudaFree(d_U);
+    env->ReleaseDoubleArrayElements(A, host_A, JNI_ABORT);
     env->ReleaseDoubleArrayElements(U, host_U, 0);
     env->ReleaseDoubleArrayElements(S, host_S, 0);
   }

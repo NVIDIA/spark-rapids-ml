@@ -99,6 +99,7 @@ class RapidsPCA(override val uid: String)
   }
 
   override def copy(extra: ParamMap): RapidsPCA = defaultCopy(extra)
+
 }
 
 object RapidsPCA extends DefaultParamsReadable[RapidsPCA] {
