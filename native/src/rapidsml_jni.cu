@@ -124,6 +124,7 @@ void dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, 
                                          m, n, k, &alpha, child_column_view.data<double>(), lda,
                                          child_column_view.data<double>(),ldb, &beta,
                                          (double*)dev_buff_C.data(), ldc, stream);
+  cudaMemcpyAsync(C, dev_buff_C.data(), size_C * sizeof(double), cudaMemcpyDefault);
 }
 
 extern "C" {
