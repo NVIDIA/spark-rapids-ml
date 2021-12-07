@@ -104,10 +104,9 @@ class RapidsRowMatrix (
       // TODO: add proper solution for this.
       // Now the mean centering is done as a ETL preprocess in PCA application
     } else {
-      listColumn.rdd.context.broadcast(OldVectors.zeros(0))
+      listColumn.sparkSession.sparkContext.broadcast(OldVectors.zeros(0))
     }
-    val gpuIdBC = listColumn.rdd.context.broadcast(gpuId)
-
+    val gpuIdBC = listColumn.sparkSession.sparkContext.broadcast(gpuId)
     val columnarRdd = ColumnarRdd(listColumn)
     val cov = {
       columnarRdd.mapPartitions( iterator => {

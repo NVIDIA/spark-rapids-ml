@@ -133,7 +133,7 @@ class RapidsPCAModel(
    *       `PCA.fit()`.
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
-    val gpuIdBC = dataset.rdd.context.broadcast(getGpuId)
+    val gpuIdBC = dataset.sparkSession.sparkContext.broadcast(getGpuId)
 
     /**
      * UDF class to speedup transform process of PCA
