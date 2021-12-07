@@ -83,8 +83,6 @@ class RapidsPCA(override val uid: String)
    * Computes a [[RapidsPCAModel]] that contains the principal components of the input vectors.
    */
   override def fit(dataset: Dataset[_]): RapidsPCAModel = {
-//    transformSchema(dataset.schema, logging = true)
-
     val input = dataset.select($(inputCol))
     val numCols = input.first().get(0).asInstanceOf[mutable.WrappedArray[Any]].length
 

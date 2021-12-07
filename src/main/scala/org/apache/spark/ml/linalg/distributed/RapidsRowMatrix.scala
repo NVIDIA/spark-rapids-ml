@@ -124,11 +124,15 @@ class RapidsRowMatrix (
         } else {
           partition.head
         }
-        assert(bigTable.getNumberOfColumns == 1)
-        val C = DenseMatrix.zeros(nCols, nCols)
-        val inputCol = bigTable.getColumn(0)
-        RAPIDSML.cov(inputCol, nCols, C, gpu)
-        Iterator.single(C.asBreeze)
+        try {
+          assert(bigTable.getNumberOfColumns == 1)
+          val C = DenseMatrix.zeros(nCols, nCols)
+          val inputCol = bigTable.getColumn(0)
+          RAPIDSML.cov(inputCol, nCols, C, gpu)
+          Iterator.single(C.asBreeze)
+        } finally {
+          bigTable.close()
+        }
       })
     }
     val M = cov.reduce((a, b) => a + b)
