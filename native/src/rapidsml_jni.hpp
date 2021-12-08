@@ -1,6 +1,5 @@
-
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.
+ * Copyright (c) 2021, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +14,15 @@
  * limitations under the License.
  */
 
-package com.nvidia.spark.ml.linalg;
+#pragma once
 
-public enum NvtxColor {
-    GREEN(0xff00ff00),
-    BLUE(0xff0000ff),
-    YELLOW(0xffffff00),
-    PURPLE(0xffff00ff),
-    CYAN(0xff00ffff),
-    RED(0xffff0000),
-    WHITE(0xffffffff),
-    DARK_GREEN(0xff006600),
-    ORANGE(0xffffa500);
+#include <raft/linalg/cublas_wrappers.h>
 
-    final int colorBits;
+cublasOperation_t convertToCublasOpEnum(int int_type);
 
-    NvtxColor(int colorBits) {
-        this.colorBits = colorBits;
-    }
-}
+void signFlip(double* input, int n_rows, int n_cols, double* components,
+              int n_cols_comp, cudaStream_t stream);
+
+long dgemm(int transa, int transb, int m, int n,
+           int k, double alpha, double* A, int size_A, int lda, long B,
+           int ldb, double beta, int ldc, int deviceID);
