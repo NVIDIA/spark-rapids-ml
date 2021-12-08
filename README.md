@@ -72,7 +72,7 @@ User can build it directly in the _project root path_ with:
 ```
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-21.12.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-21.12.0.jar` will be generated under `target` folder.
 
 _Note_: This module contains both native and Java/Scala code. The native library build instructions
 has been added to the pom.xml file so that maven build command will help build native library all
@@ -85,9 +85,9 @@ repository, usually in your `$HOME/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-21.12.0-SNAPSHOT.jar"
-CUDF_JAR="$HOME/.m2/repository/ai/rapids/cudf/21.12.0-SNAPSHOT/cudf-21.12.0-SNAPSHOT.jar"
-PLUGIN_JAR="$HOME/.m2/repository/com/nvidia/rapids-4-spark_2.12/21.12.0-SNAPSHOT/rapids-4-spark_2.12-21.12.0-SNAPSHOT.jar"
+ML_JAR="target/rapids-4-spark-ml_2.12-21.12.0.jar"
+CUDF_JAR="$HOME/.m2/repository/ai/rapids/cudf/21.12.0/cudf-21.12.0.jar"
+PLUGIN_JAR="$HOME/.m2/repository/com/nvidia/rapids-4-spark_2.12/21.12.0/rapids-4-spark_2.12-21.12.0.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
