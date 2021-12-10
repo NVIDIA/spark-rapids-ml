@@ -16,7 +16,7 @@
 
 
 # Install cuDF nightly via Conda, only for local development, will remove in CI.
-find_package(cudf)
+# find_package(cudf)
 
 set (CMAKE_CUDA_FLAGS "--extended-lambda")
 
@@ -40,29 +40,29 @@ else(DEFINED ENV{RAFT_PATH})
   set(RAFT_INCLUDE_DIR ${RAFT_GIT_DIR}/src/raft/cpp/include CACHE STRING "RAFT include variable")
 endif(DEFINED ENV{RAFT_PATH})
 
+############################################################################################
+# - cudf -----------------------------------------------------------------------------------
 
+# Ensure CUDA runtime is dynamic despite statically linking Arrow in libcudf
+set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 
-#################################################################################################
-# - CPM -----------------------------------------------------------------------------------------
-
-set(CPM_DOWNLOAD_VERSION 0.27.2)
-set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
-
-if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
-    message(STATUS "Downloading CPM.cmake")
-    file(DOWNLOAD https://github.com/TheLartians/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake ${CPM_DOWNLOAD_LOCATION})
-endif()
-
-include(${CPM_DOWNLOAD_LOCATION})
-#################################################################################################
-
-# pull cuDF sources, to use jni_utils.hpp
-# cmake options should be added here for CI build.
-CPMAddPackage(NAME cudf
-        VERSION         "21.12.00"
+rapids_cpm_init()
+rapids_cpm_find(cudf 22.02.00
+        CPM_ARGS
         GIT_REPOSITORY  https://github.com/rapidsai/cudf.git
-        GIT_TAG         branch-21.12
-)
+        GIT_TAG         branch-22.02
+        GIT_SHALLOW     TRUE
+        SOURCE_SUBDIR   cpp
+        OPTIONS         "BUILD_TESTS OFF"
+                        "BUILD_BENCHMARKS OFF"
+                        "CUDF_USE_ARROW_STATIC ON"
+                        "JITIFY_USE_CACHE ON"
+                        "CUDA_STATIC_RUNTIME OFF"
+                        "DISABLE_DEPRECATION_WARNING ON"
+                        "AUTO_DETECT_CUDA_ARCHITECTURES OFF"
+    )
+
+############################################################################################
 
 add_library(rapidsml_jni SHARED rapidsml_jni.cpp
                                 rapidsml_jni.cu

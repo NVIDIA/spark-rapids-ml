@@ -15,13 +15,23 @@
 #=============================================================================
 cmake_minimum_required(VERSION 3.20)
 
-file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-21.12/RAPIDS.cmake
+file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-22.02/RAPIDS.cmake
      ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
 include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
 
+include(rapids-cmake)
+include(rapids-cpm)
 include(rapids-cuda)
+include(rapids-export)
+include(rapids-find)
+
+# Use GPU_ARCHS if it is defined
+if(DEFINED GPU_ARCHS)
+  set(CMAKE_CUDA_ARCHITECTURES "${GPU_ARCHS}")
+endif()
 
 rapids_cuda_init_architectures(SPARK_RAPIDS_ML)
+
 project(SPARK_RAPIDS_ML LANGUAGES CXX CUDA C)
 
 # Build options.
