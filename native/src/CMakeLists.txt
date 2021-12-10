@@ -14,10 +14,6 @@
 # limitations under the License.
 #=============================================================================
 
-
-# Install cuDF nightly via Conda, only for local development, will remove in CI.
-# find_package(cudf)
-
 set (CMAKE_CUDA_FLAGS "--extended-lambda")
 
 if(DEFINED ENV{RAFT_PATH})
