@@ -26,3 +26,6 @@ void signFlip(double* input, int n_rows, int n_cols, double* components,
 long dgemm(int transa, int transb, int m, int n,
            int k, double alpha, double* A, int size_A, int lda, long B,
            int ldb, double beta, int ldc, int deviceID);
+
+void dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, int lda,long B,
+              int ldb, double beta, double* C, int ldc, int deviceID);
