@@ -77,7 +77,9 @@
         <test.exclude.tags></test.exclude.tags>
         <test.include.tags></test.include.tags>
         <cuda.version>cuda11</cuda.version>
-
+        <GPU_ARCHS>ALL</GPU_ARCHS>
+        <CUDF_ENABLE_ARROW_S3>OFF</CUDF_ENABLE_ARROW_S3>
+        <CPP_PARALLEL_LEVEL>4</CPP_PARALLEL_LEVEL>
     </properties>
 
     <repositories>
@@ -362,10 +364,15 @@
                         <configuration>
                             <target>
                                 <exec executable="cmake" failonerror="true">
-                                    <arg line="-S ${basedir}/native/ -B ${project.build.directory}/native -GNinja"/>
+                                    <arg value="-S${basedir}/native/"/>
+                                    <arg value="-B${project.build.directory}/native"/>
+                                    <arg value="-DGPU_ARCHS=${GPU_ARCHS}"/>
+                                    <arg value="-DCUDF_ENABLE_ARROW_S3=${CUDF_ENABLE_ARROW_S3}"/>
+                                    <arg value="-GNinja"/>
                                 </exec>
                                 <exec executable="ninja" dir="${project.build.directory}/native" failonerror="true">
-                                    <arg line="-v -j 2"/>
+                                    <arg value="-v"/>
+                                    <arg value="-j${CPP_PARALLEL_LEVEL}"/>
                                 </exec>
                             </target>
                         </configuration>
