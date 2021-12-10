@@ -47,10 +47,10 @@ endif(DEFINED ENV{RAFT_PATH})
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 
 rapids_cpm_init()
-rapids_cpm_find(cudf 22.02.00
+rapids_cpm_find(cudf 21.12.00
         CPM_ARGS
         GIT_REPOSITORY  https://github.com/rapidsai/cudf.git
-        GIT_TAG         branch-22.02
+        GIT_TAG         branch-21.12
         GIT_SHALLOW     TRUE
         SOURCE_SUBDIR   cpp
         OPTIONS         "BUILD_TESTS OFF"
