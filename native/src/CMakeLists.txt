@@ -56,6 +56,7 @@ rapids_cpm_find(cudf 21.12.00
         OPTIONS         "BUILD_TESTS OFF"
                         "BUILD_BENCHMARKS OFF"
                         "CUDF_USE_ARROW_STATIC ON"
+                        "CUDF_ENABLE_ARROW_S3 OFF"
                         "JITIFY_USE_CACHE ON"
                         "CUDA_STATIC_RUNTIME OFF"
                         "DISABLE_DEPRECATION_WARNING ON"

@@ -78,7 +78,6 @@
         <test.include.tags></test.include.tags>
         <cuda.version>cuda11</cuda.version>
         <GPU_ARCHS>ALL</GPU_ARCHS>
-        <CUDF_ENABLE_ARROW_S3>OFF</CUDF_ENABLE_ARROW_S3>
         <CPP_PARALLEL_LEVEL>4</CPP_PARALLEL_LEVEL>
     </properties>
 
