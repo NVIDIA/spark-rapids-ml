@@ -366,7 +366,6 @@
                                     <arg value="-S${basedir}/native/"/>
                                     <arg value="-B${project.build.directory}/native"/>
                                     <arg value="-DGPU_ARCHS=${GPU_ARCHS}"/>
-                                    <arg value="-DCUDF_ENABLE_ARROW_S3=${CUDF_ENABLE_ARROW_S3}"/>
                                     <arg value="-GNinja"/>
                                 </exec>
                                 <exec executable="ninja" dir="${project.build.directory}/native" failonerror="true">
