@@ -92,10 +92,10 @@ class RapidsRowMatrix(
       var svdOutput: Array[(DenseMatrix, DenseMatrix)] = null
       try {
         val rddTmp = rows.context.parallelize(Seq(0), 1)
-        val dense_U = DenseMatrix.zeros(n, n)
 
-        val dense_S = DenseMatrix.zeros(1, n)
         val svdRdd = rddTmp.mapPartitions( _ => {
+          val dense_U = DenseMatrix.zeros(n, n)
+          val dense_S = DenseMatrix.zeros(1, n)
           RAPIDSML.calSVD(n, Cov, dense_U, dense_S, 0)
           Iterator.single(dense_U, dense_S)
         })
