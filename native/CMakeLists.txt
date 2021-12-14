@@ -15,7 +15,14 @@
 #=============================================================================
 cmake_minimum_required(VERSION 3.20)
 
-project(CUML_JNI LANGUAGES CXX CUDA C)
+file(DOWNLOAD https://raw.githubusercontent.com/rapidsai/rapids-cmake/branch-21.12/RAPIDS.cmake
+     ${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+include(${CMAKE_BINARY_DIR}/RAPIDS.cmake)
+
+include(rapids-cuda)
+
+rapids_cuda_init_architectures(SPARK_RAPIDS_ML)
+project(SPARK_RAPIDS_ML LANGUAGES CXX CUDA C)
 
 # Build options.
 option(PER_THREAD_DEFAULT_STREAM "Build with per-thread default stream" ON)
