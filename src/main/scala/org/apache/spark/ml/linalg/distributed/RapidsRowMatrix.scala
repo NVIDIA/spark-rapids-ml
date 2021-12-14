@@ -88,24 +88,23 @@ class RapidsRowMatrix(
     if (useCuSolverSVD) {
       val nvtxRangeSVD = new NvtxRange("cuSolver SVD", NvtxColor.BLUE)
 
-      val dense_U = DenseMatrix.zeros(n, n)
 
-      val dense_S = DenseMatrix.zeros(1, n)
-      var svdDriver: Array[(DenseMatrix, DenseMatrix)] = null
+      var svdOutput: Array[(DenseMatrix, DenseMatrix)] = null
       try {
-        val rdd_tmp = rows.context.parallelize(Seq(0),1)
-        val svdRdd = rdd_tmp.mapPartitions( p => {
+        val rddTmp = rows.context.parallelize(Seq(0), 1)
+        val dense_U = DenseMatrix.zeros(n, n)
+
+        val dense_S = DenseMatrix.zeros(1, n)
+        val svdRdd = rddTmp.mapPartitions( _ => {
           RAPIDSML.calSVD(n, Cov, dense_U, dense_S, 0)
           Iterator.single(dense_U, dense_S)
         })
-        svdDriver = svdRdd.collect()
+        svdOutput = svdRdd.collect()
       } finally {
         nvtxRangeSVD.close()
       }
-      val dense_U_new = svdDriver.head._1
-      val dense_S_new = svdDriver.head._2
-      val u = dense_U_new.asBreeze.asInstanceOf[BDM[Double]]
-      val s = dense_S_new.asBreeze.asInstanceOf[BDM[Double]]
+      val u = svdOutput.head._1.asBreeze.asInstanceOf[BDM[Double]]
+      val s = svdOutput.head._2.asBreeze.asInstanceOf[BDM[Double]]
       val eigenSum = s.data.sum
       val explainedVariance = s.data.map(_ / eigenSum)
 
