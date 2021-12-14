@@ -67,6 +67,9 @@ CPMAddPackage(NAME cudf
 add_library(rapidsml_jni SHARED rapidsml_jni.cpp
                                 rapidsml_jni.cu
                                 )
+
+target_link_options(rapidsml_jni PRIVATE "-Wl,-as-needed")
+
 target_include_directories(rapidsml_jni PRIVATE
                                     "${JNI_INCLUDE_DIRS}"
                                     "${CUDAToolkit_INCLUDE_DIRS}"

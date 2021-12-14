@@ -88,17 +88,29 @@ class RapidsRowMatrix(
     if (useCuSolverSVD) {
       val nvtxRangeSVD = new NvtxRange("cuSolver SVD", NvtxColor.BLUE)
 
-      val dense_U = DenseMatrix.zeros(n, n)
 
-      val dense_S = DenseMatrix.zeros(1, n)
+      var svdOutput: Array[(DenseMatrix, DenseMatrix)] = null
+      val gpuIdBC = rows.context.broadcast(gpuId)
       try {
-        // this is done on driver, so no task resources here, assign 0 manually.
-        RAPIDSML.calSVD(n, Cov, dense_U, dense_S, 0)
+        val rddTmp = rows.context.parallelize(Seq(0), 1)
+
+        val svdRdd = rddTmp.mapPartitions( _ => {
+          val gpu = if (gpuIdBC.value == -1) {
+            TaskContext.get().resources()("gpu").addresses(0).toInt
+          } else {
+            gpuIdBC.value
+          }
+          val dense_U = DenseMatrix.zeros(n, n)
+          val dense_S = DenseMatrix.zeros(1, n)
+          RAPIDSML.calSVD(n, Cov, dense_U, dense_S, gpu)
+          Iterator.single(dense_U, dense_S)
+        })
+        svdOutput = svdRdd.collect()
       } finally {
         nvtxRangeSVD.close()
       }
-      val u = dense_U.asBreeze.asInstanceOf[BDM[Double]]
-      val s = dense_S.asBreeze.asInstanceOf[BDM[Double]]
+      val u = svdOutput.head._1.asBreeze.asInstanceOf[BDM[Double]]
+      val s = svdOutput.head._2.asBreeze.asInstanceOf[BDM[Double]]
       val eigenSum = s.data.sum
       val explainedVariance = s.data.map(_ / eigenSum)
 
