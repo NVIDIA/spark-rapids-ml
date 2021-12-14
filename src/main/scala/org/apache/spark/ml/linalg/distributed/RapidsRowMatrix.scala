@@ -90,13 +90,19 @@ class RapidsRowMatrix(
 
 
       var svdOutput: Array[(DenseMatrix, DenseMatrix)] = null
+      val gpuIdBC = rows.context.broadcast(gpuId)
       try {
         val rddTmp = rows.context.parallelize(Seq(0), 1)
 
         val svdRdd = rddTmp.mapPartitions( _ => {
+          val gpu = if (gpuIdBC.value == -1) {
+            TaskContext.get().resources()("gpu").addresses(0).toInt
+          } else {
+            gpuIdBC.value
+          }
           val dense_U = DenseMatrix.zeros(n, n)
           val dense_S = DenseMatrix.zeros(1, n)
-          RAPIDSML.calSVD(n, Cov, dense_U, dense_S, 0)
+          RAPIDSML.calSVD(n, Cov, dense_U, dense_S, gpu)
           Iterator.single(dense_U, dense_S)
         })
         svdOutput = svdRdd.collect()
