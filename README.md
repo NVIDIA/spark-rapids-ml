@@ -104,5 +104,5 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
 ### PCA examples
 
 Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/pca/main.scala) for
+[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/Spark-cuML/pca/main.scala) for
 more details about example code.
