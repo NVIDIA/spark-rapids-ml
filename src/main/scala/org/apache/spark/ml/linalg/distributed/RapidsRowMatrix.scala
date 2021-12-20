@@ -70,9 +70,9 @@ class RapidsRowMatrix (
     val nvtxRangeSVD = new NvtxRange("cuSolver SVD", NvtxColor.BLUE)
 
     var svdOutput: Array[(DenseMatrix, DenseMatrix)] = null
-    val gpuIdBC = rows.context.broadcast(gpuId)
+    val gpuIdBC = listColumn.sparkSession.sparkContext.broadcast(gpuId)
     try {
-      val rddTmp = rows.context.parallelize(Seq(0), 1)
+      val rddTmp = listColumn.sparkSession.sparkContext.parallelize(Seq(0), 1)
       val svdRdd = rddTmp.mapPartitions( _ => {
         val gpu = if (gpuIdBC.value == -1) {
           TaskContext.get().resources()("gpu").addresses(0).toInt
