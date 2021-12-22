@@ -25,23 +25,16 @@ We used a customized class and user will need to do `no code change` to enjoy th
 
 ```scala
 val pca = new com.nvidia.spark.ml.feature.PCA()
+  .setInputCol("feature_array_type") // accept ArrayType column, no need to convert it to Vector type
+  .setOutputCol("feature_value_3d")
+  .setK(3)
+  .fit(vectorDf)
 ...
 ```
 
-Besides, we provide some switch APIs to allow users to highly customize their training process:
-
-```scala
-  .useGemm(true) // or false, default: true. Switch to use original BLAS bsr or cuBLAS gemm to compute covariance matrix
-  .useCuSolverSVD(true) // or false, default: true. Switch to use original LAPack solver or cuSolver to compute SVD
-  .meanCentering(true) // or false, default: true. Switch to do mean centering or not before computing covariance matrix
-```
-
-To speedup the transform process, it's required to add an extra setting:
-```scala
-  .setTransformInputCol("feature_array_type")
-```
-Note: The `setInputCol` is targeting the input column of `Vector` type for training process, while
- the `setTransformInputCol` is for column of ArrayType.
+Note: The `setInputCol` is targeting the input column of `Vector` type for training process in `CPU`
+version. But in GPU version, user doesn't need to do the extra preprocess step to convert column of
+`ArrayType` to `Vector` type, the `setInputCol` will accept the raw `ArrayType` column.
 
 ## Build
 
@@ -56,9 +49,9 @@ and cmake dependecies
 4. [cuDF](https://github.com/rapidsai/cudf):
     - install cuDF shared library via conda:
       ```bash
-      conda install -c rapidsai-nightly -c nvidia -c conda-forge cudf=21.12 python=3.8 -y
+      conda install -c rapidsai-nightly -c nvidia -c conda-forge cudf=22.02 python=3.8 -y
       ```
-5. [RAFT(21.12)](https://github.com/rapidsai/raft):
+5. [RAFT(22.02)](https://github.com/rapidsai/raft):
     - raft provides only header files, so no build instructions for it.
       ```bash
       $ git clone -b branch-21.12 https://github.com/rapidsai/raft.git
@@ -72,7 +65,7 @@ User can build it directly in the _project root path_ with:
 ```
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-21.12.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-22.02.0-SNAPSHOT.jar` will be generated under `target` folder.
 
 _Note_: This module contains both native and Java/Scala code. The native library build instructions
 has been added to the pom.xml file so that maven build command will help build native library all
@@ -85,9 +78,9 @@ repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-21.12.0-SNAPSHOT.jar"
-CUDF_JAR="~/.m2/repository/ai/rapids/cudf/21.12.0-SNAPSHOT/cudf-21.12.0-SNAPSHOT.jar"
-PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/21.12.0-SNAPSHOT/rapids-4-spark_2.12-21.12.0-SNAPSHOT.jar"
+ML_JAR="target/rapids-4-spark-ml_2.12-22.02.0-SNAPSHOT.jar"
+CUDF_JAR="~/.m2/repository/ai/rapids/cudf/22.02.0-SNAPSHOT/cudf-22.02.0-SNAPSHOT.jar"
+PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/22.02.0-SNAPSHOT/rapids-4-spark_2.12-22.02.0-SNAPSHOT.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
@@ -104,9 +97,9 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
 ### PCA examples
 
 Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/Spark-cuML/pca/) for
+[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/) for
 more details about example code. We provide both
-[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/Spark-cuML/pca/PCA-example-notebook.ipynb)
-and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
+[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/PCA-example-notebook.ipynb)
+and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
  versions there. Instructions to run these examples are described in the
- [README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-21.12/examples/Spark-cuML/pca/README.md).
+ [README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/README.md).
