@@ -65,7 +65,6 @@ class PCASuite extends RapidsMLTest with DefaultReadWriteTest {
         .setInputCol("array_features")
         .setOutputCol("pca_features")
         .setK(3)
-        .setGpuId(0)
 
     val pcaModel = pca.fit(df)
     val transformed = pcaModel.transform(df)

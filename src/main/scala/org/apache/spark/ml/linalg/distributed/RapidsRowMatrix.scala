@@ -30,15 +30,15 @@ import org.apache.spark.sql.DataFrame
 class RapidsRowMatrix (
     val listColumn: DataFrame,
     val meanCentering: Boolean,
-    val gpuId: Int,
     private var nCols: Int) extends Logging with Serializable {
+
+  val isLocal = listColumn.sparkSession.sparkContext.isLocal
 
   /** Alternative constructor leaving matrix dimensions to be determined automatically. */
   def this(listColumn: DataFrame,
            numCols: Int,
-           meanCentering: Boolean = true,
-           gpuId: Int = -1) =
-    this(listColumn, meanCentering,gpuId, numCols)
+           meanCentering: Boolean = true) =
+    this(listColumn, meanCentering, numCols)
 
   /**
    * Computes the top k principal components and a vector of proportions of
@@ -70,14 +70,13 @@ class RapidsRowMatrix (
     val nvtxRangeSVD = new NvtxRange("cuSolver SVD", NvtxColor.BLUE)
 
     var svdOutput: Array[(DenseMatrix, DenseMatrix)] = null
-    val gpuIdBC = listColumn.sparkSession.sparkContext.broadcast(gpuId)
     try {
       val rddTmp = listColumn.sparkSession.sparkContext.parallelize(Seq(0), 1)
       val svdRdd = rddTmp.mapPartitions( _ => {
-        val gpu = if (gpuIdBC.value == -1) {
-          TaskContext.get().resources()("gpu").addresses(0).toInt
+        val gpu = if (isLocal) {
+          0
         } else {
-          gpuIdBC.value
+          TaskContext.get().resources()("gpu").addresses(0).toInt
         }
         val dense_U = DenseMatrix.zeros(n, n)
         val dense_S = DenseMatrix.zeros(1, n)
@@ -112,18 +111,19 @@ class RapidsRowMatrix (
     val meanBC = if (meanCentering) {
       // val nvtxRangeMean = new NvtxRange("mean center", NvtxColor.ORANGE)
       // TODO: add proper solution for this.
-      // Now the mean centering is done as a ETL preprocess in PCA application
+      // Now the mean centering is done as an ETL preprocess in PCA application
     } else {
       listColumn.sparkSession.sparkContext.broadcast(OldVectors.zeros(0))
     }
-    val gpuIdBC = listColumn.sparkSession.sparkContext.broadcast(gpuId)
     val columnarRdd = ColumnarRdd(listColumn)
+
+
     val cov = {
       columnarRdd.mapPartitions( iterator => {
-        val gpu = if (gpuIdBC.value == -1) {
-          TaskContext.get().resources()("gpu").addresses(0).toInt
+        val gpu = if (isLocal) {
+          0
         } else {
-          gpuIdBC.value
+          TaskContext.get().resources()("gpu").addresses(0).toInt
         }
         // only input column in this table
         val partition = iterator.toList
