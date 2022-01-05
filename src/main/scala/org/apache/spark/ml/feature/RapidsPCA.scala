@@ -43,16 +43,6 @@ trait RapidsPCAParams extends PCAParams {
   /** @group getParam */
   def getMeanCentering: Boolean = $(meanCentering)
 
-  /**
-   * The GPU ID to use.
-   *
-   * @group param
-   */
-  private[ml] final val gpuId: IntParam = new IntParam(this, "gpuId", "the GPU ID to use")
-  setDefault(gpuId, -1)
-
-  /** @group getParam */
-  private[ml] def getGpuId: Int = $(gpuId)
 }
 
 /**
@@ -76,9 +66,6 @@ class RapidsPCA(override val uid: String)
   /** @group setParam */
   def setMeanCentering(value: Boolean): this.type = set(meanCentering, value)
 
-  /** @group setParam */
-  def setGpuId(value: Int): this.type = set(gpuId, value)
-
   /**
    * Computes a [[RapidsPCAModel]] that contains the principal components of the input vectors.
    */
@@ -86,7 +73,7 @@ class RapidsPCA(override val uid: String)
     val input = dataset.select($(inputCol))
     val numCols = input.first().get(0).asInstanceOf[mutable.WrappedArray[Any]].length
 
-    val mat = new RapidsRowMatrix(input, $(meanCentering), $(gpuId), numCols)
+    val mat = new RapidsRowMatrix(input, $(meanCentering), numCols)
     val (pc, explainedVariance) = mat.computePrincipalComponentsAndExplainedVariance(getK)
     val model = new RapidsPCAModel(uid, pc, explainedVariance)
     copyValues(model.setParent(this))
@@ -133,8 +120,6 @@ class RapidsPCAModel(
    *       `PCA.fit()`.
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
-    val gpuIdBC = dataset.sparkSession.sparkContext.broadcast(getGpuId)
-
     /**
      * UDF class to speedup transform process of PCA
      */
@@ -142,14 +127,13 @@ class RapidsPCAModel(
       with RapidsUDF with Serializable {
       override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
         logDebug("==========using GPU transform==========")
-        val gpu = if (gpuIdBC.value == -1) {
-          TaskContext.get().resources()("gpu").addresses(0).toInt
+        val gpu = if (dataset.sparkSession.sparkContext.isLocal) {
+          0
         } else {
-          gpuIdBC.value
+          TaskContext.get().resources()("gpu").addresses(0).toInt
         }
         require(args.length == 1, s"Unexpected argument count: ${args.length}")
         val input = args.head
-        val input_rows = input.getRowCount.toInt
         // Due to the layout of LIST type ColumnVector, cublas gemm function should return the transposed result matrix
         // for compatibility. e.g. an expected output matrix(actually a columnar vector of LIST type)
         // [1,2]
