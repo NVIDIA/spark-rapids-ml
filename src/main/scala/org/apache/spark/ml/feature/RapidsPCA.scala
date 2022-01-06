@@ -120,6 +120,8 @@ class RapidsPCAModel(
    *       `PCA.fit()`.
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
+
+    val isLocal = dataset.sparkSession.sparkContext.isLocal
     /**
      * UDF class to speedup transform process of PCA
      */
@@ -127,7 +129,7 @@ class RapidsPCAModel(
       with RapidsUDF with Serializable {
       override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
         logDebug("==========using GPU transform==========")
-        val gpu = if (dataset.sparkSession.sparkContext.isLocal) {
+        val gpu = if (isLocal) {
           0
         } else {
           TaskContext.get().resources()("gpu").addresses(0).toInt
