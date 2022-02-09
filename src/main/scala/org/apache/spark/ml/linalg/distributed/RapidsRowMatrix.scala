@@ -119,7 +119,7 @@ class RapidsRowMatrix (
 
 
     val cov = {
-      columnarRdd.mapPartitions( iterator => {
+      columnarRdd.mapPartitions(iterator => {
         val gpu = if (isLocal) {
           0
         } else {
@@ -128,19 +128,24 @@ class RapidsRowMatrix (
         // only input column in this table
         val partition = iterator.toList
 
-        val bigTable = if (partition.length > 1) {
-          Table.concatenate(partition: _*)
+        if (partition.length == 0) {
+          Iterator.single(DenseMatrix.zeros(nCols, nCols).asBreeze)
         } else {
-          partition.head
-        }
-        try {
-          assert(bigTable.getNumberOfColumns == 1)
-          val C = DenseMatrix.zeros(nCols, nCols)
-          val inputCol = bigTable.getColumn(0)
-          RAPIDSML.cov(inputCol, nCols, C, gpu)
-          Iterator.single(C.asBreeze)
-        } finally {
-          bigTable.close()
+          val bigTable = if (partition.length > 1) {
+            Table.concatenate(partition: _*)
+          } else {
+            partition.head
+          }
+          try {
+            assert(bigTable.getNumberOfColumns == 1)
+            val C = DenseMatrix.zeros(nCols, nCols)
+            val inputCol = bigTable.getColumn(0)
+            RAPIDSML.cov(inputCol, nCols, C, gpu)
+            Iterator.single(C.asBreeze)
+          } finally {
+            bigTable.close()
+            partition.foreach(t => t.close())
+          }
         }
       })
     }
