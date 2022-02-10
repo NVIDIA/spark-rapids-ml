@@ -16,7 +16,7 @@
 
 package org.apache.spark.ml.linalg.distributed
 
-import ai.rapids.cudf.{NvtxColor, NvtxRange, Table}
+import ai.rapids.cudf.{NvtxColor, NvtxRange}
 
 import java.util.{Arrays => JavaArrays}
 import breeze.linalg.{DenseMatrix => BDM}
@@ -119,28 +119,20 @@ class RapidsRowMatrix (
 
 
     val cov = {
-      columnarRdd.mapPartitions( iterator => {
+      columnarRdd.map(table => {
         val gpu = if (isLocal) {
           0
         } else {
           TaskContext.get().resources()("gpu").addresses(0).toInt
         }
-        // only input column in this table
-        val partition = iterator.toList
-
-        val bigTable = if (partition.length > 1) {
-          Table.concatenate(partition: _*)
-        } else {
-          partition.head
-        }
         try {
-          assert(bigTable.getNumberOfColumns == 1)
-          val C = DenseMatrix.zeros(nCols, nCols)
-          val inputCol = bigTable.getColumn(0)
-          RAPIDSML.cov(inputCol, nCols, C, gpu)
-          Iterator.single(C.asBreeze)
+          assert(table.getNumberOfColumns == 1)
+          val c = DenseMatrix.zeros(nCols, nCols)
+          val inputCol = table.getColumn(0)
+          RAPIDSML.cov(inputCol, nCols, c, gpu)
+          c.asBreeze
         } finally {
-          bigTable.close()
+          table.close()
         }
       })
     }
