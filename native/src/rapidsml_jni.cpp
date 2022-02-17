@@ -19,6 +19,7 @@
 #include <iostream>
 #include <stdlib.h>
 
+#include <cudf/binaryop.hpp>
 #include <cudf/column/column.hpp>
 #include <cudf/column/column_view.hpp>
 #include <cudf/detail/sequence.hpp>
@@ -33,13 +34,24 @@ extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmWithColumnViewPtr(
   JNIEnv *env, jclass, jint transa, jint transb, jint m, jint n, jint k, jdouble alpha,
-  jdoubleArray A, jint lda, jlong B,jint ldb, jdouble beta, jint ldc, jint deviceID)
-{
+  jdoubleArray A, jint lda, jlong B,jint ldb, jdouble beta, jint ldc, jint deviceID) {
   try {
     cudf::jni::native_jdoubleArray native_A(env, A);
-    auto ret_column = dgemm(transa, transb, m, n, k, alpha, native_A.data(), native_A.size(), lda, B, ldb, beta, ldc, deviceID);
+    auto ret_column = dgemm(transa, transb, m, n, k, alpha, native_A.data(), native_A.size(), lda,
+                            B, ldb, beta, ldc, deviceID);
     return ret_column;
   }
   CATCH_STD(env, 0);
 }
+
+JNIEXPORT jlong JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemmCov(JNIEnv *env, jclass,
+  jint transa, jint transb, jint m, jint n, jint k, jdouble alpha, jlong A, jint lda, jlong B,
+  jint ldb, jdouble beta, jdoubleArray C, jint ldc, jint deviceID) {
+  try {
+    cudf::jni::native_jdoubleArray native_C(env, C);
+    dgemmCov(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, native_C.data(), ldc, deviceID);
+  }
+  CATCH_STD(env, 0);
+}
+
 }  // extern "C"
