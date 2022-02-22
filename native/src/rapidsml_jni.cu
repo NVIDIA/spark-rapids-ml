@@ -21,8 +21,7 @@
 #include <cudf/lists/lists_column_view.hpp>
 #include <cudf/scalar/scalar.hpp>
 
-#include <raft/linalg/cublas_wrappers.h>
-#include <raft/linalg/eig.cuh>
+#include <raft/linalg/eig.hpp>
 #include <raft/matrix/matrix.hpp>
 #include <raft/matrix/math.hpp>
 
@@ -89,7 +88,7 @@ long dgemm(int transa, int transb, int m, int n,int k, double alpha, double* A, 
     //create child column that will own the computation result
     auto child_column = cudf::make_numeric_column(cudf::data_type{cudf::type_id::FLOAT64}, size_C);
     auto child_mutable_view = child_column->mutable_view();
-    auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
+    auto status = raft::linalg::detail::cublasgemm(raft_handle.get_cublas_handle(),
                                            convertToCublasOpEnum(transa),
                                            convertToCublasOpEnum(transb),
                                            m, n, k, &alpha, (double const *)dev_buff_A.data(), lda,
@@ -118,7 +117,7 @@ void dgemmCov(int transa, int transb, int m, int n,int k, double alpha, long A, 
   auto size_C = m * n;
   // create child column that will own the computation result
   rmm::device_buffer dev_buff_C = rmm::device_buffer(C, size_C * sizeof(double), c_stream);
-  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
+  auto status = raft::linalg::detail::cublasgemm(raft_handle.get_cublas_handle(),
                                          convertToCublasOpEnum(transa),
                                          convertToCublasOpEnum(transb),
                                          m, n, k, &alpha, child_column_view.data<double>(), lda,
@@ -177,7 +176,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_spark_ml_linalg_JniRAPIDSML_dgemm(JNIEnv*
     env->ThrowNew(jlexception, "Error copying B to device");
   }
 
-  auto status = raft::linalg::cublasgemm(raft_handle.get_cublas_handle(),
+  auto status = raft::linalg::detail::cublasgemm(raft_handle.get_cublas_handle(),
                                          convertToCublasOpEnum(transa),
                                          convertToCublasOpEnum(transb), m, n, k, &alpha, dev_A, lda,
                                          dev_B, ldb, &beta, dev_C, ldc, stream);

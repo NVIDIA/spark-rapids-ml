@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <raft/linalg/cublas_wrappers.h>
+#include <raft/linalg/detail/cublas_wrappers.hpp>
 
 cublasOperation_t convertToCublasOpEnum(int int_type);
 
