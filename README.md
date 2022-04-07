@@ -49,12 +49,12 @@ and cmake dependecies
 4. [cuDF](https://github.com/rapidsai/cudf):
     - install cuDF shared library via conda:
       ```bash
-      conda install -c rapidsai-nightly -c nvidia -c conda-forge cudf=22.02 python=3.8 -y
+      conda install -c rapidsai-nightly -c nvidia -c conda-forge cudf=22.06 python=3.8 -y
       ```
-5. [RAFT(22.02)](https://github.com/rapidsai/raft):
+5. [RAFT(22.06)](https://github.com/rapidsai/raft):
     - raft provides only header files, so no build instructions for it.
       ```bash
-      $ git clone -b branch-21.12 https://github.com/rapidsai/raft.git
+      $ git clone -b branch-22.06 https://github.com/rapidsai/raft.git
       ```
 6. export RAFT_PATH:
     ```bash
@@ -65,7 +65,7 @@ User can build it directly in the _project root path_ with:
 ```
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-22.04.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-22.06.0-SNAPSHOT.jar` will be generated under `target` folder.
 
 _Note_: This module contains both native and Java/Scala code. The native library build instructions
 has been added to the pom.xml file so that maven build command will help build native library all
@@ -78,9 +78,9 @@ repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-22.04.0-SNAPSHOT.jar"
-CUDF_JAR="~/.m2/repository/ai/rapids/cudf/22.04.0-SNAPSHOT/cudf-22.04.0-SNAPSHOT.jar"
-PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/22.04.0-SNAPSHOT/rapids-4-spark_2.12-22.04.0-SNAPSHOT.jar"
+ML_JAR="target/rapids-4-spark-ml_2.12-22.06.0-SNAPSHOT.jar"
+CUDF_JAR="~/.m2/repository/ai/rapids/cudf/22.06.0-SNAPSHOT/cudf-22.06.0-SNAPSHOT.jar"
+PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/22.06.0-SNAPSHOT/rapids-4-spark_2.12-22.06.0-SNAPSHOT.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
@@ -97,9 +97,9 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
 ### PCA examples
 
 Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/) for
+[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/) for
 more details about example code. We provide both
-[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/PCA-example-notebook.ipynb)
-and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
+[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/PCA-example-notebook.ipynb)
+and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
  versions there. Instructions to run these examples are described in the
- [README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.02/examples/Spark-cuML/pca/README.md).
+ [README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/README.md).
