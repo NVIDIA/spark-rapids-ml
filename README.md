@@ -73,20 +73,19 @@ the way. Make sure the prerequisites are all met, or the build will fail with er
 accordingly such as "cmake not found" or "ninja not found" etc.
 
 ## How to use
-When building the jar, cudf jar and spark-rapids plugin jar will be downloaded to your local maven
+When building the jar, spark-rapids plugin jar will be downloaded to your local maven
 repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
 ML_JAR="target/rapids-4-spark-ml_2.12-22.06.0-SNAPSHOT.jar"
-CUDF_JAR="~/.m2/repository/ai/rapids/cudf/22.06.0-SNAPSHOT/cudf-22.06.0-SNAPSHOT.jar"
 PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/22.06.0-SNAPSHOT/rapids-4-spark_2.12-22.06.0-SNAPSHOT.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
  --executor-memory 30G \
  --conf spark.driver.maxResultSize=8G \
- --jars ${ML_JAR},${CUDF_JAR},${PLUGIN_JAR} \
+ --jars ${ML_JAR},${PLUGIN_JAR} \
  --conf spark.plugins=com.nvidia.spark.SQLPlugin \
  --conf spark.rapids.sql.enabled=true \
  --conf spark.task.resource.gpu.amount=0.08 \
