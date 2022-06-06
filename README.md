@@ -49,7 +49,7 @@ and cmake dependecies
 4. [cuDF](https://github.com/rapidsai/cudf):
     - install cuDF shared library via conda:
       ```bash
-      conda install -c rapidsai-nightly -c nvidia -c conda-forge cudf=22.06 python=3.8 -y
+      conda install -c rapidsai-nightly -c nvidia -c conda-forge cudf=22.04 python=3.8 -y
       ```
 5. [RAFT(22.06)](https://github.com/rapidsai/raft):
     - raft provides only header files, so no build instructions for it.
