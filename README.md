@@ -60,6 +60,7 @@ and cmake dependecies
     ```bash
     export RAFT_PATH=PATH_TO_YOUR_RAFT_FOLDER
     ```
+Note: For those using other types of GPUs which do not have CUDA forward compatibility (for example, GeForce), CUDA 11.5 or later is required.
 ### Build target jar
 User can build it directly in the _project root path_ with:
 ```
