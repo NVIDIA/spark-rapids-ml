@@ -60,6 +60,7 @@ and cmake dependecies
     ```bash
     export RAFT_PATH=PATH_TO_YOUR_RAFT_FOLDER
     ```
+Note: For those using other types of GPUs which do not have CUDA forward compatibility (for example, GeForce), CUDA 11.5 or later is required.
 ### Build target jar
 User can build it directly in the _project root path_ with:
 ```
@@ -96,9 +97,9 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
 ### PCA examples
 
 Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/) for
+[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/ML+DL-Examples/Spark-cuML/pca/) for
 more details about example code. We provide both
-[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/PCA-example-notebook.ipynb)
-and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
+[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/ML+DL-Examples/Spark-cuML/pca/notebooks/Spark_PCA_End_to_End.ipynb)
+and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/ML+DL-Examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
  versions there. Instructions to run these examples are described in the
- [README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/Spark-cuML/pca/README.md).
+ [README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-22.06/examples/ML+DL-Examples/Spark-cuML/pca/README.md).
