@@ -1,5 +1,5 @@
+from enum import unique
 from pyspark.sql import SparkSession
-import time
 from pyspark.sql.types import StructType
 from pyspark.sql.types import ArrayType 
 from pyspark.sql.types import DoubleType
@@ -7,13 +7,15 @@ from pyspark import RDD
 from pyspark.sql import DataFrame
 
 import cupy as cp
-from cuml.decomposition.pca_mg import PCAMG as CumlPCA
 
 from raft.dask.common.nccl import nccl
 from raft.dask.common.comms_utils import inject_comms_on_handle_coll_only
 from raft.common import Handle
 
+import time
+
 # borrow from Erik:torchdist_on_spark
+
 def _context_info():
     from pyspark import BarrierTaskContext
     context = BarrierTaskContext.get()
@@ -29,53 +31,68 @@ class CuPCA:
         uniqueId = sparkCtx.sparkContext.broadcast(self.ncclUniqueId)
         topk = self.topK
 
-        def partition_fit_functor(iterator):
-            context_info = _context_info()
-            print(context_info)
-            print("------end context_info \n----")
-            print(iterator)
-            print("---------iterator----------")
+        dimension = len(df.first()[self.inputCol])
+        numVec = df.count()
 
-            nWorkers = 1
-            wid = 0
-            #nWorkers = context_info[2]
-            #wid = context_info[1]
-            #import os
-            #os.environ["CUDA_VISIBLE_DEVICES"] = str(wid)
+        def part2rankFunc(iter):
+            from pyspark import BarrierTaskContext
+            context = BarrierTaskContext.get()
+            pid = context.partitionId()
+            size = sum([1 for x in iter])
+            yield (pid, size)
 
+        part2rank = df.rdd.barrier().mapPartitions(part2rankFunc).collect()
+        print(part2rank)
+        print("---part2rank--")
+
+        def partition_fit_functor(iterator, numVec, dimension, partsToRanks):
+            import time
+            from pyspark import BarrierTaskContext
+            context = BarrierTaskContext.get()
+            tasks = context.getTaskInfos()
+            context_info = (tasks[0].address.split(":")[0], context.partitionId(), len(tasks), context)
+
+            nWorkers = context_info[2]
+            wid = context_info[1]
+
+            import os
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(wid)
             ncclComm = nccl()
-            ncclComm.init(nWorkers, uniqueId.value, wid)
-            handle = Handle(n_streams = 0)
-            inject_comms_on_handle_coll_only(handle, ncclComm, nWorkers, wid, True)
 
-            kwargs = {'n_components' : topk, 'whiten' : False}
-            pcaObject = CumlPCA(handle=handle, output_type = 'cupy', **kwargs)
+            rootUniqueId = uniqueId.value
+            ncclComm.init(nWorkers, rootUniqueId, wid)
+            handle = Handle(n_streams = 0)
+            
+            if (wid == 1):
+                time.sleep(1)
+            print(rootUniqueId)
+            print(nWorkers)
+            print(wid)
+            print("......worker information from ---" + str(wid))
+
+            inject_comms_on_handle_coll_only(handle, ncclComm, nWorkers, wid, True)
+            kwargs = {'n_components' : 1, 'whiten' : False}
             cupyArraysList = [cp.array(list(iterator))]
             print(cupyArraysList)
-            print("----cupyArraysList----")
+            print("----cupyArraysList----" + str(wid))
 
-            M, N = cupyArraysList[0].shape
-            partsToRanks = [[wid, M]]
+            M = numVec
+            N =  dimension
             rank = wid
             _transform = False
+
+            from cuml.decomposition.pca_mg import PCAMG as CumlPCA
+            pcaObject = CumlPCA(handle=handle, output_type = 'cupy', **kwargs)
             pcaObject.fit(cupyArraysList, M, N, partsToRanks, rank, _transform)
 
-            print(pcaObject.components_)
-            print("-----------pcaObject.components_-------")
-            print(pcaObject.mean_)
-            print("-----------pcaObject.mean-------")
-
-            print(type(cupyArraysList[0]))
-            print(cupyArraysList[0])
-            print("-----==----type(cupyArraysList[0])---=----")
             res = pcaObject.transform(cupyArraysList[0])
             print(type(res))
             print(res)
-            print("-------end res----------")
+            print("-------end res----------" + str(wid))
             yield pcaObject 
 
         barrierRDD = df.rdd.map(lambda row : row[self.inputCol]).barrier() 
-        self.modelRDD = barrierRDD.mapPartitions(partition_fit_functor).cache()
+        self.modelRDD = barrierRDD.mapPartitions(lambda iter : partition_fit_functor(iter, numVec, dimension, part2rank)).cache()
         print(self.modelRDD.count())
         print("----------in fit function------")
         return self
