@@ -7,7 +7,6 @@ from pyspark import RDD
 from pyspark.sql import DataFrame
 
 import cupy as cp
-
 from raft.dask.common.nccl import nccl
 from raft.dask.common.comms_utils import inject_comms_on_handle_coll_only
 from raft.common import Handle
@@ -45,8 +44,7 @@ class CuPCA:
         print(part2rank)
         print("---part2rank--")
 
-        def partition_fit_functor(iterator, numVec, dimension, partsToRanks):
-            import time
+        def partition_fit_functor(iterator, numVec, dimension, partsToRanks, topk):
             from pyspark import BarrierTaskContext
             context = BarrierTaskContext.get()
             tasks = context.getTaskInfos()
@@ -63,15 +61,13 @@ class CuPCA:
             ncclComm.init(nWorkers, rootUniqueId, wid)
             handle = Handle(n_streams = 0)
             
-            if (wid == 1):
-                time.sleep(1)
             print(rootUniqueId)
             print(nWorkers)
             print(wid)
             print("......worker information from ---" + str(wid))
 
             inject_comms_on_handle_coll_only(handle, ncclComm, nWorkers, wid, True)
-            kwargs = {'n_components' : 1, 'whiten' : False}
+            kwargs = {'n_components' : topk, 'whiten' : False}
             cupyArraysList = [cp.array(list(iterator))]
             print(cupyArraysList)
             print("----cupyArraysList----" + str(wid))
@@ -88,11 +84,13 @@ class CuPCA:
             res = pcaObject.transform(cupyArraysList[0])
             print(type(res))
             print(res)
+            print(pcaObject.components_)
+            print(pcaObject.mean_)
             print("-------end res----------" + str(wid))
             yield pcaObject 
 
         barrierRDD = df.rdd.map(lambda row : row[self.inputCol]).barrier() 
-        self.modelRDD = barrierRDD.mapPartitions(lambda iter : partition_fit_functor(iter, numVec, dimension, part2rank)).cache()
+        self.modelRDD = barrierRDD.mapPartitions(lambda iter : partition_fit_functor(iter, numVec, dimension, part2rank, topk)).cache()
         print(self.modelRDD.count())
         print("----------in fit function------")
         return self
@@ -111,12 +109,12 @@ class CuPCA:
 
 if __name__ == "__main__":
     data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
-    numPart = 1
+
+    # in application code, numPart must be smaller or equal to the total number of GPUs
+    numPart = 2
+
     topk = 1
-    spark = SparkSession.builder.master("local[" + str(numPart) + "]").getOrCreate()
-    #spark = SparkSession.builder \
-    #        .master("spark://jinfengl-dt:7077") \
-    #        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     t_start = time.time()
     rdd = spark.sparkContext.parallelize(data, numPart).map(lambda row : (row, ))
