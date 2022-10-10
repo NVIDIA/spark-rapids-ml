@@ -1,20 +1,16 @@
-from enum import unique
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType
+from pyspark.sql.types import StructField
 from pyspark.sql.types import ArrayType 
 from pyspark.sql.types import DoubleType
-from pyspark import RDD
 from pyspark.sql import DataFrame
 
-import cupy as cp
 from raft.dask.common.nccl import nccl
 from raft.dask.common.comms_utils import inject_comms_on_handle_coll_only
 from raft.common import Handle
-
 import time
 
-# borrow from Erik:torchdist_on_spark
-
+# copy from Erik:torchdist_on_spark
 def _context_info():
     from pyspark import BarrierTaskContext
     context = BarrierTaskContext.get()
@@ -41,12 +37,12 @@ class CuPCA:
             yield (pid, size)
 
         part2rank = df.rdd.barrier().mapPartitions(part2rankFunc).collect()
-        print(part2rank)
-        print("---part2rank--")
 
-        def partition_fit_functor(iterator, numVec, dimension, partsToRanks, topk):
+        def partition_fit_functor(pdf_iterator, inputCol, numVec, dimension, partsToRanks, topk):
             from pyspark import BarrierTaskContext
             context = BarrierTaskContext.get()
+            context.barrier()
+
             tasks = context.getTaskInfos()
             context_info = (tasks[0].address.split(":")[0], context.partitionId(), len(tasks), context)
 
@@ -61,16 +57,15 @@ class CuPCA:
             ncclComm.init(nWorkers, rootUniqueId, wid)
             handle = Handle(n_streams = 0)
             
-            print(rootUniqueId)
-            print(nWorkers)
-            print(wid)
-            print("......worker information from ---" + str(wid))
-
             inject_comms_on_handle_coll_only(handle, ncclComm, nWorkers, wid, True)
             kwargs = {'n_components' : topk, 'whiten' : False}
-            cupyArraysList = [cp.array(list(iterator))]
-            print(cupyArraysList)
-            print("----cupyArraysList----" + str(wid))
+
+            import cudf 
+            cudfList = []
+            for pdf in pdf_iterator:
+                flatten = pdf.apply(lambda x : x[inputCol], axis = 1, result_type='expand')
+                gdf = cudf.from_pandas(flatten)
+                cudfList.append(gdf)
 
             M = numVec
             N =  dimension
@@ -78,22 +73,38 @@ class CuPCA:
             _transform = False
 
             from cuml.decomposition.pca_mg import PCAMG as CumlPCA
-            pcaObject = CumlPCA(handle=handle, output_type = 'cupy', **kwargs)
-            pcaObject.fit(cupyArraysList, M, N, partsToRanks, rank, _transform)
+            pcaObject = CumlPCA(handle=handle, output_type = 'cudf', **kwargs)
+            pcaObject.fit(cudfList, M, N, partsToRanks, rank, _transform)
 
-            res = pcaObject.transform(cupyArraysList[0])
+            res = pcaObject.transform(cudfList[0])
             print(type(res))
             print(res)
-            print(pcaObject.components_)
+            print("-------end res----------" + str(wid) + "\n")
             print(pcaObject.mean_)
-            print("-------end res----------" + str(wid))
-            yield pcaObject 
+            print("-------end pcaObject.mean_----------" + str(wid) + "\n")
 
-        barrierRDD = df.rdd.map(lambda row : row[self.inputCol]).barrier() 
-        self.modelRDD = barrierRDD.mapPartitions(lambda iter : partition_fit_functor(iter, numVec, dimension, part2rank, topk)).cache()
-        print(self.modelRDD.count())
+            import pandas
+            if rank != 0:
+                yield pandas.DataFrame({ "mean" : [[]], "pc" : [[]]})
+            else:
+                cpuMean = pcaObject.mean_.to_arrow().to_pylist()
+                cpuPcFlat = pcaObject.components_.to_numpy().flatten()
+                yield pandas.DataFrame({ "mean" : [cpuMean], "pc": [cpuPcFlat]})
+        
+        outSchema = StructType([
+            StructField("mean", ArrayType(DoubleType(), False), False),
+            StructField("pc", ArrayType(DoubleType(), False), False)
+        ])
+
+        # citation: mapInPandas barrier code refers to pyspark xgboost core.py 
+        model = df.mapInPandas(
+            lambda pdf_iter: partition_fit_functor(pdf_iter, self.inputCol, numVec, dimension, part2rank, topk), 
+            schema=outSchema
+            ) .rdd.barrier().mapPartitions(lambda x : x).collect()[0]
+        print(model)
+
         print("----------in fit function------")
-        return self
+        return model 
 
     def setInputCol(self, inputCol = "feature"):
         self.inputCol = inputCol
