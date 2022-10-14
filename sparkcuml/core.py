@@ -19,7 +19,7 @@ from typing import Any, Union, Iterator
 
 import cudf
 import pandas as pd
-from pyspark.ml import Estimator
+from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql import DataFrame
@@ -85,7 +85,20 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         """
         return dataset.repartition(self.getOrDefault(self.num_workers))
 
-    def _fit(self, dataset: DataFrame):
+    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+        """
+        Fits a model to the input dataset. This is called by the default implementation of fit.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            input dataset
+
+        Returns
+        -------
+        :class:`Transformer`
+            fitted model
+        """
         input_col_names = self.getInputCols()
         dataset = dataset.select(*input_col_names)
         dataset = self._repartition_dataset(dataset)
@@ -132,3 +145,28 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         )
 
         return self._copyValues(self._create_pyspark_model(ret))
+
+
+class _CumlModel(Model):
+    """
+    Abstract class for spark cuml models that are fitted by spark cuml estimators.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def _transform(self, dataset) -> DataFrame:
+        """
+        Transforms the input dataset.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            input dataset.
+
+        Returns
+        -------
+        :py:class:`pyspark.sql.DataFrame`
+            transformed dataset
+        """
+        pass
