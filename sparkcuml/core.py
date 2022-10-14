@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 from abc import abstractmethod
 from typing import Any, Union, Iterator
 
@@ -23,6 +24,8 @@ from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType, Row
+
+from sparkcuml.utils import _is_local, _get_spark_session, _get_gpu_id
 
 
 class _CumlEstimatorParams(HasInputCols):
@@ -86,11 +89,18 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         input_col_names = self.getInputCols()
         dataset = dataset.select(*input_col_names)
         dataset = self._repartition_dataset(dataset)
+
+        is_local = _is_local(_get_spark_session().sparkContext)
+
         params = {}
 
         def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]):
             from pyspark import BarrierTaskContext
             context = BarrierTaskContext.get()
+
+            # Get the GPU ID from resources
+            gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
+
             context.barrier()
 
             inputs = []
