@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import inspect
+from typing import Callable
 
 from pyspark import SparkContext, TaskContext
 from pyspark.sql import SparkSession
@@ -46,3 +48,20 @@ def _get_gpu_id(task_context: TaskContext) -> int:
         )
     # return the first gpu id.
     return int(resources["gpu"].addresses[0].strip())
+
+
+def _get_default_params_from_func(func: Callable, unsupported_set: list[str] = []):
+    """
+    Returns a dictionary of parameters and their default value of function fn.
+    Only the parameters with a default value will be included.
+    """
+    sig = inspect.signature(func)
+    filtered_params_dict = {}
+    for parameter in sig.parameters.values():
+        # Remove parameters without a default value and those in the unsupported_set
+        if (
+                parameter.default is not parameter.empty
+                and parameter.name not in unsupported_set
+        ):
+            filtered_params_dict[parameter.name] = parameter.default
+    return filtered_params_dict

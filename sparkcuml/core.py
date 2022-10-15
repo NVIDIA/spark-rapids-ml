@@ -25,7 +25,7 @@ from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType, Row
 
-from sparkcuml.utils import _is_local, _get_spark_session, _get_gpu_id
+from sparkcuml.utils import _is_local, _get_spark_session, _get_gpu_id, _get_default_params_from_func
 
 
 class _CumlEstimatorParams(HasInputCols):
@@ -38,6 +38,44 @@ class _CumlEstimatorParams(HasInputCols):
         "The number of Spark CUML workers. Each CUML worker corresponds to one spark task.",
         TypeConverters.toInt,
     )
+
+    @classmethod
+    def _cuml_cls(cls):
+        """
+        Return the cuml python counterpart class name, which will be used to
+        auto generate pyspark parameters.
+        """
+        raise NotImplementedError()
+
+    @classmethod
+    def _not_supported_param(cls) -> list[str]:
+        """
+        For some reason, spark cuml may not support all the parameters.
+        In that case, we need to explicitly exclude them.
+        """
+        return []
+
+    @classmethod
+    def _get_cuml_params_default(cls) -> dict[str, Any]:
+        """
+        Inspect the __init__ function of _cuml_cls() to get the
+        parameters and default values.
+        """
+        return _get_default_params_from_func(
+            cls._cuml_cls(),
+            cls._not_supported_param(),
+        )
+
+    def _gen_cuml_param(self) -> dict[str, Any]:
+        """
+        Generate the CUML parameters according the pyspark estimator parameters.
+        """
+        params = {}
+        for k, _ in self._get_cuml_params_default().items():
+            if self.getOrDefault(k):
+                params[k] = self.getOrDefault(k)
+
+        return params
 
 
 class _CumlEstimator(Estimator, _CumlEstimatorParams):
@@ -52,9 +90,25 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
     def __init__(self):
         super().__init__()
+        self._set_pyspark_cuml_params()
         self._setDefault(
             num_workers=1,
         )
+
+    def _set_pyspark_cuml_params(self):
+        # Auto set the parameters into the estimator
+        params = self._get_cuml_params_default()
+        self._setDefault(**params)
+
+    def set_params(self, **kwargs):
+        """
+        Set the kwargs to estimator's parameters
+        """
+        for k, v in kwargs.items():
+            if self.hasParam(k):
+                self._set(**{str(k): v})
+            else:
+                raise ValueError(f"Unsupported param '{k}'.")
 
     @abstractmethod
     def _fit_internal(self, df: list[cudf.DataFrame], **kwargs) -> dict[str, Any]:
@@ -105,7 +159,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
-        params = {}
+        params = self._gen_cuml_param()
 
         def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]):
             from pyspark import BarrierTaskContext
