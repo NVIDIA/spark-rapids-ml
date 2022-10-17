@@ -16,7 +16,9 @@
 import inspect
 from typing import Callable
 
+import numpy as np
 from pyspark import SparkContext, TaskContext
+from pyspark.ml.param import Param, Params
 from pyspark.sql import SparkSession
 
 
@@ -65,3 +67,50 @@ def _get_default_params_from_func(func: Callable, unsupported_set: list[str] = [
         ):
             filtered_params_dict[parameter.name] = parameter.default
     return filtered_params_dict
+
+
+def _get_class_name(cls):
+    """
+    Return the class name.
+    """
+    return f"{cls.__module__}.{cls.__name__}"
+
+
+def _set_pyspark_cuml_cls_param_attrs(pyspark_estimator_class, pyspark_model_class):
+    """
+    To set pyspark parameter attributes according to cuml parameters.
+    This function must be called after you finished the subclass design of _CumlEstimator_CumlModel
+
+    Eg,
+
+    class SparkDummy(_CumlEstimator):
+        pass
+    class SparkDummyModel(_CumlModel):
+        pass
+    _set_pyspark_cuml_cls_param_attrs(SparkDummy, SparkDummyModel)
+    """
+    cuml_estimator_class_name = _get_class_name(pyspark_estimator_class._cuml_cls())
+    params_dict = pyspark_estimator_class._get_cuml_params_default()
+
+    def param_value_converter(v):
+        if isinstance(v, np.generic):
+            # convert numpy scalar values to corresponding python scalar values
+            return np.array(v).item()
+        if isinstance(v, dict):
+            return {k: param_value_converter(nv) for k, nv in v.items()}
+        if isinstance(v, list):
+            return [param_value_converter(nv) for nv in v]
+        return v
+
+    def set_param_attrs(attr_name, param_obj_):
+        param_obj_.typeConverter = param_value_converter
+        setattr(pyspark_estimator_class, attr_name, param_obj_)
+        setattr(pyspark_model_class, attr_name, param_obj_)
+
+    for name in params_dict.keys():
+        doc = (
+            f"Refer to CUML doc of {cuml_estimator_class_name} for this param {name}"
+        )
+
+        param_obj = Param(Params._dummy(), name=name, doc=doc)
+        set_param_attrs(name, param_obj)
