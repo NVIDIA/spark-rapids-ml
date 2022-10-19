@@ -26,6 +26,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType, Row
 
 from sparkcuml.utils import _is_local, _get_spark_session, _get_gpu_id, _get_default_params_from_func
+from sparkcuml.common.nccl import SparkComm
 
 
 class _CumlEstimatorParams(HasInputCols):
@@ -160,6 +161,8 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         params = self._gen_cuml_param()
+        
+        comm = SparkComm()
 
         def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]):
             from pyspark import BarrierTaskContext
@@ -168,7 +171,17 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             # Get the GPU ID from resources
             gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
 
+            import cupy
+            cupy.cuda.Device(gpu_id).use()
+            params['rank'] = context.partitionId() 
+
+            tasks = context.getTaskInfos()
+            num_tasks = len(tasks)
+
             context.barrier()
+
+            handle = comm.init_worker(num_tasks, params['rank'])
+            params['handle'] = handle
 
             inputs = []
 
