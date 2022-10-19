@@ -161,6 +161,8 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         params = self._gen_cuml_param()
+        dimension = len(self.getInputCols())
+        params['dimension'] = dimension
         
         comm = SparkComm()
 
@@ -184,16 +186,28 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             params['handle'] = handle
 
             inputs = []
+            size = 0
 
             if input_col_names:
                 for pdf in pdf_iter:
                     inputs.append(cudf.DataFrame(pdf[input_col_names]))
+                    size += inputs[-1][0].size
             else:
                 # TODO do we need to support features (vector or array type) ??
                 for pdf in pdf_iter:
                     flatten = pdf.apply(lambda x: x['features'], axis=1, result_type='expand')
                     gdf = cudf.from_pandas(flatten)
                     inputs.append(gdf)
+
+            import json
+            rank2size = (params['rank'], size)
+            messages = context.allGather(message=json.dumps(rank2size))
+            parts_to_ranks = [json.loads(pair) for pair in messages]
+            parts_to_ranks = sorted(parts_to_ranks, key = lambda p : p[0])
+            params['partsToRanks'] = parts_to_ranks
+
+            num_vec = sum(pair[1] for pair in parts_to_ranks)
+            params['numVec'] = num_vec
 
             result = self._fit_internal(inputs, **params)
 
