@@ -154,14 +154,14 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         :class:`Transformer`
             fitted model
         """
-        input_col_names = self.getInputCols()
+        input_col_names = [self.getInputCol()] if self.hasParam("inputCol") else self.getInputCols
         dataset = dataset.select(*input_col_names)
         dataset = self._repartition_dataset(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
         params = self._gen_cuml_param()
-        dimension = len(self.getInputCols())
+        dimension = len(dataset.first()[self.getInputCol()]) if self.hasParam("inputCol") else len(self.getInputCols())
         params['dimension'] = dimension
         
         comm = SparkComm()
@@ -188,15 +188,15 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             inputs = []
             size = 0
 
-            if input_col_names:
+            if not self.hasParam("inputCol"):
                 for pdf in pdf_iter:
                     inputs.append(cudf.DataFrame(pdf[input_col_names]))
                     size += inputs[-1][0].size
             else:
-                # TODO do we need to support features (vector or array type) ??
                 for pdf in pdf_iter:
-                    flatten = pdf.apply(lambda x: x['features'], axis=1, result_type='expand')
+                    flatten = pdf.apply(lambda x: x[self.getInputCol()], axis=1, result_type='expand')
                     gdf = cudf.from_pandas(flatten)
+                    size += gdf[0].size
                     inputs.append(gdf)
 
             import json
