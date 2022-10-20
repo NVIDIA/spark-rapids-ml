@@ -15,18 +15,23 @@
 #
 
 from abc import abstractmethod
-from typing import Any, Union, Iterator
+from typing import Any, Iterator, Union
 
 import cudf
 import pandas as pd
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import HasInputCols, HasInputCol
+from pyspark.ml.param.shared import HasInputCol, HasInputCols
 from pyspark.sql import DataFrame
-from pyspark.sql.types import StructType, Row
+from pyspark.sql.types import Row, StructType
 
-from sparkcuml.utils import _is_local, _get_spark_session, _get_gpu_id, _get_default_params_from_func
 from sparkcuml.common.nccl import NcclComm
+from sparkcuml.utils import (
+    _get_default_params_from_func,
+    _get_gpu_id,
+    _get_spark_session,
+    _is_local,
+)
 
 INIT_PARAMETERS_NAME = "init"
 
@@ -35,8 +40,9 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol):
     """
     The common parameters for all Spark CUML algorithms.
     """
+
     num_workers = Param(
-        Params._dummy(),
+        Params._dummy(),  # type: ignore
         "num_workers",
         "The number of Spark CUML workers. Each CUML worker corresponds to one spark task.",
         TypeConverters.toInt,
@@ -68,8 +74,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol):
         parameters and default values.
         """
         return _get_default_params_from_func(
-            cls._cuml_cls(),
-            cls._not_supported_param(),
+            cls._cuml_cls(), cls._not_supported_param()
         )
 
     def _gen_cuml_param(self) -> dict[str, Any]:
@@ -97,9 +102,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
     def __init__(self):
         super().__init__()
         self._set_pyspark_cuml_params()
-        self._setDefault(
-            num_workers=1,
-        )
+        self._setDefault(num_workers=1)
 
     def _set_pyspark_cuml_params(self):
         # Auto set the parameters into the estimator
@@ -178,25 +181,27 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
         params = {}
         params[INIT_PARAMETERS_NAME] = self._gen_cuml_param()
-        params['dimension'] = dimension
+        params["dimension"] = dimension
 
         comm = NcclComm(self.get_num_workers())
 
         def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]):
             from pyspark import BarrierTaskContext
+
             context = BarrierTaskContext.get()
 
             # Get the GPU ID from resources
             gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
 
             import cupy
+
             cupy.cuda.Device(gpu_id).use()
-            params['rank'] = context.partitionId()
+            params["rank"] = context.partitionId()
 
             context.barrier()
 
-            handle = comm.init_worker(params['rank'], init_nccl=True)
-            params['handle'] = handle
+            handle = comm.init_worker(params["rank"], init_nccl=True)
+            params["handle"] = handle
 
             inputs = []
             size = 0
@@ -208,20 +213,25 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
                     inputs.append(gdf)
             else:
                 for pdf in pdf_iter:
-                    flatten = pdf.apply(lambda x: x[input_is_multi_cols[0]], axis=1, result_type='expand')
+                    flatten = pdf.apply(
+                        lambda x: x[input_is_multi_cols[0]],
+                        axis=1,
+                        result_type="expand",
+                    )
                     gdf = cudf.from_pandas(flatten)
                     size += gdf[0].size
                     inputs.append(gdf)
 
             import json
-            rank2size = (params['rank'], size)
+
+            rank2size = (params["rank"], size)
             messages = context.allGather(message=json.dumps(rank2size))
             parts_to_ranks = [json.loads(pair) for pair in messages]
             parts_to_ranks = sorted(parts_to_ranks, key=lambda p: p[0])
-            params['partsToRanks'] = parts_to_ranks
+            params["partsToRanks"] = parts_to_ranks
 
             num_vec = sum(pair[1] for pair in parts_to_ranks)
-            params['numVec'] = num_vec
+            params["numVec"] = num_vec
 
             result = self._fit_internal(inputs, **params)
 
@@ -230,16 +240,13 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
                 yield pd.DataFrame(data=result)
 
         ret = (
-            dataset.mapInPandas(
-                _cuml_fit,
-                schema=self._out_schema(),
-            )
+            dataset.mapInPandas(_cuml_fit, schema=self._out_schema())
             .rdd.barrier()
             .mapPartitions(lambda x: x)
             .collect()[0]
         )
 
-        return self._copyValues(self._create_pyspark_model(ret))
+        return self._copyValues(self._create_pyspark_model(ret))  # type: ignore
 
 
 class _CumlModel(Model):

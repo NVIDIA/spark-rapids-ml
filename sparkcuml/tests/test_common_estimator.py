@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-from typing import Union, Any
+from typing import Any, Union
 
 import cudf
 from pyspark import Row, TaskContext
 from pyspark.sql.types import StructType
 
-from sparkcuml.core import _CumlEstimator, _CumlModel, INIT_PARAMETERS_NAME
+from sparkcuml.core import INIT_PARAMETERS_NAME, _CumlEstimator, _CumlModel
 from sparkcuml.utils import _set_pyspark_cuml_cls_param_attrs
 
 
@@ -67,9 +67,7 @@ class SparkCumlDummy(_CumlEstimator):
         assert dummy.b == 2
         assert dummy.c == 3
 
-        return {
-            "dummy": [1024],
-        }
+        return {"dummy": [1024]}
 
     def _out_schema(self) -> Union[StructType, str]:
         return "dummy int"
@@ -95,11 +93,12 @@ _set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
 
 
 def test_dummy(spark):
-    data = [[1.0, 4.0, 4.0, 4.0],
-            [2.0, 2.0, 2.0, 2.0],
-            [3.0, 3.0, 3.0, 2.0],
-            [3.0, 3.0, 3.0, 2.0],
-            ]
+    data = [
+        [1.0, 4.0, 4.0, 4.0],
+        [2.0, 2.0, 2.0, 2.0],
+        [3.0, 3.0, 3.0, 2.0],
+        [3.0, 3.0, 3.0, 2.0],
+    ]
 
     rdd = spark.sparkContext.parallelize(data)
     input_cols = ["c1", "c2", "c3", "c4"]

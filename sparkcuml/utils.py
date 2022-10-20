@@ -35,7 +35,7 @@ def _get_spark_session() -> SparkSession:
 
 def _is_local(sc: SparkContext) -> bool:
     """Whether it is Spark local mode"""
-    return sc._jsc.sc().isLocal()
+    return sc._jsc.sc().isLocal()  # type: ignore
 
 
 def _get_gpu_id(task_context: TaskContext) -> int:
@@ -62,14 +62,14 @@ def _get_default_params_from_func(func: Callable, unsupported_set: list[str] = [
     for parameter in sig.parameters.values():
         # Remove parameters without a default value and those in the unsupported_set
         if (
-                parameter.default is not parameter.empty
-                and parameter.name not in unsupported_set
+            parameter.default is not parameter.empty
+            and parameter.name not in unsupported_set
         ):
             filtered_params_dict[parameter.name] = parameter.default
     return filtered_params_dict
 
 
-def _get_class_name(cls):
+def _get_class_name(cls: type) -> str:
     """
     Return the class name.
     """
@@ -108,9 +108,7 @@ def _set_pyspark_cuml_cls_param_attrs(pyspark_estimator_class, pyspark_model_cla
         setattr(pyspark_model_class, attr_name, param_obj_)
 
     for name in params_dict.keys():
-        doc = (
-            f"Refer to CUML doc of {cuml_estimator_class_name} for this param {name}"
-        )
+        doc = f"Refer to CUML doc of {cuml_estimator_class_name} for this param {name}"
 
         param_obj = Param(Params._dummy(), name=name, doc=doc)
         set_param_attrs(name, param_obj)

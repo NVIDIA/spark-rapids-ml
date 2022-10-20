@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 
-from raft_dask.common.nccl import nccl
-from raft_dask.common.comms_utils import inject_comms_on_handle_coll_only
 from pylibraft.common import Handle
+from raft_dask.common.comms_utils import inject_comms_on_handle_coll_only
+from raft_dask.common.nccl import nccl
 
 
 class NcclComm:
@@ -29,7 +29,7 @@ class NcclComm:
         self.nccl_unique_id = nccl.get_unique_id()
         self.nranks = nranks
 
-    def init_worker(self, rank: int, init_nccl=True) -> Handle:
+    def init_worker(self, rank: int, init_nccl: bool = True) -> Handle:
         """
         Initialize and return a Handle.
 
