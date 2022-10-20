@@ -17,10 +17,10 @@
 from typing import Union, Any
 
 import cudf
-from pyspark import Row
+from pyspark import Row, TaskContext
 from pyspark.sql.types import StructType
 
-from sparkcuml.core import _CumlEstimator, _CumlModel
+from sparkcuml.core import _CumlEstimator, _CumlModel, INIT_PARAMETERS_NAME
 from sparkcuml.utils import _set_pyspark_cuml_cls_param_attrs
 
 
@@ -55,10 +55,14 @@ class SparkCumlDummy(_CumlEstimator):
         self.set_params(**kwargs)
 
     def _fit_internal(self, df: list[cudf.DataFrame], **kwargs) -> dict[str, Any]:
-        assert len(kwargs) == 2
-        assert kwargs["a"] == 100
-        assert kwargs["c"] == 3
-        dummy = CumlDummy(**kwargs)
+        # assert len(kwargs) == 3
+        assert kwargs["rank"] == TaskContext.get().partitionId()
+        assert "handle" in kwargs
+        assert INIT_PARAMETERS_NAME in kwargs
+        init_params = kwargs[INIT_PARAMETERS_NAME]
+        assert init_params["a"] == 100
+        assert init_params["c"] == 3
+        dummy = CumlDummy(**init_params)
         assert dummy.a == 100
         assert dummy.b == 2
         assert dummy.c == 3

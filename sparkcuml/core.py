@@ -21,15 +21,17 @@ import cudf
 import pandas as pd
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import HasInputCols
+from pyspark.ml.param.shared import HasInputCols, HasInputCol
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType, Row
 
 from sparkcuml.utils import _is_local, _get_spark_session, _get_gpu_id, _get_default_params_from_func
-from sparkcuml.common.nccl import SparkComm
+from sparkcuml.common.nccl import NcclComm
+
+INIT_PARAMETERS_NAME = "init"
 
 
-class _CumlEstimatorParams(HasInputCols):
+class _CumlEstimatorParams(HasInputCols, HasInputCol):
     """
     The common parameters for all Spark CUML algorithms.
     """
@@ -39,6 +41,9 @@ class _CumlEstimatorParams(HasInputCols):
         "The number of Spark CUML workers. Each CUML worker corresponds to one spark task.",
         TypeConverters.toInt,
     )
+
+    def get_num_workers(self):
+        return self.getOrDefault(self.num_workers)
 
     @classmethod
     def _cuml_cls(cls):
@@ -154,17 +159,28 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         :class:`Transformer`
             fitted model
         """
-        input_col_names = [self.getInputCol()] if self.hasParam("inputCol") else self.getInputCols
-        dataset = dataset.select(*input_col_names)
+        select_cols = []
+        input_is_multi_cols = True
+        if self.isDefined(self.inputCol):
+            select_cols = [self.getInputCol()]
+            dimension = len(dataset.first())
+            input_is_multi_cols = False
+        elif self.isDefined(self.inputCols):
+            select_cols.extend(self.getInputCols())
+            dimension = len(self.getInputCols())
+        else:
+            raise ValueError("Please set inputCol or inputCols")
+
+        dataset = dataset.select(*select_cols)
         dataset = self._repartition_dataset(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
-        params = self._gen_cuml_param()
-        dimension = len(dataset.first()[self.getInputCol()]) if self.hasParam("inputCol") else len(self.getInputCols())
+        params = {}
+        params[INIT_PARAMETERS_NAME] = self._gen_cuml_param()
         params['dimension'] = dimension
-        
-        comm = SparkComm()
+
+        comm = NcclComm(self.get_num_workers())
 
         def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]):
             from pyspark import BarrierTaskContext
@@ -175,26 +191,24 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
             import cupy
             cupy.cuda.Device(gpu_id).use()
-            params['rank'] = context.partitionId() 
-
-            tasks = context.getTaskInfos()
-            num_tasks = len(tasks)
+            params['rank'] = context.partitionId()
 
             context.barrier()
 
-            handle = comm.init_worker(num_tasks, params['rank'])
+            handle = comm.init_worker(params['rank'], init_nccl=True)
             params['handle'] = handle
 
             inputs = []
             size = 0
 
-            if not self.hasParam("inputCol"):
+            if input_is_multi_cols:
                 for pdf in pdf_iter:
-                    inputs.append(cudf.DataFrame(pdf[input_col_names]))
-                    size += inputs[-1][0].size
+                    gdf = cudf.DataFrame(pdf[select_cols])
+                    size += gdf.shape[0]
+                    inputs.append(gdf)
             else:
                 for pdf in pdf_iter:
-                    flatten = pdf.apply(lambda x: x[self.getInputCol()], axis=1, result_type='expand')
+                    flatten = pdf.apply(lambda x: x[input_is_multi_cols[0]], axis=1, result_type='expand')
                     gdf = cudf.from_pandas(flatten)
                     size += gdf[0].size
                     inputs.append(gdf)
@@ -203,7 +217,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             rank2size = (params['rank'], size)
             messages = context.allGather(message=json.dumps(rank2size))
             parts_to_ranks = [json.loads(pair) for pair in messages]
-            parts_to_ranks = sorted(parts_to_ranks, key = lambda p : p[0])
+            parts_to_ranks = sorted(parts_to_ranks, key=lambda p: p[0])
             params['partsToRanks'] = parts_to_ranks
 
             num_vec = sum(pair[1] for pair in parts_to_ranks)
