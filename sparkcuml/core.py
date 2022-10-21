@@ -15,9 +15,10 @@
 #
 
 from abc import abstractmethod
-from typing import Any, Iterator, Union
+from typing import Any, Iterator, Type, Union
 
 import cudf
+import numpy as np
 import pandas as pd
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
@@ -27,6 +28,7 @@ from pyspark.sql.types import Row, StructType
 
 from sparkcuml.common.nccl import NcclComm
 from sparkcuml.utils import (
+    _get_class_name,
     _get_default_params_from_func,
     _get_gpu_id,
     _get_spark_session,
@@ -48,11 +50,11 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol):
         TypeConverters.toInt,
     )
 
-    def get_num_workers(self):
+    def get_num_workers(self) -> int:
         return self.getOrDefault(self.num_workers)
 
     @classmethod
-    def _cuml_cls(cls):
+    def _cuml_cls(cls) -> type:
         """
         Return the cuml python counterpart class name, which will be used to
         auto generate pyspark parameters.
@@ -99,28 +101,28 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
     5. create the pyspark model
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._set_pyspark_cuml_params()
-        self._setDefault(num_workers=1)
+        self._setDefault(num_workers=1)  # type: ignore
 
-    def _set_pyspark_cuml_params(self):
+    def _set_pyspark_cuml_params(self) -> None:
         # Auto set the parameters into the estimator
         params = self._get_cuml_params_default()
-        self._setDefault(**params)
+        self._setDefault(**params)  # type: ignore
 
-    def set_params(self, **kwargs):
+    def set_params(self, **kwargs: Any) -> None:
         """
         Set the kwargs to estimator's parameters
         """
         for k, v in kwargs.items():
             if self.hasParam(k):
-                self._set(**{str(k): v})
+                self._set(**{str(k): v})  # type: ignore
             else:
                 raise ValueError(f"Unsupported param '{k}'.")
 
     @abstractmethod
-    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs) -> dict[str, Any]:
+    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs: Any) -> dict[str, Any]:
         """
         Subclass must implement its own logic to fit a model to the input dataset.
         Please note that, this function is called on the executor side.
@@ -136,7 +138,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_pyspark_model(self, result: Row):
+    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
         """
         Create the model according to the collected Row
         """
@@ -179,13 +181,13 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
-        params = {}
+        params: dict[str, Any] = {}
         params[INIT_PARAMETERS_NAME] = self._gen_cuml_param()
         params["dimension"] = dimension
 
         comm = NcclComm(self.get_num_workers())
 
-        def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]):
+        def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
@@ -214,7 +216,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             else:
                 for pdf in pdf_iter:
                     flatten = pdf.apply(
-                        lambda x: x[input_is_multi_cols[0]],
+                        lambda x: x[input_is_multi_cols[0]],  # type: ignore
                         axis=1,
                         result_type="expand",
                     )
@@ -240,7 +242,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
                 yield pd.DataFrame(data=result)
 
         ret = (
-            dataset.mapInPandas(_cuml_fit, schema=self._out_schema())
+            dataset.mapInPandas(_cuml_fit, schema=self._out_schema())  # type: ignore
             .rdd.barrier()
             .mapPartitions(lambda x: x)
             .collect()[0]
@@ -257,7 +259,7 @@ class _CumlModel(Model):
     def __init__(self) -> None:
         super().__init__()
 
-    def _transform(self, dataset) -> DataFrame:
+    def _transform(self, dataset: DataFrame) -> DataFrame:
         """
         Transforms the input dataset.
 
@@ -272,3 +274,43 @@ class _CumlModel(Model):
             transformed dataset
         """
         pass
+
+
+def _set_pyspark_cuml_cls_param_attrs(
+    pyspark_estimator_class: Type[_CumlEstimator], pyspark_model_class: Type[_CumlModel]
+) -> None:
+    """
+    To set pyspark parameter attributes according to cuml parameters.
+    This function must be called after you finished the subclass design of _CumlEstimator_CumlModel
+
+    Eg,
+
+    class SparkDummy(_CumlEstimator):
+        pass
+    class SparkDummyModel(_CumlModel):
+        pass
+    _set_pyspark_cuml_cls_param_attrs(SparkDummy, SparkDummyModel)
+    """
+    cuml_estimator_class_name = _get_class_name(pyspark_estimator_class._cuml_cls())
+    params_dict = pyspark_estimator_class._get_cuml_params_default()
+
+    def param_value_converter(v: Any) -> Any:
+        if isinstance(v, np.generic):
+            # convert numpy scalar values to corresponding python scalar values
+            return np.array(v).item()
+        if isinstance(v, dict):
+            return {k: param_value_converter(nv) for k, nv in v.items()}
+        if isinstance(v, list):
+            return [param_value_converter(nv) for nv in v]
+        return v
+
+    def set_param_attrs(attr_name: str, param_obj_: Param) -> None:
+        param_obj_.typeConverter = param_value_converter
+        setattr(pyspark_estimator_class, attr_name, param_obj_)
+        setattr(pyspark_model_class, attr_name, param_obj_)
+
+    for name in params_dict.keys():
+        doc = f"Refer to CUML doc of {cuml_estimator_class_name} for this param {name}"
+
+        param_obj = Param(Params._dummy(), name=name, doc=doc)  # type: ignore
+        set_param_attrs(name, param_obj)

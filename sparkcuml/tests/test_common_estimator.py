@@ -18,10 +18,15 @@ from typing import Any, Union
 
 import cudf
 from pyspark import Row, TaskContext
+from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType
 
-from sparkcuml.core import INIT_PARAMETERS_NAME, _CumlEstimator, _CumlModel
-from sparkcuml.utils import _set_pyspark_cuml_cls_param_attrs
+from sparkcuml.core import (
+    INIT_PARAMETERS_NAME,
+    _CumlEstimator,
+    _CumlModel,
+    _set_pyspark_cuml_cls_param_attrs,
+)
 
 
 class CumlDummy(object):
@@ -29,7 +34,7 @@ class CumlDummy(object):
     A dummy class to mimic a cuml python class
     """
 
-    def __init__(self, a=1, b=2, c=3):
+    def __init__(self, a=1, b=2, c=3) -> None:  # type: ignore
         super().__init__()
         self.a = a
         self.b = b
@@ -41,7 +46,7 @@ class SparkCumlDummyModel(_CumlModel):
     PySpark model of CumlDummy
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
 
@@ -50,11 +55,11 @@ class SparkCumlDummy(_CumlEstimator):
     PySpark estimator of CumlDummy
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
 
-    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs) -> dict[str, Any]:
+    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs: Any) -> dict[str, Any]:
         # assert len(kwargs) == 3
         assert kwargs["rank"] == TaskContext.get().partitionId()
         assert "handle" in kwargs
@@ -72,12 +77,12 @@ class SparkCumlDummy(_CumlEstimator):
     def _out_schema(self) -> Union[StructType, str]:
         return "dummy int"
 
-    def _create_pyspark_model(self, result: Row):
+    def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
         assert result.dummy == 1024
         return SparkCumlDummyModel()
 
     @classmethod
-    def _cuml_cls(cls):
+    def _cuml_cls(cls) -> type:
         return CumlDummy
 
     @classmethod
@@ -92,7 +97,7 @@ class SparkCumlDummy(_CumlEstimator):
 _set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
 
 
-def test_dummy(spark):
+def test_dummy(spark: SparkSession) -> None:
     data = [
         [1.0, 4.0, 4.0, 4.0],
         [2.0, 2.0, 2.0, 2.0],
@@ -107,7 +112,7 @@ def test_dummy(spark):
 
     dummy = SparkCumlDummy(inputCols=input_cols, a=100)
     assert dummy.getInputCols() == input_cols
-    assert dummy.getOrDefault(dummy.a) == 100
+    assert dummy.getOrDefault(dummy.a) == 100  # type: ignore
     assert not dummy.hasParam("b")
-    assert dummy.getOrDefault(dummy.c) == 3
+    assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
     model = dummy.fit(df)

@@ -18,7 +18,7 @@ from sparkcuml.utils import _get_default_params_from_func
 
 
 def test_get_default_params_from_func() -> None:
-    def dummy_func(a=1, b=2, c=3, d=4) -> None:
+    def dummy_func(a=1, b=2, c=3, d=4) -> None:  # type: ignore
         pass
 
     params = _get_default_params_from_func(dummy_func, ["c"])

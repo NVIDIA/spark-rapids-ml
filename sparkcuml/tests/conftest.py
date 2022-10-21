@@ -15,6 +15,7 @@
 #
 
 import logging
+from typing import Generator
 
 import pytest
 from pyspark.sql import SparkSession
@@ -23,7 +24,7 @@ gpu_numbers = 1
 
 
 @pytest.fixture
-def spark():
+def spark() -> Generator[SparkSession, None, None]:
     builder = SparkSession.builder.appName(name="spark cuml python tests")
     confs = {
         "spark.master": f"local[{gpu_numbers}]",
