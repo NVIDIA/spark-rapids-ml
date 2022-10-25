@@ -97,7 +97,7 @@ class SparkCumlDummy(_CumlEstimator):
 _set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
 
 
-def test_dummy(spark: SparkSession) -> None:
+def test_dummy(spark: SparkSession, gpu_number: int) -> None:
     data = [
         [1.0, 4.0, 4.0, 4.0],
         [2.0, 2.0, 2.0, 2.0],
@@ -110,7 +110,7 @@ def test_dummy(spark: SparkSession) -> None:
     df = rdd.toDF(input_cols)
     df.show()
 
-    dummy = SparkCumlDummy(inputCols=input_cols, a=100)
+    dummy = SparkCumlDummy(inputCols=input_cols, a=100, num_workers=gpu_number)
     assert dummy.getInputCols() == input_cols
     assert dummy.getOrDefault(dummy.a) == 100  # type: ignore
     assert not dummy.hasParam("b")
