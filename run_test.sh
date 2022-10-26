@@ -10,4 +10,6 @@ python ci/lint_python.py --format=0 --type-check=1 --pylint=0 || exit 1
 
 ##### 3. run test
 
-pytest sparkcuml
+unset SPARK_HOME
+
+pytest -s sparkcuml

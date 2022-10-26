@@ -168,7 +168,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         input_is_multi_cols = True
         if self.isDefined(self.inputCol):
             select_cols = [self.getInputCol()]
-            dimension = len(dataset.first()[self.getInputCol()])
+            dimension = len(dataset.first()[self.getInputCol()])  # type: ignore
             input_is_multi_cols = False
         elif self.isDefined(self.inputCols):
             select_cols.extend(self.getInputCols())
@@ -186,7 +186,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         params[INIT_PARAMETERS_NAME] = self._gen_cuml_param()
         params["dimension"] = dimension
 
-        comm = NcclComm(self.get_num_workers())
+        num_workers = self.get_num_workers()
 
         def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -203,7 +203,9 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
             context.barrier()
 
+            comm = NcclComm(num_workers, context)
             handle = comm.init_worker(params["rank"], init_nccl=True)
+
             params["handle"] = handle
 
             inputs = []

@@ -13,20 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import base64
 
 from pylibraft.common import Handle
+from pyspark import BarrierTaskContext
 from raft_dask.common.comms_utils import inject_comms_on_handle_coll_only
 from raft_dask.common.nccl import nccl
 
 
 class NcclComm:
-    def __init__(self, nranks: int) -> None:
+    def __init__(self, nranks: int, context: BarrierTaskContext) -> None:
         """
-        This class must be instantiated in driver side.
+        Initialize the nccl unique id for workers.
 
-        It will be moved to executor side in the future.
+        1. get the nccl unique id for worker 0
+        2. do all gather for all the workers to get the nccl unique uid.
         """
-        self.nccl_unique_id = nccl.get_unique_id()
+        nccl_uid = ""
+        if context.partitionId() == 0:
+            nccl_uid = base64.b64encode(nccl.get_unique_id()).decode("utf-8")
+        nccl_uids = context.allGather(nccl_uid)
+        self.nccl_unique_id = base64.b64decode(nccl_uids[0])
         self.nranks = nranks
 
     def init_worker(self, rank: int, init_nccl: bool = True) -> Handle:
