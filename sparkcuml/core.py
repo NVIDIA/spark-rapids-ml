@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import HasInputCol, HasInputCols
+from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasOutputCol
 from pyspark.sql import DataFrame
 from pyspark.sql.types import Row, StructType
 
@@ -38,7 +38,7 @@ from sparkcuml.utils import (
 INIT_PARAMETERS_NAME = "init"
 
 
-class _CumlEstimatorParams(HasInputCols, HasInputCol):
+class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
     """
     The common parameters for all Spark CUML algorithms.
     """
@@ -168,7 +168,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         input_is_multi_cols = True
         if self.isDefined(self.inputCol):
             select_cols = [self.getInputCol()]
-            dimension = len(dataset.first())
+            dimension = len(dataset.first()[self.getInputCol()])
             input_is_multi_cols = False
         elif self.isDefined(self.inputCols):
             select_cols.extend(self.getInputCols())
@@ -177,7 +177,8 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             raise ValueError("Please set inputCol or inputCols")
 
         dataset = dataset.select(*select_cols)
-        dataset = self._repartition_dataset(dataset)
+        if dataset.rdd.getNumPartitions() != self.get_num_workers():
+            dataset = self._repartition_dataset(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -216,7 +217,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             else:
                 for pdf in pdf_iter:
                     flatten = pdf.apply(
-                        lambda x: x[input_is_multi_cols[0]],  # type: ignore
+                        lambda x: x[select_cols[0]],  # type: ignore
                         axis=1,
                         result_type="expand",
                     )
@@ -251,7 +252,7 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         return self._copyValues(self._create_pyspark_model(ret))  # type: ignore
 
 
-class _CumlModel(Model):
+class _CumlModel(Model, HasInputCol, HasOutputCol):
     """
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """

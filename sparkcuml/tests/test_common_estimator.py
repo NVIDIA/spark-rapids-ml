@@ -61,7 +61,9 @@ class SparkCumlDummy(_CumlEstimator):
 
     def _fit_internal(self, df: list[cudf.DataFrame], **kwargs: Any) -> dict[str, Any]:
         # assert len(kwargs) == 3
-        assert kwargs["rank"] == TaskContext.get().partitionId()
+        context = TaskContext.get()
+        assert context is not None
+        assert kwargs["rank"] == context.partitionId()
         assert "handle" in kwargs
         assert INIT_PARAMETERS_NAME in kwargs
         init_params = kwargs[INIT_PARAMETERS_NAME]
