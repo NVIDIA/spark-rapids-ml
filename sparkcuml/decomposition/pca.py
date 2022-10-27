@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 
-from typing import Any, Union
+from typing import Any, Callable, Union
 
 import cudf
-from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import ArrayType, DoubleType, Row, StructField, StructType
 
@@ -88,32 +87,40 @@ class SparkCumlPCA(_CumlEstimator):
         self.set_params(outputCol=value)
         return self
 
-    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs: Any) -> dict[str, Any]:
-        pca_object = CumlPCAMG(
-            handle=kwargs["handle"],
-            output_type="cudf",
-            **kwargs[INIT_PARAMETERS_NAME],
-        )
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[list[cudf.DataFrame], dict[str, Any]], dict[str, Any]]:
+        def _cuml_fit(
+            df: list[cudf.DataFrame], params: dict[str, Any]
+        ) -> dict[str, Any]:
+            from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
-        pca_object.fit(
-            df,
-            kwargs["numVec"],
-            kwargs["dimension"],
-            kwargs["partsToRanks"],
-            kwargs["rank"],
-            _transform=False,
-        )
-        cpu_mean = pca_object.mean_.to_arrow().to_pylist()
-        cpu_pc = pca_object.components_.to_numpy().tolist()
-        cpu_explained_variance = pca_object.explained_variance_.to_numpy().tolist()
+            pca_object = CumlPCAMG(
+                handle=params["handle"],
+                output_type="cudf",
+                **params[INIT_PARAMETERS_NAME],
+            )
 
-        ret_dict = {
-            "mean": [cpu_mean],
-            "pc": [cpu_pc],
-            "explained_variance": [cpu_explained_variance],
-        }
+            pca_object.fit(
+                df,
+                params["numVec"],
+                params["dimension"],
+                params["partsToRanks"],
+                params["rank"],
+                _transform=False,
+            )
 
-        return ret_dict
+            cpu_mean = pca_object.mean_.to_arrow().to_pylist()
+            cpu_pc = pca_object.components_.to_numpy().tolist()
+            cpu_explained_variance = pca_object.explained_variance_.to_numpy().tolist()
+
+            return {
+                "mean": [cpu_mean],
+                "pc": [cpu_pc],
+                "explained_variance": [cpu_explained_variance],
+            }
+
+        return _cuml_fit
 
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(

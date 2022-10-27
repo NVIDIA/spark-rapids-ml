@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-from typing import Any, Union
+from typing import Any, Callable, Union
 
 import cudf
 from pyspark import Row, TaskContext
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
 
 from sparkcuml.core import (
@@ -59,22 +59,29 @@ class SparkCumlDummy(_CumlEstimator):
         super().__init__()
         self.set_params(**kwargs)
 
-    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs: Any) -> dict[str, Any]:
-        # assert len(kwargs) == 3
-        context = TaskContext.get()
-        assert context is not None
-        assert kwargs["rank"] == context.partitionId()
-        assert "handle" in kwargs
-        assert INIT_PARAMETERS_NAME in kwargs
-        init_params = kwargs[INIT_PARAMETERS_NAME]
-        assert init_params["a"] == 100
-        assert init_params["c"] == 3
-        dummy = CumlDummy(**init_params)
-        assert dummy.a == 100
-        assert dummy.b == 2
-        assert dummy.c == 3
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[list[cudf.DataFrame], dict[str, Any]], dict[str, Any]]:
+        def _cuml_fit(
+            df: list[cudf.DataFrame], params: dict[str, Any]
+        ) -> dict[str, Any]:
+            context = TaskContext.get()
+            assert context is not None
+            assert params["rank"] == context.partitionId()
+            assert "handle" in params
+            assert INIT_PARAMETERS_NAME in params
+            init_params = params[INIT_PARAMETERS_NAME]
+            assert init_params["a"] == 100
+            assert "b" not in init_params
+            assert init_params["c"] == 3
+            dummy = CumlDummy(**init_params)
+            assert dummy.a == 100
+            assert dummy.b == 2
+            assert dummy.c == 3
 
-        return {"dummy": [1024]}
+            return {"dummy": [1024]}
+
+        return _cuml_fit
 
     def _out_schema(self) -> Union[StructType, str]:
         return "dummy int"

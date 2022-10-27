@@ -15,7 +15,7 @@
 #
 
 from abc import abstractmethod
-from typing import Any, Iterator, Type, Union
+from typing import Any, Callable, Iterator, Type, Union
 
 import cudf
 import numpy as np
@@ -122,14 +122,6 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
                 raise ValueError(f"Unsupported param '{k}'.")
 
     @abstractmethod
-    def _fit_internal(self, df: list[cudf.DataFrame], **kwargs: Any) -> dict[str, Any]:
-        """
-        Subclass must implement its own logic to fit a model to the input dataset.
-        Please note that, this function is called on the executor side.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def _out_schema(self) -> Union[StructType, str]:
         """
         The output schema of the estimator, which will be used to
@@ -149,6 +141,34 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         Repartition the dataset to the desired number of workers.
         """
         return dataset.repartition(self.getOrDefault(self.num_workers))
+
+    @abstractmethod
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[list[cudf.DataFrame], dict[str, Any]], dict[str, Any]]:
+        """
+        Subclass must implement this function to return a cuml fit function that will be
+        sent to executor to run.
+
+        Eg,
+
+        def _get_cuml_fit_func(self, dataset: DataFrame):
+            ...
+            def _cuml_fit(df: list[cudf.DataFrame], params: dict[str, Any]) -> dict[str, Any]:
+                "" "
+                df:  a sequence of cudf DataFrame
+                params: a series of parameters stored in dictionary,
+                    especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
+                "" "
+                ...
+            ...
+
+            return _cuml_fit
+
+        _get_cuml_fit_func itself runs on the driver side, while the returned _cuml_fit will
+        run on the executor side.
+        """
+        raise NotImplementedError()
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
         """
@@ -182,26 +202,27 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
-        params: dict[str, Any] = {}
-        params[INIT_PARAMETERS_NAME] = self._gen_cuml_param()
-        params["dimension"] = dimension
+        params: dict[str, Any] = {
+            INIT_PARAMETERS_NAME: self._gen_cuml_param(),
+            "dimension": dimension,
+        }
 
         num_workers = self.get_num_workers()
 
-        def _cuml_fit(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+        cuml_fit_func = self._get_cuml_fit_func(dataset)
+
+        def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
-
             # Get the GPU ID from resources
             gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
 
             import cupy
 
             cupy.cuda.Device(gpu_id).use()
-            params["rank"] = context.partitionId()
 
-            context.barrier()
+            params["rank"] = context.partitionId()
 
             comm = NcclComm(num_workers, context)
             handle = comm.init_worker(params["rank"], init_nccl=True)
@@ -231,21 +252,20 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
             rank2size = (params["rank"], size)
             messages = context.allGather(message=json.dumps(rank2size))
+            print("---debug message: ", messages)
             parts_to_ranks = [json.loads(pair) for pair in messages]
-            parts_to_ranks = sorted(parts_to_ranks, key=lambda p: p[0])
             params["partsToRanks"] = parts_to_ranks
-
             num_vec = sum(pair[1] for pair in parts_to_ranks)
             params["numVec"] = num_vec
 
-            result = self._fit_internal(inputs, **params)
+            result = cuml_fit_func(inputs, params)
 
             context.barrier()
             if context.partitionId() == 0:
                 yield pd.DataFrame(data=result)
 
         ret = (
-            dataset.mapInPandas(_cuml_fit, schema=self._out_schema())  # type: ignore
+            dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
             .rdd.barrier()
             .mapPartitions(lambda x: x)
             .collect()[0]
