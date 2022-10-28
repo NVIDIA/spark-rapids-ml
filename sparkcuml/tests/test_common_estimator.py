@@ -79,6 +79,11 @@ class SparkCumlDummy(_CumlEstimator):
             assert dummy.b == 2
             assert dummy.c == 3
 
+            import time
+
+            # sleep for 1 sec to bypass https://issues.apache.org/jira/browse/SPARK-40932
+            time.sleep(1)
+
             return {"dummy": [1024]}
 
         return _cuml_fit

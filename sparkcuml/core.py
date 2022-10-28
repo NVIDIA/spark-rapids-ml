@@ -252,7 +252,6 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
 
             rank2size = (params["rank"], size)
             messages = context.allGather(message=json.dumps(rank2size))
-            print("---debug message: ", messages)
             parts_to_ranks = [json.loads(pair) for pair in messages]
             params["partsToRanks"] = parts_to_ranks
             num_vec = sum(pair[1] for pair in parts_to_ranks)
