@@ -17,6 +17,7 @@
 from typing import Any, Callable, Union
 
 import cudf
+import pandas as pd
 from pyspark import Row, TaskContext
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import StructType
@@ -46,8 +47,27 @@ class SparkCumlDummyModel(_CumlModel):
     PySpark model of CumlDummy
     """
 
-    def __init__(self) -> None:
+    def __init__(self, fake_model: int) -> None:
         super().__init__()
+        self.fake_model = fake_model
+
+    @classmethod
+    def from_row(cls, row: Row) -> "SparkCumlDummyModel":
+        return cls(row.dummy)
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame
+    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+        fake_model = self.fake_model
+
+        def _dummy_transform(gdf: cudf.DataFrame) -> pd.DataFrame:
+            assert fake_model == 1024
+            return gdf.to_pandas()
+
+        return _dummy_transform
+
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        return input_schema
 
 
 class SparkCumlDummy(_CumlEstimator):
@@ -93,7 +113,7 @@ class SparkCumlDummy(_CumlEstimator):
 
     def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
         assert result.dummy == 1024
-        return SparkCumlDummyModel()
+        return SparkCumlDummyModel.from_row(result)
 
     @classmethod
     def _cuml_cls(cls) -> type:
@@ -130,3 +150,10 @@ def test_dummy(spark: SparkSession, gpu_number: int) -> None:
     assert not dummy.hasParam("b")
     assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
     model = dummy.fit(df)
+    transformed_df = model.transform(df)
+    ret = transformed_df.collect()
+    assert len(ret) == 4
+
+    for x, y in zip(ret, data):
+        for i in range(len(ret)):
+            assert x[i] == y[i]

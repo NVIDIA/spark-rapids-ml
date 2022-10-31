@@ -17,6 +17,8 @@
 from typing import Any, Callable, Union
 
 import cudf
+import pandas as pd
+from pyspark.sql import DataFrame
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import ArrayType, DoubleType, Row, StructField, StructType
 
@@ -37,7 +39,12 @@ class SparkCumlPCAModel(_CumlModel):
         self.pc = pc
         self.explained_variance = explained_variance
 
-    def _transform(self, df: DataFrame) -> DataFrame:
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame
+    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+        pass
+
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         pass
 
 

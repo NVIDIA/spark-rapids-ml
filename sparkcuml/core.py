@@ -15,11 +15,12 @@
 #
 
 from abc import abstractmethod
-from typing import Any, Callable, Iterator, Type, Union
+from typing import Any, Callable, Iterator, Optional, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark import TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasOutputCol
@@ -36,6 +37,23 @@ from sparkcuml.utils import (
 )
 
 INIT_PARAMETERS_NAME = "init"
+
+
+class _CumlCommon:
+    @staticmethod
+    def set_gpu_device(context: Optional[TaskContext], is_local: bool) -> None:
+        """
+        Set gpu device according to the spark task resources.
+
+        If it is local mode, we use partition id as gpu id.
+        """
+        # Get the GPU ID from resources
+        assert context is not None
+        gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
+
+        import cupy
+
+        cupy.cuda.Device(gpu_id).use()
 
 
 class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
@@ -91,7 +109,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
         return params
 
 
-class _CumlEstimator(Estimator, _CumlEstimatorParams):
+class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
     """
     The common estimator to handle the fit callback (_fit). It should handle
     1. set the default parameters
@@ -215,23 +233,18 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
-            # Get the GPU ID from resources
-            gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
+            partition_id = context.partitionId()
 
-            import cupy
+            # set gpu device
+            self.set_gpu_device(context, is_local)
 
-            cupy.cuda.Device(gpu_id).use()
-
-            params["rank"] = context.partitionId()
-
+            # initialize nccl comm
             comm = NcclComm(num_workers, context)
-            handle = comm.init_worker(params["rank"], init_nccl=True)
+            handle = comm.init_worker(partition_id, init_nccl=True)
 
-            params["handle"] = handle
-
+            # handle the input
             inputs = []
             size = 0
-
             if input_is_multi_cols:
                 for pdf in pdf_iter:
                     gdf = cudf.DataFrame(pdf[select_cols])
@@ -248,15 +261,20 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
                     size += gdf[0].size
                     inputs.append(gdf)
 
+            # prepare (parts, rank)
             import json
 
-            rank2size = (params["rank"], size)
-            messages = context.allGather(message=json.dumps(rank2size))
-            parts_to_ranks = [json.loads(pair) for pair in messages]
-            params["partsToRanks"] = parts_to_ranks
-            num_vec = sum(pair[1] for pair in parts_to_ranks)
-            params["numVec"] = num_vec
+            rank_size = (partition_id, size)
+            messages = context.allGather(message=json.dumps(rank_size))
+            parts_rank_size = [json.loads(pair) for pair in messages]
+            num_cols = sum(pair[1] for pair in parts_rank_size)
 
+            params["partsToRanks"] = parts_rank_size
+            params["rank"] = partition_id
+            params["handle"] = handle
+            params["numVec"] = num_cols
+
+            # call the cuml fit function
             result = cuml_fit_func(inputs, params)
 
             context.barrier()
@@ -273,13 +291,44 @@ class _CumlEstimator(Estimator, _CumlEstimatorParams):
         return self._copyValues(self._create_pyspark_model(ret))  # type: ignore
 
 
-class _CumlModel(Model, HasInputCol, HasOutputCol):
+class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     """
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """
 
     def __init__(self) -> None:
         super().__init__()
+
+    @abstractmethod
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame
+    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+        """
+        Subclass must implement this function to return a cuml transform function that will be
+        sent to executor to run.
+
+        Eg,
+
+        def _get_cuml_transform_func(self, dataset: DataFrame):
+            ...
+            def _cuml_transform(df: cudf.DataFrame) ->pd.DataFrame:
+                ...
+            ...
+
+            return _cuml_transform
+
+        _get_cuml_transform_func itself runs on the driver side, while the returned _cuml_transform will
+        run on the executor side.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        """
+        The output schema of the model, which will be used to
+        construct the returning pandas dataframe
+        """
+        raise NotImplementedError()
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """
@@ -295,7 +344,45 @@ class _CumlModel(Model, HasInputCol, HasOutputCol):
         :py:class:`pyspark.sql.DataFrame`
             transformed dataset
         """
-        pass
+
+        select_cols = []
+        input_is_multi_cols = True
+        if self.isDefined(self.inputCol):
+            select_cols.append(self.getInputCol())
+            input_is_multi_cols = False
+        elif self.isDefined(self.inputCols):
+            select_cols.extend(self.getInputCols())
+        else:
+            raise ValueError("Please set inputCol or inputCols")
+
+        is_local = _is_local(_get_spark_session().sparkContext)
+
+        cuml_transform_func = self._get_cuml_transform_func(dataset)
+
+        def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            from pyspark import TaskContext
+
+            context = TaskContext.get()
+
+            self.set_gpu_device(context, is_local)
+
+            if input_is_multi_cols:
+                for pdf in pdf_iter:
+                    gdf = cudf.DataFrame(pdf[select_cols])
+                    yield cuml_transform_func(gdf)
+            else:
+                for pdf in pdf_iter:
+                    flatten = pdf.apply(
+                        lambda x: x[select_cols[0]],  # type: ignore
+                        axis=1,
+                        result_type="expand",
+                    )
+                    gdf = cudf.from_pandas(flatten)
+                    yield cuml_transform_func(gdf)
+
+        return dataset.mapInPandas(
+            _transform_udf, schema=self._out_schema(dataset.schema)  # type: ignore
+        )
 
 
 def _set_pyspark_cuml_cls_param_attrs(
