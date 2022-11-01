@@ -71,6 +71,7 @@ class SparkCumlPCA(_CumlEstimator):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
+        self.set_params(n_components=1)
         self.set_params(**kwargs)
 
     def setK(self, value: int) -> "SparkCumlPCA":
@@ -159,7 +160,14 @@ class SparkCumlPCA(_CumlEstimator):
         For some reason, spark cuml may not support all the parameters.
         In that case, we need to explicitly exclude them.
         """
-        return ["handle", "copy"]
+        return [
+            "handle",
+            "copy",
+            "iterated_power",
+            "random_state",
+            "tol",
+            "output_type",
+        ]
 
 
 _set_pyspark_cuml_cls_param_attrs(SparkCumlPCA, SparkCumlPCAModel)
