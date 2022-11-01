@@ -278,6 +278,8 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             result = cuml_fit_func(inputs, params)
 
             context.barrier()
+            comm.destroy()
+
             if context.partitionId() == 0:
                 yield pd.DataFrame(data=result)
 

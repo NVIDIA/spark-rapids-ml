@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import base64
+from typing import Any
 
 from pylibraft.common import Handle
 from pyspark import BarrierTaskContext
@@ -35,6 +36,7 @@ class NcclComm:
         nccl_uids = context.allGather(nccl_uid)
         self.nccl_unique_id = base64.b64decode(nccl_uids[0])
         self.nranks = nranks
+        self.raft_comm_state: dict[str, Any] = {}
 
     def init_worker(self, rank: int, init_nccl: bool = True) -> Handle:
         """
@@ -49,5 +51,19 @@ class NcclComm:
             nccl_comm = nccl()
             nccl_comm.init(self.nranks, self.nccl_unique_id, rank)
             inject_comms_on_handle_coll_only(handle, nccl_comm, self.nranks, rank, True)
-
+            self.raft_comm_state["nccl"] = nccl_comm
+        self.raft_comm_state["handle"] = handle
         return handle
+
+    def destroy(self) -> None:
+        """
+        destroy objects for NCCL communication
+
+        release GPU memory of nccl comm and handle if they exist
+        """
+        if "nccl" in self.raft_comm_state:
+            self.raft_comm_state["nccl"].destroy()
+            del self.raft_comm_state["nccl"]
+
+        if "handle" in self.raft_comm_state:
+            del self.raft_comm_state["handle"]
