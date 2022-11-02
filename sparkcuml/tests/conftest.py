@@ -16,7 +16,9 @@
 import json
 import logging
 import os
+import shutil
 import subprocess
+import tempfile
 from typing import Generator
 
 import pytest
@@ -65,3 +67,10 @@ def spark() -> Generator[SparkSession, None, None]:
     logging.getLogger("pyspark").setLevel(logging.WARN)
     yield spark
     spark.stop()
+
+
+@pytest.fixture
+def tmp_path() -> Generator[str, None, None]:
+    path = tempfile.mkdtemp(prefix="spark_cuml_tests_")
+    yield path
+    shutil.rmtree(path)

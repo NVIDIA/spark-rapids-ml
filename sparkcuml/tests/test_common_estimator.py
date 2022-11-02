@@ -131,7 +131,7 @@ class SparkCumlDummy(_CumlEstimator):
 _set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
 
 
-def test_dummy(spark: SparkSession, gpu_number: int) -> None:
+def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
     data = [
         [1.0, 4.0, 4.0, 4.0],
         [2.0, 2.0, 2.0, 2.0],
@@ -145,10 +145,22 @@ def test_dummy(spark: SparkSession, gpu_number: int) -> None:
     df.show()
 
     dummy = SparkCumlDummy(inputCols=input_cols, a=100, num_workers=gpu_number)
-    assert dummy.getInputCols() == input_cols
-    assert dummy.getOrDefault(dummy.a) == 100  # type: ignore
-    assert not dummy.hasParam("b")
-    assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
+
+    def assert_parameters(dummy: SparkCumlDummy) -> None:
+        assert dummy.getInputCols() == input_cols
+        assert dummy.getOrDefault(dummy.a) == 100  # type: ignore
+        assert not dummy.hasParam("b")
+        assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
+
+    assert_parameters(dummy)
+
+    path = tmp_path + "/dummy_tests"
+    estimator_path = f"{path}/dummy_estimator"
+    dummy.write().overwrite().save(estimator_path)
+    dummp_loaded = SparkCumlDummy.load(estimator_path)
+
+    assert_parameters(dummp_loaded)
+
     model = dummy.fit(df)
     transformed_df = model.transform(df)
     ret = transformed_df.collect()
