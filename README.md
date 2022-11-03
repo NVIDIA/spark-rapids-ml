@@ -17,7 +17,7 @@ Once you have the `rapids-22.10`, you still need to install below packages.
 
 ``` bash
 conda activate rapids-22.10
-pip install pylint pytest pyspark black
+pip install pylint pytest pyspark black mypy
 ```
 
 Run test
