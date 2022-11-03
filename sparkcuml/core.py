@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import json
+import os
 from abc import abstractmethod
 from typing import Any, Callable, Dict, Iterator, List, Optional, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import SparkContext, TaskContext
+from pyspark import TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasOutputCol
@@ -47,35 +48,6 @@ from sparkcuml.utils import (
 INIT_PARAMETERS_NAME = "init"
 
 
-class _CumlSharedReadWrite:
-    @staticmethod
-    def save_meta_data(
-        instance: "_CumlEstimator",
-        path: str,
-        sc: SparkContext,
-        extra_metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        instance.validate_params()
-        skip_params: List[str] = []
-        json_params: Dict[str, Any] = {}
-        for p, v in instance._paramMap.items():  # type: ignore
-            if p.name not in skip_params:
-                json_params[p.name] = v
-        extra_metadata = extra_metadata or {}
-        DefaultParamsWriter.saveMetadata(
-            instance, path, sc, extraMetadata=extra_metadata, paramMap=json_params  # type: ignore
-        )
-
-    @staticmethod
-    def load_instance(
-        cuml_estimator_cls: Type, path: str, sc: SparkContext
-    ) -> "_CumlEstimator":
-        metadata = DefaultParamsReader.loadMetadata(path, sc)
-        cuml_estimator = cuml_estimator_cls()
-        DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
-        return cuml_estimator
-
-
 class _CumlEstimatorWriter(MLWriter):
     """
     Write the parameters of _CumlEstimator to the file
@@ -86,7 +58,7 @@ class _CumlEstimatorWriter(MLWriter):
         self.instance = instance
 
     def saveImpl(self, path: str) -> None:
-        _CumlSharedReadWrite.save_meta_data(self.instance, path, self.sc)
+        DefaultParamsWriter.saveMetadata(self.instance, path, self.sc)  # type: ignore
 
 
 class _CumlEstimatorReader(MLReader):
@@ -96,10 +68,49 @@ class _CumlEstimatorReader(MLReader):
 
     def __init__(self, cls: Type) -> None:
         super().__init__()
-        self.cls = cls
+        self.estimator_cls = cls
 
     def load(self, path: str) -> "_CumlEstimator":
-        return _CumlSharedReadWrite.load_instance(self.cls, path, self.sc)
+        metadata = DefaultParamsReader.loadMetadata(path, self.sc)
+        cuml_estimator = self.estimator_cls()
+        DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
+        return cuml_estimator
+
+
+class _CumlModelWriter(MLWriter):
+    """
+    Write the parameters of _CumlModel to the file
+    """
+
+    def __init__(self, instance: "_CumlModel") -> None:
+        super().__init__()
+        self.instance: "_CumlModel" = instance
+
+    def saveImpl(self, path: str) -> None:
+        DefaultParamsWriter.saveMetadata(self.instance, path, self.sc)  # type: ignore
+        data_path = os.path.join(path, "data")
+        model_attributes = self.instance.get_model_attributes()
+        model_attributes_str = json.dumps(model_attributes)
+        self.sc.parallelize([model_attributes_str], 1).saveAsTextFile(data_path)
+
+
+class _CumlModelReader(MLReader):
+    """
+    Instantiate the _CumlModel from the file.
+    """
+
+    def __init__(self, cls: Type) -> None:
+        super().__init__()
+        self.model_cls = cls
+
+    def load(self, path: str) -> "_CumlEstimator":
+        metadata = DefaultParamsReader.loadMetadata(path, self.sc)
+        data_path = os.path.join(path, "data")
+        model_attr_str = self.sc.textFile(data_path).collect()[0]
+        model_attr_dict = json.loads(model_attr_str)
+        instance = self.model_cls(**model_attr_dict)
+        DefaultParamsReader.getAndSetParams(instance, metadata)
+        return instance
 
 
 class _CumlCommon(Params, MLWritable, MLReadable):
@@ -180,9 +191,6 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
                 params[k] = self.getOrDefault(k)
 
         return params
-
-    def validate_params(self) -> None:
-        pass
 
 
 class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
@@ -371,11 +379,24 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, **model_attributes: Any) -> None:
+        """
+        Subclass must pass the model attributes which will be saved in model persistence.
+        """
         super().__init__()
+
+        # model_data is the native data which will be saved for model persistence
+        self._model_attributes = model_attributes
+
+    def get_model_attributes(self) -> Optional[Dict[str, Any]]:
+        return self._model_attributes
 
     @classmethod
     def from_row(cls, model_attributes: Row):  # type: ignore
+        """
+        Default to pass all the attributes of the model to the model constructor,
+        So please make sure if the constructor can accept all of them.
+        """
         attr_dict = model_attributes.asDict()
         return cls(**attr_dict)
 
@@ -463,6 +484,13 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
         return dataset.mapInPandas(
             _transform_udf, schema=self._out_schema(dataset.schema)  # type: ignore
         )
+
+    def write(self) -> MLWriter:
+        return _CumlModelWriter(self)
+
+    @classmethod
+    def read(cls) -> MLReader:
+        return _CumlModelReader(cls)
 
 
 def _set_pyspark_cuml_cls_param_attrs(

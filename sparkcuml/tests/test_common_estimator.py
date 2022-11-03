@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Type, Union
 
 import cudf
 import pandas as pd
@@ -47,21 +47,22 @@ class SparkCumlDummyModel(_CumlModel):
     PySpark model of CumlDummy
     """
 
-    def __init__(self, fake_model: int) -> None:
-        super().__init__()
-        self.fake_model = fake_model
-
-    @classmethod
-    def from_row(cls, row: Row) -> "SparkCumlDummyModel":
-        return cls(row.dummy)
+    def __init__(
+        self, model_attribute_a: int, model_attribute_b: str, not_used: int = 1
+    ) -> None:
+        super().__init__(
+            model_attribute_a=model_attribute_a, model_attribute_b=model_attribute_b
+        )
+        self.model_attribute_a = model_attribute_a
+        self.model_attribute_b = model_attribute_b
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
     ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
-        fake_model = self.fake_model
+        model_attribute_a = self.model_attribute_a
 
         def _dummy_transform(gdf: cudf.DataFrame) -> pd.DataFrame:
-            assert fake_model == 1024
+            assert model_attribute_a == 1024
             return gdf.to_pandas()
 
         return _dummy_transform
@@ -104,19 +105,20 @@ class SparkCumlDummy(_CumlEstimator):
             # sleep for 1 sec to bypass https://issues.apache.org/jira/browse/SPARK-40932
             time.sleep(1)
 
-            return {"dummy": [1024]}
+            return {"model_attribute_a": [1024], "model_attribute_b": "hello dummy"}
 
         return _cuml_fit
 
     def _out_schema(self) -> Union[StructType, str]:
-        return "dummy int"
+        return "model_attribute_a int, model_attribute_b string"
 
     def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
-        assert result.dummy == 1024
+        assert result.model_attribute_a == 1024
+        assert result.model_attribute_b == "hello dummy"
         return SparkCumlDummyModel.from_row(result)
 
     @classmethod
-    def _cuml_cls(cls) -> type:
+    def _cuml_cls(cls) -> Type:
         return CumlDummy
 
     @classmethod
@@ -142,30 +144,51 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
     rdd = spark.sparkContext.parallelize(data)
     input_cols = ["c1", "c2", "c3", "c4"]
     df = rdd.toDF(input_cols)
-    df.show()
 
-    dummy = SparkCumlDummy(inputCols=input_cols, a=100, num_workers=gpu_number)
-
-    def assert_parameters(dummy: SparkCumlDummy) -> None:
+    def assert_estimator(dummy: SparkCumlDummy) -> None:
         assert dummy.getInputCols() == input_cols
         assert dummy.getOrDefault(dummy.a) == 100  # type: ignore
         assert not dummy.hasParam("b")
         assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
 
-    assert_parameters(dummy)
+    # Generate estimator
+    dummy = SparkCumlDummy(inputCols=input_cols, a=100, num_workers=gpu_number)
 
+    assert_estimator(dummy)
+
+    # Estimator persistence
     path = tmp_path + "/dummy_tests"
     estimator_path = f"{path}/dummy_estimator"
     dummy.write().overwrite().save(estimator_path)
-    dummp_loaded = SparkCumlDummy.load(estimator_path)
+    dummy_loaded = SparkCumlDummy.load(estimator_path)
+    assert_estimator(dummy_loaded)
 
-    assert_parameters(dummp_loaded)
+    # Estimator fit and get a model
+    model: SparkCumlDummyModel = dummy.fit(df)
 
-    model = dummy.fit(df)
+    def assert_model(model: SparkCumlDummyModel) -> None:
+        assert model.model_attribute_a == 1024
+        assert model.model_attribute_b == "hello dummy"
+        assert model.getOrDefault(model.a) == 100  # type: ignore
+        assert not model.hasParam("b")
+        assert model.getOrDefault(model.c) == 3  # type: ignore
+
+    assert_model(model)
+
+    # Model persistence
+    model_path = f"{path}/dummy_model"
+    model.write().overwrite().save(model_path)
+    model_loaded = SparkCumlDummyModel.load(model_path)
+
+    assert_model(model_loaded)
+
+    # Tranform the training dataset
     transformed_df = model.transform(df)
+
     ret = transformed_df.collect()
     assert len(ret) == 4
 
+    # Compare data.
     for x, y in zip(ret, data):
         for i in range(len(ret)):
             assert x[i] == y[i]
