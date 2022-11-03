@@ -15,7 +15,7 @@
 #
 
 from abc import abstractmethod
-from typing import Any, Callable, Iterator, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Type, Union
 
 import cudf
 import numpy as np
@@ -53,11 +53,11 @@ class _CumlSharedReadWrite:
         instance: "_CumlEstimator",
         path: str,
         sc: SparkContext,
-        extra_metadata: Optional[dict] = None,
+        extra_metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         instance.validate_params()
-        skip_params: list[str] = []
-        json_params: dict[str, Any] = {}
+        skip_params: List[str] = []
+        json_params: Dict[str, Any] = {}
         for p, v in instance._paramMap.items():  # type: ignore
             if p.name not in skip_params:
                 json_params[p.name] = v
@@ -153,7 +153,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
         raise NotImplementedError()
 
     @classmethod
-    def _not_supported_param(cls) -> list[str]:
+    def _not_supported_param(cls) -> List[str]:
         """
         For some reason, spark cuml may not support all the parameters.
         In that case, we need to explicitly exclude them.
@@ -161,7 +161,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
         return []
 
     @classmethod
-    def _get_cuml_params_default(cls) -> dict[str, Any]:
+    def _get_cuml_params_default(cls) -> Dict[str, Any]:
         """
         Inspect the __init__ function of _cuml_cls() to get the
         parameters and default values.
@@ -170,7 +170,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
             cls._cuml_cls(), cls._not_supported_param()
         )
 
-    def _gen_cuml_param(self) -> dict[str, Any]:
+    def _gen_cuml_param(self) -> Dict[str, Any]:
         """
         Generate the CUML parameters according the pyspark estimator parameters.
         """
@@ -229,7 +229,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
     @abstractmethod
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[list[cudf.DataFrame], dict[str, Any]], dict[str, Any]]:
+    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
         """
         Subclass must implement this function to return a cuml fit function that will be
         sent to executor to run.
@@ -238,7 +238,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         def _get_cuml_fit_func(self, dataset: DataFrame):
             ...
-            def _cuml_fit(df: list[cudf.DataFrame], params: dict[str, Any]) -> dict[str, Any]:
+            def _cuml_fit(df: List[cudf.DataFrame], params: Dict[str, Any]) -> Dict[str, Any]:
                 "" "
                 df:  a sequence of cudf DataFrame
                 params: a series of parameters stored in dictionary,
@@ -286,7 +286,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
-        params: dict[str, Any] = {
+        params: Dict[str, Any] = {
             INIT_PARAMETERS_NAME: self._gen_cuml_param(),
             "dimension": dimension,
         }

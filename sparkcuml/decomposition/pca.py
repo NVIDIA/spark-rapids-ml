@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Union
+from typing import Any, Callable, Dict, List, Union
 
 import cudf
 import pandas as pd
@@ -78,10 +78,10 @@ class SparkCumlPCA(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[list[cudf.DataFrame], dict[str, Any]], dict[str, Any]]:
+    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
         def _cuml_fit(
-            df: list[cudf.DataFrame], params: dict[str, Any]
-        ) -> dict[str, Any]:
+            df: List[cudf.DataFrame], params: Dict[str, Any]
+        ) -> Dict[str, Any]:
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
             pca_object = CumlPCAMG(
@@ -135,7 +135,7 @@ class SparkCumlPCA(_CumlEstimator):
         return PCA
 
     @classmethod
-    def _not_supported_param(cls) -> list[str]:
+    def _not_supported_param(cls) -> List[str]:
         """
         For some reason, spark cuml may not support all the parameters.
         In that case, we need to explicitly exclude them.
@@ -153,10 +153,10 @@ class SparkCumlPCA(_CumlEstimator):
 class SparkCumlPCAModel(_CumlModel):
     def __init__(
         self,
-        mean: list[float],
-        pc: list[list[float]],
-        explained_variance: list[float],
-        singular_values: list[float],
+        mean: List[float],
+        pc: List[List[float]],
+        explained_variance: List[float],
+        singular_values: List[float],
     ):
         super().__init__()
 

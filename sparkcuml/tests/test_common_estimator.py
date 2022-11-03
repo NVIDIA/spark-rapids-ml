@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Union
+from typing import Any, Callable, Dict, List, Union
 
 import cudf
 import pandas as pd
@@ -81,10 +81,10 @@ class SparkCumlDummy(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[list[cudf.DataFrame], dict[str, Any]], dict[str, Any]]:
+    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
         def _cuml_fit(
-            df: list[cudf.DataFrame], params: dict[str, Any]
-        ) -> dict[str, Any]:
+            df: List[cudf.DataFrame], params: Dict[str, Any]
+        ) -> Dict[str, Any]:
             context = TaskContext.get()
             assert context is not None
             assert params["rank"] == context.partitionId()
@@ -120,7 +120,7 @@ class SparkCumlDummy(_CumlEstimator):
         return CumlDummy
 
     @classmethod
-    def _not_supported_param(cls) -> list[str]:
+    def _not_supported_param(cls) -> List[str]:
         """
         For some reason, spark cuml may not support all the parameters.
         In that case, we need to explicitly exclude them.

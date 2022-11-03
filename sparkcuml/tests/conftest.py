@@ -19,7 +19,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-from typing import Generator
+from typing import Generator, List
 
 import pytest
 from pyspark.sql import SparkSession
@@ -29,7 +29,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 gpu_discovery_script_path = f"{dir_path}/discover_gpu.sh"
 
 
-def get_devices() -> list[str]:
+def get_devices() -> List[str]:
     """This works only if driver is the same machine of worker."""
     completed = subprocess.run(gpu_discovery_script_path, stdout=subprocess.PIPE)
     assert completed.returncode == 0, "Failed to execute discovery script."

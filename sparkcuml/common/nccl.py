@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import base64
-from typing import Any
+from typing import Any, Dict
 
 from pylibraft.common import Handle
 from pyspark import BarrierTaskContext
@@ -36,7 +36,7 @@ class NcclComm:
         nccl_uids = context.allGather(nccl_uid)
         self.nccl_unique_id = base64.b64decode(nccl_uids[0])
         self.nranks = nranks
-        self.raft_comm_state: dict[str, Any] = {}
+        self.raft_comm_state: Dict[str, Any] = {}
 
     def init_worker(self, rank: int, init_nccl: bool = True) -> Handle:
         """

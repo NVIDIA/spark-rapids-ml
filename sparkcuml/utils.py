@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import inspect
-from typing import Any, Callable, Type
+from typing import Any, Callable, Dict, List, Type
 
 import numpy as np
 from pyspark import SparkContext, TaskContext
@@ -53,8 +53,8 @@ def _get_gpu_id(task_context: TaskContext) -> int:
 
 
 def _get_default_params_from_func(
-    func: Callable, unsupported_set: list[str] = []
-) -> dict[str, Any]:
+    func: Callable, unsupported_set: List[str] = []
+) -> Dict[str, Any]:
     """
     Returns a dictionary of parameters and their default value of function fn.
     Only the parameters with a default value will be included.

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from typing import List
 
 import pytest
 from pyspark.sql import SparkSession
@@ -160,7 +161,7 @@ def test_fit_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
     )
 
 
-def assert_pc_equal(pc1: list[float], pc2: list[float], tolerance: float) -> None:
+def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> None:
     pc2_opposite_dir = [-v for v in pc2]
     assert pc1 == pytest.approx(pc2, tolerance) or pc1 == pytest.approx(
         pc2_opposite_dir, tolerance
