@@ -25,7 +25,6 @@ from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasOutputCol
 from pyspark.ml.util import (
-    RL,
     DefaultParamsReader,
     DefaultParamsWriter,
     MLReadable,
@@ -59,12 +58,12 @@ class _CumlSharedReadWrite:
         instance.validate_params()
         skip_params: list[str] = []
         json_params: dict[str, Any] = {}
-        for p, v in instance._paramMap.items():
+        for p, v in instance._paramMap.items():  # type: ignore
             if p.name not in skip_params:
                 json_params[p.name] = v
         extra_metadata = extra_metadata or {}
         DefaultParamsWriter.saveMetadata(
-            instance, path, sc, extraMetadata=extra_metadata, paramMap=json_params
+            instance, path, sc, extraMetadata=extra_metadata, paramMap=json_params  # type: ignore
         )
 
     @staticmethod
@@ -363,7 +362,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
         return _CumlEstimatorWriter(self)
 
     @classmethod
-    def read(cls) -> MLReader[RL]:
+    def read(cls) -> MLReader:
         return _CumlEstimatorReader(cls)
 
 
@@ -490,7 +489,7 @@ def _set_pyspark_cuml_cls_param_attrs(
         return v
 
     def set_param_attrs(attr_name: str, param_obj_: Param) -> None:
-        param_obj_.typeConverter = param_value_converter
+        param_obj_.typeConverter = param_value_converter  # type: ignore
         setattr(pyspark_estimator_class, attr_name, param_obj_)
         setattr(pyspark_model_class, attr_name, param_obj_)
 
