@@ -102,7 +102,7 @@ class _CumlEstimatorReader(MLReader):
         return _CumlSharedReadWrite.load_instance(self.cls, path, self.sc)
 
 
-class _CumlCommon(MLWritable, MLReadable):
+class _CumlCommon(Params, MLWritable, MLReadable):
     @staticmethod
     def set_gpu_device(context: Optional[TaskContext], is_local: bool) -> None:
         """
@@ -117,6 +117,16 @@ class _CumlCommon(MLWritable, MLReadable):
         import cupy
 
         cupy.cuda.Device(gpu_id).use()
+
+    def set_params(self, **kwargs: Any) -> None:
+        """
+        Set the kwargs to model's parameters
+        """
+        for k, v in kwargs.items():
+            if self.hasParam(k):
+                self._set(**{str(k): v})  # type: ignore
+            else:
+                raise ValueError(f"Unsupported param '{k}'.")
 
 
 class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
@@ -194,16 +204,6 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
         # Auto set the parameters into the estimator
         params = self._get_cuml_params_default()
         self._setDefault(**params)  # type: ignore
-
-    def set_params(self, **kwargs: Any) -> None:
-        """
-        Set the kwargs to estimator's parameters
-        """
-        for k, v in kwargs.items():
-            if self.hasParam(k):
-                self._set(**{str(k): v})  # type: ignore
-            else:
-                raise ValueError(f"Unsupported param '{k}'.")
 
     @abstractmethod
     def _out_schema(self) -> Union[StructType, str]:
@@ -373,6 +373,11 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
 
     def __init__(self) -> None:
         super().__init__()
+
+    @classmethod
+    def from_row(cls, model_attributes: Row):  # type: ignore
+        attr_dict = model_attributes.asDict()
+        return cls(**attr_dict)
 
     @abstractmethod
     def _get_cuml_transform_func(

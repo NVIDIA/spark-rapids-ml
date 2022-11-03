@@ -17,7 +17,7 @@
 import pytest
 from pyspark.sql import SparkSession
 
-from sparkcuml.decomposition import SparkCumlPCA
+from sparkcuml.decomposition import SparkCumlPCA, SparkCumlPCAModel
 
 
 def test_fit(spark: SparkSession, gpu_number: int) -> None:
@@ -165,3 +165,29 @@ def assert_pc_equal(pc1: list[float], pc2: list[float], tolerance: float) -> Non
     assert pc1 == pytest.approx(pc2, tolerance) or pc1 == pytest.approx(
         pc2_opposite_dir, tolerance
     )
+
+
+def test_transform(spark: SparkSession) -> None:
+    mean = [2.0, 2.0]
+    pc = [[0.707, 0.707]]
+    explained_variance = [2.0]
+    singular_values = [2.0]
+    data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
+    df = spark.sparkContext.parallelize(data).map(lambda row: (row,)).toDF(["features"])
+    model = (
+        SparkCumlPCAModel(mean, pc, explained_variance, singular_values)
+        .setInputCol("features")
+        .setOutputCol("pca_features")
+    )
+
+    projs = model.transform(df).collect()
+    assert len(projs) == 3
+    d1 = projs[0].asDict()
+    d2 = projs[1].asDict()
+    d3 = projs[2].asDict()
+    assert "pca_features" in d1
+    assert "pca_features" in d2
+    assert "pca_features" in d3
+    assert d1["pca_features"] == pytest.approx([-1.414], 0.001)
+    assert d2["pca_features"] == pytest.approx([0], 0.001)
+    assert d3["pca_features"] == pytest.approx([1.414], 0.001)
