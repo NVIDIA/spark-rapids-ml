@@ -158,7 +158,12 @@ class SparkCumlPCAModel(_CumlModel):
         explained_variance: List[float],
         singular_values: List[float],
     ):
-        super().__init__()
+        super().__init__(
+            mean=mean,
+            pc=pc,
+            explained_variance=explained_variance,
+            singular_values=singular_values,
+        )
 
         self.mean = mean
         self.pc = pc

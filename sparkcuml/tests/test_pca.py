@@ -85,7 +85,7 @@ def test_fit_rectangle(spark: SparkSession, gpu_number: int) -> None:
     assert gpu_model.explained_variance[1] == pytest.approx(4.0 / 3, 0.001)
 
 
-def test_pca_parameters(spark: SparkSession, gpu_number: int) -> None:
+def test_pca_basic(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
     """
     Sparkcuml keeps the algorithmic parameters and their default values
     exactly the same as cuml.dask.decomposition.PCA,
@@ -96,9 +96,8 @@ def test_pca_parameters(spark: SparkSession, gpu_number: int) -> None:
     default_pca = SparkCumlPCA()
     assert default_pca.getOrDefault("n_components") == 1
     assert default_pca.getOrDefault("svd_solver") == "auto"
-    assert default_pca.getOrDefault("verbose") == False
-    assert default_pca.getOrDefault("whiten") == False
-
+    assert not default_pca.getOrDefault("verbose")
+    assert not default_pca.getOrDefault("whiten")
     assert default_pca.getOrDefault("num_workers") == 1
     assert default_pca.get_num_workers() == 1
 
@@ -115,13 +114,50 @@ def test_pca_parameters(spark: SparkSession, gpu_number: int) -> None:
         num_workers=num_workers,
     )
 
-    assert custom_pca.getOrDefault("n_components") == n_components
-    assert custom_pca.getOrDefault("svd_solver") == svd_solver
-    assert custom_pca.getOrDefault("verbose") == verbose
-    assert custom_pca.getOrDefault("whiten") == whiten
+    def assert_pca_parameters(pca: SparkCumlPCA) -> None:
+        assert pca.getOrDefault("n_components") == n_components
+        assert pca.getOrDefault("svd_solver") == svd_solver
+        assert pca.getOrDefault("verbose") == verbose
+        assert pca.getOrDefault("whiten") == whiten
+        assert pca.getOrDefault("num_workers") == num_workers
+        assert pca.get_num_workers() == num_workers
 
-    assert custom_pca.getOrDefault("num_workers") == num_workers
-    assert custom_pca.get_num_workers() == num_workers
+    assert_pca_parameters(custom_pca)
+
+    path = tmp_path + "/pca_tests"
+    estimator_path = f"{path}/pca"
+    custom_pca.write().overwrite().save(estimator_path)
+    custom_pca_loaded = SparkCumlPCA.load(estimator_path)
+
+    assert_pca_parameters(custom_pca_loaded)
+
+    # Train a PCA model
+    data = [[1.0, 1.0, 1.0], [1.0, 3.0, 2.0], [5.0, 1.0, 3.9], [5.0, 3.0, 2.9]]
+    topk = 2
+    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
+    df = rdd.toDF(["coordinates"])
+    gpu_pca = SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
+    pca_model: SparkCumlPCAModel = gpu_pca.fit(df)
+
+    model_path = f"{path}/pca_model"
+    pca_model.write().overwrite().save(model_path)
+    pca_model_loaded = SparkCumlPCAModel.load(model_path)
+
+    def assert_pca_model(
+        model: SparkCumlPCAModel, loaded_model: SparkCumlPCAModel
+    ) -> None:
+        """
+        Expect the model attributes are same
+        """
+        assert model.mean == loaded_model.mean
+        assert model.singular_values == loaded_model.singular_values
+        assert model.explained_variance == loaded_model.explained_variance
+        assert model.pc == loaded_model.pc
+        assert model.getOrDefault("n_components") == loaded_model.getOrDefault(
+            "n_components"
+        )
+
+    assert_pca_model(pca_model, pca_model_loaded)
 
 
 def test_fit_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
