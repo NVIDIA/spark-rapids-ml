@@ -176,7 +176,7 @@ def test_fit_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
     gdf = cudf.DataFrame(data)
     cuml_pca.fit(gdf)
 
-    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
+    rdd = spark.sparkContext.parallelize(data, gpu_number).map(lambda row: (row,))
     df = rdd.toDF(["features"])
     sparkcuml_pca = SparkCumlPCA(num_workers=gpu_number, n_components=topk).setInputCol(
         "features"
@@ -195,6 +195,22 @@ def test_fit_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
     assert sparkcuml_model.explained_variance == pytest.approx(
         cuml_pca.explained_variance_.tolist(), tolerance_float
     )
+
+    # test transform function
+    sparkcuml_model.setOutputCol("pca_features")
+    projDf = sparkcuml_model.transform(df)
+    sprojs = [row["pca_features"] for row in projDf.collect()]
+
+    cprojs = cuml_pca.transform(gdf).tolist()
+
+    assert len(sprojs) == len(cprojs)
+    for i in range(len(sprojs)):
+        assert len(sprojs[i]) == len(cprojs[i])
+
+    sprojs = numpy.transpose(sprojs).tolist()  # transpose to compare by columns
+    cprojs = numpy.transpose(cprojs).tolist()
+    for i in range(len(sprojs)):
+        assert_pc_equal(sprojs[i], cprojs[i], tolerance_float)
 
 
 def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> None:
