@@ -36,7 +36,7 @@ from pyspark.ml.util import (
 from pyspark.sql import DataFrame
 from pyspark.sql.types import Row, StructType
 
-from sparkcuml.common.nccl import NcclComm
+from sparkcuml.common.cuml_context import CumlContext
 from sparkcuml.utils import (
     _get_class_name,
     _get_default_params_from_func,
@@ -312,48 +312,43 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             # set gpu device
             self.set_gpu_device(context, is_local)
 
-            # initialize nccl comm
-            comm = NcclComm(num_workers, context)
-            handle = comm.init_worker(partition_id, init_nccl=True)
+            with CumlContext(partition_id, num_workers, context) as cc:
+                # handle the input
+                inputs = []
+                size = 0
+                if input_is_multi_cols:
+                    for pdf in pdf_iter:
+                        gdf = cudf.DataFrame(pdf[select_cols])
+                        size += gdf.shape[0]
+                        inputs.append(gdf)
+                else:
+                    for pdf in pdf_iter:
+                        flatten = pdf.apply(
+                            lambda x: x[select_cols[0]],  # type: ignore
+                            axis=1,
+                            result_type="expand",
+                        )
+                        gdf = cudf.from_pandas(flatten)
+                        size += gdf[0].size
+                        inputs.append(gdf)
 
-            # handle the input
-            inputs = []
-            size = 0
-            if input_is_multi_cols:
-                for pdf in pdf_iter:
-                    gdf = cudf.DataFrame(pdf[select_cols])
-                    size += gdf.shape[0]
-                    inputs.append(gdf)
-            else:
-                for pdf in pdf_iter:
-                    flatten = pdf.apply(
-                        lambda x: x[select_cols[0]],  # type: ignore
-                        axis=1,
-                        result_type="expand",
-                    )
-                    gdf = cudf.from_pandas(flatten)
-                    size += gdf[0].size
-                    inputs.append(gdf)
+                # prepare (parts, rank)
+                import json
 
-            # prepare (parts, rank)
-            import json
+                rank_size = (partition_id, size)
+                messages = context.allGather(message=json.dumps(rank_size))
+                parts_rank_size = [json.loads(pair) for pair in messages]
+                num_cols = sum(pair[1] for pair in parts_rank_size)
 
-            rank_size = (partition_id, size)
-            messages = context.allGather(message=json.dumps(rank_size))
-            parts_rank_size = [json.loads(pair) for pair in messages]
-            num_cols = sum(pair[1] for pair in parts_rank_size)
+                params["partsToRanks"] = parts_rank_size
+                params["rank"] = partition_id
+                params["handle"] = cc.handle
+                params["numVec"] = num_cols
 
-            params["partsToRanks"] = parts_rank_size
-            params["rank"] = partition_id
-            params["handle"] = handle
-            params["numVec"] = num_cols
-
-            # call the cuml fit function
-            result = cuml_fit_func(inputs, params)
+                # call the cuml fit function
+                result = cuml_fit_func(inputs, params)
 
             context.barrier()
-            comm.destroy()
-
             if context.partitionId() == 0:
                 yield pd.DataFrame(data=result)
 
