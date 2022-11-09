@@ -14,9 +14,12 @@
 # limitations under the License.
 #
 import inspect
-from typing import Any, Callable, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
+import cudf
 import numpy as np
+from cuml.common.array import CumlArray
+from cuml.common.input_utils import input_to_cuml_array
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.ml.param import Param, Params
 from pyspark.sql import SparkSession
@@ -116,3 +119,10 @@ class PartitionDescriptor:
         total_rows = sum(pair[1] for pair in parts_rank_size)
 
         return cls(total_rows, total_cols, rank, parts_rank_size)
+
+
+def cudf_to_cuml_array(
+    gdf: Union[cudf.DataFrame, cudf.Series], order: str = "F"
+) -> CumlArray:
+    cumlarray, _, _, _ = input_to_cuml_array(gdf, order=order)
+    return cumlarray

@@ -64,8 +64,8 @@ def assert_centers_equal(
     a_clusters: List[List[float]], b_clusters: List[List[float]], tolerance: float
 ) -> None:
     assert len(a_clusters) == len(b_clusters)
-    a_clusters.sort(key=lambda l: l)
-    b_clusters.sort(key=lambda l: l)
+    a_clusters = sorted(a_clusters, key=lambda l: l)
+    b_clusters = sorted(b_clusters, key=lambda l: l)
     for i in range(len(a_clusters)):
         a_center = a_clusters[i]
         b_center = b_clusters[i]
@@ -76,18 +76,28 @@ def assert_centers_equal(
 def test_toy_example(spark: SparkSession, gpu_number: int) -> None:
     data = [[1.0, 1.0], [1.0, 2.0], [3.0, 2.0], [4.0, 3.0]]
 
-    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
+    rdd = spark.sparkContext.parallelize(data, gpu_number).map(lambda row: (row,))
     df = rdd.toDF(["features"])
 
-    sparkcuml_kmeans = SparkCumlKMeans(num_workers=1, n_clusters=2).setFeaturesCol(
-        "features"
-    )
+    sparkcuml_kmeans = SparkCumlKMeans(
+        num_workers=gpu_number, n_clusters=2
+    ).setFeaturesCol("features")
     sparkcuml_model = sparkcuml_kmeans.fit(df)
 
     assert len(sparkcuml_model.cluster_centers_) == 2
     sorted_centers = sorted(sparkcuml_model.cluster_centers_, key=lambda p: p)
     assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
     assert sorted_centers[1] == pytest.approx([3.5, 2.5], 0.001)
+
+    # test transform function
+    label_df = sparkcuml_model.transform(df)
+    o_col = sparkcuml_model.getOutputCol()
+    labels = [row[o_col] for row in label_df.collect()]
+
+    assert len(labels) == 4
+    assert labels[0] == labels[1]
+    assert labels[1] != labels[2]
+    assert labels[2] == labels[3]
 
 
 def test_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
@@ -117,15 +127,36 @@ def test_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
     gdf = cudf.DataFrame(data)
     cuml_kmeans.fit(gdf)
 
-    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
+    rdd = spark.sparkContext.parallelize(data, gpu_number).map(lambda row: (row,))
     df = rdd.toDF(["features"])
     sparkcuml_kmeans = SparkCumlKMeans(
         num_workers=gpu_number, n_clusters=n_clusters
     ).setFeaturesCol("features")
     sparkcuml_model = sparkcuml_kmeans.fit(df)
 
+    cuml_cluster_centers = cuml_kmeans.cluster_centers_.tolist()
     assert_centers_equal(
         sparkcuml_model.cluster_centers_,
-        cuml_kmeans.cluster_centers_.tolist(),
+        cuml_cluster_centers,
         tolerance,
     )
+
+    # test transform function
+
+    sid_ordered = sorted(
+        range(n_clusters), key=lambda idx: sparkcuml_model.cluster_centers_[idx]
+    )
+    cid_ordered = sorted(range(n_clusters), key=lambda idx: cuml_cluster_centers[idx])
+    s2c = dict(
+        zip(sid_ordered, cid_ordered)
+    )  # map sparkcuml center id to cuml center id
+
+    labelDf = sparkcuml_model.transform(df)
+    o_col = sparkcuml_model.getOutputCol()
+    slabels = [row[o_col] for row in labelDf.collect()]
+
+    clabels = cuml_kmeans.predict(gdf).tolist()
+
+    assert len(slabels) == len(clabels)
+    to_clabels = [s2c[v] for v in slabels]
+    assert to_clabels == clabels
