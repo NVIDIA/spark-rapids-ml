@@ -115,17 +115,30 @@ class _CumlModelReader(MLReader):
 
 class _CumlCommon(Params, MLWritable, MLReadable):
     @staticmethod
-    def set_gpu_device(context: Optional[TaskContext], is_local: bool) -> None:
+    def set_gpu_device(
+        context: Optional[TaskContext], is_local: bool, is_transform: bool = False
+    ) -> None:
         """
         Set gpu device according to the spark task resources.
 
-        If it is local mode, we use partition id as gpu id.
+        If it is local mode, we use partition id as gpu id for training
+        and (partition id ) % gpus for transform.
         """
         # Get the GPU ID from resources
         assert context is not None
-        gpu_id = context.partitionId() if is_local else _get_gpu_id(context)
 
         import cupy
+
+        if is_local:
+            partition_id = context.partitionId()
+            if is_transform:
+                # For transform local mode, default the gpu_id to (partition id ) % gpus.
+                total_gpus = cupy.cuda.runtime.getDeviceCount()
+                gpu_id = partition_id % total_gpus
+            else:
+                gpu_id = partition_id
+        else:
+            gpu_id = _get_gpu_id(context)
 
         cupy.cuda.Device(gpu_id).use()
 
@@ -450,7 +463,7 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
 
             context = TaskContext.get()
 
-            self.set_gpu_device(context, is_local)
+            self.set_gpu_device(context, is_local, True)
 
             if input_is_multi_cols:
                 for pdf in pdf_iter:

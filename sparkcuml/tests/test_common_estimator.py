@@ -196,7 +196,10 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
     assert_model(model_loaded)
 
     # Transform the training dataset
-    transformed_df = model.transform(df)
+    test_rdd = spark.sparkContext.parallelize(data, 4)
+    input_cols = ["c1", "c2", "c3", "c4"]
+    test_df = test_rdd.toDF(input_cols)
+    transformed_df = model.transform(test_df)
 
     ret = transformed_df.collect()
     assert len(ret) == len(data)
