@@ -296,7 +296,6 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         params: Dict[str, Any] = {
             INIT_PARAMETERS_NAME: self._gen_cuml_param(),
-            "dimension": dimension,
         }
 
         num_workers = self.get_num_workers()
@@ -315,11 +314,11 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             with CumlContext(partition_id, num_workers, context) as cc:
                 # handle the input
                 inputs = []
-                size = 0
+                sizes = []
                 if input_is_multi_cols:
                     for pdf in pdf_iter:
                         gdf = cudf.DataFrame(pdf[select_cols])
-                        size += gdf.shape[0]
+                        sizes.append(gdf.shape[0])
                         inputs.append(gdf)
                 else:
                     for pdf in pdf_iter:
@@ -329,21 +328,12 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
                             result_type="expand",
                         )
                         gdf = cudf.from_pandas(flatten)
-                        size += gdf[0].size
+                        sizes.append(gdf[0].size)
                         inputs.append(gdf)
 
-                # prepare (parts, rank)
-                import json
-
-                rank_size = (partition_id, size)
-                messages = context.allGather(message=json.dumps(rank_size))
-                parts_rank_size = [json.loads(pair) for pair in messages]
-                num_cols = sum(pair[1] for pair in parts_rank_size)
-
-                params["partsToRanks"] = parts_rank_size
-                params["rank"] = partition_id
                 params["handle"] = cc.handle
-                params["numVec"] = num_cols
+                params["part_sizes"] = sizes
+                params["n"] = dimension
 
                 # call the cuml fit function
                 result = cuml_fit_func(inputs, params)

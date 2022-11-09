@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 import inspect
-from typing import Any, Callable, Dict, List, Type
+from typing import Any, Callable, Dict, List, Tuple, Type
 
 import numpy as np
-from pyspark import SparkContext, TaskContext
+from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.ml.param import Param, Params
 from pyspark.sql import SparkSession
 
@@ -76,3 +76,43 @@ def _get_class_name(cls: type) -> str:
     Return the class name.
     """
     return f"{cls.__module__}.{cls.__name__}"
+
+
+class PartitionDescriptor:
+    """
+    Partition descriptor
+
+    m: total number of rows across all workers
+    n: total number of cols
+    parts_rank_size: a sequence of (rank, rows per partitions)
+    rank: rank to be mapped
+    """
+
+    def __init__(
+        self, m: int, n: int, rank: int, parts_rank_size: List[Tuple[int, int]]
+    ) -> None:
+        super().__init__()
+        self.m = m
+        self.n = n
+        self.rank = rank
+        self.parts_rank_size = parts_rank_size
+
+    @classmethod
+    def build(cls, partition_rows: List[int], total_cols: int) -> "PartitionDescriptor":
+        context = BarrierTaskContext.get()
+        if context is None:
+            # safety check.
+            raise RuntimeError("build should not be invoked from driver side.")
+
+        rank = context.partitionId()
+
+        # prepare (parts, rank)
+
+        import json
+
+        rank_size = [(rank, size) for size in partition_rows]
+        messages = context.allGather(message=json.dumps(rank_size))
+        parts_rank_size = [item for pair in messages for item in json.loads(pair)]
+        total_rows = sum(pair[1] for pair in parts_rank_size)
+
+        return cls(total_rows, total_cols, rank, parts_rank_size)

@@ -27,6 +27,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
+from sparkcuml.utils import PartitionDescriptor
 
 
 class SparkCumlPCA(_CumlEstimator):
@@ -90,12 +91,14 @@ class SparkCumlPCA(_CumlEstimator):
                 **params[INIT_PARAMETERS_NAME],
             )
 
+            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
+
             pca_object.fit(
                 df,
-                params["numVec"],
-                params["dimension"],
-                params["partsToRanks"],
-                params["rank"],
+                pd.m,
+                pd.n,
+                pd.parts_rank_size,
+                pd.rank,
                 _transform=False,
             )
 

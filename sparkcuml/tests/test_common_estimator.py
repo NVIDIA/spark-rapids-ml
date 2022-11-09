@@ -28,6 +28,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
+from sparkcuml.utils import PartitionDescriptor
 
 
 class CumlDummy(object):
@@ -83,13 +84,24 @@ class SparkCumlDummy(_CumlEstimator):
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
+        num_workers = self.get_num_workers()
+
         def _cuml_fit(
             df: List[cudf.DataFrame], params: Dict[str, Any]
         ) -> Dict[str, Any]:
             context = TaskContext.get()
             assert context is not None
-            assert params["rank"] == context.partitionId()
             assert "handle" in params
+            assert "part_sizes" in params
+            assert "n" in params
+
+            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
+
+            assert pd.rank == context.partitionId()
+            assert len(pd.parts_rank_size) >= num_workers
+            assert pd.m == 5
+            assert pd.n == 4
+
             assert INIT_PARAMETERS_NAME in params
             init_params = params[INIT_PARAMETERS_NAME]
             assert init_params["a"] == 100
@@ -139,6 +151,7 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
         [2.0, 2.0, 2.0, 2.0],
         [3.0, 3.0, 3.0, 2.0],
         [3.0, 3.0, 3.0, 2.0],
+        [5.0, 2.0, 1.0, 3.0],
     ]
 
     rdd = spark.sparkContext.parallelize(data)
@@ -182,13 +195,13 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
 
     assert_model(model_loaded)
 
-    # Tranform the training dataset
+    # Transform the training dataset
     transformed_df = model.transform(df)
 
     ret = transformed_df.collect()
-    assert len(ret) == 4
+    assert len(ret) == len(data)
 
     # Compare data.
     for x, y in zip(ret, data):
-        for i in range(len(ret)):
+        for i in range(len(data[0])):
             assert x[i] == y[i]
