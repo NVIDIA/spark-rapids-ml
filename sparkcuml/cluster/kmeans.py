@@ -17,6 +17,7 @@
 from typing import Any, Callable, Dict, List, Union
 
 import cudf
+import numpy as np
 import pandas as pd
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
@@ -83,9 +84,11 @@ class SparkCumlKMeans(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
+    ) -> Callable[
+        [Union[List[pd.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
+    ]:
         def _cuml_fit(
-            df: List[cudf.DataFrame], params: Dict[str, Any]
+            df: Union[List[pd.DataFrame], List[np.ndarray]], params: Dict[str, Any]
         ) -> Dict[str, Any]:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
@@ -95,7 +98,12 @@ class SparkCumlKMeans(_CumlEstimator):
                 **params[INIT_PARAMETERS_NAME],
             )
 
-            concated = cudf.concat(df)
+            if isinstance(df, pd.DataFrame):
+                concated = pd.concat(df)
+            else:
+                # should be list of np.ndarrays here
+                concated = np.concatenate(df)
+
             kmeans_object.fit(
                 concated,
                 sample_weight=None,
@@ -159,7 +167,7 @@ class SparkCumlKMeansModel(_CumlModel):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+    ) -> Callable[[Union[pd.DataFrame, np.ndarray]], pd.DataFrame]:
 
         cuml_alg_params = {}
         for k in SparkCumlKMeans._get_cuml_params_default():
@@ -168,15 +176,15 @@ class SparkCumlKMeansModel(_CumlModel):
         cluster_centers_ = self.cluster_centers_
         output_col = self.getOutputCol()
 
-        def _transform_internal(df: cudf.DataFrame) -> pd.DataFrame:
+        def _transform_internal(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
-            kmeans_object = CumlKMeansMG(**cuml_alg_params)
-            kmeans_object.dtype = df.dtypes[0]
-            kmeans_object.n_cols = len(df.columns)
+            kmeans_object = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
 
-            from sparkcuml.utils import cudf_to_cuml_array
+            from sparkcuml.utils import cudf_to_cuml_array, data_info
 
+            # TODO: n_cols and dtype should be part of sparkcuml model and not inferred from data here
+            kmeans_object.n_cols, kmeans_object.dtype = data_info(df)
             kmeans_object.cluster_centers_ = cudf_to_cuml_array(
                 cudf.DataFrame(cluster_centers_), order="C"
             )

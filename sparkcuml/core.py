@@ -250,7 +250,9 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
     @abstractmethod
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
+    ) -> Callable[
+        [Union[List[cudf.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
+    ]:
         """
         Subclass must implement this function to return a cuml fit function that will be
         sent to executor to run.
@@ -330,19 +332,13 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
                 sizes = []
                 if input_is_multi_cols:
                     for pdf in pdf_iter:
-                        gdf = cudf.DataFrame(pdf[select_cols])
-                        sizes.append(gdf.shape[0])
-                        inputs.append(gdf)
+                        sizes.append(pdf.shape[0])
+                        inputs.append(pdf[select_cols])
                 else:
                     for pdf in pdf_iter:
-                        flatten = pdf.apply(
-                            lambda x: x[select_cols[0]],  # type: ignore
-                            axis=1,
-                            result_type="expand",
-                        )
-                        gdf = cudf.from_pandas(flatten)
-                        sizes.append(gdf[0].size)
-                        inputs.append(gdf)
+                        nparray = np.array(list(pdf[select_cols[0]]))
+                        sizes.append(nparray.shape[0])
+                        inputs.append(nparray)
 
                 params["handle"] = cc.handle
                 params["part_sizes"] = sizes
@@ -401,7 +397,7 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     @abstractmethod
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+    ) -> Callable[[Union[cudf.DataFrame, np.ndarray]], pd.DataFrame]:
         """
         Subclass must implement this function to return a cuml transform function that will be
         sent to executor to run.
@@ -467,17 +463,11 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
 
             if input_is_multi_cols:
                 for pdf in pdf_iter:
-                    gdf = cudf.DataFrame(pdf[select_cols])
-                    yield cuml_transform_func(gdf)
+                    yield cuml_transform_func(pdf[select_cols])
             else:
                 for pdf in pdf_iter:
-                    flatten = pdf.apply(
-                        lambda x: x[select_cols[0]],  # type: ignore
-                        axis=1,
-                        result_type="expand",
-                    )
-                    gdf = cudf.from_pandas(flatten)
-                    yield cuml_transform_func(gdf)
+                    nparray = np.array(list(pdf[select_cols[0]]))
+                    yield cuml_transform_func(nparray)
 
         return dataset.mapInPandas(
             _transform_udf, schema=self._out_schema(dataset.schema)  # type: ignore

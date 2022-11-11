@@ -17,6 +17,7 @@
 from typing import Any, Callable, Dict, List, Type, Union
 
 import cudf
+import numpy as np
 import pandas as pd
 from pyspark import Row, TaskContext
 from pyspark.sql import DataFrame, SparkSession
@@ -59,12 +60,16 @@ class SparkCumlDummyModel(_CumlModel):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+    ) -> Callable[[Union[cudf.DataFrame, np.ndarray]], pd.DataFrame]:
         model_attribute_a = self.model_attribute_a
 
-        def _dummy_transform(gdf: cudf.DataFrame) -> pd.DataFrame:
+        def _dummy_transform(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
             assert model_attribute_a == 1024
-            return gdf.to_pandas()
+            if isinstance(df, pd.DataFrame):
+                return df
+            else:
+                # TODO: implement when adding single column test
+                raise NotImplementedError()
 
         return _dummy_transform
 
@@ -83,11 +88,13 @@ class SparkCumlDummy(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
+    ) -> Callable[
+        [Union[List[cudf.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
+    ]:
         num_workers = self.get_num_workers()
 
         def _cuml_fit(
-            df: List[cudf.DataFrame], params: Dict[str, Any]
+            df: Union[List[cudf.DataFrame], List[np.ndarray]], params: Dict[str, Any]
         ) -> Dict[str, Any]:
             context = TaskContext.get()
             assert context is not None
@@ -195,10 +202,12 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
 
     assert_model(model_loaded)
 
+    # multicolumn transform
     # Transform the training dataset
     test_rdd = spark.sparkContext.parallelize(data, 4)
     input_cols = ["c1", "c2", "c3", "c4"]
     test_df = test_rdd.toDF(input_cols)
+
     transformed_df = model.transform(test_df)
 
     ret = transformed_df.collect()

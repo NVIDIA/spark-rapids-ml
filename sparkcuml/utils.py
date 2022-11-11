@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
 import cudf
 import numpy as np
+import pandas as pd
 from cuml.common.array import CumlArray
 from cuml.common.input_utils import input_to_cuml_array
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
@@ -126,3 +127,11 @@ def cudf_to_cuml_array(
 ) -> CumlArray:
     cumlarray, _, _, _ = input_to_cuml_array(gdf, order=order)
     return cumlarray
+
+
+def data_info(data: Union[pd.DataFrame, np.ndarray]) -> Tuple[int, type]:
+    if isinstance(data, pd.DataFrame):
+        return (len(data.columns), data.dtypes[0])
+    else:
+        # should be numpy.ndarray here
+        return (data.shape[1], data.dtype)

@@ -17,6 +17,7 @@
 from typing import Any, Callable, Dict, List, Union
 
 import cudf
+import numpy as np
 import pandas as pd
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import ArrayType, DoubleType, Row, StructField, StructType
@@ -27,7 +28,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor
+from sparkcuml.utils import PartitionDescriptor, data_info
 
 
 class SparkCumlPCA(_CumlEstimator):
@@ -79,9 +80,11 @@ class SparkCumlPCA(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[[List[cudf.DataFrame], Dict[str, Any]], Dict[str, Any]]:
+    ) -> Callable[
+        [Union[List[pd.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
+    ]:
         def _cuml_fit(
-            df: List[cudf.DataFrame], params: Dict[str, Any]
+            df: Union[List[pd.DataFrame], List[np.ndarray]], params: Dict[str, Any]
         ) -> Dict[str, Any]:
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
@@ -91,14 +94,14 @@ class SparkCumlPCA(_CumlEstimator):
                 **params[INIT_PARAMETERS_NAME],
             )
 
-            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
+            pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
 
             pca_object.fit(
                 df,
-                pd.m,
-                pd.n,
-                pd.parts_rank_size,
-                pd.rank,
+                pdesc.m,
+                pdesc.n,
+                pdesc.parts_rank_size,
+                pdesc.rank,
                 _transform=False,
             )
 
@@ -199,33 +202,28 @@ class SparkCumlPCAModel(_CumlModel):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[cudf.DataFrame], pd.DataFrame]:
+    ) -> Callable[[Union[pd.DataFrame, np.ndarray]], pd.DataFrame]:
 
         cuml_alg_params = {}
         for k, _ in SparkCumlPCA._get_cuml_params_default().items():
             if self.getOrDefault(k):
                 cuml_alg_params[k] = self.getOrDefault(k)
 
-        def _transform_internal(df: cudf.DataFrame) -> pd.DataFrame:
+        def _transform_internal(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
 
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
             pca_object = CumlPCAMG(output_type="cudf", **cuml_alg_params)
-
-            pca_object.n_cols = len(df.columns)
             pca_object._n_components = pca_object.n_components
-            pca_object.dtype = df.dtypes[0]
 
-            from cuml.common.array import CumlArray
-            from cuml.common.input_utils import input_to_cuml_array
+            from sparkcuml.utils import cudf_to_cuml_array, data_info
 
-            def cudf_to_cumlarray(gdf: Union[cudf.DataFrame, cudf.Series]) -> CumlArray:
-                cumlarray, _, _, _ = input_to_cuml_array(gdf)
-                return cumlarray
+            # TODO: n_cols and dtype should be part of sparkcuml model and not inferred from data here
+            pca_object.n_cols, pca_object.dtype = data_info(df)
 
-            pca_object.components_ = cudf_to_cumlarray(cudf.DataFrame(self.pc))
-            pca_object.mean_ = cudf_to_cumlarray(cudf.Series(self.mean))
-            pca_object.singular_values_ = cudf_to_cumlarray(
+            pca_object.components_ = cudf_to_cuml_array(cudf.DataFrame(self.pc))
+            pca_object.mean_ = cudf_to_cuml_array(cudf.Series(self.mean))
+            pca_object.singular_values_ = cudf_to_cuml_array(
                 cudf.Series(self.singular_values)
             )
 
