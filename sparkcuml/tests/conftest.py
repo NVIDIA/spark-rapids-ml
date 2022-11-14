@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import json
 import logging
 import os
@@ -29,7 +30,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 gpu_discovery_script_path = f"{dir_path}/discover_gpu.sh"
 
 
-def get_devices() -> List[str]:
+def _get_devices() -> List[str]:
     """This works only if driver is the same machine of worker."""
     completed = subprocess.run(gpu_discovery_script_path, stdout=subprocess.PIPE)
     assert completed.returncode == 0, "Failed to execute discovery script."
@@ -39,7 +40,7 @@ def get_devices() -> List[str]:
     return addresses
 
 
-_gpu_number = len(get_devices())
+_gpu_number = len(_get_devices())
 # We restrict the max gpu numbers to use
 _gpu_number = _gpu_number if _gpu_number < 4 else 4
 
@@ -50,27 +51,40 @@ def gpu_number() -> int:
 
 
 @pytest.fixture
-def spark() -> Generator[SparkSession, None, None]:
-    builder = SparkSession.builder.appName(name="spark cuml python tests")
-    confs = {
-        "spark.master": f"local[{_gpu_number}]",
-        "spark.python.worker.reuse": "false",
-        "spark.driver.host": "127.0.0.1",
-        "spark.task.maxFailures": "1",
-        "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
-        "spark.sql.pyspark.jvmStacktrace.enabled": "true",
-    }
-    for k, v in confs.items():
-        builder.config(k, v)
-    spark = builder.getOrCreate()
-    spark.sparkContext.setLogLevel("WARN")
-    logging.getLogger("pyspark").setLevel(logging.WARN)
-    yield spark
-    spark.stop()
-
-
-@pytest.fixture
 def tmp_path() -> Generator[str, None, None]:
     path = tempfile.mkdtemp(prefix="spark_cuml_tests_")
     yield path
     shutil.rmtree(path)
+
+
+_default_conf = {
+    "spark.master": f"local[{_gpu_number}]",
+    "spark.python.worker.reuse": "false",
+    "spark.driver.host": "127.0.0.1",
+    "spark.task.maxFailures": "1",
+    "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
+    "spark.sql.pyspark.jvmStacktrace.enabled": "true",
+}
+
+
+def _get_spark() -> SparkSession:
+    builder = SparkSession.builder.appName(name="spark cuml python tests")
+    for k, v in _default_conf.items():
+        builder.config(k, v)
+    spark = builder.getOrCreate()
+    spark.sparkContext.setLogLevel("WARN")
+    logging.getLogger("pyspark").setLevel(logging.WARN)
+    return spark
+
+
+_spark = _get_spark()
+
+
+def get_spark_i_know_what_i_am_doing() -> SparkSession:
+    """
+    Get the current SparkSession.
+    This should almost never be called directly instead you should call
+    with_spark_session for spark_session.
+    This is to guarantee that the session and it's config is setup in a repeatable way.
+    """
+    return _spark

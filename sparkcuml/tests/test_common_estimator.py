@@ -20,7 +20,7 @@ import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row, TaskContext
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
 from sparkcuml.core import (
@@ -82,9 +82,14 @@ class SparkCumlDummy(_CumlEstimator):
     PySpark estimator of CumlDummy
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(
+        self, m: int = 0, n: int = 0, partition_num: int = 0, **kwargs: Any
+    ) -> None:
         super().__init__()
         self.set_params(**kwargs)
+        self.m = m
+        self.n = n
+        self.partition_num = partition_num
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
@@ -92,6 +97,9 @@ class SparkCumlDummy(_CumlEstimator):
         [Union[List[cudf.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
     ]:
         num_workers = self.get_num_workers()
+        partition_num = self.partition_num
+        m = self.m
+        n = self.n
 
         def _cuml_fit(
             df: Union[List[cudf.DataFrame], List[np.ndarray]], params: Dict[str, Any]
@@ -105,9 +113,9 @@ class SparkCumlDummy(_CumlEstimator):
             pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
 
             assert pd.rank == context.partitionId()
-            assert len(pd.parts_rank_size) >= num_workers
-            assert pd.m == 5
-            assert pd.n == 4
+            assert len(pd.parts_rank_size) == partition_num
+            assert pd.m == m
+            assert pd.n == n
 
             assert INIT_PARAMETERS_NAME in params
             init_params = params[INIT_PARAMETERS_NAME]
@@ -152,7 +160,8 @@ class SparkCumlDummy(_CumlEstimator):
 _set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
 
 
-def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
+def test_dummy(gpu_number: int, tmp_path: str) -> None:
+
     data = [
         [1.0, 4.0, 4.0, 4.0],
         [2.0, 2.0, 2.0, 2.0],
@@ -160,10 +169,11 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
         [3.0, 3.0, 3.0, 2.0],
         [5.0, 2.0, 1.0, 3.0],
     ]
-
-    rdd = spark.sparkContext.parallelize(data)
+    m = len(data)
+    n = len(data[0])
     input_cols = ["c1", "c2", "c3", "c4"]
-    df = rdd.toDF(input_cols)
+
+    max_records_per_batch = 1
 
     def assert_estimator(dummy: SparkCumlDummy) -> None:
         assert dummy.getInputCols() == input_cols
@@ -171,8 +181,18 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
         assert not dummy.hasParam("b")
         assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
 
+    def ceiling_division(n: int, d: int) -> int:
+        return -(n // -d)
+
     # Generate estimator
-    dummy = SparkCumlDummy(inputCols=input_cols, a=100, num_workers=gpu_number)
+    dummy = SparkCumlDummy(
+        inputCols=input_cols,
+        a=100,
+        num_workers=gpu_number,
+        partition_num=ceiling_division(m, max_records_per_batch),
+        m=m,
+        n=n,
+    )
 
     assert_estimator(dummy)
 
@@ -183,9 +203,6 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
     dummy_loaded = SparkCumlDummy.load(estimator_path)
     assert_estimator(dummy_loaded)
 
-    # Estimator fit and get a model
-    model: SparkCumlDummyModel = dummy.fit(df)
-
     def assert_model(model: SparkCumlDummyModel) -> None:
         assert model.model_attribute_a == 1024
         assert model.model_attribute_b == "hello dummy"
@@ -193,27 +210,29 @@ def test_dummy(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
         assert not model.hasParam("b")
         assert model.getOrDefault(model.c) == 3  # type: ignore
 
-    assert_model(model)
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
+    from sparkcuml.tests.sparksession import CleanSparkSession
 
-    # Model persistence
-    model_path = f"{path}/dummy_model"
-    model.write().overwrite().save(model_path)
-    model_loaded = SparkCumlDummyModel.load(model_path)
+    # Estimator fit and get a model
+    with CleanSparkSession(conf) as spark:
+        df = spark.sparkContext.parallelize(data).toDF(input_cols)
+        model: SparkCumlDummyModel = dummy.fit(df)
+        assert_model(model)
+        # Model persistence
+        model_path = f"{path}/dummy_model"
+        model.write().overwrite().save(model_path)
+        model_loaded = SparkCumlDummyModel.load(model_path)
+        assert_model(model_loaded)
 
-    assert_model(model_loaded)
+        # Transform the training dataset with a clean spark
+        with CleanSparkSession() as clean_spark:
+            test_df = clean_spark.sparkContext.parallelize(data, m).toDF(input_cols)
+            transformed_df = model.transform(test_df)
 
-    # multicolumn transform
-    # Transform the training dataset
-    test_rdd = spark.sparkContext.parallelize(data, 4)
-    input_cols = ["c1", "c2", "c3", "c4"]
-    test_df = test_rdd.toDF(input_cols)
+            ret = transformed_df.collect()
+            assert len(ret) == m
 
-    transformed_df = model.transform(test_df)
-
-    ret = transformed_df.collect()
-    assert len(ret) == len(data)
-
-    # Compare data.
-    for x, y in zip(ret, data):
-        for i in range(len(data[0])):
-            assert x[i] == y[i]
+            # Compare data.
+            for x, y in zip(ret, data):
+                for i in range(n):
+                    assert x[i] == y[i]

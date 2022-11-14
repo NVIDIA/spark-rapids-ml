@@ -16,76 +16,82 @@
 from typing import List
 
 import pytest
-from pyspark.sql import SparkSession
 
 from sparkcuml.decomposition import SparkCumlPCA, SparkCumlPCAModel
+from sparkcuml.tests.sparksession import CleanSparkSession
 
 
-def test_fit(spark: SparkSession, gpu_number: int) -> None:
+def test_fit(gpu_number: int) -> None:
     data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
-
     topk = 1
 
-    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
+    with CleanSparkSession() as spark:
+        df = (
+            spark.sparkContext.parallelize(data)
+            .map(lambda row: (row,))
+            .toDF(["features"])
+        )
+        gpu_pca = (
+            SparkCumlPCA(num_workers=gpu_number).setInputCol("features").setK(topk)
+        )
+        gpu_model = gpu_pca.fit(df)
 
-    df = rdd.toDF(["features"])
+        assert gpu_model.getInputCol() == "features"
 
-    gpu_pca = SparkCumlPCA(num_workers=gpu_number).setInputCol("features").setK(topk)
+        assert len(gpu_model.mean) == 2
+        assert gpu_model.mean[0] == pytest.approx(2.0, 0.001)
+        assert gpu_model.mean[1] == pytest.approx(2.0, 0.001)
 
-    gpu_model = gpu_pca.fit(df)
+        assert len(gpu_model.pc) == 1
+        assert len(gpu_model.pc[0]) == 2
+        assert gpu_model.pc[0][0] == pytest.approx(0.707, 0.001)
+        assert gpu_model.pc[0][1] == pytest.approx(0.707, 0.001)
 
-    assert gpu_model.getInputCol() == "features"
-
-    assert len(gpu_model.mean) == 2
-    assert gpu_model.mean[0] == pytest.approx(2.0, 0.001)
-    assert gpu_model.mean[1] == pytest.approx(2.0, 0.001)
-
-    assert len(gpu_model.pc) == 1
-    assert len(gpu_model.pc[0]) == 2
-    assert gpu_model.pc[0][0] == pytest.approx(0.707, 0.001)
-    assert gpu_model.pc[0][1] == pytest.approx(0.707, 0.001)
-
-    assert len(gpu_model.explained_variance) == 1
-    assert gpu_model.explained_variance[0] == pytest.approx(2.0, 0.001)
+        assert len(gpu_model.explained_variance) == 1
+        assert gpu_model.explained_variance[0] == pytest.approx(2.0, 0.001)
 
 
-def test_fit_rectangle(spark: SparkSession, gpu_number: int) -> None:
+def test_fit_rectangle(gpu_number: int) -> None:
     data = [[1.0, 1.0], [1.0, 3.0], [5.0, 1.0], [5.0, 3.0]]
 
     topk = 2
 
-    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
+    with CleanSparkSession() as spark:
+        df = (
+            spark.sparkContext.parallelize(data)
+            .map(lambda row: (row,))
+            .toDF(["coordinates"])
+        )
 
-    df = rdd.toDF(["coordinates"])
+        gpu_pca = (
+            SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
+        )
+        gpu_model = gpu_pca.fit(df)
 
-    gpu_pca = SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
+        assert gpu_model.getInputCol() == "coordinates"
 
-    gpu_model = gpu_pca.fit(df)
+        assert len(gpu_model.mean) == 2
+        assert gpu_model.mean[0] == pytest.approx(3.0, 0.001)
+        assert gpu_model.mean[1] == pytest.approx(2.0, 0.001)
 
-    assert gpu_model.getInputCol() == "coordinates"
+        assert len(gpu_model.pc) == 2
 
-    assert len(gpu_model.mean) == 2
-    assert gpu_model.mean[0] == pytest.approx(3.0, 0.001)
-    assert gpu_model.mean[1] == pytest.approx(2.0, 0.001)
+        first_pc = gpu_model.pc[0]
+        assert len(first_pc) == 2
+        assert first_pc[0] == pytest.approx(1.0, 0.001)
+        assert first_pc[1] == pytest.approx(0.0, 0.001)
 
-    assert len(gpu_model.pc) == 2
+        second_pc = gpu_model.pc[1]
+        assert len(second_pc) == 2
+        assert second_pc[0] == pytest.approx(0.0, 0.001)
+        assert second_pc[1] == pytest.approx(1.0, 0.001)
 
-    first_pc = gpu_model.pc[0]
-    assert len(first_pc) == 2
-    assert first_pc[0] == pytest.approx(1.0, 0.001)
-    assert first_pc[1] == pytest.approx(0.0, 0.001)
-
-    second_pc = gpu_model.pc[1]
-    assert len(second_pc) == 2
-    assert second_pc[0] == pytest.approx(0.0, 0.001)
-    assert second_pc[1] == pytest.approx(1.0, 0.001)
-
-    assert len(gpu_model.explained_variance) == 2
-    assert gpu_model.explained_variance[0] == pytest.approx(16.0 / 3, 0.001)
-    assert gpu_model.explained_variance[1] == pytest.approx(4.0 / 3, 0.001)
+        assert len(gpu_model.explained_variance) == 2
+        assert gpu_model.explained_variance[0] == pytest.approx(16.0 / 3, 0.001)
+        assert gpu_model.explained_variance[1] == pytest.approx(4.0 / 3, 0.001)
 
 
-def test_pca_basic(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
+def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
     """
     Sparkcuml keeps the algorithmic parameters and their default values
     exactly the same as cuml.dask.decomposition.PCA,
@@ -134,33 +140,41 @@ def test_pca_basic(spark: SparkSession, gpu_number: int, tmp_path: str) -> None:
     # Train a PCA model
     data = [[1.0, 1.0, 1.0], [1.0, 3.0, 2.0], [5.0, 1.0, 3.9], [5.0, 3.0, 2.9]]
     topk = 2
-    rdd = spark.sparkContext.parallelize(data).map(lambda row: (row,))
-    df = rdd.toDF(["coordinates"])
-    gpu_pca = SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
-    pca_model: SparkCumlPCAModel = gpu_pca.fit(df)
 
-    model_path = f"{path}/pca_model"
-    pca_model.write().overwrite().save(model_path)
-    pca_model_loaded = SparkCumlPCAModel.load(model_path)
-
-    def assert_pca_model(
-        model: SparkCumlPCAModel, loaded_model: SparkCumlPCAModel
-    ) -> None:
-        """
-        Expect the model attributes are same
-        """
-        assert model.mean == loaded_model.mean
-        assert model.singular_values == loaded_model.singular_values
-        assert model.explained_variance == loaded_model.explained_variance
-        assert model.pc == loaded_model.pc
-        assert model.getOrDefault("n_components") == loaded_model.getOrDefault(
-            "n_components"
+    with CleanSparkSession() as spark:
+        df = (
+            spark.sparkContext.parallelize(data)
+            .map(lambda row: (row,))
+            .toDF(["coordinates"])
         )
 
-    assert_pca_model(pca_model, pca_model_loaded)
+        gpu_pca = (
+            SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
+        )
+        pca_model: SparkCumlPCAModel = gpu_pca.fit(df)
+
+        model_path = f"{path}/pca_model"
+        pca_model.write().overwrite().save(model_path)
+        pca_model_loaded = SparkCumlPCAModel.load(model_path)
+
+        def assert_pca_model(
+            model: SparkCumlPCAModel, loaded_model: SparkCumlPCAModel
+        ) -> None:
+            """
+            Expect the model attributes are same
+            """
+            assert model.mean == loaded_model.mean
+            assert model.singular_values == loaded_model.singular_values
+            assert model.explained_variance == loaded_model.explained_variance
+            assert model.pc == loaded_model.pc
+            assert model.getOrDefault("n_components") == loaded_model.getOrDefault(
+                "n_components"
+            )
+
+        assert_pca_model(pca_model, pca_model_loaded)
 
 
-def test_fit_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
+def test_fit_compare_cuml(gpu_number: int) -> None:
     import numpy
 
     data = numpy.random.rand(100, 30).astype(numpy.float64).tolist()
@@ -176,41 +190,45 @@ def test_fit_compare_cuml(spark: SparkSession, gpu_number: int) -> None:
     gdf = cudf.DataFrame(data)
     cuml_pca.fit(gdf)
 
-    rdd = spark.sparkContext.parallelize(data, gpu_number).map(lambda row: (row,))
-    df = rdd.toDF(["features"])
-    sparkcuml_pca = SparkCumlPCA(num_workers=gpu_number, n_components=topk).setInputCol(
-        "features"
-    )
-    sparkcuml_model = sparkcuml_pca.fit(df)
+    with CleanSparkSession() as spark:
+        df = (
+            spark.sparkContext.parallelize(data, gpu_number)
+            .map(lambda row: (row,))
+            .toDF(["features"])
+        )
+        sparkcuml_pca = SparkCumlPCA(
+            num_workers=gpu_number, n_components=topk
+        ).setInputCol("features")
+        sparkcuml_model = sparkcuml_pca.fit(df)
 
-    assert sparkcuml_pca.getOrDefault("num_workers") == gpu_number
+        assert sparkcuml_pca.getOrDefault("num_workers") == gpu_number
 
-    assert sparkcuml_model.mean == pytest.approx(
-        cuml_pca.mean_.tolist(), tolerance_float
-    )
-    cuml_pc = cuml_pca.components_.tolist()
-    assert len(sparkcuml_model.pc) == len(cuml_pc)
-    for i in range(len(cuml_pc)):
-        assert_pc_equal(sparkcuml_model.pc[i], cuml_pc[i], tolerance_float)
-    assert sparkcuml_model.explained_variance == pytest.approx(
-        cuml_pca.explained_variance_.tolist(), tolerance_float
-    )
+        assert sparkcuml_model.mean == pytest.approx(
+            cuml_pca.mean_.tolist(), tolerance_float
+        )
+        cuml_pc = cuml_pca.components_.tolist()
+        assert len(sparkcuml_model.pc) == len(cuml_pc)
+        for i in range(len(cuml_pc)):
+            assert_pc_equal(sparkcuml_model.pc[i], cuml_pc[i], tolerance_float)
+        assert sparkcuml_model.explained_variance == pytest.approx(
+            cuml_pca.explained_variance_.tolist(), tolerance_float
+        )
 
-    # test transform function
-    sparkcuml_model.setOutputCol("pca_features")
-    projDf = sparkcuml_model.transform(df)
-    sprojs = [row["pca_features"] for row in projDf.collect()]
+        # test transform function
+        sparkcuml_model.setOutputCol("pca_features")
+        projDf = sparkcuml_model.transform(df)
+        sprojs = [row["pca_features"] for row in projDf.collect()]
 
-    cprojs = cuml_pca.transform(gdf).tolist()
+        cprojs = cuml_pca.transform(gdf).tolist()
 
-    assert len(sprojs) == len(cprojs)
-    for i in range(len(sprojs)):
-        assert len(sprojs[i]) == len(cprojs[i])
+        assert len(sprojs) == len(cprojs)
+        for i in range(len(sprojs)):
+            assert len(sprojs[i]) == len(cprojs[i])
 
-    sprojs = numpy.transpose(sprojs).tolist()  # transpose to compare by columns
-    cprojs = numpy.transpose(cprojs).tolist()
-    for i in range(len(sprojs)):
-        assert_pc_equal(sprojs[i], cprojs[i], tolerance_float)
+        sprojs = numpy.transpose(sprojs).tolist()  # transpose to compare by columns
+        cprojs = numpy.transpose(cprojs).tolist()
+        for i in range(len(sprojs)):
+            assert_pc_equal(sprojs[i], cprojs[i], tolerance_float)
 
 
 def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> None:
@@ -220,27 +238,33 @@ def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> Non
     )
 
 
-def test_transform(spark: SparkSession) -> None:
+def test_transform() -> None:
     mean = [2.0, 2.0]
     pc = [[0.707, 0.707]]
     explained_variance = [2.0]
     singular_values = [2.0]
     data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
-    df = spark.sparkContext.parallelize(data).map(lambda row: (row,)).toDF(["features"])
-    model = (
-        SparkCumlPCAModel(mean, pc, explained_variance, singular_values)
-        .setInputCol("features")
-        .setOutputCol("pca_features")
-    )
 
-    projs = model.transform(df).collect()
-    assert len(projs) == 3
-    d1 = projs[0].asDict()
-    d2 = projs[1].asDict()
-    d3 = projs[2].asDict()
-    assert "pca_features" in d1
-    assert "pca_features" in d2
-    assert "pca_features" in d3
-    assert d1["pca_features"] == pytest.approx([-1.414], 0.001)
-    assert d2["pca_features"] == pytest.approx([0], 0.001)
-    assert d3["pca_features"] == pytest.approx([1.414], 0.001)
+    with CleanSparkSession() as spark:
+        df = (
+            spark.sparkContext.parallelize(data)
+            .map(lambda row: (row,))
+            .toDF(["features"])
+        )
+        model = (
+            SparkCumlPCAModel(mean, pc, explained_variance, singular_values)
+            .setInputCol("features")
+            .setOutputCol("pca_features")
+        )
+
+        projs = model.transform(df).collect()
+        assert len(projs) == 3
+        d1 = projs[0].asDict()
+        d2 = projs[1].asDict()
+        d3 = projs[2].asDict()
+        assert "pca_features" in d1
+        assert "pca_features" in d2
+        assert "pca_features" in d3
+        assert d1["pca_features"] == pytest.approx([-1.414], 0.001)
+        assert d2["pca_features"] == pytest.approx([0], 0.001)
+        assert d3["pca_features"] == pytest.approx([1.414], 0.001)
