@@ -18,11 +18,11 @@ from typing import List
 
 import pytest
 
-from sparkcuml.cluster import SparkCumlKMeans
+from sparkcuml.cluster import SparkCumlKMeans, SparkCumlKMeansModel
 from sparkcuml.tests.sparksession import CleanSparkSession
 
 
-def test_kmeans_parameters(gpu_number: int) -> None:
+def test_kmeans_parameters(gpu_number: int, tmp_path: str) -> None:
     """
     Sparkcuml keeps the algorithmic parameters and their default values
     exactly the same as cuml multi-node multi-GPU KMeans,
@@ -34,12 +34,11 @@ def test_kmeans_parameters(gpu_number: int) -> None:
     assert default_kmeans.getOrDefault("n_clusters") == 8
     assert default_kmeans.getOrDefault("max_iter") == 300
     assert default_kmeans.getOrDefault("tol") == 1e-4
-    assert default_kmeans.getOrDefault("verbose") == False
+    assert not default_kmeans.getOrDefault("verbose")
     assert default_kmeans.getOrDefault("random_state") == 1
     assert default_kmeans.getOrDefault("init") == "scalable-k-means++"
     assert default_kmeans.getOrDefault("oversampling_factor") == 2
-    assert default_kmeans.getOrDefault("max_samples_per_batch") == 32768
-
+    assert default_kmeans.getOrDefault("max_samples_per_batch") == 1 << 15
     assert default_kmeans.getOrDefault("num_workers") == 1
     assert default_kmeans.get_num_workers() == 1
 
@@ -54,10 +53,20 @@ def test_kmeans_parameters(gpu_number: int) -> None:
         "max_samples_per_batch": 45678,
     }
 
-    custom_kmeans = SparkCumlKMeans(**custom_params)
+    def assertKmeansParameters(kmeans: SparkCumlKMeans) -> None:
+        for key in custom_params:
+            assert kmeans.getOrDefault(key) == custom_params[key]
 
-    for key in custom_params:
-        assert custom_kmeans.getOrDefault(key) == custom_params[key]
+    custom_kmeans = SparkCumlKMeans(**custom_params)
+    assertKmeansParameters(kmeans=custom_kmeans)
+
+    # Estimator persistence
+    path = tmp_path + "/kmeans_tests"
+    estimator_path = f"{path}/kmeans"
+    custom_kmeans.write().overwrite().save(estimator_path)
+    custom_kmeans_loaded = SparkCumlKMeans.load(estimator_path)
+
+    assertKmeansParameters(kmeans=custom_kmeans_loaded)
 
 
 def assert_centers_equal(
@@ -73,7 +82,7 @@ def assert_centers_equal(
         assert a_center == pytest.approx(b_center, tolerance)
 
 
-def test_toy_example(gpu_number: int) -> None:
+def test_toy_example(gpu_number: int, tmp_path: str) -> None:
     data = [[1.0, 1.0], [1.0, 2.0], [3.0, 2.0], [4.0, 3.0]]
 
     with CleanSparkSession() as spark:
@@ -85,16 +94,27 @@ def test_toy_example(gpu_number: int) -> None:
         sparkcuml_kmeans = SparkCumlKMeans(
             num_workers=gpu_number, n_clusters=2
         ).setFeaturesCol("features")
-        sparkcuml_model = sparkcuml_kmeans.fit(df)
 
-        assert len(sparkcuml_model.cluster_centers_) == 2
-        sorted_centers = sorted(sparkcuml_model.cluster_centers_, key=lambda p: p)
-        assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
-        assert sorted_centers[1] == pytest.approx([3.5, 2.5], 0.001)
+        def assertKmeansModel(model: SparkCumlKMeansModel) -> None:
+            assert len(model.cluster_centers_) == 2
+            sorted_centers = sorted(model.cluster_centers_, key=lambda p: p)
+            assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
+            assert sorted_centers[1] == pytest.approx([3.5, 2.5], 0.001)
+
+        kmeans_model = sparkcuml_kmeans.fit(df)
+        assertKmeansModel(model=kmeans_model)
+
+        # Model persistence
+        path = tmp_path + "/kmeans_tests"
+        model_path = f"{path}/kmeans_model"
+        kmeans_model.write().overwrite().save(model_path)
+        kmeans_model_loaded = SparkCumlKMeansModel.load(model_path)
+
+        assertKmeansModel(model=kmeans_model_loaded)
 
         # test transform function
-        label_df = sparkcuml_model.transform(df)
-        o_col = sparkcuml_model.getOutputCol()
+        label_df = kmeans_model.transform(df)
+        o_col = kmeans_model.getOutputCol()
         labels = [row[o_col] for row in label_df.collect()]
 
         assert len(labels) == 4

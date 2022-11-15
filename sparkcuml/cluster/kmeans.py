@@ -152,7 +152,7 @@ class SparkCumlKMeansModel(_CumlModel):
         self,
         cluster_centers_: List[List[float]],
     ):
-        super().__init__()
+        super().__init__(cluster_centers_=cluster_centers_)
 
         self.cluster_centers_ = cluster_centers_
 
