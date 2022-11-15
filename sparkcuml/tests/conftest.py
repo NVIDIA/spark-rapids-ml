@@ -22,6 +22,7 @@ import subprocess
 import tempfile
 from typing import Generator, List
 
+import cupy
 import pytest
 from pyspark.sql import SparkSession
 
@@ -40,7 +41,7 @@ def _get_devices() -> List[str]:
     return addresses
 
 
-_gpu_number = len(_get_devices())
+_gpu_number = min(len(_get_devices()), cupy.cuda.runtime.getDeviceCount())
 # We restrict the max gpu numbers to use
 _gpu_number = _gpu_number if _gpu_number < 4 else 4
 
