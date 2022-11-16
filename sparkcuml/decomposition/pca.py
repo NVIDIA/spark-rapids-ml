@@ -108,7 +108,7 @@ class SparkCumlPCA(_CumlEstimator):
             cpu_mean = pca_object.mean_.to_arrow().to_pylist()
             cpu_pc = pca_object.components_.to_numpy().tolist()
             cpu_explained_variance = pca_object.explained_variance_.to_numpy().tolist()
-            cpu_singular_values = pca_object.explained_variance_.to_numpy().tolist()
+            cpu_singular_values = pca_object.singular_values_.to_numpy().tolist()
 
             return {
                 "mean": [cpu_mean],
