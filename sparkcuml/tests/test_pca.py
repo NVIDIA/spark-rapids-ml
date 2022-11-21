@@ -13,9 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import List
 
+from typing import List, Union
+
+import numpy as np
 import pytest
+from pyspark.sql.types import (
+    ArrayType,
+    DoubleType,
+    FloatType,
+    Row,
+    StructField,
+    StructType,
+)
 
 from sparkcuml.decomposition import SparkCumlPCA, SparkCumlPCAModel
 from sparkcuml.tests.sparksession import CleanSparkSession
@@ -238,24 +248,26 @@ def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> Non
     )
 
 
-def test_transform() -> None:
+@pytest.mark.parametrize("dtype", [FloatType(), DoubleType()])
+def test_transform(dtype: Union[FloatType, DoubleType]) -> None:
     mean = [2.0, 2.0]
     pc = [[0.707, 0.707]]
     explained_variance = [2.0]
     singular_values = [2.0]
-    data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
 
     with CleanSparkSession() as spark:
-        df = (
-            spark.sparkContext.parallelize(data)
-            .map(lambda row: (row,))
-            .toDF(["features"])
-        )
+
         model = (
             SparkCumlPCAModel(mean, pc, explained_variance, singular_values)
             .setInputCol("features")
             .setOutputCol("pca_features")
         )
+
+        data = [Row(features=arr) for arr in [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]]
+        schema = StructType([StructField("features", ArrayType(dtype, False), False)])
+
+        df = spark.createDataFrame(spark.sparkContext.parallelize(data), schema=schema)
+        df.printSchema()
 
         projs = model.transform(df).collect()
         assert len(projs) == 3

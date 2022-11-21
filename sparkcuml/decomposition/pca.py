@@ -195,8 +195,14 @@ class SparkCumlPCAModel(_CumlModel):
         return self
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        input_column_name = self.getInputCol()
+        for field in input_schema:
+            if field.name == input_column_name:
+                # TODO: mypy throws error here since it doesn't know that dataType will be ArrayType which has elementType field
+                input_data_type = field.dataType.elementType  # type: ignore
+
         ret_schema = StructType(
-            [StructField(self.getOutputCol(), ArrayType(DoubleType(), False), False)]
+            [StructField(self.getOutputCol(), ArrayType(input_data_type, False), False)]
         )
         return ret_schema
 
@@ -220,16 +226,23 @@ class SparkCumlPCAModel(_CumlModel):
 
             # TODO: n_cols and dtype should be part of sparkcuml model and not inferred from data here
             pca_object.n_cols, pca_object.dtype = data_info(df)
-
-            pca_object.components_ = cudf_to_cuml_array(cudf.DataFrame(self.pc))
-            pca_object.mean_ = cudf_to_cuml_array(cudf.Series(self.mean))
+            pca_object.components_ = cudf_to_cuml_array(
+                np.array(self.pc).astype(pca_object.dtype)
+            )
+            pca_object.mean_ = cudf_to_cuml_array(
+                np.array(self.mean).astype(pca_object.dtype)
+            )
             pca_object.singular_values_ = cudf_to_cuml_array(
-                cudf.Series(self.singular_values)
+                np.array(self.singular_values).astype(pca_object.dtype)
             )
 
-            res = pca_object.transform(df).to_numpy().tolist()
-            if type(res[0]) != list:
-                res = [[v] for v in res]
+            res = pca_object.transform(df).to_numpy()
+            # if num_components is 1, a 1-d numpy array is returned
+            # convert to 2d for correct downstream behavior
+            if len(res.shape) == 1:
+                res = np.expand_dims(res, 1)
+
+            res = list(res)
 
             return pd.DataFrame({self.getOutputCol(): res})
 
