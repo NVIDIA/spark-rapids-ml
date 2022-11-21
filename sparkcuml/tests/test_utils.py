@@ -26,3 +26,34 @@ def test_get_default_params_from_func() -> None:
     assert len(params) == 3
     assert params["a"] == 1
     assert params["d"] == 4
+
+
+def test_clean_sparksession() -> None:
+    from sparkcuml.tests.sparksession import CleanSparkSession
+
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(1)}
+    # Clean SparkSession with extra conf
+    with CleanSparkSession(conf) as spark:
+        assert int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 1
+
+    # Clean SparkSession
+    with CleanSparkSession() as spark:
+        assert (
+            int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 10000
+        )
+
+    # Test Nested SparkSession
+    with CleanSparkSession(conf) as spark:
+        assert int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 1
+
+        # Nested SparkSession will reset the conf
+        with CleanSparkSession() as spark:
+            assert (
+                int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch"))
+                == 10000
+            )
+
+        # The conf has been reset.
+        assert (
+            int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 10000
+        )
