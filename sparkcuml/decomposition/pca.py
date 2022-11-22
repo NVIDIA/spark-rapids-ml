@@ -16,11 +16,18 @@
 
 from typing import Any, Callable, Dict, List, Union
 
-import cudf
 import numpy as np
 import pandas as pd
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.types import ArrayType, DoubleType, Row, StructField, StructType
+from pyspark.sql.types import (
+    ArrayType,
+    DoubleType,
+    IntegerType,
+    Row,
+    StringType,
+    StructField,
+    StructType,
+)
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
@@ -110,11 +117,14 @@ class SparkCumlPCA(_CumlEstimator):
             cpu_explained_variance = pca_object.explained_variance_.to_numpy().tolist()
             cpu_singular_values = pca_object.singular_values_.to_numpy().tolist()
 
+            n_cols, dtype = data_info(df[0])
             return {
                 "mean": [cpu_mean],
                 "pc": [cpu_pc],
                 "explained_variance": [cpu_explained_variance],
                 "singular_values": [cpu_singular_values],
+                "n_cols": n_cols,
+                "dtype": dtype.name,
             }
 
         return _cuml_fit
@@ -128,6 +138,8 @@ class SparkCumlPCA(_CumlEstimator):
                     "explained_variance", ArrayType(DoubleType(), False), False
                 ),
                 StructField("singular_values", ArrayType(DoubleType(), False), False),
+                StructField("n_cols", IntegerType(), False),
+                StructField("dtype", StringType(), False),
             ]
         )
 
@@ -163,18 +175,24 @@ class SparkCumlPCAModel(_CumlModel):
         pc: List[List[float]],
         explained_variance: List[float],
         singular_values: List[float],
+        n_cols: int,
+        dtype: str,
     ):
         super().__init__(
             mean=mean,
             pc=pc,
             explained_variance=explained_variance,
             singular_values=singular_values,
+            n_cols=n_cols,
+            dtype=dtype,
         )
 
         self.mean = mean
         self.pc = pc
         self.explained_variance = explained_variance
         self.singular_values = singular_values
+        self.n_cols = n_cols
+        self.dtype = dtype
 
         cumlParams = SparkCumlPCA._get_cuml_params_default()
         self.set_params(**cumlParams)
@@ -222,18 +240,18 @@ class SparkCumlPCAModel(_CumlModel):
             pca_object = CumlPCAMG(output_type="cudf", **cuml_alg_params)
             pca_object._n_components = pca_object.n_components
 
-            from sparkcuml.utils import cudf_to_cuml_array, data_info
+            from sparkcuml.utils import cudf_to_cuml_array
 
-            # TODO: n_cols and dtype should be part of sparkcuml model and not inferred from data here
-            pca_object.n_cols, pca_object.dtype = data_info(df)
+            pca_object.n_cols = self.n_cols
+            pca_object.dtype = np.dtype(self.dtype)
             pca_object.components_ = cudf_to_cuml_array(
-                np.array(self.pc).astype(pca_object.dtype)
+                np.array(self.pc).astype(self.dtype)
             )
             pca_object.mean_ = cudf_to_cuml_array(
-                np.array(self.mean).astype(pca_object.dtype)
+                np.array(self.mean).astype(self.dtype)
             )
             pca_object.singular_values_ = cudf_to_cuml_array(
-                np.array(self.singular_values).astype(pca_object.dtype)
+                np.array(self.singular_values).astype(self.dtype)
             )
 
             res = pca_object.transform(df).to_numpy()

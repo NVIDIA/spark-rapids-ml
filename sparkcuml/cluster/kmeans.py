@@ -25,6 +25,7 @@ from pyspark.sql.types import (
     DoubleType,
     IntegerType,
     Row,
+    StringType,
     StructField,
     StructType,
 )
@@ -35,6 +36,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
+from sparkcuml.utils import data_info
 
 
 class SparkCumlKMeans(_CumlEstimator):
@@ -104,6 +106,8 @@ class SparkCumlKMeans(_CumlEstimator):
                 # should be list of np.ndarrays here
                 concated = np.concatenate(df)
 
+            n_cols, dtype = data_info(df[0])
+
             kmeans_object.fit(
                 concated,
                 sample_weight=None,
@@ -113,6 +117,8 @@ class SparkCumlKMeans(_CumlEstimator):
                 "cluster_centers_": [
                     kmeans_object.cluster_centers_.to_numpy().tolist()
                 ],
+                "n_cols": n_cols,
+                "dtype": dtype.name,
             }
 
         return _cuml_fit
@@ -123,6 +129,8 @@ class SparkCumlKMeans(_CumlEstimator):
                 StructField(
                     "cluster_centers_", ArrayType(ArrayType(DoubleType()), False), False
                 ),
+                StructField("n_cols", IntegerType(), False),
+                StructField("dtype", StringType(), False),
             ]
         )
 
@@ -151,11 +159,14 @@ class SparkCumlKMeansModel(_CumlModel):
     def __init__(
         self,
         cluster_centers_: List[List[float]],
+        n_cols: int,
+        dtype: str,
     ):
-        super().__init__(cluster_centers_=cluster_centers_)
+        super().__init__(cluster_centers_=cluster_centers_, n_cols=n_cols, dtype=dtype)
 
         self.cluster_centers_ = cluster_centers_
-
+        self.n_cols = n_cols
+        self.dtype = dtype
         cumlParams = SparkCumlKMeans._get_cuml_params_default()
         self.set_params(**cumlParams)
 
@@ -175,18 +186,20 @@ class SparkCumlKMeansModel(_CumlModel):
 
         cluster_centers_ = self.cluster_centers_
         output_col = self.getOutputCol()
+        dtype = self.dtype
+        n_cols = self.n_cols
 
         def _transform_internal(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans_object = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
 
-            from sparkcuml.utils import cudf_to_cuml_array, data_info
+            from sparkcuml.utils import cudf_to_cuml_array
 
-            # TODO: n_cols and dtype should be part of sparkcuml model and not inferred from data here
-            kmeans_object.n_cols, kmeans_object.dtype = data_info(df)
+            kmeans_object.n_cols = n_cols
+            kmeans_object.dtype = np.dtype(dtype)
             kmeans_object.cluster_centers_ = cudf_to_cuml_array(
-                cudf.DataFrame(cluster_centers_), order="C"
+                np.array(cluster_centers_).astype(dtype), order="C"
             )
 
             res = list(kmeans_object.predict(df, normalize_weights=False).to_numpy())

@@ -95,14 +95,16 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
             num_workers=gpu_number, n_clusters=2
         ).setFeaturesCol("features")
 
-        def assertKmeansModel(model: SparkCumlKMeansModel) -> None:
+        def assert_kmeans_model(model: SparkCumlKMeansModel) -> None:
             assert len(model.cluster_centers_) == 2
             sorted_centers = sorted(model.cluster_centers_, key=lambda p: p)
             assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
             assert sorted_centers[1] == pytest.approx([3.5, 2.5], 0.001)
+            assert model.dtype == "float64"
+            assert model.n_cols == 2
 
         kmeans_model = sparkcuml_kmeans.fit(df)
-        assertKmeansModel(model=kmeans_model)
+        assert_kmeans_model(model=kmeans_model)
 
         # Model persistence
         path = tmp_path + "/kmeans_tests"
@@ -110,7 +112,7 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
         kmeans_model.write().overwrite().save(model_path)
         kmeans_model_loaded = SparkCumlKMeansModel.load(model_path)
 
-        assertKmeansModel(model=kmeans_model_loaded)
+        assert_kmeans_model(model=kmeans_model_loaded)
 
         # test transform function
         label_df = kmeans_model.transform(df)

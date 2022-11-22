@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import inspect
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import cudf
 import numpy as np
@@ -22,7 +22,6 @@ import pandas as pd
 from cuml.common.array import CumlArray
 from cuml.common.input_utils import input_to_cuml_array
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
-from pyspark.ml.param import Param, Params
 from pyspark.sql import SparkSession
 
 
@@ -129,7 +128,7 @@ def cudf_to_cuml_array(
     return cumlarray
 
 
-def data_info(data: Union[pd.DataFrame, np.ndarray]) -> Tuple[int, type]:
+def data_info(data: Union[pd.DataFrame, np.ndarray]) -> Tuple[int, np.dtype]:
     if isinstance(data, pd.DataFrame):
         return (len(data.columns), data.dtypes[0])
     else:

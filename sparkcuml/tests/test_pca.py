@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-from typing import List, Union
+from typing import List, Tuple, Union
 
-import numpy as np
 import pytest
 from pyspark.sql.types import (
     ArrayType,
@@ -180,6 +179,10 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
             assert model.getOrDefault("n_components") == loaded_model.getOrDefault(
                 "n_components"
             )
+            assert model.dtype == loaded_model.dtype
+            assert model.n_cols == model.n_cols
+            assert model.n_cols == 3
+            assert model.dtype == "float64"
 
         assert_pca_model(pca_model, pca_model_loaded)
 
@@ -248,17 +251,24 @@ def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> Non
     )
 
 
-@pytest.mark.parametrize("dtype", [FloatType(), DoubleType()])
-def test_transform(dtype: Union[FloatType, DoubleType]) -> None:
+@pytest.mark.parametrize(
+    "dtype_gen", [("float32", FloatType()), ("float64", DoubleType())]
+)
+def test_transform(
+    dtype_gen: Union[Tuple[str, FloatType], Tuple[str, DoubleType]]
+) -> None:
     mean = [2.0, 2.0]
     pc = [[0.707, 0.707]]
     explained_variance = [2.0]
     singular_values = [2.0]
 
+    dtype_name, dtype = dtype_gen
     with CleanSparkSession() as spark:
 
         model = (
-            SparkCumlPCAModel(mean, pc, explained_variance, singular_values)
+            SparkCumlPCAModel(
+                mean, pc, explained_variance, singular_values, len(pc[0]), dtype_name
+            )
             .setInputCol("features")
             .setOutputCol("pca_features")
         )
