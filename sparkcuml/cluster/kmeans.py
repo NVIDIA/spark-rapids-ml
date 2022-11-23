@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import cudf
 import numpy as np
@@ -32,6 +32,7 @@ from pyspark.sql.types import (
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
+    CumlT,
     _CumlEstimator,
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
@@ -178,8 +179,10 @@ class SparkCumlKMeansModel(_CumlModel):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[Union[pd.DataFrame, np.ndarray]], pd.DataFrame]:
-
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
         cuml_alg_params = {}
         for k in SparkCumlKMeans._get_cuml_params_default():
             cuml_alg_params[k] = self.getOrDefault(k)
@@ -189,23 +192,26 @@ class SparkCumlKMeansModel(_CumlModel):
         dtype = self.dtype
         n_cols = self.n_cols
 
-        def _transform_internal(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
+        def _construct_kmeans() -> CumlT:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
-            kmeans_object = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
+            kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
+            from sparkcuml.utils import cudf_to_cuml_array, data_info
 
-            from sparkcuml.utils import cudf_to_cuml_array
-
-            kmeans_object.n_cols = n_cols
-            kmeans_object.dtype = np.dtype(dtype)
-            kmeans_object.cluster_centers_ = cudf_to_cuml_array(
+            kmeans.n_cols = n_cols
+            kmeans.dtype = np.dtype(dtype)
+            kmeans.cluster_centers_ = cudf_to_cuml_array(
                 np.array(cluster_centers_).astype(dtype), order="C"
             )
+            return kmeans
 
-            res = list(kmeans_object.predict(df, normalize_weights=False).to_numpy())
+        def _transform_internal(
+            kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
+        ) -> pd.DataFrame:
+            res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
             return pd.DataFrame({output_col: res})
 
-        return _transform_internal
+        return _construct_kmeans, _transform_internal
 
     def setFeaturesCol(self, value: str) -> "SparkCumlKMeansModel":
         """

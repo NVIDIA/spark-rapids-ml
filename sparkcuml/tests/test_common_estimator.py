@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Type, Union
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
 import cudf
 import numpy as np
@@ -25,6 +25,7 @@ from pyspark.sql.types import StructType
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
+    CumlT,
     _CumlEstimator,
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
@@ -60,10 +61,23 @@ class SparkCumlDummyModel(_CumlModel):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[Union[cudf.DataFrame, np.ndarray]], pd.DataFrame]:
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
         model_attribute_a = self.model_attribute_a
 
-        def _dummy_transform(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
+        def _construct_dummy() -> CumlT:
+            dummy = CumlDummy(a=101, b=102, c=103)
+            return dummy
+
+        def _dummy_transform(
+            dummy: CumlT, df: Union[pd.DataFrame, np.ndarray]
+        ) -> pd.DataFrame:
+            assert dummy.a == 101
+            assert dummy.b == 102
+            assert dummy.c == 103
+
             assert model_attribute_a == 1024
             if isinstance(df, pd.DataFrame):
                 return df
@@ -71,7 +85,7 @@ class SparkCumlDummyModel(_CumlModel):
                 # TODO: implement when adding single column test
                 raise NotImplementedError()
 
-        return _dummy_transform
+        return _construct_dummy, _dummy_transform
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return input_schema
@@ -161,7 +175,6 @@ _set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
 
 
 def test_dummy(gpu_number: int, tmp_path: str) -> None:
-
     data = [
         [1.0, 4.0, 4.0, 4.0],
         [2.0, 2.0, 2.0, 2.0],

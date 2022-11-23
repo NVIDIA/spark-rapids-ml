@@ -16,7 +16,19 @@
 import json
 import os
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Iterator, List, Optional, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import cudf
 import numpy as np
@@ -46,6 +58,14 @@ from sparkcuml.utils import (
 )
 
 INIT_PARAMETERS_NAME = "init"
+
+if TYPE_CHECKING:
+    from cuml.cluster.kmeans_mg import KMeansMG
+    from cuml.decomposition.pca_mg import PCAMG
+
+    CumlT = TypeVar("CumlT", PCAMG, KMeansMG)
+else:
+    CumlT = Any
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -397,23 +417,29 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     @abstractmethod
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[Union[cudf.DataFrame, np.ndarray]], pd.DataFrame]:
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
         """
-        Subclass must implement this function to return a cuml transform function that will be
-        sent to executor to run.
+        Subclass must implement this function to return two functions,
+        1. a function to construct cuml counterpart instance
+        2. a function to transform the dataset
 
         Eg,
 
         def _get_cuml_transform_func(self, dataset: DataFrame):
             ...
-            def _cuml_transform(df: cudf.DataFrame) ->pd.DataFrame:
+            def _construct_cuml_object() -> CumlT
+                ...
+            def _cuml_transform(cuml_obj: CumlT, df: Union[pd.DataFrame, np.ndarray]) ->pd.DataFrame:
                 ...
             ...
 
-            return _cuml_transform
+            return _construct_cuml_object, _cuml_transform
 
-        _get_cuml_transform_func itself runs on the driver side, while the returned _cuml_transform will
-        run on the executor side.
+        _get_cuml_transform_func itself runs on the driver side, while the returned
+        _construct_cuml_object and _cuml_transform will run on the executor side.
         """
         raise NotImplementedError()
 
@@ -452,7 +478,10 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
-        cuml_transform_func = self._get_cuml_transform_func(dataset)
+        # Get the functions which will be passed into executor to run.
+        construct_cuml_object_func, cuml_transform_func = self._get_cuml_transform_func(
+            dataset
+        )
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
@@ -461,13 +490,17 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
 
             self.set_gpu_device(context, is_local, True)
 
+            # Construct the cuml counterpart object
+            cuml_object = construct_cuml_object_func()
+
+            # Transform the dataset
             if input_is_multi_cols:
                 for pdf in pdf_iter:
-                    yield cuml_transform_func(pdf[select_cols])
+                    yield cuml_transform_func(cuml_object, pdf[select_cols])
             else:
                 for pdf in pdf_iter:
                     nparray = np.array(list(pdf[select_cols[0]]))
-                    yield cuml_transform_func(nparray)
+                    yield cuml_transform_func(cuml_object, nparray)
 
         return dataset.mapInPandas(
             _transform_udf, schema=self._out_schema(dataset.schema)  # type: ignore

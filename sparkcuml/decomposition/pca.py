@@ -14,8 +14,9 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
+import cudf
 import numpy as np
 import pandas as pd
 from pyspark.sql.dataframe import DataFrame
@@ -31,6 +32,7 @@ from pyspark.sql.types import (
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
+    CumlT,
     _CumlEstimator,
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
@@ -226,34 +228,43 @@ class SparkCumlPCAModel(_CumlModel):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
-    ) -> Callable[[Union[pd.DataFrame, np.ndarray]], pd.DataFrame]:
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
 
         cuml_alg_params = {}
         for k, _ in SparkCumlPCA._get_cuml_params_default().items():
             if self.getOrDefault(k):
                 cuml_alg_params[k] = self.getOrDefault(k)
 
-        def _transform_internal(df: Union[pd.DataFrame, np.ndarray]) -> pd.DataFrame:
+        def _construct_pca() -> CumlT:
+            """
 
+            Returns the instance of PCAMG which will be passed to _transform_internal
+            to do the transform.
+            -------
+
+            """
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
-            pca_object = CumlPCAMG(output_type="cudf", **cuml_alg_params)
-            pca_object._n_components = pca_object.n_components
+            pca = CumlPCAMG(output_type="cudf", **cuml_alg_params)
+            pca._n_components = pca.n_components
 
             from sparkcuml.utils import cudf_to_cuml_array
 
-            pca_object.n_cols = self.n_cols
-            pca_object.dtype = np.dtype(self.dtype)
-            pca_object.components_ = cudf_to_cuml_array(
-                np.array(self.pc).astype(self.dtype)
+            pca.n_cols = self.n_cols
+            pca.dtype = np.dtype(self.dtype)
+            pca.components_ = cudf_to_cuml_array(np.array(self.pc).astype(pca.dtype))
+            pca.mean_ = cudf_to_cuml_array(np.array(self.mean).astype(pca.dtype))
+            pca.singular_values_ = cudf_to_cuml_array(
+                np.array(self.singular_values).astype(pca.dtype)
             )
-            pca_object.mean_ = cudf_to_cuml_array(
-                np.array(self.mean).astype(self.dtype)
-            )
-            pca_object.singular_values_ = cudf_to_cuml_array(
-                np.array(self.singular_values).astype(self.dtype)
-            )
+            return pca
 
+        def _transform_internal(
+            pca_object: CumlT, df: Union[pd.DataFrame, np.ndarray]
+        ) -> pd.DataFrame:
             res = pca_object.transform(df).to_numpy()
             # if num_components is 1, a 1-d numpy array is returned
             # convert to 2d for correct downstream behavior
@@ -261,10 +272,9 @@ class SparkCumlPCAModel(_CumlModel):
                 res = np.expand_dims(res, 1)
 
             res = list(res)
-
             return pd.DataFrame({self.getOutputCol(): res})
 
-        return _transform_internal
+        return _construct_pca, _transform_internal
 
 
 _set_pyspark_cuml_cls_param_attrs(SparkCumlPCA, SparkCumlPCAModel)
