@@ -24,6 +24,12 @@ Run test
 
 ``` bash
 ./run_test.sh
+
+Run benchmark
+
+``` bash
+./run_benchmark.sh
+```
 ```
 
 
