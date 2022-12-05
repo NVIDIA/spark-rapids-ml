@@ -126,11 +126,3 @@ def cudf_to_cuml_array(
 ) -> CumlArray:
     cumlarray, _, _, _ = input_to_cuml_array(gdf, order=order)
     return cumlarray
-
-
-def data_info(data: Union[pd.DataFrame, np.ndarray]) -> Tuple[int, np.dtype]:
-    if isinstance(data, pd.DataFrame):
-        return (len(data.columns), data.dtypes[0])
-    else:
-        # should be numpy.ndarray here
-        return (data.shape[1], data.dtype)

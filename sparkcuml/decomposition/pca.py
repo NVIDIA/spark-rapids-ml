@@ -32,12 +32,13 @@ from pyspark.sql.types import (
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
+    CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor, data_info
+from sparkcuml.utils import PartitionDescriptor
 
 
 class SparkCumlPCA(_CumlEstimator):
@@ -89,11 +90,10 @@ class SparkCumlPCA(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[
-        [Union[List[pd.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
-    ]:
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         def _cuml_fit(
-            df: Union[List[pd.DataFrame], List[np.ndarray]], params: Dict[str, Any]
+            dfs: CumlInputType,
+            params: Dict[str, Any],
         ) -> Dict[str, Any]:
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
@@ -104,9 +104,8 @@ class SparkCumlPCA(_CumlEstimator):
             )
 
             pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
-
             pca_object.fit(
-                df,
+                [x for x, _ in dfs],
                 pdesc.m,
                 pdesc.n,
                 pdesc.parts_rank_size,
@@ -119,14 +118,13 @@ class SparkCumlPCA(_CumlEstimator):
             cpu_explained_variance = pca_object.explained_variance_.to_numpy().tolist()
             cpu_singular_values = pca_object.singular_values_.to_numpy().tolist()
 
-            n_cols, dtype = data_info(df[0])
             return {
                 "mean": [cpu_mean],
                 "pc": [cpu_pc],
                 "explained_variance": [cpu_explained_variance],
                 "singular_values": [cpu_singular_values],
-                "n_cols": n_cols,
-                "dtype": dtype.name,
+                "n_cols": params["n"],
+                "dtype": pca_object.dtype.name,
             }
 
         return _cuml_fit

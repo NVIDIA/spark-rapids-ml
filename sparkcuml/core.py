@@ -16,6 +16,7 @@
 import json
 import os
 from abc import abstractmethod
+from collections import namedtuple
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -36,7 +37,7 @@ import pandas as pd
 from pyspark import TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasOutputCol
+from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasLabelCol, HasOutputCol
 from pyspark.ml.util import (
     DefaultParamsReader,
     DefaultParamsWriter,
@@ -45,7 +46,8 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
-from pyspark.sql import DataFrame
+from pyspark.sql import Column, DataFrame
+from pyspark.sql.functions import col
 from pyspark.sql.types import Row, StructType
 
 from sparkcuml.common.cuml_context import CumlContext
@@ -66,6 +68,16 @@ if TYPE_CHECKING:
     CumlT = TypeVar("CumlT", PCAMG, KMeansMG)
 else:
     CumlT = Any
+
+_SinglePdDataFrameBatchType = Tuple[pd.DataFrame, Optional[pd.DataFrame]]
+_SingleNpArrayBatchType = Tuple[np.ndarray, Optional[np.ndarray]]
+# CumlInputType is type of [(feature, label), ...]
+CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatchType]]
+
+
+# Global constant for defining column alias
+Alias = namedtuple("Alias", ("data", "label"))
+alias = Alias("cuml_values", "cuml_label")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -270,9 +282,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
     @abstractmethod
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[
-        [Union[List[cudf.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
-    ]:
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         """
         Subclass must implement this function to return a cuml fit function that will be
         sent to executor to run.
@@ -281,9 +291,9 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         def _get_cuml_fit_func(self, dataset: DataFrame):
             ...
-            def _cuml_fit(df: List[cudf.DataFrame], params: Dict[str, Any]) -> Dict[str, Any]:
+            def _cuml_fit(df: CumlInputType, params: Dict[str, Any]) -> Dict[str, Any]:
                 "" "
-                df:  a sequence of cudf DataFrame
+                df:  a sequence of (X, Y)
                 params: a series of parameters stored in dictionary,
                     especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
                 "" "
@@ -296,6 +306,24 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
         run on the executor side.
         """
         raise NotImplementedError()
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[List[Column], Optional[List[str]], int]:
+        select_cols = []
+        multi_col_names = None
+        if self.isDefined(self.inputCol):
+            select_cols.append(col(self.getOrDefault(self.inputCol)).alias(alias.data))
+            dimension = len(dataset.first()[self.getInputCol()])  # type: ignore
+        elif self.isDefined(self.inputCols):
+            multi_col_names = self.getInputCols()
+            dimension = len(multi_col_names)
+            for c in multi_col_names:
+                select_cols.append(col(c))
+        else:
+            raise ValueError("Please set inputCol or inputCols")
+
+        return select_cols, multi_col_names, dimension
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
         """
@@ -311,19 +339,11 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
         :class:`Transformer`
             fitted model
         """
-        select_cols = []
-        input_is_multi_cols = True
-        if self.isDefined(self.inputCol):
-            select_cols = [self.getInputCol()]
-            dimension = len(dataset.first()[self.getInputCol()])  # type: ignore
-            input_is_multi_cols = False
-        elif self.isDefined(self.inputCols):
-            select_cols.extend(self.getInputCols())
-            dimension = len(self.getInputCols())
-        else:
-            raise ValueError("Please set inputCol or inputCols")
+
+        select_cols, multi_col_names, dimension = self._pre_process_data(dataset)
 
         dataset = dataset.select(*select_cols)
+
         if dataset.rdd.getNumPartitions() != self.get_num_workers():
             dataset = self._repartition_dataset(dataset)
 
@@ -348,17 +368,17 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
             with CumlContext(partition_id, num_workers, context) as cc:
                 # handle the input
+                # inputs = [(X, Optional(y)), (X, Optional(y))]
                 inputs = []
                 sizes = []
-                if input_is_multi_cols:
-                    for pdf in pdf_iter:
-                        sizes.append(pdf.shape[0])
-                        inputs.append(pdf[select_cols])
-                else:
-                    for pdf in pdf_iter:
-                        nparray = np.array(list(pdf[select_cols[0]]))
-                        sizes.append(nparray.shape[0])
-                        inputs.append(nparray)
+                for pdf in pdf_iter:
+                    sizes.append(pdf.shape[0])
+                    if multi_col_names:
+                        features = pdf[multi_col_names]
+                    else:
+                        features = np.array(list(pdf[alias.data]))
+                    label = pdf[alias.label] if alias.label in pdf.columns else None
+                    inputs.append((features, label))
 
                 params["handle"] = cc.handle
                 params["part_sizes"] = sizes
@@ -386,6 +406,22 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
     @classmethod
     def read(cls) -> MLReader:
         return _CumlEstimatorReader(cls)
+
+
+class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
+    """
+    Base class for Cuml Supervised machine learning
+    """
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[List[Column], Optional[List[str]], int]:
+        select_cols, multi_col_names, dimension = super()._pre_process_data(dataset)
+
+        label_col = col(self.getOrDefault(self.labelCol)).alias(alias.label)
+        select_cols.append(label_col)
+
+        return select_cols, multi_col_names, dimension
 
 
 class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):

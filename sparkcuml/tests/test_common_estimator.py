@@ -25,6 +25,7 @@ from pyspark.sql.types import StructType
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
+    CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModel,
@@ -107,16 +108,15 @@ class SparkCumlDummy(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[
-        [Union[List[cudf.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
-    ]:
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         num_workers = self.get_num_workers()
         partition_num = self.partition_num
         m = self.m
         n = self.n
 
         def _cuml_fit(
-            df: Union[List[cudf.DataFrame], List[np.ndarray]], params: Dict[str, Any]
+            dfs: CumlInputType,
+            params: Dict[str, Any],
         ) -> Dict[str, Any]:
             context = TaskContext.get()
             assert context is not None

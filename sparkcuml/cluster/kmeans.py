@@ -32,12 +32,12 @@ from pyspark.sql.types import (
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
+    CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import data_info
 
 
 class SparkCumlKMeans(_CumlEstimator):
@@ -87,11 +87,10 @@ class SparkCumlKMeans(_CumlEstimator):
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
-    ) -> Callable[
-        [Union[List[pd.DataFrame], List[np.ndarray]], Dict[str, Any]], Dict[str, Any]
-    ]:
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         def _cuml_fit(
-            df: Union[List[pd.DataFrame], List[np.ndarray]], params: Dict[str, Any]
+            dfs: CumlInputType,
+            params: Dict[str, Any],
         ) -> Dict[str, Any]:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
@@ -100,14 +99,12 @@ class SparkCumlKMeans(_CumlEstimator):
                 output_type="cudf",
                 **params[INIT_PARAMETERS_NAME],
             )
-
-            if isinstance(df, pd.DataFrame):
-                concated = pd.concat(df)
+            df_list = [x for (x, _) in dfs]
+            if isinstance(df_list[0], pd.DataFrame):
+                concated = pd.concat(df_list)
             else:
                 # should be list of np.ndarrays here
-                concated = np.concatenate(df)
-
-            n_cols, dtype = data_info(df[0])
+                concated = np.concatenate(df_list)
 
             kmeans_object.fit(
                 concated,
@@ -118,8 +115,8 @@ class SparkCumlKMeans(_CumlEstimator):
                 "cluster_centers_": [
                     kmeans_object.cluster_centers_.to_numpy().tolist()
                 ],
-                "n_cols": n_cols,
-                "dtype": dtype.name,
+                "n_cols": params["n"],
+                "dtype": kmeans_object.dtype.name,
             }
 
         return _cuml_fit
@@ -196,7 +193,7 @@ class SparkCumlKMeansModel(_CumlModel):
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
-            from sparkcuml.utils import cudf_to_cuml_array, data_info
+            from sparkcuml.utils import cudf_to_cuml_array
 
             kmeans.n_cols = n_cols
             kmeans.dtype = np.dtype(dtype)
