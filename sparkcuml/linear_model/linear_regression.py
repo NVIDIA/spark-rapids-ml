@@ -20,7 +20,14 @@ import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.sql import DataFrame
-from pyspark.sql.types import ArrayType, DoubleType, StructField, StructType
+from pyspark.sql.types import (
+    ArrayType,
+    DoubleType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 from sparkcuml.core import (
     INIT_PARAMETERS_NAME,
@@ -28,9 +35,10 @@ from sparkcuml.core import (
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModel,
+    _CumlModelSupervised,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor
+from sparkcuml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
 class SparkLinearRegression(_CumlEstimatorSupervised):
@@ -47,6 +55,14 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
         else:
             self.set_params(inputCols=value)
         return self
+
+    def getFeaturesCol(self) -> Union[str, List[str]]:
+        if self.isDefined(self.inputCols):
+            return self.getInputCols()
+        elif self.isDefined(self.inputCol):
+            return self.getInputCol()
+        else:
+            raise RuntimeError("features col is not set")
 
     def setLabelCol(self, value: str) -> "SparkLinearRegression":
         self._set(labelCol=value)  # type: ignore
@@ -79,6 +95,8 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
             return {
                 "coef": [linear_regression.coef_.to_numpy().tolist()],
                 "intercept": linear_regression.intercept_,
+                "dtype": linear_regression.dtype.name,
+                "n_cols": linear_regression.n_cols,
             }
 
         return _linear_regression_fit
@@ -88,10 +106,12 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
             [
                 StructField("coef", ArrayType(DoubleType(), False), False),
                 StructField("intercept", DoubleType(), False),
+                StructField("n_cols", IntegerType(), False),
+                StructField("dtype", StringType(), False),
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
+    def _create_pyspark_model(self, result: Row) -> "SparkLinearRegressionModel":
         return SparkLinearRegressionModel.from_row(result)
 
     @classmethod
@@ -105,9 +125,15 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
         return ["handle", "output_type"]
 
 
-class SparkLinearRegressionModel(_CumlModel):
-    def __init__(self, coef: List[float], intercept: float) -> None:
-        super().__init__(coef=coef, intercept=intercept)
+class SparkLinearRegressionModel(_CumlModelSupervised):
+    def __init__(
+        self,
+        coef: List[float],
+        intercept: float,
+        n_cols: int,
+        dtype: str,
+    ) -> None:
+        super().__init__(dtype=dtype, n_cols=n_cols, coef=coef, intercept=intercept)
         self.coef = coef
         self.intercept = intercept
         cuml_params = SparkLinearRegression._get_cuml_params_default()
@@ -119,10 +145,27 @@ class SparkLinearRegressionModel(_CumlModel):
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
-        pass
+        coef = self.coef
+        intercept = self.intercept
+        n_cols = self.n_cols
+        dtype = self.dtype
 
-    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        pass
+        def _construct_lr() -> CumlT:
+            from cuml.linear_model.linear_regression_mg import LinearRegressionMG
+
+            lr = LinearRegressionMG(output_type="numpy")
+            lr.coef_ = cudf_to_cuml_array(np.array(coef).astype(dtype))
+            lr.intercept_ = intercept
+            lr.n_cols = n_cols
+            lr.dtype = np.dtype(dtype)
+
+            return lr
+
+        def _predict(lr: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
+            ret = lr.predict(pdf)
+            return pd.Series(ret)
+
+        return _construct_lr, _predict
 
 
 _set_pyspark_cuml_cls_param_attrs(SparkLinearRegression, SparkLinearRegressionModel)

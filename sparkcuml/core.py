@@ -37,7 +37,13 @@ import pandas as pd
 from pyspark import TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import HasInputCol, HasInputCols, HasLabelCol, HasOutputCol
+from pyspark.ml.param.shared import (
+    HasInputCol,
+    HasInputCols,
+    HasLabelCol,
+    HasOutputCol,
+    HasPredictionCol,
+)
 from pyspark.ml.util import (
     DefaultParamsReader,
     DefaultParamsWriter,
@@ -47,7 +53,8 @@ from pyspark.ml.util import (
     MLWriter,
 )
 from pyspark.sql import Column, DataFrame
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, struct
+from pyspark.sql.pandas.functions import pandas_udf
 from pyspark.sql.types import Row, StructType
 
 from sparkcuml.common.cuml_context import CumlContext
@@ -57,6 +64,7 @@ from sparkcuml.utils import (
     _get_gpu_id,
     _get_spark_session,
     _is_local,
+    dtype_to_pyspark_type,
 )
 
 INIT_PARAMETERS_NAME = "init"
@@ -429,7 +437,9 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """
 
-    def __init__(self, **model_attributes: Any) -> None:
+    def __init__(
+        self, *, dtype: str = None, n_cols: int = None, **model_attributes: Any
+    ) -> None:
         """
         Subclass must pass the model attributes which will be saved in model persistence.
         """
@@ -437,6 +447,10 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
 
         # model_data is the native data which will be saved for model persistence
         self._model_attributes = model_attributes
+        self._model_attributes["dtype"] = dtype
+        self._model_attributes["n_cols"] = n_cols
+        self.dtype = dtype
+        self.n_cols = n_cols
 
     def get_model_attributes(self) -> Optional[Dict[str, Any]]:
         return self._model_attributes
@@ -548,6 +562,51 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     @classmethod
     def read(cls) -> MLReader:
         return _CumlModelReader(cls)
+
+
+class _CumlModelSupervised(_CumlModel, HasPredictionCol):
+    """Cuml base model for supervised machine learning"""
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        """This version of transform is directly adding extra columns to the dataset"""
+
+        features_col = []
+        single = True
+        if self.isDefined(self.inputCol):
+            features_col.append(self.getInputCol())
+        elif self.isDefined(self.inputCols):
+            single = False
+            features_col.extend(self.getInputCols())
+
+        pred_name = self.getOrDefault(self.predictionCol)
+
+        is_local = _is_local(_get_spark_session().sparkContext)
+
+        # Get the functions which will be passed into executor to run.
+        construct_cuml_object_func, cuml_transform_func = self._get_cuml_transform_func(
+            dataset
+        )
+
+        @pandas_udf(self._out_schema(dataset.schema))  # type: ignore
+        def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
+            from pyspark import TaskContext
+
+            context = TaskContext.get()
+            self.set_gpu_device(context, is_local, True)
+            cuml_object = construct_cuml_object_func()
+            for pdf in iterator:
+                if single:
+                    data = np.array(list(pdf[features_col[0]]))
+                else:
+                    data = pdf[features_col]
+
+                yield cuml_transform_func(cuml_object, data)
+
+        return dataset.withColumn(pred_name, predict_udf(struct(*features_col)))
+
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        assert self.dtype is not None
+        return dtype_to_pyspark_type(self.dtype)
 
 
 def _set_pyspark_cuml_cls_param_attrs(

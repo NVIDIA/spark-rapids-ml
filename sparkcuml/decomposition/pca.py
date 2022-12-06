@@ -179,20 +179,18 @@ class SparkCumlPCAModel(_CumlModel):
         dtype: str,
     ):
         super().__init__(
+            n_cols=n_cols,
+            dtype=dtype,
             mean=mean,
             pc=pc,
             explained_variance=explained_variance,
             singular_values=singular_values,
-            n_cols=n_cols,
-            dtype=dtype,
         )
 
         self.mean = mean
         self.pc = pc
         self.explained_variance = explained_variance
         self.singular_values = singular_values
-        self.n_cols = n_cols
-        self.dtype = dtype
 
         cumlParams = SparkCumlPCA._get_cuml_params_default()
         self.set_params(**cumlParams)

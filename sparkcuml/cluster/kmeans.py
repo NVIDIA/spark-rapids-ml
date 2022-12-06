@@ -160,11 +160,9 @@ class SparkCumlKMeansModel(_CumlModel):
         n_cols: int,
         dtype: str,
     ):
-        super().__init__(cluster_centers_=cluster_centers_, n_cols=n_cols, dtype=dtype)
+        super().__init__(n_cols=n_cols, dtype=dtype, cluster_centers_=cluster_centers_)
 
         self.cluster_centers_ = cluster_centers_
-        self.n_cols = n_cols
-        self.dtype = dtype
         cumlParams = SparkCumlKMeans._get_cuml_params_default()
         self.set_params(**cumlParams)
 

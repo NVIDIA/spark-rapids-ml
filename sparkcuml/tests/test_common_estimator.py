@@ -52,10 +52,18 @@ class SparkCumlDummyModel(_CumlModel):
     """
 
     def __init__(
-        self, model_attribute_a: int, model_attribute_b: str, not_used: int = 1
+        self,
+        dtype: str,
+        n_cols: int,
+        model_attribute_a: int,
+        model_attribute_b: str,
+        not_used: int = 1,
     ) -> None:
         super().__init__(
-            model_attribute_a=model_attribute_a, model_attribute_b=model_attribute_b
+            dtype=dtype,
+            n_cols=n_cols,
+            model_attribute_a=model_attribute_a,
+            model_attribute_b=model_attribute_b,
         )
         self.model_attribute_a = model_attribute_a
         self.model_attribute_b = model_attribute_b
@@ -146,14 +154,23 @@ class SparkCumlDummy(_CumlEstimator):
             # sleep for 1 sec to bypass https://issues.apache.org/jira/browse/SPARK-40932
             time.sleep(1)
 
-            return {"model_attribute_a": [1024], "model_attribute_b": "hello dummy"}
+            return {
+                "dtype": np.dtype(np.float32).name,
+                "n_cols": n,
+                "model_attribute_a": [1024],
+                "model_attribute_b": "hello dummy",
+            }
 
         return _cuml_fit
 
     def _out_schema(self) -> Union[StructType, str]:
-        return "model_attribute_a int, model_attribute_b string"
+        return (
+            "dtype string, n_cols int, model_attribute_a int, model_attribute_b string"
+        )
 
     def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
+        assert result.dtype == np.dtype(np.float32).name
+        assert result.n_cols == self.n
         assert result.model_attribute_a == 1024
         assert result.model_attribute_b == "hello dummy"
         return SparkCumlDummyModel.from_row(result)

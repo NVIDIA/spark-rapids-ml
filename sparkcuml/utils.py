@@ -18,7 +18,6 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 import cudf
 import numpy as np
-import pandas as pd
 from cuml.common.array import CumlArray
 from cuml.common.input_utils import input_to_cuml_array
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
@@ -126,3 +125,18 @@ def cudf_to_cuml_array(
 ) -> CumlArray:
     cumlarray, _, _, _ = input_to_cuml_array(gdf, order=order)
     return cumlarray
+
+
+def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
+    """Convert np.dtype to the corresponding pyspark type"""
+    dtype = np.dtype(dtype)
+    if dtype == np.float32:
+        return "float"
+    elif dtype == np.float64:
+        return "double"
+    elif dtype == np.int32:
+        return "int"
+    elif dtype == np.int16:
+        return "short"
+    else:
+        raise RuntimeError("Unsupported dtype, found ", dtype)
