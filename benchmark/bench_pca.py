@@ -26,21 +26,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 
 from sparkcuml.decomposition import SparkCumlPCA
+from benchmark.utils import prepare_spark_session 
 
-
-def prepare_spark_session(spark_confs: List[str]) -> SparkSession:
-    builder = SparkSession.builder
-    for sconf in spark_confs:
-        key, value = sconf.split("=")
-        builder = builder.config(key, value)
-    spark = builder.getOrCreate()
-    return spark
-
-def prepare_df(spark: SparkSession, num_vecs: int, dim: int, num_partitions: int, dtype: Union[np.float64, np.float32], input_col: str) -> DataFrame: 
-    data = np.random.rand(num_vecs, dim).astype(dtype).tolist()
-    rdd = spark.sparkContext.parallelize(data, num_partitions).map(lambda row: (row,))
-    df = rdd.toDF([input_col])
-    return df
 
 def test_pca_bench(
     run_id: int, 
@@ -50,12 +37,11 @@ def test_pca_bench(
     num_gpus: int,
     num_cpus: int,
     dtype: Union[np.float64, np.float32],
+    parquet_path: str,
     spark_confs: List[str],
 ) -> pd.DataFrame:
 
     func_start_time = time.time()
-    input_col = "features"
-    output_col = "pca_features"
 
     report_row = {
         "run_id": run_id, 
@@ -68,6 +54,7 @@ def test_pca_bench(
         "num_gpus": num_gpus,
         "num_cpus": num_cpus,
         "dtype": dtype,
+        "parquet_path": parquet_path,
     }
 
     for sconf in spark_confs:
@@ -78,12 +65,16 @@ def test_pca_bench(
 
     spark = prepare_spark_session(spark_confs)
 
+    df = spark.read.parquet(parquet_path)
+    input_col = df.dtypes[0][0]
+    output_col = "pca_features"
+
     if num_gpus > 0:
         assert num_cpus <= 0
         start_time = time.time()
-        df = prepare_df(spark, num_vecs, dim, num_gpus, dtype, input_col).cache()
+        df = df.repartition(num_gpus).cache()
         df.count()
-        print(f"gen_dataset of {num_gpus} partitions took: {time.time() - start_time} sec")
+        print(f"prepare session and dataset took: {time.time() - start_time} sec")
 
         start_time = time.time()
         gpu_pca = (
@@ -108,10 +99,10 @@ def test_pca_bench(
     if num_cpus > 0:
         assert num_gpus <= 0
         start_time = time.time()
-        df = prepare_df(spark, num_vecs, dim, num_cpus, dtype, input_col)
+        df = df.repartition(num_cpus)
         vector_df = df.select(array_to_vector(df[input_col]).alias(input_col)).cache()
         vector_df.count()
-        print(f"gen_dataset of {num_cpus} partitions took: {time.time() - start_time} sec")
+        print(f"prepare session and dataset: {time.time() - start_time} sec")
 
         start_time = time.time()
         cpu_pca = PCA().setInputCol(input_col).setOutputCol(output_col).setK(n_components)
@@ -141,6 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("--dtype", type=str, choices=["float64"], default="float64")
     parser.add_argument("--num_runs", type=int, default=2, help='set the number of repetitions for cold/warm runs')
     parser.add_argument("--report_path", type=str, default="")
+    parser.add_argument("--parquet_path", type=str, default="")
     parser.add_argument("--spark_confs", action="append", default=[])
     args = parser.parse_args()
 
@@ -154,6 +146,7 @@ if __name__ == "__main__":
             args.num_gpus,
             args.num_cpus,
             args.dtype,
+            args.parquet_path,
             args.spark_confs,
         )
         print(rpd)

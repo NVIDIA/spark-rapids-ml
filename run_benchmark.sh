@@ -1,10 +1,20 @@
 #! /bin/bash
-# local mode
 unset SPARK_HOME
 SPARKCUML_HOME=`pwd`
 export PYTHONPATH="$SPARKCUML_HOME:$PYTHONPATH"
 
-CUDA_VISIBLE_DEICES=0,1 python ./benchmark/bench_pca.py \
+### generate parquet dataset
+python ./benchmark/gen_data.py \
+    --num_vecs 5000 \
+    --dim 3000 \
+    --dtype "float64" \
+    --parquet_path "/tmp/5k_3k_float64.parquet" \
+    --spark_conf "spark.master=local[*]" \
+    --spark_confs "spark.driver.memory=128g" 
+
+
+### local mode
+CUDA_VISIBLE_DEVICES=0,1 python ./benchmark/bench_pca.py \
     --num_vecs 5000 \
     --dim 3000 \
     --n_components 3 \
@@ -12,16 +22,16 @@ CUDA_VISIBLE_DEICES=0,1 python ./benchmark/bench_pca.py \
     --num_cpus 0 \
     --dtype "float64" \
     --num_runs 3 \
+    --parquet_path "/tmp/5k_3k_float64.parquet" \
     --report_path "./report.csv" \
     --spark_confs "spark.master=local[12]" \
     --spark_confs "spark.driver.memory=128g" \
     --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=200000" 
 
+
 ### standalone mode
 #SPARK_MASTER=spark://hostname:port
-#unset SPARK_HOME
-#SPARKCUML_HOME=`pwd`
-#export PYTHONPATH="$SPARKCUML_HOME:$PYTHONPATH"
+#tar -czvf sparkcuml.tar.gz ./sparkcuml
 #
 #python ./benchmark/bench_pca.py \
 #    --num_vecs 5000 \
@@ -31,6 +41,7 @@ CUDA_VISIBLE_DEICES=0,1 python ./benchmark/bench_pca.py \
 #    --num_cpus 0 \
 #    --dtype "float64" \
 #    --num_runs 3 \
+#    --parquet_path "/tmp/5k_3k_float64.parquet" \
 #    --report_path "./report_standalone.csv" \
 #    --spark_confs "spark.master=${SPARK_MASTER}" \
 #    --spark_confs "spark.driver.memory=128g" \
