@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 import inspect
+import logging
+import sys
 from typing import Any, Callable, Dict, List, Tuple, Union
 
 import cudf
@@ -140,3 +142,22 @@ def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
         return "short"
     else:
         raise RuntimeError("Unsupported dtype, found ", dtype)
+
+
+# similar to https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/utils.py
+def get_logger(cls: type, level: str = "INFO") -> logging.Logger:
+    """Gets a logger by name, or creates and configures it for the first time."""
+    name = _get_class_name(cls)
+    logger = logging.getLogger(name)
+
+    logger.setLevel(level)
+    # If the logger is configured, skip the configure
+    if not logger.handlers and not logging.getLogger().handlers:
+        handler = logging.StreamHandler(sys.stderr)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    return logger

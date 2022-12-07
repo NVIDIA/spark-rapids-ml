@@ -65,6 +65,7 @@ from sparkcuml.utils import (
     _get_spark_session,
     _is_local,
     dtype_to_pyspark_type,
+    get_logger,
 )
 
 INIT_PARAMETERS_NAME = "init"
@@ -154,6 +155,10 @@ class _CumlModelReader(MLReader):
 
 
 class _CumlCommon(Params, MLWritable, MLReadable):
+    def __init__(self) -> None:
+        super().__init__()
+        self.logger = get_logger(self.__class__)
+
     @staticmethod
     def set_gpu_device(
         context: Optional[TaskContext], is_local: bool, is_transform: bool = False
@@ -348,6 +353,8 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             fitted model
         """
 
+        cls = self.__class__
+
         select_cols, multi_col_names, dimension = self._pre_process_data(dataset)
 
         dataset = dataset.select(*select_cols)
@@ -368,6 +375,9 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
 
+            logger = get_logger(cls)
+            logger.info("Initializing cuml context")
+
             context = BarrierTaskContext.get()
             partition_id = context.partitionId()
 
@@ -377,6 +387,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             with CumlContext(partition_id, num_workers, context) as cc:
                 # handle the input
                 # inputs = [(X, Optional(y)), (X, Optional(y))]
+                logger.info("Loading data into python worker memory")
                 inputs = []
                 sizes = []
                 for pdf in pdf_iter:
@@ -392,8 +403,11 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
                 params["part_sizes"] = sizes
                 params["n"] = dimension
 
+                logger.info("Invoking cuml fit")
+
                 # call the cuml fit function
                 result = cuml_fit_func(inputs, params)
+                logger.info("Cuml fit complete")
 
             context.barrier()
             if context.partitionId() == 0:
@@ -438,7 +452,11 @@ class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
     """
 
     def __init__(
-        self, *, dtype: str = None, n_cols: int = None, **model_attributes: Any
+        self,
+        *,
+        dtype: Optional[str] = None,
+        n_cols: Optional[int] = None,
+        **model_attributes: Any,
     ) -> None:
         """
         Subclass must pass the model attributes which will be saved in model persistence.
