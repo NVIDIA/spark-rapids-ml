@@ -145,7 +145,7 @@ def test_compare_cuml(gpu_number: int) -> None:
 
     from cuml import KMeans
 
-    cuml_kmeans = KMeans(n_clusters=n_clusters, output_type="numpy")
+    cuml_kmeans = KMeans(n_clusters=n_clusters, output_type="numpy", tol=0.0, verbose=7)
 
     import cudf
 
@@ -159,7 +159,7 @@ def test_compare_cuml(gpu_number: int) -> None:
             .toDF(["features"])
         )
         sparkcuml_kmeans = SparkCumlKMeans(
-            num_workers=gpu_number, n_clusters=n_clusters
+            num_workers=gpu_number, n_clusters=n_clusters, verbose=7
         ).setFeaturesCol("features")
         sparkcuml_model = sparkcuml_kmeans.fit(df)
 

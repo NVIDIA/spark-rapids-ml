@@ -134,7 +134,7 @@ def test_linear_regression(
             spark, feature_type, data_type, X_train, y_train
         )
         assert label_col is not None
-        slr = SparkLinearRegression(num_workers=gpu_number)
+        slr = SparkLinearRegression(num_workers=gpu_number, verbose=7)
         slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)

@@ -197,6 +197,24 @@ class _CumlCommon(Params, MLWritable, MLReadable):
             else:
                 raise ValueError(f"Unsupported param '{k}'.")
 
+    @staticmethod
+    def initialize_cuml_logging(verbose: Optional[Union[bool, int]]) -> None:
+        if verbose is not None:
+            from cuml.common import logger as cuml_logger
+
+            # below is from https://docs.rapids.ai/api/cuml/stable/api.html#verbosity-levels
+            if isinstance(verbose, bool):
+                if verbose:
+                    log_level = 5
+                else:
+                    log_level = 4
+            elif isinstance(verbose, int):
+                log_level = verbose
+            else:
+                raise ValueError(f"invalid value for verbose parameter: {verbose}")
+
+            cuml_logger.set_level(log_level)
+
 
 class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
     """
@@ -372,11 +390,17 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
 
+        cuml_verbose = None
+        if self.hasParam("verbose"):
+            cuml_verbose = self.getOrDefault("verbose")
+
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
 
             logger = get_logger(cls)
             logger.info("Initializing cuml context")
+
+            self.initialize_cuml_logging(cuml_verbose)
 
             context = BarrierTaskContext.get()
             partition_id = context.partitionId()

@@ -41,7 +41,9 @@ def test_fit(gpu_number: int) -> None:
             .toDF(["features"])
         )
         gpu_pca = (
-            SparkCumlPCA(num_workers=gpu_number).setInputCol("features").setK(topk)
+            SparkCumlPCA(num_workers=gpu_number, verbose=6)
+            .setInputCol("features")
+            .setK(topk)
         )
         gpu_model = gpu_pca.fit(df)
 
@@ -196,7 +198,7 @@ def test_fit_compare_cuml(gpu_number: int) -> None:
 
     from cuml import PCA
 
-    cuml_pca = PCA(n_components=topk, output_type="numpy")
+    cuml_pca = PCA(n_components=topk, output_type="numpy", verbose=7)
 
     import cudf
 
@@ -210,7 +212,7 @@ def test_fit_compare_cuml(gpu_number: int) -> None:
             .toDF(["features"])
         )
         sparkcuml_pca = SparkCumlPCA(
-            num_workers=gpu_number, n_components=topk
+            num_workers=gpu_number, n_components=topk, verbose=7
         ).setInputCol("features")
         sparkcuml_model = sparkcuml_pca.fit(df)
 
