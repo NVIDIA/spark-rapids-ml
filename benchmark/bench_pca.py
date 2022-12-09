@@ -25,11 +25,12 @@ from pyspark.ml.functions import array_to_vector
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 
+from benchmark.utils import WithSparkSession
 from sparkcuml.decomposition import SparkCumlPCA
-from benchmark.utils import prepare_spark_session 
 
 
 def test_pca_bench(
+    spark: SparkSession,
     run_id: int, 
     num_vecs: int,
     dim: int,
@@ -38,7 +39,6 @@ def test_pca_bench(
     num_cpus: int,
     dtype: Union[np.float64, np.float32],
     parquet_path: str,
-    spark_confs: List[str],
 ) -> pd.DataFrame:
 
     func_start_time = time.time()
@@ -57,13 +57,7 @@ def test_pca_bench(
         "parquet_path": parquet_path,
     }
 
-    for sconf in spark_confs:
-        key, value = sconf.split("=")
-        report_row[key] = value
-
     report_pd = pd.DataFrame(columns = report_row.keys())
-
-    spark = prepare_spark_session(spark_confs)
 
     df = spark.read.parquet(parquet_path)
     input_col = df.dtypes[0][0]
@@ -111,7 +105,7 @@ def test_pca_bench(
         print(f"cpu fit took: {report_row['fit']} sec")
 
         start_time = time.time()
-        cpu_model.transform(vector_df).count()  
+        cpu_model.transform(vector_df).count()
         report_row["transform"] = time.time() - start_time
         print(f"cpu transform took: {report_row['transform']} sec")
 
@@ -137,20 +131,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report_pd = pd.DataFrame()
-    for run_id in range(args.num_runs):
-        rpd = test_pca_bench(
-            run_id, 
-            args.num_vecs,
-            args.dim,
-            args.n_components,
-            args.num_gpus,
-            args.num_cpus,
-            args.dtype,
-            args.parquet_path,
-            args.spark_confs,
-        )
-        print(rpd)
-        report_pd = pd.concat([report_pd, rpd])
+
+    with WithSparkSession(args.spark_confs) as spark:
+        for run_id in range(args.num_runs):
+            rpd = test_pca_bench(
+                spark,
+                run_id,
+                args.num_vecs,
+                args.dim,
+                args.n_components,
+                args.num_gpus,
+                args.num_cpus,
+                args.dtype,
+                args.parquet_path,
+            )
+            print(rpd)
+            report_pd = pd.concat([report_pd, rpd])
 
     print(f"\nsummary of the total {args.num_runs} runs:\n")
     print(report_pd)
