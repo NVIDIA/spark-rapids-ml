@@ -32,8 +32,6 @@ from sparkcuml.decomposition import SparkCumlPCA
 def test_pca_bench(
     spark: SparkSession,
     run_id: int, 
-    num_vecs: int,
-    dim: int,
     n_components: int,
     num_gpus: int,
     num_cpus: int,
@@ -48,8 +46,6 @@ def test_pca_bench(
         "fit": None,
         "transform": None,
         "total": None,
-        "num_vecs": num_vecs,
-        "dim": dim,
         "n_components": n_components,
         "num_gpus": num_gpus,
         "num_cpus": num_cpus,
@@ -118,8 +114,6 @@ def test_pca_bench(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_vecs", type=int, default=5000)
-    parser.add_argument("--dim", type=int, default=2000)
     parser.add_argument("--n_components", type=int, default=3)
     parser.add_argument("--num_gpus", type=int, default=1, help='number of available GPUs. If num_gpus > 0, sparkcuml will run with the number of dataset partitions equal to num_gpus.')
     parser.add_argument("--num_cpus", type=int, default=6, help='number of available CPUs. If num_cpus > 0, spark will run and with the number of dataset partitions to num_cpus.')
@@ -137,8 +131,6 @@ if __name__ == "__main__":
             rpd = test_pca_bench(
                 spark,
                 run_id,
-                args.num_vecs,
-                args.dim,
                 args.n_components,
                 args.num_gpus,
                 args.num_cpus,

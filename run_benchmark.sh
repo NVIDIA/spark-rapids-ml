@@ -5,18 +5,17 @@ export PYTHONPATH="$SPARKCUML_HOME:$PYTHONPATH"
 
 ### generate parquet dataset
 python ./benchmark/gen_data.py \
-    --num_vecs 5000 \
-    --dim 3000 \
+    --num_rows 5000 \
+    --num_cols 3000 \
     --dtype "float64" \
-    --parquet_path "/tmp/5k_3k_float64.parquet" \
+    --feature_type "array" \
+    --output_dir "/tmp/5k_3k_float64.parquet" \
     --spark_conf "spark.master=local[*]" \
     --spark_confs "spark.driver.memory=128g" 
 
 
 ### local mode
 CUDA_VISIBLE_DEVICES=0,1 python ./benchmark/bench_pca.py \
-    --num_vecs 5000 \
-    --dim 3000 \
     --n_components 3 \
     --num_gpus 2 \
     --num_cpus 0 \

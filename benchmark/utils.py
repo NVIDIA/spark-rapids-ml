@@ -15,3 +15,4 @@ class WithSparkSession(object):
 
     def __exit__(self, *args: Any) -> None:
         self.spark.stop()
+
