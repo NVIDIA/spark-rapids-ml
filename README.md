@@ -80,6 +80,12 @@ for release versions. In this case, users doesn't need to manually build and ins
 plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-22.12/pom.xml#L94-L96)
 in pom file.
 
+Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
+release in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
+for release versions. In this case, users doesn't need to manually build and install spark-rapids
+plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-22.06/pom.xml#L93-L97)
+in pom file.
+
 _Note_: This module contains both native and Java/Scala code. The native library build instructions
 has been added to the pom.xml file so that maven build command will help build native library all
 the way. Make sure the prerequisites are all met, or the build will fail with error messages
