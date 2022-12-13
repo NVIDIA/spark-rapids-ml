@@ -62,7 +62,7 @@ and cmake dependecies
     ```
 ### Build target jar
 Spark-rapids-ml uses [spark-rapids](https://github.com/NVIDIA/spark-rapids) plugin as a dependency.
-To build the _SNAPSHOT_ jar, user need to build and install the denpendency jar _rapids-4-spark_ first
+To build the _SNAPSHOT_ jar, user needs to build and install the denpendency jar _rapids-4-spark_ first
 because there's no snapshot jar for spark-rapids plugin in public maven repositories.
 See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-22.06/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
 
