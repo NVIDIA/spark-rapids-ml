@@ -67,7 +67,7 @@ To build the _SNAPSHOT_ jar, user needs to build and install the denpendency jar
 because there's no snapshot jar for spark-rapids plugin in public maven repositories.
 See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-22.12/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
 
-Make sure the _rapids-4-spark_ is installed in your local maven Then User can build it directly in
+Make sure the _rapids-4-spark_ is installed in your local maven then user can build it directly in
 the _project root path_ with:
 ```
 mvn clean package
