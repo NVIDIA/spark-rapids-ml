@@ -40,10 +40,10 @@ version. But in GPU version, user doesn't need to do the extra preprocess step t
 
 ### Prerequisites:
 1. essential build tools: 
-    - [cmake(>=3.20)](https://cmake.org/download/), 
+    - [cmake(>=3.23.1)](https://cmake.org/download/),
     - [ninja(>=1.10)](https://github.com/ninja-build/ninja/releases),
     - [gcc(>=9.3)](https://gcc.gnu.org/releases.html)
-2. [CUDA Toolkit(>=11.0)](https://developer.nvidia.com/cuda-toolkit)
+2. [CUDA Toolkit(>=11.5)](https://developer.nvidia.com/cuda-toolkit)
 3. conda: use [miniconda](https://docs.conda.io/en/latest/miniconda.html) to maintain header files
 and cmake dependecies
 4. [cuDF](https://github.com/rapidsai/cudf):
@@ -62,11 +62,23 @@ and cmake dependecies
     ```
 Note: For those using other types of GPUs which do not have CUDA forward compatibility (for example, GeForce), CUDA 11.5 or later is required.
 ### Build target jar
-User can build it directly in the _project root path_ with:
+Spark-rapids-ml uses [spark-rapids](https://github.com/NVIDIA/spark-rapids) plugin as a dependency.
+To build the _SNAPSHOT_ jar, user needs to build and install the denpendency jar _rapids-4-spark_ first
+because there's no snapshot jar for spark-rapids plugin in public maven repositories.
+See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-22.06/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
+
+Make sure the _rapids-4-spark_ is installed in your local maven Then User can build it directly in
+the _project root path_ with:
 ```
 mvn clean package
 ```
 Then `rapids-4-spark-ml_2.12-22.12.0-SNAPSHOT.jar` will be generated under `target` folder.
+
+Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
+release in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
+for release versions. In this case, users doesn't need to manually build and install spark-rapids
+plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-22.12/pom.xml#L94-L96)
+in pom file.
 
 _Note_: This module contains both native and Java/Scala code. The native library build instructions
 has been added to the pom.xml file so that maven build command will help build native library all
@@ -74,7 +86,7 @@ the way. Make sure the prerequisites are all met, or the build will fail with er
 accordingly such as "cmake not found" or "ninja not found" etc.
 
 ## How to use
-When building the jar, spark-rapids plugin jar will be downloaded to your local maven
+After the building processes, spark-rapids plugin jar will be installed to your local maven
 repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
