@@ -76,7 +76,7 @@ Then `rapids-4-spark-ml_2.12-22.12.0-SNAPSHOT.jar` will be generated under `targ
 
 Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
 released in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
-for release versions. In this case, users doesn't need to manually build and install spark-rapids
+for release versions. In this case, users don't need to manually build and install spark-rapids
 plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-22.12/pom.xml#L94-L96)
 in pom file.
 
