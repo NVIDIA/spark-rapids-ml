@@ -1,5 +1,7 @@
+from time import time
+
 from pyspark.sql import SparkSession
-from typing import List, Any
+from typing import List, Any, Callable
 
 
 class WithSparkSession(object):
@@ -16,3 +18,12 @@ class WithSparkSession(object):
     def __exit__(self, *args: Any) -> None:
         self.spark.stop()
 
+
+def with_benchmark(phrase: str, action: Callable) -> Any:
+    start = time()
+    result = action()
+    end = time()
+    print('-' * 100)
+    print('{} takes {} seconds'.format(phrase, round(end - start, 2)))
+    print('-' * 100)
+    return result

@@ -62,12 +62,12 @@ class DefaultDataGen(DataGenBase):
 
         return spark.createDataFrame(rdd, schema=",".join(self.schema)), self.feature_cols
 
+
 class BlobsDataGen(DataGenBase):
     """Generate random dataset using cuml.datasets.make_blobs, 
        which creates blobs for bechmarking unsupervised clustering algorithms (e.g. KMeans)"""
 
     def __init__(self, n_clusters: int = 20, **kargs: Dict[str, Any]) -> None:
-
         super().__init__(**kargs)
         self.n_clusters = n_clusters
 
@@ -75,7 +75,8 @@ class BlobsDataGen(DataGenBase):
         "More information about the implementation can be found in RegressionDataGen."
 
         def make_blobs_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            data, _ = make_blobs(self.num_rows, self.num_cols, self.n_clusters, random_state = self.random_state, dtype = self.dtype)
+            data, _ = make_blobs(self.num_rows, self.num_cols, self.n_clusters, random_state=self.random_state,
+                                 dtype=self.dtype)
             data = data.tolist()
             yield pd.DataFrame(data=data)
 
@@ -83,6 +84,7 @@ class BlobsDataGen(DataGenBase):
                 .range(0, self.num_rows, 1, 1)
                 .mapInPandas(make_blobs_udf, schema=",".join(self.schema))
                 ), self.feature_cols
+
 
 class RegressionDataGen(DataGenBase):
     """Generate regression dataset including features and label."""
@@ -131,11 +133,11 @@ class DataGenProxy(DataGen):
         elif args.category == "blobs":
             print("BlobsDataGen!")
             self.data_gen = BlobsDataGen(
-                n_clusters = args.n_clusters, 
-                num_rows = args.num_rows, 
-                num_cols = args.num_cols, 
-                dtype = args.dtype, 
-                random_state = args.random_state)
+                n_clusters=args.n_clusters,
+                num_rows=args.num_rows,
+                num_cols=args.num_cols,
+                dtype=args.dtype,
+                random_state=args.random_state)
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[pyspark.sql.DataFrame, List[str]]:
         return self.data_gen.gen_dataframe(spark)
@@ -148,7 +150,8 @@ def parse_arguments():
     parser.add_argument("--dtype", type=str, choices=["float64", "float32"], default="float32")
     parser.add_argument("--random_state", type=int, default=0)
     parser.add_argument("--feature_type", type=str, choices=["array", "multi_cols"], default="multi_cols")
-    parser.add_argument("--n_clusters", type=int, default=20, help="reauired for using BlobsDataGen and dummy otherwise")
+    parser.add_argument("--n_clusters", type=int, default=20,
+                        help="reauired for using BlobsDataGen and dummy otherwise")
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--output_num_files", type=int)
     parser.add_argument("--overwrite", type=bool, default=False)
