@@ -34,19 +34,20 @@ from sparkcuml.core import (
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
-    _CumlModel,
     _CumlModelSupervised,
     _set_pyspark_cuml_cls_param_attrs,
 )
 from sparkcuml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
-class SparkLinearRegression(_CumlEstimatorSupervised):
+class SparkCumlLinearRegression(_CumlEstimatorSupervised):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
 
-    def setFeaturesCol(self, value: Union[str, List[str]]) -> "SparkLinearRegression":
+    def setFeaturesCol(
+        self, value: Union[str, List[str]]
+    ) -> "SparkCumlLinearRegression":
         """
         Sets the value of `inputCol` or `inputCols`.
         """
@@ -64,7 +65,7 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
         else:
             raise RuntimeError("features col is not set")
 
-    def setLabelCol(self, value: str) -> "SparkLinearRegression":
+    def setLabelCol(self, value: str) -> "SparkCumlLinearRegression":
         self._set(labelCol=value)  # type: ignore
         return self
 
@@ -111,8 +112,8 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "SparkLinearRegressionModel":
-        return SparkLinearRegressionModel.from_row(result)
+    def _create_pyspark_model(self, result: Row) -> "SparkCumlLinearRegressionModel":
+        return SparkCumlLinearRegressionModel.from_row(result)
 
     @classmethod
     def _cuml_cls(cls) -> type:
@@ -125,7 +126,7 @@ class SparkLinearRegression(_CumlEstimatorSupervised):
         return ["handle", "output_type"]
 
 
-class SparkLinearRegressionModel(_CumlModelSupervised):
+class SparkCumlLinearRegressionModel(_CumlModelSupervised):
     def __init__(
         self,
         coef: List[float],
@@ -136,7 +137,7 @@ class SparkLinearRegressionModel(_CumlModelSupervised):
         super().__init__(dtype=dtype, n_cols=n_cols, coef=coef, intercept=intercept)
         self.coef = coef
         self.intercept = intercept
-        cuml_params = SparkLinearRegression._get_cuml_params_default()
+        cuml_params = SparkCumlLinearRegression._get_cuml_params_default()
         self.set_params(**cuml_params)
 
     def _get_cuml_transform_func(
@@ -168,4 +169,6 @@ class SparkLinearRegressionModel(_CumlModelSupervised):
         return _construct_lr, _predict
 
 
-_set_pyspark_cuml_cls_param_attrs(SparkLinearRegression, SparkLinearRegressionModel)
+_set_pyspark_cuml_cls_param_attrs(
+    SparkCumlLinearRegression, SparkCumlLinearRegressionModel
+)

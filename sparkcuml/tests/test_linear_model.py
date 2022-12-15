@@ -20,8 +20,8 @@ import pytest
 from cuml import LinearRegression as cuLinearRegression
 
 from sparkcuml.linear_model.linear_regression import (
-    SparkLinearRegression,
-    SparkLinearRegressionModel,
+    SparkCumlLinearRegression,
+    SparkCumlLinearRegressionModel,
 )
 from sparkcuml.tests.sparksession import CleanSparkSession
 from sparkcuml.tests.utils import (
@@ -45,24 +45,24 @@ def train_with_cuml_linear_regression(
 
 def test_linear_regression_estimator_basic(tmp_path: str) -> None:
     # test estimator default param
-    lr = SparkLinearRegression()
+    lr = SparkCumlLinearRegression()
     assert lr.getOrDefault("algorithm") == "eig"
     assert lr.getOrDefault("fit_intercept")
     assert not lr.getOrDefault("normalize")
 
-    def assert_params(linear_reg: SparkLinearRegression) -> None:
+    def assert_params(linear_reg: SparkCumlLinearRegression) -> None:
         assert linear_reg.getOrDefault("algorithm") == "svd"
         assert not linear_reg.getOrDefault("fit_intercept")
         assert linear_reg.getOrDefault("normalize")
 
-    lr = SparkLinearRegression(algorithm="svd", fit_intercept=False, normalize=True)
+    lr = SparkCumlLinearRegression(algorithm="svd", fit_intercept=False, normalize=True)
     assert_params(lr)
 
     # Estimator persistence
     path = tmp_path + "/linear_regression_tests"
     estimator_path = f"{path}/linear_regression"
     lr.write().overwrite().save(estimator_path)
-    lr_loaded = SparkLinearRegression.load(estimator_path)
+    lr_loaded = SparkCumlLinearRegression.load(estimator_path)
 
     assert_params(lr_loaded)
 
@@ -80,7 +80,7 @@ def test_linear_regression_model_basic(
             spark, feature_type, data_type, X, y
         )
 
-        lr = SparkLinearRegression()
+        lr = SparkCumlLinearRegression()
         lr.setFeaturesCol(features_col)
         assert label_col is not None
         lr.setLabelCol(label_col)
@@ -89,7 +89,7 @@ def test_linear_regression_model_basic(
         assert lr.getLabelCol() == label_col
 
         def assert_model(
-            lhs: SparkLinearRegressionModel, rhs: SparkLinearRegressionModel
+            lhs: SparkCumlLinearRegressionModel, rhs: SparkCumlLinearRegressionModel
         ) -> None:
             assert lhs.coef == rhs.coef
             assert lhs.intercept == lhs.intercept
@@ -106,7 +106,7 @@ def test_linear_regression_model_basic(
         model_path = f"{path}/linear_regression_model"
         lr_model.write().overwrite().save(model_path)
 
-        lr_model_loaded = SparkLinearRegressionModel.load(model_path)
+        lr_model_loaded = SparkCumlLinearRegressionModel.load(model_path)
         assert_model(lr_model, lr_model_loaded)
 
 
@@ -134,7 +134,7 @@ def test_linear_regression(
             spark, feature_type, data_type, X_train, y_train
         )
         assert label_col is not None
-        slr = SparkLinearRegression(num_workers=gpu_number, verbose=7)
+        slr = SparkCumlLinearRegression(num_workers=gpu_number, verbose=7)
         slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
