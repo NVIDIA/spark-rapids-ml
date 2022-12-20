@@ -66,7 +66,7 @@
         <java.version>1.8</java.version>
         <scala.version>2.12.14</scala.version>
         <scala.binary.version>2.12</scala.binary.version>
-        <spark.version>3.1.2</spark.version>
+        <spark.version>3.3.0</spark.version>
         <test.java.home>${java.home}</test.java.home>
         <spark.test.webdriver.chrome.driver></spark.test.webdriver.chrome.driver>
         <spark.test.docker.keepContainer>false</spark.test.docker.keepContainer>
@@ -106,12 +106,6 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- Test -->
@@ -136,12 +130,6 @@
             <classifier>tests</classifier>
             <type>test-jar</type>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
