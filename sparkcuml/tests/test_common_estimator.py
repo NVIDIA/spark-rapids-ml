@@ -176,8 +176,8 @@ class SparkCumlDummy(_CumlEstimator):
         return SparkCumlDummyModel.from_row(result)
 
     @classmethod
-    def _cuml_cls(cls) -> Type:
-        return CumlDummy
+    def _cuml_cls(cls) -> List[type]:
+        return [CumlDummy]
 
     @classmethod
     def _not_supported_param(cls) -> List[str]:

@@ -232,7 +232,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
         return self.getOrDefault(self.num_workers)
 
     @classmethod
-    def _cuml_cls(cls) -> type:
+    def _cuml_cls(cls) -> List[type]:
         """
         Return the cuml python counterpart class name, which will be used to
         auto generate pyspark parameters.
@@ -253,9 +253,13 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
         Inspect the __init__ function of _cuml_cls() to get the
         parameters and default values.
         """
-        return _get_default_params_from_func(
-            cls._cuml_cls(), cls._not_supported_param()
-        )
+        params = {}
+
+        for cls_type in cls._cuml_cls():
+            params.update(
+                _get_default_params_from_func(cls_type, cls._not_supported_param())
+            )
+        return params
 
     def _gen_cuml_param(self) -> Dict[str, Any]:
         """
@@ -666,7 +670,10 @@ def _set_pyspark_cuml_cls_param_attrs(
         pass
     _set_pyspark_cuml_cls_param_attrs(SparkDummy, SparkDummyModel)
     """
-    cuml_estimator_class_name = _get_class_name(pyspark_estimator_class._cuml_cls())
+    cuml_estimator_class_name = []
+    for cls_type in pyspark_estimator_class._cuml_cls():
+        cuml_estimator_class_name.append(_get_class_name(cls_type))
+
     params_dict = pyspark_estimator_class._get_cuml_params_default()
 
     def param_value_converter(v: Any) -> Any:
@@ -685,7 +692,7 @@ def _set_pyspark_cuml_cls_param_attrs(
         setattr(pyspark_model_class, attr_name, param_obj_)
 
     for name in params_dict.keys():
-        doc = f"Refer to CUML doc of {cuml_estimator_class_name} for this param {name}"
+        doc = f"Refer to CUML doc of {', '.join(cuml_estimator_class_name)} for this param {name}"
 
         param_obj = Param(Params._dummy(), name=name, doc=doc)  # type: ignore
         set_param_attrs(name, param_obj)

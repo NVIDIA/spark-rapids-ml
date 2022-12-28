@@ -19,6 +19,7 @@ import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
+from pyspark.ml.param.shared import HasRegParam
 from pyspark.sql import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -40,7 +41,20 @@ from sparkcuml.core import (
 from sparkcuml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
-class SparkCumlLinearRegression(_CumlEstimatorSupervised):
+class CumlLinearRegressionParas(HasRegParam):
+    """
+    Both Ridge and Lasso have "alpha" parameter which confused SparkCumlLinearRegression.
+    So SparkCumlLinearRegression use regParam to indicate if it has L2 regularization
+    """
+
+    def __init__(self, *args: Any) -> None:
+        super().__init__(*args)
+        self._setDefault(  # type: ignore
+            regParam=0.0,
+        )
+
+
+class SparkCumlLinearRegression(_CumlEstimatorSupervised, CumlLinearRegressionParas):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
@@ -57,6 +71,12 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised):
             self.set_params(inputCols=value)
         return self
 
+    def setRegParam(self, value: float) -> "SparkCumlLinearRegression":
+        """
+        Sets the value of :py:attr:`alpha`.
+        """
+        return self._set(regParam=value)  # type: ignore
+
     def getFeaturesCol(self) -> Union[str, List[str]]:
         if self.isDefined(self.inputCols):
             return self.getInputCols()
@@ -72,16 +92,30 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised):
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+
+        l2 = self.getRegParam()
+
         def _linear_regression_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            from cuml.linear_model.linear_regression_mg import LinearRegressionMG
+            init_parameters = params[INIT_PARAMETERS_NAME]
+            if l2 > 0:
+                from cuml.linear_model.ridge_mg import RidgeMG as CumlLinearRegression
 
-            linear_regression = LinearRegressionMG(
+                init_parameters["alpha"] = l2
+                init_parameters.pop("algorithm")
+            else:
+                from cuml.linear_model.linear_regression_mg import (
+                    LinearRegressionMG as CumlLinearRegression,
+                )
+
+                init_parameters.pop("solver")
+
+            linear_regression = CumlLinearRegression(
                 handle=params["handle"],
                 output_type="cudf",
-                **params[INIT_PARAMETERS_NAME],
+                **init_parameters,
             )
 
             pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
@@ -116,14 +150,16 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised):
         return SparkCumlLinearRegressionModel.from_row(result)
 
     @classmethod
-    def _cuml_cls(cls) -> type:
+    def _cuml_cls(cls) -> List[type]:
         from cuml.linear_model.linear_regression import LinearRegression
+        from cuml.linear_model.ridge import Ridge
 
-        return LinearRegression
+        return [LinearRegression, Ridge]
 
     @classmethod
     def _not_supported_param(cls) -> List[str]:
-        return ["handle", "output_type"]
+        # "alpha" is replaced by regParam
+        return ["handle", "output_type", "alpha"]
 
 
 class SparkCumlLinearRegressionModel(_CumlModelSupervised):

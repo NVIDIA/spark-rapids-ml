@@ -136,10 +136,10 @@ class SparkCumlKMeans(_CumlEstimator):
         return SparkCumlKMeansModel.from_row(result)
 
     @classmethod
-    def _cuml_cls(cls) -> type:
+    def _cuml_cls(cls) -> List[type]:
         from cuml import KMeans
 
-        return KMeans
+        return [KMeans]
 
     @classmethod
     def _not_supported_param(cls) -> List[str]:

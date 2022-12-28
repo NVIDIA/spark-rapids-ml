@@ -147,10 +147,10 @@ class SparkCumlPCA(_CumlEstimator):
         return SparkCumlPCAModel.from_row(result)
 
     @classmethod
-    def _cuml_cls(cls) -> type:
+    def _cuml_cls(cls) -> List[type]:
         from cuml import PCA
 
-        return PCA
+        return [PCA]
 
     @classmethod
     def _not_supported_param(cls) -> List[str]:

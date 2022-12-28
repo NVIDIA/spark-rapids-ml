@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import pytest
-from cuml import LinearRegression as cuLinearRegression
 
 from sparkcuml.linear_model.linear_regression import (
     SparkCumlLinearRegression,
@@ -35,28 +34,39 @@ from sparkcuml.tests.utils import (
 
 
 # @lru_cache(4) TODO fixme: TypeError: Unhashable Type” Numpy.Ndarray
-def train_with_cuml_linear_regression(
-    X: np.ndarray, y: np.ndarray
-) -> cuLinearRegression:
-    lr = cuLinearRegression(output_type="numpy")
+def train_with_cuml_linear_regression(X: np.ndarray, y: np.ndarray, l2: float) -> Any:
+    if l2 > 0:
+        from cuml import Ridge as cuLinearRegression
+
+        lr = cuLinearRegression(output_type="numpy", alpha=l2)
+    else:
+        from cuml import LinearRegression as cuLinearRegression
+
+        lr = cuLinearRegression(output_type="numpy")
+
     lr.fit(X, y)
     return lr
 
 
-def test_linear_regression_estimator_basic(tmp_path: str) -> None:
+@pytest.mark.parametrize("l2", [0.0, 0.7])
+def test_linear_regression_estimator_basic(tmp_path: str, l2: float) -> None:
     # test estimator default param
     lr = SparkCumlLinearRegression()
     assert lr.getOrDefault("algorithm") == "eig"
+    assert lr.getOrDefault("solver") == "eig"
     assert lr.getOrDefault("fit_intercept")
     assert not lr.getOrDefault("normalize")
+    assert lr.getRegParam() == 0.0
 
-    def assert_params(linear_reg: SparkCumlLinearRegression) -> None:
+    def assert_params(linear_reg: SparkCumlLinearRegression, l2: float) -> None:
         assert linear_reg.getOrDefault("algorithm") == "svd"
         assert not linear_reg.getOrDefault("fit_intercept")
         assert linear_reg.getOrDefault("normalize")
+        assert linear_reg.getRegParam() == l2
 
     lr = SparkCumlLinearRegression(algorithm="svd", fit_intercept=False, normalize=True)
-    assert_params(lr)
+    lr.setRegParam(l2)
+    assert_params(lr, l2)
 
     # Estimator persistence
     path = tmp_path + "/linear_regression_tests"
@@ -64,14 +74,19 @@ def test_linear_regression_estimator_basic(tmp_path: str) -> None:
     lr.write().overwrite().save(estimator_path)
     lr_loaded = SparkCumlLinearRegression.load(estimator_path)
 
-    assert_params(lr_loaded)
+    assert_params(lr_loaded, l2)
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(10, 2)], ids=idfn)
+@pytest.mark.parametrize("l2", [0.0, 0.7])
 def test_linear_regression_model_basic(
-    tmp_path: str, feature_type: str, data_type: np.dtype, data_shape: Tuple[int, int]
+    tmp_path: str,
+    feature_type: str,
+    data_type: np.dtype,
+    data_shape: Tuple[int, int],
+    l2: float,
 ) -> None:
     # Train a toy model
     X, _, y, _ = make_regression_dataset(data_type, data_shape[0], data_shape[1])
@@ -81,6 +96,7 @@ def test_linear_regression_model_basic(
         )
 
         lr = SparkCumlLinearRegression()
+        lr.setRegParam(l2)
         lr.setFeaturesCol(features_col)
         assert label_col is not None
         lr.setLabelCol(label_col)
@@ -114,18 +130,20 @@ def test_linear_regression_model_basic(
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.parametrize("l2", [0.0, 0.7])
 def test_linear_regression(
     gpu_number: int,
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
     max_record_batch: int,
+    l2: float,
 ) -> None:
     X_train, X_test, y_train, _ = make_regression_dataset(
         data_type, data_shape[0], data_shape[1]
     )
 
-    cu_lr = train_with_cuml_linear_regression(X_train, y_train)
+    cu_lr = train_with_cuml_linear_regression(X_train, y_train, l2)
     cu_expected = cu_lr.predict(X_test)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -135,6 +153,7 @@ def test_linear_regression(
         )
         assert label_col is not None
         slr = SparkCumlLinearRegression(num_workers=gpu_number, verbose=7)
+        slr.setRegParam(l2)
         slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
