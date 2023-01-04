@@ -19,11 +19,11 @@
 ###
 
 ARG CUDA_VERSION=11.5.2
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu18.04
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
 # Install packages to build spark-rapids-ml jars
 RUN apt update -y && \
-    apt install -y openjdk-8-jdk wget git zip
+    DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk wget git zip
 
 # Install gcc & g++ 
 ARG GCC_VERSION=9
