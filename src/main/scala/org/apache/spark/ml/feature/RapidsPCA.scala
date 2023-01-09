@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, NVIDIA CORPORATION.
+ * Copyright (c) 2021-2023, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,7 +127,7 @@ class RapidsPCAModel(
      */
     class gpuTransform extends Function[mutable.WrappedArray[Double], Array[Double]]
       with RapidsUDF with Serializable {
-      override def evaluateColumnar(args: ColumnVector*): ColumnVector = {
+      override def evaluateColumnar(numRows: Int, args: ColumnVector*): ColumnVector = {
         logDebug("==========using GPU transform==========")
         val gpu = if (isLocal) {
           0
