@@ -11,5 +11,10 @@ Please check the [Dockerfile](./Dockerfile) for more configurable build argument
 
 ## Build the project in the container
 
+Enter the container and build the project:
+```bash
+docker run -it --rm rapids-ml:latest bash
+```
+
 The build process is the same as the [build process](../README.md#build-target-jar).
 
