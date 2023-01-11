@@ -19,7 +19,7 @@ import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
-from pyspark.ml.param.shared import HasRegParam
+from pyspark.ml.param.shared import HasElasticNetParam, HasRegParam
 from pyspark.sql import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -41,20 +41,21 @@ from sparkcuml.core import (
 from sparkcuml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
-class CumlLinearRegressionParas(HasRegParam):
+class _LinearRegressionParams(HasRegParam, HasElasticNetParam):
     """
-    Both Ridge and Lasso have "alpha" parameter which confused SparkCumlLinearRegression.
-    So SparkCumlLinearRegression use regParam to indicate if it has L2 regularization
+    Spark wraps L1 and L2 into LinearRegression. It uses elasticNetParam and regParam
+    to decide which regularization will be used.
     """
 
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
         self._setDefault(  # type: ignore
             regParam=0.0,
+            elasticNetParam=0.0,
         )
 
 
-class SparkCumlLinearRegression(_CumlEstimatorSupervised, CumlLinearRegressionParas):
+class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParams):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
@@ -73,9 +74,15 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, CumlLinearRegressionPa
 
     def setRegParam(self, value: float) -> "SparkCumlLinearRegression":
         """
-        Sets the value of :py:attr:`alpha`.
+        Sets the value of :py:attr:`regParam`.
         """
         return self._set(regParam=value)  # type: ignore
+
+    def setElasticNetParam(self, value: float) -> "SparkCumlLinearRegression":
+        """
+        Sets the value of :py:attr:`elasticNetParam`.
+        """
+        return self._set(elasticNetParam=value)  # type: ignore
 
     def getFeaturesCol(self) -> Union[str, List[str]]:
         if self.isDefined(self.inputCols):
@@ -93,24 +100,44 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, CumlLinearRegressionPa
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
 
-        l2 = self.getRegParam()
+        # alpha
+        reg = self.getRegParam()
+
+        # L1 ratio
+        elastic_net = self.getElasticNetParam()
 
         def _linear_regression_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             init_parameters = params[INIT_PARAMETERS_NAME]
-            if l2 > 0:
-                from cuml.linear_model.ridge_mg import RidgeMG as CumlLinearRegression
 
-                init_parameters["alpha"] = l2
-                init_parameters.pop("algorithm")
-            else:
+            if reg == 0:
+                # LR
                 from cuml.linear_model.linear_regression_mg import (
                     LinearRegressionMG as CumlLinearRegression,
                 )
 
                 init_parameters.pop("solver")
+            else:
+                if elastic_net == 0:
+                    # LR + L2
+                    from cuml.linear_model.ridge_mg import (
+                        RidgeMG as CumlLinearRegression,
+                    )
+
+                    init_parameters["alpha"] = reg
+                    init_parameters.pop("algorithm")
+                elif elastic_net == 1:
+                    # LR + L1 = Lasso
+                    raise NotImplementedError(
+                        "LinearRegression with L1 regularization is not supported"
+                    )
+                else:
+                    # LR + L1 + L2 = ElasticNet
+                    raise NotImplementedError(
+                        "LinearRegression with L1 and L2 regularization is not supported"
+                    )
 
             linear_regression = CumlLinearRegression(
                 handle=params["handle"],

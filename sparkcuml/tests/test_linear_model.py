@@ -34,15 +34,20 @@ from sparkcuml.tests.utils import (
 
 
 # @lru_cache(4) TODO fixme: TypeError: Unhashable Type” Numpy.Ndarray
-def train_with_cuml_linear_regression(X: np.ndarray, y: np.ndarray, l2: float) -> Any:
-    if l2 > 0:
-        from cuml import Ridge as cuLinearRegression
-
-        lr = cuLinearRegression(output_type="numpy", alpha=l2)
-    else:
+def train_with_cuml_linear_regression(
+    X: np.ndarray, y: np.ndarray, alpha: float, l1_ratio: float
+) -> Any:
+    if alpha == 0:
         from cuml import LinearRegression as cuLinearRegression
 
         lr = cuLinearRegression(output_type="numpy")
+    else:
+        if l1_ratio == 0.0:
+            from cuml import Ridge as cuLinearRegression
+
+            lr = cuLinearRegression(output_type="numpy", alpha=alpha)
+        else:
+            raise NotImplementedError("Lassor and ElasticNet have not been implemented")
 
     lr.fit(X, y)
     return lr
@@ -130,20 +135,22 @@ def test_linear_regression_model_basic(
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
-@pytest.mark.parametrize("l2", [0.0, 0.7])
+@pytest.mark.parametrize("alpha", [0.0, 0.7])  # equal to reg parameter
+@pytest.mark.parametrize("l1_ratio", [0.0])  # equal to elastic_net parameter
 def test_linear_regression(
     gpu_number: int,
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
     max_record_batch: int,
-    l2: float,
+    alpha: float,
+    l1_ratio: float,
 ) -> None:
     X_train, X_test, y_train, _ = make_regression_dataset(
         data_type, data_shape[0], data_shape[1]
     )
 
-    cu_lr = train_with_cuml_linear_regression(X_train, y_train, l2)
+    cu_lr = train_with_cuml_linear_regression(X_train, y_train, alpha, l1_ratio)
     cu_expected = cu_lr.predict(X_test)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -153,7 +160,8 @@ def test_linear_regression(
         )
         assert label_col is not None
         slr = SparkCumlLinearRegression(num_workers=gpu_number, verbose=7)
-        slr.setRegParam(l2)
+        slr.setRegParam(alpha)
+        slr.setElasticNetParam(l1_ratio)
         slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
