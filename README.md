@@ -38,6 +38,9 @@ version. But in GPU version, user doesn't need to do the extra preprocess step t
 
 ## Build
 
+### Build in Docker:
+We provide a Dockerfile to build the project in a container. See [docker](./docker/README.md) for more instructions.
+
 ### Prerequisites:
 1. essential build tools: 
     - [cmake(>=3.23.1)](https://cmake.org/download/),
@@ -66,6 +69,8 @@ Spark-rapids-ml uses [spark-rapids](https://github.com/NVIDIA/spark-rapids) plug
 To build the _SNAPSHOT_ jar, user needs to build and install the denpendency jar _rapids-4-spark_ first
 because there's no snapshot jar for spark-rapids plugin in public maven repositories.
 See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-23.02/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
+
+User can also modify the pom file to use the _release_ version spark-rapids plugin as the dependency. In this case user doesn't need to manually build and install spark-rapids plugin jar by themselves.
 
 Make sure the _rapids-4-spark_ is installed in your local maven then user can build it directly in
 the _project root path_ with:
