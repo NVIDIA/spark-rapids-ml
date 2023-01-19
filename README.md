@@ -1,39 +1,22 @@
-# SparkCuml
+# SparkCuML
+SparkCuML is a project to make the GPU-accelerated [RAPIDS cuML](https://docs.rapids.ai/api/cuml/stable/) python package run distibuted on [Apache Spark](https://spark.apache.org/).
 
-SparkCuml is a project to make cuml python package distibuted run on spark.
-
-## Run tests
-
+## Installation
 We strongly suggest installing the python dependencies in conda environment
-
-``` bash
+```bash
 conda create -n rapids-22.10 -c rapidsai -c nvidia -c conda-forge \
     cuml=22.10 python=3.9 cudatoolkit=11.5
 ```
 
 You can choose the latest version from [rapids.ai](https://rapids.ai/start.html#get-rapids).
 
-Once you have the `rapids-22.10`, you still need to install below packages.
-
-``` bash
+Once you have the `rapids-22.10` conda environment, install the required packages.
+```bash
 conda activate rapids-22.10
-pip install pylint pytest pyspark black mypy scikit-learn
+pip install -r requirements.txt
 ```
-
-Run test
-
-``` bash
-./run_test.sh
-```
-
-Run benchmark
-
-``` bash
-./run_benchmark.sh
-```
-
-
-## To run GPU-accelerated pyspark PCA (multi-node multi-gpu)
+## Usage
+### Run PCA (multi-node multi-gpu)
 ```bash
 SPARK_MASTER=spark://hostname:port
 PYTHON_ENV_PATH=~/miniconda3/envs/cuspark/bin/python
@@ -47,17 +30,24 @@ ${SPARK_HOME}/bin/spark-submit --master ${SPARK_MASTER} \
   cuspark_pca.py
 ```
 
-## To run GPU-accelerated pyspark Kmeans (single-gpu) 
+### Run K-Means (single-gpu)
 ```bash
-    python cuspark_kmeans.py
+python cuspark_kmeans.py
 ```
 
-## To reproduce a bug 
+## Development
+### Run tests
 ```bash
-    python bug.py
+./run_test.sh
+```
+
+### Run benchmarks
+```bash
+./run_benchmark.sh
 ```
 
 ## Contact
-- [Jinfeng Li](jinfengl@nvidia.com) 
+- [Jinfeng Li](jinfengl@nvidia.com)
 - [Bobby Wang](bobwang@nvidia.com)
-- [Erik Ordentlich](eordentlich@nvidia.com) 
+- [Erik Ordentlich](eordentlich@nvidia.com)
+- [Lee Yang](leey@nvidia.com)

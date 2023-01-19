@@ -117,11 +117,12 @@ class PyLint:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--format", type=int, choices=[0, 1], default=1)
-    parser.add_argument("--type-check", type=int, choices=[0, 1], default=1)
-    parser.add_argument("--pylint", type=int, choices=[0, 1], default=1)
+    parser.add_argument("--format", action='store_true', default=False)
+    parser.add_argument("--type-check", action='store_true', default=False)
+    parser.add_argument("--pylint", action='store_true', default=False)
     args = parser.parse_args()
-    if args.format == 1:
+    if args.format:
+        print("Formatting...")
         if not all(
                 run_formatter(path)
                 for path in [
@@ -131,7 +132,8 @@ if __name__ == "__main__":
         ):
             sys.exit(-1)
 
-    if args.type_check == 1:
+    if args.type_check:
+        print("Type checking...")
         if not all(
                 run_mypy(path)
                 for path in [
@@ -140,6 +142,7 @@ if __name__ == "__main__":
         ):
             sys.exit(-1)
 
-    if args.pylint == 1:
+    if args.pylint:
+        print("Running PyLint...")
         if not PyLint()():
             sys.exit(-1)

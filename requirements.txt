@@ -1,0 +1,6 @@
+black
+mypy
+pylint
+pyspark
+pytest
+scikit-learn
