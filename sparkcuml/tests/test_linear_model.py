@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import pytest
@@ -35,7 +35,11 @@ from sparkcuml.tests.utils import (
 
 # @lru_cache(4) TODO fixme: TypeError: Unhashable Type” Numpy.Ndarray
 def train_with_cuml_linear_regression(
-    X: np.ndarray, y: np.ndarray, alpha: float, l1_ratio: float
+    X: np.ndarray,
+    y: np.ndarray,
+    alpha: float,
+    l1_ratio: float,
+    other_params: Dict[str, Any] = {},
 ) -> Any:
     if alpha == 0:
         from cuml import LinearRegression as cuLinearRegression
@@ -43,18 +47,26 @@ def train_with_cuml_linear_regression(
         lr = cuLinearRegression(output_type="numpy")
     else:
         if l1_ratio == 0.0:
-            from cuml import Ridge as cuLinearRegression
+            from cuml import Ridge
 
-            lr = cuLinearRegression(output_type="numpy", alpha=alpha)
+            lr = Ridge(output_type="numpy", alpha=alpha)
+        elif l1_ratio == 1.0:
+            from cuml import Lasso
+
+            lr = Lasso(output_type="numpy", alpha=alpha)
         else:
-            raise NotImplementedError("Lassor and ElasticNet have not been implemented")
+            from cuml import ElasticNet
+
+            lr = ElasticNet(
+                output_type="numpy", alpha=alpha, l1_ratio=l1_ratio, **other_params
+            )
 
     lr.fit(X, y)
     return lr
 
 
-@pytest.mark.parametrize("l2", [0.0, 0.7])
-def test_linear_regression_estimator_basic(tmp_path: str, l2: float) -> None:
+@pytest.mark.parametrize("reg", [0.0, 0.7])
+def test_linear_regression_estimator_basic(tmp_path: str, reg: float) -> None:
     # test estimator default param
     lr = SparkCumlLinearRegression()
     assert lr.getOrDefault("algorithm") == "eig"
@@ -62,6 +74,9 @@ def test_linear_regression_estimator_basic(tmp_path: str, l2: float) -> None:
     assert lr.getOrDefault("fit_intercept")
     assert not lr.getOrDefault("normalize")
     assert lr.getRegParam() == 0.0
+    assert lr.getOrDefault("loss") == "squared_loss"
+    assert lr.getElasticNetParam() == 0.0
+    assert lr.getOrDefault("max_iter") == 1000
 
     def assert_params(linear_reg: SparkCumlLinearRegression, l2: float) -> None:
         assert linear_reg.getOrDefault("algorithm") == "svd"
@@ -70,8 +85,8 @@ def test_linear_regression_estimator_basic(tmp_path: str, l2: float) -> None:
         assert linear_reg.getRegParam() == l2
 
     lr = SparkCumlLinearRegression(algorithm="svd", fit_intercept=False, normalize=True)
-    lr.setRegParam(l2)
-    assert_params(lr, l2)
+    lr.setRegParam(reg)
+    assert_params(lr, reg)
 
     # Estimator persistence
     path = tmp_path + "/linear_regression_tests"
@@ -79,19 +94,19 @@ def test_linear_regression_estimator_basic(tmp_path: str, l2: float) -> None:
     lr.write().overwrite().save(estimator_path)
     lr_loaded = SparkCumlLinearRegression.load(estimator_path)
 
-    assert_params(lr_loaded, l2)
+    assert_params(lr_loaded, reg)
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(10, 2)], ids=idfn)
-@pytest.mark.parametrize("l2", [0.0, 0.7])
+@pytest.mark.parametrize("reg", [0.0, 0.7])
 def test_linear_regression_model_basic(
     tmp_path: str,
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
-    l2: float,
+    reg: float,
 ) -> None:
     # Train a toy model
     X, _, y, _ = make_regression_dataset(data_type, data_shape[0], data_shape[1])
@@ -101,7 +116,7 @@ def test_linear_regression_model_basic(
         )
 
         lr = SparkCumlLinearRegression()
-        lr.setRegParam(l2)
+        lr.setRegParam(reg)
         lr.setFeaturesCol(features_col)
         assert label_col is not None
         lr.setLabelCol(label_col)
@@ -136,7 +151,14 @@ def test_linear_regression_model_basic(
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize("alpha", [0.0, 0.7])  # equal to reg parameter
-@pytest.mark.parametrize("l1_ratio", [0.0])  # equal to elastic_net parameter
+@pytest.mark.parametrize(
+    "l1_ratio_and_other_params",
+    [
+        (0.0, {}),  # LinearRegression
+        (0.5, {"tol": 1e-5}),  # ElasticNet
+        (1.0, {"tol": 1e-5}),  # Lasso
+    ],
+)
 def test_linear_regression(
     gpu_number: int,
     feature_type: str,
@@ -144,13 +166,16 @@ def test_linear_regression(
     data_type: np.dtype,
     max_record_batch: int,
     alpha: float,
-    l1_ratio: float,
+    l1_ratio_and_other_params: Tuple[float, Dict[str, Any]],
 ) -> None:
     X_train, X_test, y_train, _ = make_regression_dataset(
         data_type, data_shape[0], data_shape[1]
     )
 
-    cu_lr = train_with_cuml_linear_regression(X_train, y_train, alpha, l1_ratio)
+    l1_ratio, other_params = l1_ratio_and_other_params
+    cu_lr = train_with_cuml_linear_regression(
+        X_train, y_train, alpha, l1_ratio, other_params
+    )
     cu_expected = cu_lr.predict(X_test)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -159,17 +184,19 @@ def test_linear_regression(
             spark, feature_type, data_type, X_train, y_train
         )
         assert label_col is not None
-        slr = SparkCumlLinearRegression(num_workers=gpu_number, verbose=7)
+        slr = SparkCumlLinearRegression(
+            num_workers=gpu_number, verbose=7, **other_params
+        )
         slr.setRegParam(alpha)
         slr.setElasticNetParam(l1_ratio)
         slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
 
-        assert array_equal(cu_lr.coef_, slr_model.coef, 1e-3, 1e-3)
+        assert array_equal(cu_lr.coef_, slr_model.coef, 1e-3)
 
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = slr_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
-        assert array_equal(cu_expected, pred_result, 1e-3, 1e-3)
+        assert array_equal(cu_expected, pred_result, 1e-3)

@@ -38,7 +38,13 @@ from sparkcuml.core import (
     _CumlModelSupervised,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor, cudf_to_cuml_array
+from sparkcuml.utils import (
+    PartitionDescriptor,
+    _get_default_params_from_func,
+    cudf_to_cuml_array,
+)
+
+_lr_unsupported_params = ["handle", "output_type", "alpha", "l1_ratio"]
 
 
 class _LinearRegressionParams(HasRegParam, HasElasticNetParam):
@@ -114,30 +120,43 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParam
 
             if reg == 0:
                 # LR
+                from cuml.linear_model.linear_regression import (
+                    LinearRegression as LREstimator,
+                )
                 from cuml.linear_model.linear_regression_mg import (
                     LinearRegressionMG as CumlLinearRegression,
                 )
 
-                init_parameters.pop("solver")
+                other_params = []
             else:
                 if elastic_net == 0:
                     # LR + L2
+                    from cuml.linear_model.ridge import Ridge as LREstimator
                     from cuml.linear_model.ridge_mg import (
                         RidgeMG as CumlLinearRegression,
                     )
 
-                    init_parameters["alpha"] = reg
-                    init_parameters.pop("algorithm")
-                elif elastic_net == 1:
-                    # LR + L1 = Lasso
-                    raise NotImplementedError(
-                        "LinearRegression with L1 regularization is not supported"
-                    )
+                    other_params = ["alpha"]
+
                 else:
-                    # LR + L1 + L2 = ElasticNet
-                    raise NotImplementedError(
-                        "LinearRegression with L1 and L2 regularization is not supported"
-                    )
+                    # LR + L1, or LR + L1 + L2
+                    # Cuml uses Coordinate Descent algorithm to implement Lasso and ElasticNet
+                    # So combine Lasso and ElasticNet here.
+                    from cuml.solvers import CD as LREstimator
+                    from cuml.solvers.cd_mg import CDMG as CumlLinearRegression
+
+                    other_params = ["alpha", "l1_ratio"]
+
+            init_parameters["alpha"] = reg
+            init_parameters["l1_ratio"] = elastic_net
+            param_names = list(
+                _get_default_params_from_func(
+                    LREstimator, _lr_unsupported_params
+                ).keys()
+            )
+            param_names.extend(other_params)
+
+            init_parameters = dict((k, init_parameters[k]) for k in param_names)
 
             linear_regression = CumlLinearRegression(
                 handle=params["handle"],
@@ -180,13 +199,14 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParam
     def _cuml_cls(cls) -> List[type]:
         from cuml.linear_model.linear_regression import LinearRegression
         from cuml.linear_model.ridge import Ridge
+        from cuml.solvers import CD
 
-        return [LinearRegression, Ridge]
+        return [LinearRegression, Ridge, CD]
 
     @classmethod
     def _not_supported_param(cls) -> List[str]:
         # "alpha" is replaced by regParam
-        return ["handle", "output_type", "alpha"]
+        return _lr_unsupported_params
 
 
 class SparkCumlLinearRegressionModel(_CumlModelSupervised):

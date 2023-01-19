@@ -267,8 +267,7 @@ class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
         """
         params = {}
         for k, _ in self._get_cuml_params_default().items():
-            if self.getOrDefault(k):
-                params[k] = self.getOrDefault(k)
+            params[k] = self.getOrDefault(k)
 
         return params
 

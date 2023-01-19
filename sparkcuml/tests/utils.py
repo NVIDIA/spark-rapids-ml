@@ -108,7 +108,7 @@ def array_equal(
     lhs: Union[np.ndarray, List[float]],
     rhs: Union[np.ndarray, List[float]],
     unit_tol: float = 1e-4,
-    total_tol: float = 1e-4,
+    total_tol: float = 0,
     with_sign: bool = True,
 ) -> bool:
     a = np.asarray(lhs)
@@ -118,5 +118,5 @@ def array_equal(
 
     if not with_sign:
         a, b = np.abs(a), np.abs(b)
-    res = (np.sum(np.abs(a - b) > unit_tol)) / a.size < total_tol
+    res = (np.sum(np.abs(a - b) > unit_tol)) / a.size <= total_tol
     return res
