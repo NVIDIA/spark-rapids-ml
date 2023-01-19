@@ -292,3 +292,21 @@ def test_transform(
         assert d1["pca_features"] == pytest.approx([-1.414], 0.001)
         assert d2["pca_features"] == pytest.approx([0], 0.001)
         assert d3["pca_features"] == pytest.approx([1.414], 0.001)
+
+
+@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
+def test_pca_numeric_type(gpu_number: int, data_type: str) -> None:
+    data = [
+        [1, 4, 4, 4, 0],
+        [2, 2, 2, 2, 1],
+        [3, 3, 3, 2, 2],
+        [3, 3, 3, 2, 3],
+        [5, 2, 1, 3, 4],
+    ]
+
+    with CleanSparkSession() as spark:
+        feature_cols = ["c1", "c2", "c3", "c4", "c5"]
+        schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
+        df = spark.createDataFrame(data, schema=schema)
+        pca = SparkCumlPCA(num_workers=gpu_number, inputCols=feature_cols)
+        pca.fit(df)

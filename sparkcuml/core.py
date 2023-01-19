@@ -55,7 +55,7 @@ from pyspark.ml.util import (
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
-from pyspark.sql.types import Row, StructType
+from pyspark.sql.types import DoubleType, FloatType, IntegralType, Row, StructType
 
 from sparkcuml.common.cuml_context import CumlContext
 from sparkcuml.utils import (
@@ -353,7 +353,16 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             multi_col_names = self.getInputCols()
             dimension = len(multi_col_names)
             for c in multi_col_names:
-                select_cols.append(col(c))
+                if isinstance(dataset.schema[c].dataType, IntegralType):
+                    # Convert integral type to float.
+                    select_cols.append(col(c).cast(FloatType()).alias(c))
+                elif isinstance(dataset.schema[c].dataType, (FloatType, DoubleType)):
+                    select_cols.append(col(c))
+                else:
+                    raise ValueError(
+                        "All columns must be integral types or float/double types."
+                    )
+
         else:
             raise ValueError("Please set inputCol or inputCols")
 
@@ -467,7 +476,16 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
     ) -> Tuple[List[Column], Optional[List[str]], int]:
         select_cols, multi_col_names, dimension = super()._pre_process_data(dataset)
 
-        label_col = col(self.getOrDefault(self.labelCol)).alias(alias.label)
+        label_name = self.getLabelCol()
+        if isinstance(dataset.schema[label_name].dataType, IntegralType):
+            label_col = col(label_name).cast(FloatType()).alias(alias.label)
+        elif isinstance(dataset.schema[label_name].dataType, (FloatType, DoubleType)):
+            label_col = col(label_name).alias(alias.label)
+        else:
+            raise ValueError(
+                "Label column must be integral types or float/double types."
+            )
+
         select_cols.append(label_col)
 
         return select_cols, multi_col_names, dimension

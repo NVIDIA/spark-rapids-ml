@@ -191,3 +191,23 @@ def test_compare_cuml(gpu_number: int) -> None:
         assert len(slabels) == len(clabels)
         to_clabels = [s2c[v] for v in slabels]
         assert to_clabels == clabels
+
+
+@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
+def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
+    data = [
+        [1, 4, 4, 4, 0],
+        [2, 2, 2, 2, 1],
+        [3, 3, 3, 2, 2],
+        [3, 3, 3, 2, 3],
+        [5, 2, 1, 3, 4],
+    ]
+
+    with CleanSparkSession() as spark:
+        feature_cols = ["c1", "c2", "c3", "c4", "c5"]
+        schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
+        df = spark.createDataFrame(data, schema=schema)
+        kmeans = SparkCumlKMeans(
+            num_workers=gpu_number, inputCols=feature_cols, n_clusters=2
+        )
+        kmeans.fit(df)

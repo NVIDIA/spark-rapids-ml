@@ -200,3 +200,25 @@ def test_linear_regression(
         result = slr_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
         assert array_equal(cu_expected, pred_result, 1e-3)
+
+
+@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
+def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None:
+    data = [
+        [1, 4, 4, 4, 0],
+        [2, 2, 2, 2, 1],
+        [3, 3, 3, 2, 2],
+        [3, 3, 3, 2, 3],
+        [5, 2, 1, 3, 4],
+    ]
+
+    with CleanSparkSession() as spark:
+        feature_cols = ["c1", "c2", "c3", "c4"]
+        schema = (
+            ", ".join([f"{c} {data_type}" for c in feature_cols])
+            + f", label {data_type}"
+        )
+        df = spark.createDataFrame(data, schema=schema)
+        lr = SparkCumlLinearRegression(num_workers=gpu_number)
+        lr.setFeaturesCol(feature_cols)
+        lr.fit(df)
