@@ -11,6 +11,10 @@ from pylint import epylint
 
 CURDIR = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 PROJECT_ROOT = os.path.normpath(os.path.join(CURDIR, os.path.pardir))
+SRC_PATHS = [
+  "src/sparkcuml",
+  "tests"
+]
 
 
 class DirectoryExcursion:
@@ -43,9 +47,7 @@ def run_mypy(rel_path: str) -> bool:
     with DirectoryExcursion(PROJECT_ROOT):
         path = os.path.join(PROJECT_ROOT, rel_path)
         ret = subprocess.run(["mypy", path])
-        if ret.returncode != 0:
-            return False
-        return True
+        return ret.returncode == 0
 
 
 class PyLint:
@@ -123,23 +125,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.format:
         print("Formatting...")
-        if not all(
-                run_formatter(path)
-                for path in [
-                    # sparkcuml module
-                    "sparkcuml",
-                ]
-        ):
+        if not all(run_formatter(path) for path in SRC_PATHS):
             sys.exit(-1)
 
     if args.type_check:
         print("Type checking...")
-        if not all(
-                run_mypy(path)
-                for path in [
-                    "sparkcuml",
-                ]
-        ):
+        if not all(run_mypy(path) for path in SRC_PATHS):
             sys.exit(-1)
 
     if args.pylint:

@@ -38,16 +38,17 @@ python cuspark_kmeans.py
 ## Development
 ### Run tests
 ```bash
+pip install -e .
 ./run_test.sh
 ```
 
 ### Run benchmarks
 ```bash
+pip install -e .
 ./run_benchmark.sh
 ```
 
-## Contact
-- [Jinfeng Li](jinfengl@nvidia.com)
-- [Bobby Wang](bobwang@nvidia.com)
-- [Erik Ordentlich](eordentlich@nvidia.com)
-- [Lee Yang](leey@nvidia.com)
+### Build package
+```bash
+python -m build
+```

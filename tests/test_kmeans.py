@@ -19,7 +19,8 @@ from typing import List
 import pytest
 
 from sparkcuml.cluster import SparkCumlKMeans, SparkCumlKMeansModel
-from sparkcuml.tests.sparksession import CleanSparkSession
+
+from .sparksession import CleanSparkSession
 
 
 def test_kmeans_parameters(gpu_number: int, tmp_path: str) -> None:

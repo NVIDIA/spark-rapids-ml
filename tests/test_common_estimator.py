@@ -241,7 +241,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         assert model.getOrDefault(model.c) == 3  # type: ignore
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
-    from sparkcuml.tests.sparksession import CleanSparkSession
+    from .sparksession import CleanSparkSession
 
     # Estimator fit and get a model
     with CleanSparkSession(conf) as spark:

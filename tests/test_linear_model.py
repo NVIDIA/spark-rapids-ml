@@ -22,8 +22,9 @@ from sparkcuml.linear_model.linear_regression import (
     SparkCumlLinearRegression,
     SparkCumlLinearRegressionModel,
 )
-from sparkcuml.tests.sparksession import CleanSparkSession
-from sparkcuml.tests.utils import (
+
+from .sparksession import CleanSparkSession
+from .utils import (
     array_equal,
     create_pyspark_dataframe,
     cuml_supported_data_types,
@@ -159,6 +160,7 @@ def test_linear_regression_model_basic(
         (1.0, {"tol": 1e-5}),  # Lasso
     ],
 )
+@pytest.mark.slow
 def test_linear_regression(
     gpu_number: int,
     feature_type: str,

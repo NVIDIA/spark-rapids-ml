@@ -17,7 +17,7 @@ from typing import Any, Dict
 
 from pyspark.sql import SparkSession
 
-from sparkcuml.tests.conftest import _default_conf, get_spark_i_know_what_i_am_doing
+from .conftest import _default_conf, get_spark_i_know_what_i_am_doing
 
 
 # sparksession.py is copied from spark-rapids

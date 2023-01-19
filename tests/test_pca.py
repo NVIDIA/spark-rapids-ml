@@ -27,7 +27,8 @@ from pyspark.sql.types import (
 )
 
 from sparkcuml.decomposition import SparkCumlPCA, SparkCumlPCAModel
-from sparkcuml.tests.sparksession import CleanSparkSession
+
+from .sparksession import CleanSparkSession
 
 
 def test_fit(gpu_number: int) -> None:
