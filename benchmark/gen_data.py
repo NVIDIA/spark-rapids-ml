@@ -1,3 +1,18 @@
+#
+# Copyright (c) 2022, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import argparse
 from abc import abstractmethod
 from typing import Iterator, Union, List, Tuple, Dict, Any
@@ -64,7 +79,7 @@ class DefaultDataGen(DataGenBase):
 
 
 class BlobsDataGen(DataGenBase):
-    """Generate random dataset using cuml.datasets.make_blobs, 
+    """Generate random dataset using cuml.datasets.make_blobs,
        which creates blobs for bechmarking unsupervised clustering algorithms (e.g. KMeans)"""
 
     def __init__(self, n_clusters: int = 20, **kargs: Dict[str, Any]) -> None:
@@ -168,7 +183,7 @@ if __name__ == "__main__":
     --dtype "float64" \
     --output_dir "./5k_2k_float64.parquet" \
     --spark_confs "spark.master=local[*]" \
-    --spark_confs "spark.driver.memory=128g" 
+    --spark_confs "spark.driver.memory=128g"
     """
     args = parse_arguments()
 
