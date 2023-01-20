@@ -52,3 +52,10 @@ pip install -e .
 ```bash
 python -m build
 ```
+
+### Build docs
+```bash
+# sphinx-apidoc -f -o docs/source src/sparkcuml
+cd docs
+make html
+```

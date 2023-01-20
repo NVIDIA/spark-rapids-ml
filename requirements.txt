@@ -4,3 +4,4 @@ pylint
 pyspark
 pytest
 scikit-learn
+sphinx
