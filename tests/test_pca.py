@@ -14,21 +14,22 @@
 # limitations under the License.
 #
 
-from typing import List, Tuple, Union
+from typing import Tuple
 
+import numpy as np
 import pytest
-from pyspark.sql.types import (
-    ArrayType,
-    DoubleType,
-    FloatType,
-    Row,
-    StructField,
-    StructType,
-)
+from sklearn.datasets import make_blobs
 
 from sparkcuml.decomposition import SparkCumlPCA, SparkCumlPCAModel
 
 from .sparksession import CleanSparkSession
+from .utils import (
+    array_equal,
+    create_pyspark_dataframe,
+    cuml_supported_data_types,
+    feature_types_alias,
+    idfn,
+)
 
 
 def test_fit(gpu_number: int) -> None:
@@ -190,109 +191,41 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
         assert_pca_model(pca_model, pca_model_loaded)
 
 
-def test_fit_compare_cuml(gpu_number: int) -> None:
-    import numpy
-
-    data = numpy.random.rand(100, 30).astype(numpy.float64).tolist()
-    topk = 5
-    tolerance_float = 0.001
-
-    from cuml import PCA
-
-    cuml_pca = PCA(n_components=topk, output_type="numpy", verbose=7)
-
-    import cudf
-
-    gdf = cudf.DataFrame(data)
-    cuml_pca.fit(gdf)
-
-    with CleanSparkSession() as spark:
-        df = (
-            spark.sparkContext.parallelize(data, gpu_number)
-            .map(lambda row: (row,))
-            .toDF(["features"])
-        )
-        sparkcuml_pca = SparkCumlPCA(
-            num_workers=gpu_number, n_components=topk, verbose=7
-        ).setInputCol("features")
-        sparkcuml_model = sparkcuml_pca.fit(df)
-
-        assert sparkcuml_pca.getOrDefault("num_workers") == gpu_number
-
-        assert sparkcuml_model.mean == pytest.approx(
-            cuml_pca.mean_.tolist(), tolerance_float
-        )
-        cuml_pc = cuml_pca.components_.tolist()
-        assert len(sparkcuml_model.pc) == len(cuml_pc)
-        for i in range(len(cuml_pc)):
-            assert_pc_equal(sparkcuml_model.pc[i], cuml_pc[i], tolerance_float)
-        assert sparkcuml_model.explained_variance == pytest.approx(
-            cuml_pca.explained_variance_.tolist(), tolerance_float
-        )
-
-        # test transform function
-        sparkcuml_model.setOutputCol("pca_features")
-        projDf = sparkcuml_model.transform(df)
-        sprojs = [row["pca_features"] for row in projDf.collect()]
-
-        cprojs = cuml_pca.transform(gdf).tolist()
-
-        assert len(sprojs) == len(cprojs)
-        for i in range(len(sprojs)):
-            assert len(sprojs[i]) == len(cprojs[i])
-
-        sprojs = numpy.transpose(sprojs).tolist()  # transpose to compare by columns
-        cprojs = numpy.transpose(cprojs).tolist()
-        for i in range(len(sprojs)):
-            assert_pc_equal(sprojs[i], cprojs[i], tolerance_float)
-
-
-def assert_pc_equal(pc1: List[float], pc2: List[float], tolerance: float) -> None:
-    pc2_opposite_dir = [-v for v in pc2]
-    assert pc1 == pytest.approx(pc2, tolerance) or pc1 == pytest.approx(
-        pc2_opposite_dir, tolerance
-    )
-
-
-@pytest.mark.parametrize(
-    "dtype_gen", [("float32", FloatType()), ("float64", DoubleType())]
-)
-def test_transform(
-    dtype_gen: Union[Tuple[str, FloatType], Tuple[str, DoubleType]]
+@pytest.mark.parametrize("feature_type", [feature_types_alias.array])
+@pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
+@pytest.mark.parametrize("data_type", cuml_supported_data_types)
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
+def test_pca(
+    gpu_number: int,
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
 ) -> None:
-    mean = [2.0, 2.0]
-    pc = [[0.707, 0.707]]
-    explained_variance = [2.0]
-    singular_values = [2.0]
 
-    dtype_name, dtype = dtype_gen
-    with CleanSparkSession() as spark:
+    X, _ = make_blobs(n_samples=data_shape[0], n_features=data_shape[1], random_state=0)
 
-        model = (
-            SparkCumlPCAModel(
-                mean, pc, explained_variance, singular_values, len(pc[0]), dtype_name
-            )
-            .setInputCol("features")
-            .setOutputCol("pca_features")
+    from cuml import PCA as cuPCA
+
+    cu_pca = cuPCA(n_components=3, output_type="numpy", verbose=7)
+    cu_result = cu_pca.fit_transform(X)
+
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    with CleanSparkSession(conf) as spark:
+        train_df, features_col, _ = create_pyspark_dataframe(
+            spark, feature_type, data_type, X, None
         )
 
-        data = [Row(features=arr) for arr in [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]]
-        schema = StructType([StructField("features", ArrayType(dtype, False), False)])
-
-        df = spark.createDataFrame(spark.sparkContext.parallelize(data), schema=schema)
-        df.printSchema()
-
-        projs = model.transform(df).collect()
-        assert len(projs) == 3
-        d1 = projs[0].asDict()
-        d2 = projs[1].asDict()
-        d3 = projs[2].asDict()
-        assert "pca_features" in d1
-        assert "pca_features" in d2
-        assert "pca_features" in d3
-        assert d1["pca_features"] == pytest.approx([-1.414], 0.001)
-        assert d2["pca_features"] == pytest.approx([0], 0.001)
-        assert d3["pca_features"] == pytest.approx([1.414], 0.001)
+        spark_pca = SparkCumlPCA(n_components=3, inputCol=features_col)
+        model = spark_pca.fit(train_df)
+        assert array_equal(cu_pca.components_, model.pc, 1e-3, with_sign=False)
+        assert array_equal(cu_pca.explained_variance_, model.explained_variance, 1e-3)
+        assert array_equal(cu_pca.mean_, model.mean, 1e-3)
+        assert array_equal(cu_pca.singular_values_, model.singular_values, 1e-3)
+        transform_df = model.transform(train_df)
+        spark_result = transform_df.collect()
+        spark_result = [v[0] for v in spark_result]
+        assert array_equal(cu_result, spark_result, 1e-3, with_sign=False)
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
