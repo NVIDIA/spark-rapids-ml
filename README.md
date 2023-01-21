@@ -59,3 +59,9 @@ python -m build
 cd docs
 make html
 ```
+
+### Preview docs
+```
+cd docs/build/html
+python -m http.server 8080
+```
