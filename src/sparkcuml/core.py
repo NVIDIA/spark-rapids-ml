@@ -42,6 +42,7 @@ from pyspark.ml.param.shared import (
     HasInputCols,
     HasLabelCol,
     HasOutputCol,
+    HasOutputCols,
     HasPredictionCol,
 )
 from pyspark.ml.util import (
@@ -216,7 +217,7 @@ class _CumlCommon(Params, MLWritable, MLReadable):
             cuml_logger.set_level(log_level)
 
 
-class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol):
+class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol, HasOutputCols):
     """
     The common parameters for all Spark CUML algorithms.
     """
@@ -491,7 +492,9 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
         return select_cols, multi_col_names, dimension
 
 
-class _CumlModel(_CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol):
+class _CumlModel(
+    _CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol, HasOutputCols
+):
     """
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """

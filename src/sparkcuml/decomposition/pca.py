@@ -38,7 +38,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor
+from sparkcuml.utils import PartitionDescriptor, dtype_to_pyspark_type
 
 
 class SparkCumlPCA(_CumlEstimator):
@@ -74,18 +74,24 @@ class SparkCumlPCA(_CumlEstimator):
         self.set_params(n_components=value)
         return self
 
-    def setInputCol(self, value: str) -> "SparkCumlPCA":
+    def setInputCol(self, value: Union[str, List[str]]) -> "SparkCumlPCA":
         """
-        Sets the value of `inputCol`.
+        Sets the value of `inputCol` or `inputCols`.
         """
-        self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
         return self
 
     def setOutputCol(self, value: str) -> "SparkCumlPCA":
         """
-        Sets the value of `outputCol`.
+        Sets the value of `outputCol` or `outputCols`.
         """
-        self.set_params(outputCol=value)
+        if isinstance(value, str):
+            self.set_params(outputCol=value)
+        else:
+            self.set_params(outputCols=value)
         return self
 
     def _get_cuml_fit_func(
@@ -196,30 +202,54 @@ class SparkCumlPCAModel(_CumlModel):
         self.set_params(**cumlParams)
         self.set_params(n_components=len(pc))
 
-    def setInputCol(self, value: str) -> "SparkCumlPCAModel":
+    def setInputCol(self, value: Union[str, List[str]]) -> "SparkCumlPCAModel":
         """
-        Sets the value of `inputCol`.
+        Sets the value of `inputCol` or `inputCols`.
         """
-        self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
         return self
 
-    def setOutputCol(self, value: str) -> "SparkCumlPCAModel":
+    def setOutputCol(self, value: Union[str, List[str]]) -> "SparkCumlPCAModel":
         """
-        Sets the value of `outputCol`.
+        Sets the value of `outputCol` or `outputCols`.
         """
-        self.set_params(outputCol=value)
+        if isinstance(value, str):
+            self.set_params(outputCol=value)
+        else:
+            self.set_params(outputCols=value)
         return self
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        input_column_name = self.getInputCol()
+        if self.isDefined(self.inputCol):
+            input_column_name = self.getInputCol()
+        else:
+            input_column_name = self.getInputCols()[0]
+
         for field in input_schema:
             if field.name == input_column_name:
                 # TODO: mypy throws error here since it doesn't know that dataType will be ArrayType which has elementType field
-                input_data_type = field.dataType.elementType  # type: ignore
+                input_data_type = field.dataType.elementType if self.isDefined(self.inputCol) else field.dataType  # type: ignore
+                break
 
-        ret_schema = StructType(
-            [StructField(self.getOutputCol(), ArrayType(input_data_type, False), False)]
-        )
+        if self.isDefined(self.outputCols):
+            output_cols = self.getOutputCols()
+            ret_schema = StructType(
+                [
+                    StructField(col_name, input_data_type, False)
+                    for col_name in output_cols
+                ]
+            )
+        else:
+            ret_schema = StructType(
+                [
+                    StructField(
+                        self.getOutputCol(), ArrayType(input_data_type, False), False
+                    )
+                ]
+            )
         return ret_schema
 
     def _get_cuml_transform_func(
@@ -267,8 +297,11 @@ class SparkCumlPCAModel(_CumlModel):
             if len(res.shape) == 1:
                 res = np.expand_dims(res, 1)
 
-            res = list(res)
-            return pd.DataFrame({self.getOutputCol(): res})
+            if self.isDefined(self.outputCols):
+                return pd.DataFrame(res, columns=self.getOutputCols())
+            else:
+                res = list(res)
+                return pd.DataFrame({self.getOutputCol(): res})
 
         return _construct_pca, _transform_internal
 

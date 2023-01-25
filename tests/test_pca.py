@@ -191,7 +191,9 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
         assert_pca_model(pca_model, pca_model_loaded)
 
 
-@pytest.mark.parametrize("feature_type", [feature_types_alias.array])
+@pytest.mark.parametrize(
+    "feature_type", [feature_types_alias.array, feature_types_alias.multi_cols]
+)
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
@@ -207,7 +209,9 @@ def test_pca(
 
     from cuml import PCA as cuPCA
 
-    cu_pca = cuPCA(n_components=3, output_type="numpy", verbose=7)
+    n_components = 3
+
+    cu_pca = cuPCA(n_components=n_components, output_type="numpy", verbose=7)
     cu_result = cu_pca.fit_transform(X)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -216,15 +220,29 @@ def test_pca(
             spark, feature_type, data_type, X, None
         )
 
-        spark_pca = SparkCumlPCA(n_components=3, inputCol=features_col)
+        output_col = (
+            "pca_features"
+            if isinstance(features_col, str)
+            else ["pca_feature_" + str(i) for i in range(n_components)]
+        )
+
+        spark_pca = (
+            SparkCumlPCA(n_components=3)
+            .setInputCol(features_col)
+            .setOutputCol(output_col)
+        )
         model = spark_pca.fit(train_df)
         assert array_equal(cu_pca.components_, model.pc, 1e-3, with_sign=False)
         assert array_equal(cu_pca.explained_variance_, model.explained_variance, 1e-3)
         assert array_equal(cu_pca.mean_, model.mean, 1e-3)
         assert array_equal(cu_pca.singular_values_, model.singular_values, 1e-3)
         transform_df = model.transform(train_df)
-        spark_result = transform_df.collect()
-        spark_result = [v[0] for v in spark_result]
+
+        if isinstance(output_col, str):
+            spark_result = transform_df.collect()
+            spark_result = [v[0] for v in spark_result]
+        else:
+            spark_result = transform_df.toPandas().to_numpy()
         assert array_equal(cu_result, spark_result, 1e-3, with_sign=False)
 
 

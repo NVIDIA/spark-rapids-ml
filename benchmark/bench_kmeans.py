@@ -123,8 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--tol", type=float, default=-1, help='sparkcuml requires tol to be negative in order to finish max_iters')
     parser.add_argument("--num_gpus", type=int, default=1, help='number of available GPUs. If num_gpus > 0, sparkcuml will run with the number of dataset partitions equal to num_gpus.')
     parser.add_argument("--num_cpus", type=int, default=6, help='number of available CPUs. If num_cpus > 0, spark will run and with the number of dataset partitions to num_cpus.')
-    parser.add_argument("--no_cache", type=bool, default=False, help='whether to enable dataframe repartition, cache and cout outside sparkcuml fit')
-    parser.add_argument("--dtype", type=str, choices=["float64"], default="float64")
+    parser.add_argument("--no_cache", action='store_true', default=False, help='whether to enable dataframe repartition, cache and cout outside sparkcuml fit')
     parser.add_argument("--num_runs", type=int, default=2, help='set the number of repetitions for cold/warm runs')
     parser.add_argument("--report_path", type=str, default="")
     parser.add_argument("--parquet_path", type=str, default="")
@@ -156,7 +155,6 @@ if __name__ == "__main__":
                 "num_gpus": args.num_gpus,
                 "num_cpus": args.num_cpus,
                 "no_cache": args.no_cache,
-                "dtype": args.dtype,
                 "parquet_path": args.parquet_path,
             }
 

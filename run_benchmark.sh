@@ -1,6 +1,6 @@
 #! /bin/bash
 unset SPARK_HOME
-SPARKCUML_HOME=`pwd`
+SPARKCUML_HOME=`pwd`/src
 export PYTHONPATH="$SPARKCUML_HOME:$PYTHONPATH"
 
 ### generate parquet dataset
@@ -19,7 +19,6 @@ CUDA_VISIBLE_DEVICES=0,1 python ./benchmark/bench_pca.py \
     --n_components 3 \
     --num_gpus 2 \
     --num_cpus 0 \
-    --dtype "float64" \
     --num_runs 3 \
     --parquet_path "/tmp/5k_3k_float64.parquet" \
     --report_path "./report.csv" \
@@ -30,15 +29,12 @@ CUDA_VISIBLE_DEVICES=0,1 python ./benchmark/bench_pca.py \
 
 ### standalone mode
 #SPARK_MASTER=spark://hostname:port
-#tar -czvf sparkcuml.tar.gz ./sparkcuml
+#tar -czvf sparkcuml.tar.gz -C ./src .
 #
 #python ./benchmark/bench_pca.py \
-#    --num_vecs 5000 \
-#    --dim 3000 \
 #    --n_components 3 \
 #    --num_gpus 2 \
 #    --num_cpus 0 \
-#    --dtype "float64" \
 #    --num_runs 3 \
 #    --parquet_path "/tmp/5k_3k_float64.parquet" \
 #    --report_path "./report_standalone.csv" \
