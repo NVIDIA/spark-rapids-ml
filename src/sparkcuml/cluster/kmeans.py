@@ -66,9 +66,12 @@ class SparkCumlKMeans(_CumlEstimator):
 
     def setFeaturesCol(self, value: str) -> "SparkCumlKMeans":
         """
-        Sets the value of `inputCol`.
+        Sets the value of `inputCol` or `inputCols`.
         """
-        self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
         return self
 
     def setPredictionCol(self, value: str) -> "SparkCumlKMeans":
@@ -210,9 +213,12 @@ class SparkCumlKMeansModel(_CumlModel):
 
     def setFeaturesCol(self, value: str) -> "SparkCumlKMeansModel":
         """
-        Sets the value of `inputCol`.
+        Sets the value of `inputCol` or `inputCols`.
         """
-        self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
         return self
 
     def setPredictionCol(self, value: str) -> "SparkCumlKMeansModel":

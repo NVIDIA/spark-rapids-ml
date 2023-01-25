@@ -102,7 +102,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
+    config: pytest.Config, items: List[pytest.Item]
 ) -> None:
     if config.getoption("--runslow"):
         # --runslow given in cli: do not skip slow tests

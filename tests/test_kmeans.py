@@ -14,13 +14,20 @@
 # limitations under the License.
 #
 
-from typing import List
+from typing import List, Tuple
 
+import numpy as np
 import pytest
 
 from sparkcuml.cluster import SparkCumlKMeans, SparkCumlKMeansModel
 
 from .sparksession import CleanSparkSession
+from .utils import (
+    create_pyspark_dataframe,
+    cuml_supported_data_types,
+    feature_types_alias,
+    idfn,
+)
 
 
 def test_kmeans_parameters(gpu_number: int, tmp_path: str) -> None:
@@ -126,23 +133,34 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
         assert labels[2] == labels[3]
 
 
-def test_compare_cuml(gpu_number: int) -> None:
+@pytest.mark.parametrize(
+    "feature_type", [feature_types_alias.array, feature_types_alias.multi_cols]
+)
+@pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
+@pytest.mark.parametrize("data_type", cuml_supported_data_types)
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
+def test_compare_cuml(
+    gpu_number: int,
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+) -> None:
     """
     The dataset of this test case comes from cuml:
     https://github.com/rapidsai/cuml/blob/496f1f155676fb4b7d99aeb117cbb456ce628a4b/python/cuml/tests/test_kmeans.py#L39
     """
     from cuml.datasets import make_blobs
 
-    n_rows = 1000
-    n_cols = 50
+    n_rows = data_shape[0]
+    n_cols = data_shape[1]
     n_clusters = 8
     cluster_std = 1.0
     tolerance = 0.001
 
-    data, _ = make_blobs(
+    X, _ = make_blobs(
         n_rows, n_cols, n_clusters, cluster_std=cluster_std, random_state=0
     )  # make_blobs creates a random dataset of isotropic gaussian blobs.
-    data = data.tolist()
 
     from cuml import KMeans
 
@@ -150,18 +168,18 @@ def test_compare_cuml(gpu_number: int) -> None:
 
     import cudf
 
-    gdf = cudf.DataFrame(data)
+    gdf = cudf.DataFrame(X)
     cuml_kmeans.fit(gdf)
 
-    with CleanSparkSession() as spark:
-        df = (
-            spark.sparkContext.parallelize(data, gpu_number)
-            .map(lambda row: (row,))
-            .toDF(["features"])
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    with CleanSparkSession(conf) as spark:
+        df, features_col, _ = create_pyspark_dataframe(
+            spark, feature_type, data_type, X, None
         )
+
         sparkcuml_kmeans = SparkCumlKMeans(
             num_workers=gpu_number, n_clusters=n_clusters, verbose=7
-        ).setFeaturesCol("features")
+        ).setFeaturesCol(features_col)
         sparkcuml_model = sparkcuml_kmeans.fit(df)
 
         cuml_cluster_centers = cuml_kmeans.cluster_centers_.tolist()

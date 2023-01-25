@@ -21,6 +21,7 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 from pyspark.ml.clustering import KMeans
+from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
 
 from benchmark.utils import WithSparkSession
@@ -29,16 +30,13 @@ from sparkcuml.cluster import SparkCumlKMeans
 from typing import Dict, Tuple, Any
 
 def bench_alg(
-    run_id: int, 
     n_clusters: int,
     max_iter: int,
     tol: float,
     num_gpus: int,
     num_cpus: int,
     no_cache: bool,
-    dtype: Union[np.float64, np.float32],
     parquet_path: str,
-    spark_confs: List[str],
 ) -> Tuple[float, float, float]:
 
     fit_time = None
@@ -48,7 +46,11 @@ def bench_alg(
     func_start_time = time.time()
 
     df = spark.read.parquet(parquet_path)
-    input_col = df.dtypes[0][0]
+    first_col = df.dtypes[0][0]
+    first_col_type = df.dtypes[0][1]
+    is_single_col = True if 'array' in first_col_type else False
+    if is_single_col == False:
+        input_cols = [c for c in df.schema.names]
     output_col = "cluster_idx"
 
     if num_gpus > 0:
@@ -62,9 +64,14 @@ def bench_alg(
         start_time = time.time()
         gpu_estimator = (
             SparkCumlKMeans(num_workers=num_gpus, n_clusters=n_clusters, max_iter=max_iter, tol=tol, init='random', verbose=6)
-            .setFeaturesCol(input_col)
             .setPredictionCol(output_col)
         )
+
+        if is_single_col:
+            gpu_estimator = gpu_estimator.setFeaturesCol(first_col)
+        else:
+            gpu_estimator = gpu_estimator.setFeaturesCol(input_cols)
+
         gpu_model = gpu_estimator.fit(df)
         fit_time = time.time() - start_time
         print(f"gpu fit took: {fit_time} sec")
@@ -80,14 +87,20 @@ def bench_alg(
     if num_cpus > 0:
         assert num_gpus <= 0
         start_time = time.time()
-        vector_df = df.select(array_to_vector(df[input_col]).alias(input_col))
+        if is_single_col:
+            vector_df = df.select(array_to_vector(df[first_col]).alias(first_col))
+        else:
+            vector_assembler = VectorAssembler(outputCol="features").setInputCols(input_cols)
+            vector_df = vector_assembler.transform(df)
+            first_col = "features"
+
         if not no_cache:
             vector_df = vector_df.cache()
             vector_df.count()
             print(f"prepare session and dataset: {time.time() - start_time} sec")
 
         start_time = time.time()
-        cpu_estimator = KMeans(initMode='random').setFeaturesCol(input_col).setPredictionCol(output_col).setK(n_clusters).setMaxIter(max_iter).setTol(tol)
+        cpu_estimator = KMeans(initMode='random').setFeaturesCol(first_col).setPredictionCol(output_col).setK(n_clusters).setMaxIter(max_iter).setTol(tol)
         cpu_model = cpu_estimator.fit(vector_df)
         fit_time = time.time() - start_time
         print(f"cpu fit took: {fit_time} sec")
@@ -123,16 +136,13 @@ if __name__ == "__main__":
     with WithSparkSession(args.spark_confs) as spark:
         for run_id in range(args.num_runs):
             (fit_time, transform_time, total_time) = bench_alg(
-                run_id, 
                 args.n_clusters,
                 args.max_iter,
                 args.tol,
                 args.num_gpus,
                 args.num_cpus,
                 args.no_cache,
-                args.dtype,
                 args.parquet_path,
-                args.spark_confs,
             )
 
             report_dict = {
