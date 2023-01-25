@@ -41,7 +41,7 @@ from sparkcuml.core import (
 from sparkcuml.utils import PartitionDescriptor, dtype_to_pyspark_type
 
 
-class SparkCumlPCA(_CumlEstimator):
+class PCA(_CumlEstimator):
     """
     PCA algorithm projects high-dimensional vectors into low-dimensional vectors
     while preserving the similarity of the vectors. This class provides GPU accleration for pyspark mllib PCA.
@@ -67,14 +67,14 @@ class SparkCumlPCA(_CumlEstimator):
         self.set_params(n_components=1)
         self.set_params(**kwargs)
 
-    def setK(self, value: int) -> "SparkCumlPCA":
+    def setK(self, value: int) -> "PCA":
         """
         Sets the value of `k`.
         """
         self.set_params(n_components=value)
         return self
 
-    def setInputCol(self, value: Union[str, List[str]]) -> "SparkCumlPCA":
+    def setInputCol(self, value: Union[str, List[str]]) -> "PCA":
         """
         Sets the value of `inputCol` or `inputCols`.
         """
@@ -84,7 +84,7 @@ class SparkCumlPCA(_CumlEstimator):
             self.set_params(inputCols=value)
         return self
 
-    def setOutputCol(self, value: str) -> "SparkCumlPCA":
+    def setOutputCol(self, value: str) -> "PCA":
         """
         Sets the value of `outputCol` or `outputCols`.
         """
@@ -149,8 +149,8 @@ class SparkCumlPCA(_CumlEstimator):
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "SparkCumlPCAModel":
-        return SparkCumlPCAModel.from_row(result)
+    def _create_pyspark_model(self, result: Row) -> "PCAModel":
+        return PCAModel.from_row(result)
 
     @classmethod
     def _cuml_cls(cls) -> List[type]:
@@ -174,7 +174,7 @@ class SparkCumlPCA(_CumlEstimator):
         ]
 
 
-class SparkCumlPCAModel(_CumlModel):
+class PCAModel(_CumlModel):
     def __init__(
         self,
         mean: List[float],
@@ -198,11 +198,11 @@ class SparkCumlPCAModel(_CumlModel):
         self.explained_variance = explained_variance
         self.singular_values = singular_values
 
-        cumlParams = SparkCumlPCA._get_cuml_params_default()
+        cumlParams = PCA._get_cuml_params_default()
         self.set_params(**cumlParams)
         self.set_params(n_components=len(pc))
 
-    def setInputCol(self, value: Union[str, List[str]]) -> "SparkCumlPCAModel":
+    def setInputCol(self, value: Union[str, List[str]]) -> "PCAModel":
         """
         Sets the value of `inputCol` or `inputCols`.
         """
@@ -212,7 +212,7 @@ class SparkCumlPCAModel(_CumlModel):
             self.set_params(inputCols=value)
         return self
 
-    def setOutputCol(self, value: Union[str, List[str]]) -> "SparkCumlPCAModel":
+    def setOutputCol(self, value: Union[str, List[str]]) -> "PCAModel":
         """
         Sets the value of `outputCol` or `outputCols`.
         """
@@ -260,7 +260,7 @@ class SparkCumlPCAModel(_CumlModel):
     ]:
 
         cuml_alg_params = {}
-        for k, _ in SparkCumlPCA._get_cuml_params_default().items():
+        for k, _ in PCA._get_cuml_params_default().items():
             if self.getOrDefault(k):
                 cuml_alg_params[k] = self.getOrDefault(k)
 
@@ -306,4 +306,4 @@ class SparkCumlPCAModel(_CumlModel):
         return _construct_pca, _transform_internal
 
 
-_set_pyspark_cuml_cls_param_attrs(SparkCumlPCA, SparkCumlPCAModel)
+_set_pyspark_cuml_cls_param_attrs(PCA, PCAModel)

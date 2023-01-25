@@ -39,7 +39,7 @@ python cuspark_kmeans.py
 ### Run tests
 ```bash
 pip install -e .
-./run_test.sh
+./run_test.sh --runslow
 ```
 
 ### Run benchmarks

@@ -25,7 +25,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
 
 from benchmark.utils import WithSparkSession
-from sparkcuml.cluster import SparkCumlKMeans
+from sparkcuml.clustering import KMeans as SparkCumlKMeans
 
 from typing import Dict, Tuple, Any
 
@@ -145,7 +145,7 @@ if __name__ == "__main__":
             )
 
             report_dict = {
-                "run_id": run_id, 
+                "run_id": run_id,
                 "fit": fit_time,
                 "transform": transform_time,
                 "total": total_time,
@@ -161,7 +161,7 @@ if __name__ == "__main__":
             for sconf in args.spark_confs:
                 key, value = sconf.split("=")
                 report_dict[key] = value
-    
+
             alg_name = 'sparkcuml_kmeans' if args.num_gpus > 0 else 'spark_kmeans'
             pdf = pd.DataFrame(
                 data = {k : [v] for k, v in report_dict.items()},

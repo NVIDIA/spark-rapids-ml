@@ -70,7 +70,7 @@ class BenchmarkLinearRegression(BenchmarkBase):
         features_col = [c for c in df.schema.names if c != label_name]
 
         if self.args.gpu_workers > 0:
-            from sparkcuml.linear_model.linear_regression import SparkCumlLinearRegression
+            from sparkcuml.regression import LinearRegression as SparkCumlLinearRegression
             lr = SparkCumlLinearRegression(num_workers=self.args.gpu_workers)
             lr.setFeaturesCol(features_col)
             lr.setLabelCol(label_name)

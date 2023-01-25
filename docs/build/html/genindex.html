@@ -1,0 +1,762 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; sparkcuml 0.0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+<link href="_static/styles/bootstrap.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+<link href="_static/styles/pydata-sphinx-theme.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+
+  
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="docsearch:language" content="en">
+  </head>
+  
+  
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="180" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__primary" id="__primary">
+  <label class="overlay overlay-primary" for="__primary"></label>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__secondary" id="__secondary">
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+      
+<form class="bd-search d-flex align-items-center" action="search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+  </div>
+
+  
+  <nav class="bd-header navbar navbar-expand-lg bd-navbar" id="navbar-main"><div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+      <span class="fa-solid fa-bars"></span>
+  </label>
+  <div id="navbar-start">
+    
+    
+  
+
+
+<a class="navbar-brand logo" href="index.html">
+
+  
+  
+  
+  
+  
+  
+  
+
+  
+  
+    <p class="title logo__title">sparkcuml 0.0.1 documentation</p>
+  
+</a>
+    
+  </div>
+
+  
+  <div class="col-lg-9 navbar-header-items">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+    </ul>
+</nav>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+        <div class="navbar-end-item navbar-persistent--container">
+          
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+        </div>
+      
+      
+      <div class="navbar-end-item">
+        <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+
+
+  
+  
+    <div class="navbar-persistent--mobile">
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+    </div>
+  
+
+  
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
+
+</div>
+  </nav>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+    </ul>
+</nav>
+      </div>
+      
+      </div>
+    
+
+    
+    
+    <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  
+
+  
+  <div class="sidebar-end-items sidebar-primary__section">
+    <div class="sidebar-end-items__item">
+    </div>
+  </div>
+
+  
+  <div id="rtd-footer-container"></div>
+
+      </div>
+      <main id="main-content" class="bd-main">
+        
+        
+        <div class="bd-content">
+          <div class="bd-article-container">
+            
+            <div class="bd-header-article">
+                
+            </div>
+            
+            
+            <article class="bd-article" role="main">
+              
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.algorithm">algorithm (sparkcuml.regression.LinearRegression attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.algorithm">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.core.Alias">Alias (class in sparkcuml.core)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.utils.PartitionDescriptor.build">build() (sparkcuml.utils.PartitionDescriptor class method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.utils.cudf_to_cuml_array">cudf_to_cuml_array() (in module sparkcuml.utils)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.common.html#sparkcuml.common.cuml_context.CumlContext">CumlContext (class in sparkcuml.common.cuml_context)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.core.Alias.data">data (sparkcuml.core.Alias attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.utils.dtype_to_pyspark_type">dtype_to_pyspark_type() (in module sparkcuml.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.fit_intercept">fit_intercept (sparkcuml.regression.LinearRegression attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.fit_intercept">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.utils.get_logger">get_logger() (in module sparkcuml.utils)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.getFeaturesCol">getFeaturesCol() (sparkcuml.clustering.KMeansModel method)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.getFeaturesCol">(sparkcuml.regression.LinearRegression method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.getPredictionCol">getPredictionCol() (sparkcuml.clustering.KMeansModel method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.common.html#sparkcuml.common.cuml_context.CumlContext.handle">handle (sparkcuml.common.cuml_context.CumlContext property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.init">init (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.init">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans">KMeans (class in sparkcuml.clustering)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel">KMeansModel (class in sparkcuml.clustering)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.core.Alias.label">label (sparkcuml.core.Alias attribute)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression">LinearRegression (class in sparkcuml.regression)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel">LinearRegressionModel (class in sparkcuml.regression)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.loss">loss (sparkcuml.regression.LinearRegression attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.loss">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.max_iter">max_iter (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.max_iter">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.max_iter">(sparkcuml.regression.LinearRegression attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.max_iter">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.max_samples_per_batch">max_samples_per_batch (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.max_samples_per_batch">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+      </ul></li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml">sparkcuml</a>
+</li>
+        <li><a href="sparkcuml.html#module-sparkcuml.clustering">sparkcuml.clustering</a>
+</li>
+        <li><a href="sparkcuml.common.html#module-sparkcuml.common">sparkcuml.common</a>
+</li>
+        <li><a href="sparkcuml.common.html#module-sparkcuml.common.cuml_context">sparkcuml.common.cuml_context</a>
+</li>
+        <li><a href="sparkcuml.html#module-sparkcuml.core">sparkcuml.core</a>
+</li>
+        <li><a href="sparkcuml.html#module-sparkcuml.feature">sparkcuml.feature</a>
+</li>
+        <li><a href="sparkcuml.html#module-sparkcuml.regression">sparkcuml.regression</a>
+</li>
+        <li><a href="sparkcuml.html#module-sparkcuml.utils">sparkcuml.utils</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.n_clusters">n_clusters (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.n_clusters">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCA.n_components">n_components (sparkcuml.feature.PCA attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel.n_components">(sparkcuml.feature.PCAModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.n_init">n_init (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.n_init">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.normalize">normalize (sparkcuml.regression.LinearRegression attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.normalize">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.oversampling_factor">oversampling_factor (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.oversampling_factor">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.utils.PartitionDescriptor">PartitionDescriptor (class in sparkcuml.utils)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCA">PCA (class in sparkcuml.feature)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel">PCAModel (class in sparkcuml.feature)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.random_state">random_state (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.random_state">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.setElasticNetParam">setElasticNetParam() (sparkcuml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.setFeaturesCol">setFeaturesCol() (sparkcuml.clustering.KMeans method)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.setFeaturesCol">(sparkcuml.clustering.KMeansModel method)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.setFeaturesCol">(sparkcuml.regression.LinearRegression method)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCA.setInputCol">setInputCol() (sparkcuml.feature.PCA method)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel.setInputCol">(sparkcuml.feature.PCAModel method)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.setK">setK() (sparkcuml.clustering.KMeans method)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCA.setK">(sparkcuml.feature.PCA method)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.setLabelCol">setLabelCol() (sparkcuml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.setMaxIter">setMaxIter() (sparkcuml.clustering.KMeans method)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCA.setOutputCol">setOutputCol() (sparkcuml.feature.PCA method)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel.setOutputCol">(sparkcuml.feature.PCAModel method)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.setPredictionCol">setPredictionCol() (sparkcuml.clustering.KMeans method)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.setPredictionCol">(sparkcuml.clustering.KMeansModel method)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.setRegParam">setRegParam() (sparkcuml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.shuffle">shuffle (sparkcuml.regression.LinearRegression attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.shuffle">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.solver">solver (sparkcuml.regression.LinearRegression attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.solver">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    sparkcuml
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.clustering
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml.clustering">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.common
+
+      <ul>
+        <li><a href="sparkcuml.common.html#module-sparkcuml.common">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.common.cuml_context
+
+      <ul>
+        <li><a href="sparkcuml.common.html#module-sparkcuml.common.cuml_context">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.core
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml.core">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.feature
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml.feature">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.regression
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml.regression">module</a>
+</li>
+      </ul></li>
+      <li>
+    sparkcuml.utils
+
+      <ul>
+        <li><a href="sparkcuml.html#module-sparkcuml.utils">module</a>
+</li>
+      </ul></li>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCA.svd_solver">svd_solver (sparkcuml.feature.PCA attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel.svd_solver">(sparkcuml.feature.PCAModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.tol">tol (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.tol">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.tol">(sparkcuml.regression.LinearRegression attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.tol">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.clustering.KMeans.verbose">verbose (sparkcuml.clustering.KMeans attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.clustering.KMeansModel.verbose">(sparkcuml.clustering.KMeansModel attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCA.verbose">(sparkcuml.feature.PCA attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel.verbose">(sparkcuml.feature.PCAModel attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegression.verbose">(sparkcuml.regression.LinearRegression attribute)</a>
+</li>
+        <li><a href="sparkcuml.html#sparkcuml.regression.LinearRegressionModel.verbose">(sparkcuml.regression.LinearRegressionModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="sparkcuml.html#sparkcuml.feature.PCA.whiten">whiten (sparkcuml.feature.PCA attribute)</a>
+
+      <ul>
+        <li><a href="sparkcuml.html#sparkcuml.feature.PCAModel.whiten">(sparkcuml.feature.PCAModel attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+
+
+            </article>
+            
+            
+            
+            <footer class="bd-footer-article">
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+            
+          </div>
+          
+          
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div id="searchbox"></div>
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+            </div>
+          
+          
+        </div>
+        <footer class="bd-footer-content">
+          <div class="bd-footer-content__inner">
+            
+          </div>
+        </footer>
+        
+      </main>
+    </div>
+  </div>
+
+  
+    
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94"></script>
+
+  <footer class="bd-footer"><div class="bd-footer__inner container">
+  
+  <div class="footer-item">
+    
+<p class="copyright">
+
+    &copy; Copyright 2023, NVIDIA.<br>
+
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="theme-version">
+    Built with the
+    <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">
+        PyData Sphinx Theme
+    </a>
+    0.12.0.
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+<p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+</p>
+
+  </div>
+  
+</div>
+  </footer>
+  </body>
+</html>

@@ -40,7 +40,7 @@ from sparkcuml.core import (
 )
 
 
-class SparkCumlKMeans(_CumlEstimator):
+class KMeans(_CumlEstimator):
     """
     KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.
     The algorithm initializes a set of k random centers then runs in iterations.
@@ -57,14 +57,14 @@ class SparkCumlKMeans(_CumlEstimator):
         super().__init__()
         self.set_params(**kwargs)
 
-    def setK(self, value: int) -> "SparkCumlKMeans":
+    def setK(self, value: int) -> "KMeans":
         """
         Sets the value of `n_clusters`.
         """
         self.set_params(n_clusters=value)
         return self
 
-    def setFeaturesCol(self, value: str) -> "SparkCumlKMeans":
+    def setFeaturesCol(self, value: str) -> "KMeans":
         """
         Sets the value of `inputCol` or `inputCols`.
         """
@@ -74,14 +74,14 @@ class SparkCumlKMeans(_CumlEstimator):
             self.set_params(inputCols=value)
         return self
 
-    def setPredictionCol(self, value: str) -> "SparkCumlKMeans":
+    def setPredictionCol(self, value: str) -> "KMeans":
         """
         Sets the value of `outputCol`.
         """
         self.set_params(outputCol=value)
         return self
 
-    def setMaxIter(self, value: int) -> "SparkCumlKMeans":
+    def setMaxIter(self, value: int) -> "KMeans":
         """
         Sets the value of `max_iter`.
         """
@@ -135,8 +135,8 @@ class SparkCumlKMeans(_CumlEstimator):
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "SparkCumlKMeansModel":
-        return SparkCumlKMeansModel.from_row(result)
+    def _create_pyspark_model(self, result: Row) -> "KMeansModel":
+        return KMeansModel.from_row(result)
 
     @classmethod
     def _cuml_cls(cls) -> List[type]:
@@ -156,7 +156,7 @@ class SparkCumlKMeans(_CumlEstimator):
         ]
 
 
-class SparkCumlKMeansModel(_CumlModel):
+class KMeansModel(_CumlModel):
     def __init__(
         self,
         cluster_centers_: List[List[float]],
@@ -166,7 +166,7 @@ class SparkCumlKMeansModel(_CumlModel):
         super().__init__(n_cols=n_cols, dtype=dtype, cluster_centers_=cluster_centers_)
 
         self.cluster_centers_ = cluster_centers_
-        cumlParams = SparkCumlKMeans._get_cuml_params_default()
+        cumlParams = KMeans._get_cuml_params_default()
         self.set_params(**cumlParams)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
@@ -182,7 +182,7 @@ class SparkCumlKMeansModel(_CumlModel):
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
         cuml_alg_params = {}
-        for k in SparkCumlKMeans._get_cuml_params_default():
+        for k in KMeans._get_cuml_params_default():
             cuml_alg_params[k] = self.getOrDefault(k)
 
         cluster_centers_ = self.cluster_centers_
@@ -211,7 +211,7 @@ class SparkCumlKMeansModel(_CumlModel):
 
         return _construct_kmeans, _transform_internal
 
-    def setFeaturesCol(self, value: str) -> "SparkCumlKMeansModel":
+    def setFeaturesCol(self, value: str) -> "KMeansModel":
         """
         Sets the value of `inputCol` or `inputCols`.
         """
@@ -221,7 +221,7 @@ class SparkCumlKMeansModel(_CumlModel):
             self.set_params(inputCols=value)
         return self
 
-    def setPredictionCol(self, value: str) -> "SparkCumlKMeansModel":
+    def setPredictionCol(self, value: str) -> "KMeansModel":
         """
         Sets the value of `outputCol`.
         """
@@ -241,4 +241,4 @@ class SparkCumlKMeansModel(_CumlModel):
         return self.getOrDefault(self.outputCol)
 
 
-_set_pyspark_cuml_cls_param_attrs(SparkCumlKMeans, SparkCumlKMeansModel)
+_set_pyspark_cuml_cls_param_attrs(KMeans, KMeansModel)

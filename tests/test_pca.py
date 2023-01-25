@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 from sklearn.datasets import make_blobs
 
-from sparkcuml.decomposition import SparkCumlPCA, SparkCumlPCAModel
+from sparkcuml.feature import PCA, PCAModel
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -43,9 +43,7 @@ def test_fit(gpu_number: int) -> None:
             .toDF(["features"])
         )
         gpu_pca = (
-            SparkCumlPCA(num_workers=gpu_number, verbose=6)
-            .setInputCol("features")
-            .setK(topk)
+            PCA(num_workers=gpu_number, verbose=6).setInputCol("features").setK(topk)
         )
         gpu_model = gpu_pca.fit(df)
 
@@ -76,9 +74,7 @@ def test_fit_rectangle(gpu_number: int) -> None:
             .toDF(["coordinates"])
         )
 
-        gpu_pca = (
-            SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
-        )
+        gpu_pca = PCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
         gpu_model = gpu_pca.fit(df)
 
         assert gpu_model.getInputCol() == "coordinates"
@@ -112,7 +108,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
     Please refer to https://docs.rapids.ai/api/cuml/stable/api.html#id45
     """
 
-    default_pca = SparkCumlPCA()
+    default_pca = PCA()
     assert default_pca.getOrDefault("n_components") == 1
     assert default_pca.getOrDefault("svd_solver") == "auto"
     assert not default_pca.getOrDefault("verbose")
@@ -125,7 +121,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
     verbose = True
     whiten = True
     num_workers = 5
-    custom_pca = SparkCumlPCA(
+    custom_pca = PCA(
         n_components=n_components,
         svd_solver=svd_solver,
         verbose=verbose,
@@ -133,7 +129,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
         num_workers=num_workers,
     )
 
-    def assert_pca_parameters(pca: SparkCumlPCA) -> None:
+    def assert_pca_parameters(pca: PCA) -> None:
         assert pca.getOrDefault("n_components") == n_components
         assert pca.getOrDefault("svd_solver") == svd_solver
         assert pca.getOrDefault("verbose") == verbose
@@ -146,7 +142,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
     path = tmp_path + "/pca_tests"
     estimator_path = f"{path}/pca"
     custom_pca.write().overwrite().save(estimator_path)
-    custom_pca_loaded = SparkCumlPCA.load(estimator_path)
+    custom_pca_loaded = PCA.load(estimator_path)
 
     assert_pca_parameters(custom_pca_loaded)
 
@@ -161,18 +157,14 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
             .toDF(["coordinates"])
         )
 
-        gpu_pca = (
-            SparkCumlPCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
-        )
-        pca_model: SparkCumlPCAModel = gpu_pca.fit(df)
+        gpu_pca = PCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
+        pca_model: PCAModel = gpu_pca.fit(df)
 
         model_path = f"{path}/pca_model"
         pca_model.write().overwrite().save(model_path)
-        pca_model_loaded = SparkCumlPCAModel.load(model_path)
+        pca_model_loaded = PCAModel.load(model_path)
 
-        def assert_pca_model(
-            model: SparkCumlPCAModel, loaded_model: SparkCumlPCAModel
-        ) -> None:
+        def assert_pca_model(model: PCAModel, loaded_model: PCAModel) -> None:
             """
             Expect the model attributes are same
             """
@@ -227,9 +219,7 @@ def test_pca(
         )
 
         spark_pca = (
-            SparkCumlPCA(n_components=3)
-            .setInputCol(features_col)
-            .setOutputCol(output_col)
+            PCA(n_components=3).setInputCol(features_col).setOutputCol(output_col)
         )
         model = spark_pca.fit(train_df)
         assert array_equal(cu_pca.components_, model.pc, 1e-3, with_sign=False)
@@ -260,5 +250,5 @@ def test_pca_numeric_type(gpu_number: int, data_type: str) -> None:
         feature_cols = ["c1", "c2", "c3", "c4", "c5"]
         schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
         df = spark.createDataFrame(data, schema=schema)
-        pca = SparkCumlPCA(num_workers=gpu_number, inputCols=feature_cols)
+        pca = PCA(num_workers=gpu_number, inputCols=feature_cols)
         pca.fit(df)

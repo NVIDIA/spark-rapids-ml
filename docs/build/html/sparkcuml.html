@@ -1,0 +1,1691 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>sparkcuml package &#8212; sparkcuml 0.0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+<link href="_static/styles/bootstrap.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+<link href="_static/styles/pydata-sphinx-theme.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+
+  
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=796348d33e8b1d947c94" rel="stylesheet">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94">
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'sparkcuml';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="docsearch:language" content="en">
+  </head>
+  
+  
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="180" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__primary" id="__primary">
+  <label class="overlay overlay-primary" for="__primary"></label>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__secondary" id="__secondary">
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+      
+<form class="bd-search d-flex align-items-center" action="search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+  </div>
+
+  
+  <nav class="bd-header navbar navbar-expand-lg bd-navbar" id="navbar-main"><div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+      <span class="fa-solid fa-bars"></span>
+  </label>
+  <div id="navbar-start">
+    
+    
+  
+
+
+<a class="navbar-brand logo" href="index.html">
+
+  
+  
+  
+  
+  
+  
+  
+
+  
+  
+    <p class="title logo__title">sparkcuml 0.0.1 documentation</p>
+  
+</a>
+    
+  </div>
+
+  
+  <div class="col-lg-9 navbar-header-items">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+    </ul>
+</nav>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      
+        <div class="navbar-end-item navbar-persistent--container">
+          
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+        </div>
+      
+      
+      <div class="navbar-end-item">
+        <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+
+
+  
+  
+    <div class="navbar-persistent--mobile">
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+    </div>
+  
+
+  
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
+
+</div>
+  </nav>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+    </ul>
+</nav>
+      </div>
+      
+      </div>
+    
+
+    
+    
+    <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+      </ul>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  
+  <div class="sidebar-start-items sidebar-primary__section">
+    <div class="sidebar-start-items__item"><nav class="bd-links" id="bd-docs-nav" aria-label="Section navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">
+    Section Navigation
+  </p>
+  <div class="bd-toc-item navbar-nav">
+    <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="sparkcuml.common.html">sparkcuml.common package</a></li>
+</ul>
+
+  </div>
+</nav>
+    </div>
+  </div>
+  
+
+  
+  <div class="sidebar-end-items sidebar-primary__section">
+    <div class="sidebar-end-items__item">
+    </div>
+  </div>
+
+  
+  <div id="rtd-footer-container"></div>
+
+      </div>
+      <main id="main-content" class="bd-main">
+        
+        
+        <div class="bd-content">
+          <div class="bd-article-container">
+            
+            <div class="bd-header-article">
+                
+            </div>
+            
+            
+            <article class="bd-article" role="main">
+              
+  <section id="sparkcuml-package">
+<h1>sparkcuml package<a class="headerlink" href="#sparkcuml-package" title="Permalink to this heading">#</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="sparkcuml.common.html">sparkcuml.common package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sparkcuml.common.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparkcuml.common.html#module-sparkcuml.common.cuml_context">sparkcuml.common.cuml_context module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="sparkcuml.common.html#sparkcuml.common.cuml_context.CumlContext"><code class="docutils literal notranslate"><span class="pre">CumlContext</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="sparkcuml.common.html#sparkcuml.common.cuml_context.CumlContext.handle"><code class="docutils literal notranslate"><span class="pre">CumlContext.handle</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sparkcuml.common.html#module-sparkcuml.common">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading">#</a></h2>
+</section>
+<section id="module-sparkcuml.clustering">
+<span id="sparkcuml-clustering-module"></span><h2>sparkcuml.clustering module<a class="headerlink" href="#module-sparkcuml.clustering" title="Permalink to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.clustering.</span></span><span class="sig-name descname"><span class="pre">KMeans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.clustering.KMeans" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlEstimator</span></code></p>
+<p>KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.
+The algorithm initializes a set of k random centers then runs in iterations.
+In each iteration, KMeans assigns every point to its nearest center,
+then calculates a new set of k centers.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sparkcuml.cluster</span> <span class="kn">import</span> <span class="n">SparkCumlKMeans</span>
+<span class="go">TODO</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeans.setFeaturesCol" title="sparkcuml.clustering.KMeans.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeans.setK" title="sparkcuml.clustering.KMeans.setK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setK</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>n_clusters</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeans.setMaxIter" title="sparkcuml.clustering.KMeans.setMaxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMaxIter</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>max_iter</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeans.setPredictionCol" title="sparkcuml.clustering.KMeans.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>outputCol</cite>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.init">
+<span class="sig-name descname"><span class="pre">init</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='init',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">init')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.init" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.max_iter">
+<span class="sig-name descname"><span class="pre">max_iter</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_iter',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">max_iter')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.max_iter" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.max_samples_per_batch">
+<span class="sig-name descname"><span class="pre">max_samples_per_batch</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_samples_per_batch',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">max_samples_per_batch')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.max_samples_per_batch" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.n_clusters">
+<span class="sig-name descname"><span class="pre">n_clusters</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_clusters',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">n_clusters')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.n_clusters" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.n_init">
+<span class="sig-name descname"><span class="pre">n_init</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_init',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">n_init')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.n_init" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.oversampling_factor">
+<span class="sig-name descname"><span class="pre">oversampling_factor</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='oversampling_factor',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">oversampling_factor')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.oversampling_factor" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.random_state">
+<span class="sig-name descname"><span class="pre">random_state</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='random_state',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">random_state')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.random_state" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.setFeaturesCol">
+<span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.clustering.KMeans" title="sparkcuml.clustering.KMeans"><span class="pre">KMeans</span></a></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeans.setFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.setK">
+<span class="sig-name descname"><span class="pre">setK</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.clustering.KMeans" title="sparkcuml.clustering.KMeans"><span class="pre">KMeans</span></a></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeans.setK" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>n_clusters</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.setMaxIter">
+<span class="sig-name descname"><span class="pre">setMaxIter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.clustering.KMeans" title="sparkcuml.clustering.KMeans"><span class="pre">KMeans</span></a></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeans.setMaxIter" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>max_iter</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.setPredictionCol">
+<span class="sig-name descname"><span class="pre">setPredictionCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.clustering.KMeans" title="sparkcuml.clustering.KMeans"><span class="pre">KMeans</span></a></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeans.setPredictionCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>outputCol</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.tol">
+<span class="sig-name descname"><span class="pre">tol</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='tol',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">tol')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.tol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeans.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">verbose')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeans.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.clustering.</span></span><span class="sig-name descname"><span class="pre">KMeansModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cluster_centers_</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.clustering.KMeansModel" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlModel</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeansModel.getFeaturesCol" title="sparkcuml.clustering.KMeansModel.getFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>inputCol</cite> or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeansModel.getPredictionCol" title="sparkcuml.clustering.KMeansModel.getPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>outputCol</cite> or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeansModel.setFeaturesCol" title="sparkcuml.clustering.KMeansModel.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.clustering.KMeansModel.setPredictionCol" title="sparkcuml.clustering.KMeansModel.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>outputCol</cite>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.getFeaturesCol">
+<span class="sig-name descname"><span class="pre">getFeaturesCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.getFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>inputCol</cite> or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.getPredictionCol">
+<span class="sig-name descname"><span class="pre">getPredictionCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.getPredictionCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>outputCol</cite> or its default value.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.init">
+<span class="sig-name descname"><span class="pre">init</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='init',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">init')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.init" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.max_iter">
+<span class="sig-name descname"><span class="pre">max_iter</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_iter',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">max_iter')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.max_iter" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.max_samples_per_batch">
+<span class="sig-name descname"><span class="pre">max_samples_per_batch</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_samples_per_batch',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">max_samples_per_batch')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.max_samples_per_batch" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.n_clusters">
+<span class="sig-name descname"><span class="pre">n_clusters</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_clusters',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">n_clusters')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.n_clusters" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.n_init">
+<span class="sig-name descname"><span class="pre">n_init</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_init',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">n_init')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.n_init" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.oversampling_factor">
+<span class="sig-name descname"><span class="pre">oversampling_factor</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='oversampling_factor',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">oversampling_factor')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.oversampling_factor" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.random_state">
+<span class="sig-name descname"><span class="pre">random_state</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='random_state',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">random_state')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.random_state" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.setFeaturesCol">
+<span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.clustering.KMeansModel" title="sparkcuml.clustering.KMeansModel"><span class="pre">KMeansModel</span></a></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.setFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.setPredictionCol">
+<span class="sig-name descname"><span class="pre">setPredictionCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.clustering.KMeansModel" title="sparkcuml.clustering.KMeansModel"><span class="pre">KMeansModel</span></a></span></span><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.setPredictionCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>outputCol</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.tol">
+<span class="sig-name descname"><span class="pre">tol</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='tol',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">tol')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.tol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.clustering.KMeansModel.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.cluster.kmeans.KMeans</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">verbose')</span></em><a class="headerlink" href="#sparkcuml.clustering.KMeansModel.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-sparkcuml.core">
+<span id="sparkcuml-core-module"></span><h2>sparkcuml.core module<a class="headerlink" href="#module-sparkcuml.core" title="Permalink to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.core.Alias">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.core.</span></span><span class="sig-name descname"><span class="pre">Alias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.core.Alias" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>data</strong></dt><dd><p>Alias for field number 0</p>
+</dd>
+<dt><strong>label</strong></dt><dd><p>Alias for field number 1</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.core.Alias.data">
+<span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#sparkcuml.core.Alias.data" title="Permalink to this definition">#</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.core.Alias.label">
+<span class="sig-name descname"><span class="pre">label</span></span><a class="headerlink" href="#sparkcuml.core.Alias.label" title="Permalink to this definition">#</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-sparkcuml.feature">
+<span id="sparkcuml-feature-module"></span><h2>sparkcuml.feature module<a class="headerlink" href="#module-sparkcuml.feature" title="Permalink to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.feature.</span></span><span class="sig-name descname"><span class="pre">PCA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.feature.PCA" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlEstimator</span></code></p>
+<p>PCA algorithm projects high-dimensional vectors into low-dimensional vectors
+while preserving the similarity of the vectors. This class provides GPU accleration for pyspark mllib PCA.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sparkcuml.decomposition</span> <span class="kn">import</span> <span class="n">SparkCumlPCA</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">topk</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_pca</span> <span class="o">=</span> <span class="n">SparkCumlPCA</span><span class="p">()</span><span class="o">.</span><span class="n">setInputCol</span><span class="p">(</span><span class="s2">&quot;features&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setK</span><span class="p">(</span><span class="n">topk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">SparkContext</span><span class="o">.</span><span class="n">parallelize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">(</span><span class="n">row</span><span class="p">,))</span><span class="o">.</span><span class="n">toDF</span><span class="p">([</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_pca</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">gpu_model</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
+<span class="go">[2.0, 2.0]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">gpu_model</span><span class="o">.</span><span class="n">pc</span><span class="p">)</span>
+<span class="go">[[0.7071067811865475, 0.7071067811865475]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">gpu_model</span><span class="o">.</span><span class="n">explained_variance</span><span class="p">)</span>
+<span class="go">[1.9999999999999998]</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.feature.PCA.setInputCol" title="sparkcuml.feature.PCA.setInputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.feature.PCA.setK" title="sparkcuml.feature.PCA.setK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setK</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>k</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.feature.PCA.setOutputCol" title="sparkcuml.feature.PCA.setOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setOutputCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>outputCol</cite> or <cite>outputCols</cite>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.n_components">
+<span class="sig-name descname"><span class="pre">n_components</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_components',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">n_components')</span></em><a class="headerlink" href="#sparkcuml.feature.PCA.n_components" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.setInputCol">
+<span class="sig-name descname"><span class="pre">setInputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.feature.PCA" title="sparkcuml.feature.PCA"><span class="pre">PCA</span></a></span></span><a class="headerlink" href="#sparkcuml.feature.PCA.setInputCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.setK">
+<span class="sig-name descname"><span class="pre">setK</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.feature.PCA" title="sparkcuml.feature.PCA"><span class="pre">PCA</span></a></span></span><a class="headerlink" href="#sparkcuml.feature.PCA.setK" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>k</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.setOutputCol">
+<span class="sig-name descname"><span class="pre">setOutputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.feature.PCA" title="sparkcuml.feature.PCA"><span class="pre">PCA</span></a></span></span><a class="headerlink" href="#sparkcuml.feature.PCA.setOutputCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>outputCol</cite> or <cite>outputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.svd_solver">
+<span class="sig-name descname"><span class="pre">svd_solver</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='svd_solver',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">svd_solver')</span></em><a class="headerlink" href="#sparkcuml.feature.PCA.svd_solver" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">verbose')</span></em><a class="headerlink" href="#sparkcuml.feature.PCA.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCA.whiten">
+<span class="sig-name descname"><span class="pre">whiten</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='whiten',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">whiten')</span></em><a class="headerlink" href="#sparkcuml.feature.PCA.whiten" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.feature.</span></span><span class="sig-name descname"><span class="pre">PCAModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">explained_variance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">singular_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.feature.PCAModel" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlModel</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.feature.PCAModel.setInputCol" title="sparkcuml.feature.PCAModel.setInputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.feature.PCAModel.setOutputCol" title="sparkcuml.feature.PCAModel.setOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setOutputCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>outputCol</cite> or <cite>outputCols</cite>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel.n_components">
+<span class="sig-name descname"><span class="pre">n_components</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_components',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">n_components')</span></em><a class="headerlink" href="#sparkcuml.feature.PCAModel.n_components" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel.setInputCol">
+<span class="sig-name descname"><span class="pre">setInputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.feature.PCAModel" title="sparkcuml.feature.PCAModel"><span class="pre">PCAModel</span></a></span></span><a class="headerlink" href="#sparkcuml.feature.PCAModel.setInputCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel.setOutputCol">
+<span class="sig-name descname"><span class="pre">setOutputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.feature.PCAModel" title="sparkcuml.feature.PCAModel"><span class="pre">PCAModel</span></a></span></span><a class="headerlink" href="#sparkcuml.feature.PCAModel.setOutputCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>outputCol</cite> or <cite>outputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel.svd_solver">
+<span class="sig-name descname"><span class="pre">svd_solver</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='svd_solver',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">svd_solver')</span></em><a class="headerlink" href="#sparkcuml.feature.PCAModel.svd_solver" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">verbose')</span></em><a class="headerlink" href="#sparkcuml.feature.PCAModel.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.feature.PCAModel.whiten">
+<span class="sig-name descname"><span class="pre">whiten</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='whiten',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.decomposition.pca.PCA</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">whiten')</span></em><a class="headerlink" href="#sparkcuml.feature.PCAModel.whiten" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-sparkcuml.regression">
+<span id="sparkcuml-regression-module"></span><h2>sparkcuml.regression module<a class="headerlink" href="#module-sparkcuml.regression" title="Permalink to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.regression.</span></span><span class="sig-name descname"><span class="pre">LinearRegression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.regression.LinearRegression" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlEstimatorSupervised</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_LinearRegressionParams</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.regression.LinearRegression.setElasticNetParam" title="sparkcuml.regression.LinearRegression.setElasticNetParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setElasticNetParam</span></code></a>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">elasticNetParam</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#sparkcuml.regression.LinearRegression.setFeaturesCol" title="sparkcuml.regression.LinearRegression.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#sparkcuml.regression.LinearRegression.setRegParam" title="sparkcuml.regression.LinearRegression.setRegParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRegParam</span></code></a>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">regParam</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="table">
+<tbody>
+<tr class="row-odd"><td><p><strong>getFeaturesCol</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>setLabelCol</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.algorithm">
+<span class="sig-name descname"><span class="pre">algorithm</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='algorithm',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">algorithm')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.algorithm" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.fit_intercept">
+<span class="sig-name descname"><span class="pre">fit_intercept</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='fit_intercept',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">fit_intercept')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.fit_intercept" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.getFeaturesCol">
+<span class="sig-name descname"><span class="pre">getFeaturesCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#sparkcuml.regression.LinearRegression.getFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.loss">
+<span class="sig-name descname"><span class="pre">loss</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='loss',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">loss')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.loss" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.max_iter">
+<span class="sig-name descname"><span class="pre">max_iter</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_iter',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">max_iter')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.max_iter" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='normalize',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">normalize')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.normalize" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.setElasticNetParam">
+<span class="sig-name descname"><span class="pre">setElasticNetParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.regression.LinearRegression" title="sparkcuml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#sparkcuml.regression.LinearRegression.setElasticNetParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">elasticNetParam</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.setFeaturesCol">
+<span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.regression.LinearRegression" title="sparkcuml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#sparkcuml.regression.LinearRegression.setFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>inputCol</cite> or <cite>inputCols</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.setLabelCol">
+<span class="sig-name descname"><span class="pre">setLabelCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.regression.LinearRegression" title="sparkcuml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#sparkcuml.regression.LinearRegression.setLabelCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.setRegParam">
+<span class="sig-name descname"><span class="pre">setRegParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.regression.LinearRegression" title="sparkcuml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#sparkcuml.regression.LinearRegression.setRegParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">regParam</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.shuffle">
+<span class="sig-name descname"><span class="pre">shuffle</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='shuffle',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">shuffle')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.shuffle" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.solver">
+<span class="sig-name descname"><span class="pre">solver</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='solver',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">solver')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.solver" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.tol">
+<span class="sig-name descname"><span class="pre">tol</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='tol',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">tol')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.tol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegression.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">verbose')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegression.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.regression.</span></span><span class="sig-name descname"><span class="pre">LinearRegressionModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coef</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intercept</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlModelSupervised</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.algorithm">
+<span class="sig-name descname"><span class="pre">algorithm</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='algorithm',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">algorithm')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.algorithm" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.fit_intercept">
+<span class="sig-name descname"><span class="pre">fit_intercept</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='fit_intercept',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">fit_intercept')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.fit_intercept" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.loss">
+<span class="sig-name descname"><span class="pre">loss</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='loss',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">loss')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.loss" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.max_iter">
+<span class="sig-name descname"><span class="pre">max_iter</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_iter',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">max_iter')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.max_iter" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='normalize',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">normalize')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.normalize" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.shuffle">
+<span class="sig-name descname"><span class="pre">shuffle</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='shuffle',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">shuffle')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.shuffle" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.solver">
+<span class="sig-name descname"><span class="pre">solver</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='solver',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">solver')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.solver" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.tol">
+<span class="sig-name descname"><span class="pre">tol</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='tol',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">tol')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.tol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="sparkcuml.regression.LinearRegressionModel.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='Refer</span> <span class="pre">to</span> <span class="pre">CUML</span> <span class="pre">doc</span> <span class="pre">of</span> <span class="pre">cuml.linear_model.linear_regression.LinearRegression,</span> <span class="pre">cuml.linear_model.ridge.Ridge,</span> <span class="pre">cuml.solvers.cd.CD</span> <span class="pre">for</span> <span class="pre">this</span> <span class="pre">param</span> <span class="pre">verbose')</span></em><a class="headerlink" href="#sparkcuml.regression.LinearRegressionModel.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-sparkcuml.utils">
+<span id="sparkcuml-utils-module"></span><h2>sparkcuml.utils module<a class="headerlink" href="#module-sparkcuml.utils" title="Permalink to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="sparkcuml.utils.PartitionDescriptor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">sparkcuml.utils.</span></span><span class="sig-name descname"><span class="pre">PartitionDescriptor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parts_rank_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sparkcuml.utils.PartitionDescriptor" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Partition descriptor</p>
+<p>m: total number of rows across all workers
+n: total number of cols
+parts_rank_size: a sequence of (rank, rows per partitions)
+rank: rank to be mapped</p>
+<p class="rubric">Methods</p>
+<table class="table">
+<tbody>
+<tr class="row-odd"><td><p><strong>build</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="sparkcuml.utils.PartitionDescriptor.build">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">partition_rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#sparkcuml.utils.PartitionDescriptor" title="sparkcuml.utils.PartitionDescriptor"><span class="pre">PartitionDescriptor</span></a></span></span><a class="headerlink" href="#sparkcuml.utils.PartitionDescriptor.build" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="sparkcuml.utils.cudf_to_cuml_array">
+<span class="sig-prename descclassname"><span class="pre">sparkcuml.utils.</span></span><span class="sig-name descname"><span class="pre">cudf_to_cuml_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gdf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Series</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'F'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CumlArray</span></span></span><a class="headerlink" href="#sparkcuml.utils.cudf_to_cuml_array" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="sparkcuml.utils.dtype_to_pyspark_type">
+<span class="sig-prename descclassname"><span class="pre">sparkcuml.utils.</span></span><span class="sig-name descname"><span class="pre">dtype_to_pyspark_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">dtype</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#sparkcuml.utils.dtype_to_pyspark_type" title="Permalink to this definition">#</a></dt>
+<dd><p>Convert np.dtype to the corresponding pyspark type</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="sparkcuml.utils.get_logger">
+<span class="sig-prename descclassname"><span class="pre">sparkcuml.utils.</span></span><span class="sig-name descname"><span class="pre">get_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'INFO'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Logger</span></span></span><a class="headerlink" href="#sparkcuml.utils.get_logger" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets a logger by name, or creates and configures it for the first time.</p>
+</dd></dl>
+
+</section>
+<section id="module-sparkcuml">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-sparkcuml" title="Permalink to this heading">#</a></h2>
+</section>
+</section>
+
+
+            </article>
+            
+            
+            
+            <footer class="bd-footer-article">
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+</div>
+            </footer>
+            
+          </div>
+          
+          
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#subpackages">
+   Subpackages
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#submodules">
+   Submodules
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#module-sparkcuml.clustering">
+   sparkcuml.clustering module
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       KMeans
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.init">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.init
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.max_iter">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.max_iter
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.max_samples_per_batch">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.max_samples_per_batch
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.n_clusters">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.n_clusters
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.n_init">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.n_init
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.oversampling_factor">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.oversampling_factor
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.random_state">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.random_state
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.setFeaturesCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.setFeaturesCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.setK">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.setK()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.setMaxIter">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.setMaxIter()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.setPredictionCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.setPredictionCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.tol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.tol
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeans.verbose">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeans.verbose
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       KMeansModel
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.getFeaturesCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.getFeaturesCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.getPredictionCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.getPredictionCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.init">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.init
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.max_iter">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.max_iter
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.max_samples_per_batch">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.max_samples_per_batch
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.n_clusters">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.n_clusters
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.n_init">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.n_init
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.oversampling_factor">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.oversampling_factor
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.random_state">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.random_state
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.setFeaturesCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.setFeaturesCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.setPredictionCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.setPredictionCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.tol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.tol
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.clustering.KMeansModel.verbose">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         KMeansModel.verbose
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#module-sparkcuml.core">
+   sparkcuml.core module
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.core.Alias">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       Alias
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.core.Alias.data">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         Alias.data
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.core.Alias.label">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         Alias.label
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#module-sparkcuml.feature">
+   sparkcuml.feature module
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.feature.PCA">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       PCA
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.n_components">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.n_components
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.setInputCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.setInputCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.setK">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.setK()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.setOutputCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.setOutputCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.svd_solver">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.svd_solver
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.verbose">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.verbose
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCA.whiten">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCA.whiten
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       PCAModel
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel.n_components">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCAModel.n_components
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel.setInputCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCAModel.setInputCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel.setOutputCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCAModel.setOutputCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel.svd_solver">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCAModel.svd_solver
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel.verbose">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCAModel.verbose
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.feature.PCAModel.whiten">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PCAModel.whiten
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#module-sparkcuml.regression">
+   sparkcuml.regression module
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LinearRegression
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.algorithm">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.algorithm
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.fit_intercept">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.fit_intercept
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.getFeaturesCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.getFeaturesCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.loss">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.loss
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.max_iter">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.max_iter
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.normalize">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.normalize
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.setElasticNetParam">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.setElasticNetParam()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.setFeaturesCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.setFeaturesCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.setLabelCol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.setLabelCol()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.setRegParam">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.setRegParam()
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.shuffle">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.shuffle
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.solver">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.solver
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.tol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.tol
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegression.verbose">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegression.verbose
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       LinearRegressionModel
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.algorithm">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.algorithm
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.fit_intercept">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.fit_intercept
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.loss">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.loss
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.max_iter">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.max_iter
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.normalize">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.normalize
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.shuffle">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.shuffle
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.solver">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.solver
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.tol">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.tol
+        </span>
+       </code>
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.regression.LinearRegressionModel.verbose">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         LinearRegressionModel.verbose
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#module-sparkcuml.utils">
+   sparkcuml.utils module
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.utils.PartitionDescriptor">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       PartitionDescriptor
+      </span>
+     </code>
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#sparkcuml.utils.PartitionDescriptor.build">
+       <code class="docutils literal notranslate">
+        <span class="pre">
+         PartitionDescriptor.build()
+        </span>
+       </code>
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.utils.cudf_to_cuml_array">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       cudf_to_cuml_array()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.utils.dtype_to_pyspark_type">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       dtype_to_pyspark_type()
+      </span>
+     </code>
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sparkcuml.utils.get_logger">
+     <code class="docutils literal notranslate">
+      <span class="pre">
+       get_logger()
+      </span>
+     </code>
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#module-sparkcuml">
+   Module contents
+  </a>
+ </li>
+</ul>
+
+</nav>
+</div>
+
+<div class="toc-item">
+  
+<div id="searchbox"></div>
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+<div class="toc-item">
+  
+<div class="tocsection sourcelink">
+    <a href="_sources/sparkcuml.rst.txt">
+        <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+</div>
+
+</div>
+
+            </div>
+          
+          
+        </div>
+        <footer class="bd-footer-content">
+          <div class="bd-footer-content__inner">
+            
+          </div>
+        </footer>
+        
+      </main>
+    </div>
+  </div>
+
+  
+    
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=796348d33e8b1d947c94"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=796348d33e8b1d947c94"></script>
+
+  <footer class="bd-footer"><div class="bd-footer__inner container">
+  
+  <div class="footer-item">
+    
+<p class="copyright">
+
+    &copy; Copyright 2023, NVIDIA.<br>
+
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="theme-version">
+    Built with the
+    <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">
+        PyData Sphinx Theme
+    </a>
+    0.12.0.
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+<p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
+</p>
+
+  </div>
+  
+</div>
+  </footer>
+  </body>
+</html>

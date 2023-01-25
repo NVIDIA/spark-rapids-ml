@@ -19,7 +19,7 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
-from sparkcuml.cluster import SparkCumlKMeans, SparkCumlKMeansModel
+from sparkcuml.clustering import KMeans, KMeansModel
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -38,7 +38,7 @@ def test_kmeans_parameters(gpu_number: int, tmp_path: str) -> None:
     Please refer to https://docs.rapids.ai/api/cuml/stable/api.html#cuml.dask.cluster.KMeans
     """
 
-    default_kmeans = SparkCumlKMeans()
+    default_kmeans = KMeans()
     assert default_kmeans.getOrDefault("n_clusters") == 8
     assert default_kmeans.getOrDefault("max_iter") == 300
     assert default_kmeans.getOrDefault("tol") == 1e-4
@@ -61,18 +61,18 @@ def test_kmeans_parameters(gpu_number: int, tmp_path: str) -> None:
         "max_samples_per_batch": 45678,
     }
 
-    def assertKmeansParameters(kmeans: SparkCumlKMeans) -> None:
+    def assertKmeansParameters(kmeans: KMeans) -> None:
         for key in custom_params:
             assert kmeans.getOrDefault(key) == custom_params[key]
 
-    custom_kmeans = SparkCumlKMeans(**custom_params)
+    custom_kmeans = KMeans(**custom_params)
     assertKmeansParameters(kmeans=custom_kmeans)
 
     # Estimator persistence
     path = tmp_path + "/kmeans_tests"
     estimator_path = f"{path}/kmeans"
     custom_kmeans.write().overwrite().save(estimator_path)
-    custom_kmeans_loaded = SparkCumlKMeans.load(estimator_path)
+    custom_kmeans_loaded = KMeans.load(estimator_path)
 
     assertKmeansParameters(kmeans=custom_kmeans_loaded)
 
@@ -99,11 +99,11 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
             .map(lambda row: (row,))
             .toDF(["features"])
         )
-        sparkcuml_kmeans = SparkCumlKMeans(
-            num_workers=gpu_number, n_clusters=2
-        ).setFeaturesCol("features")
+        sparkcuml_kmeans = KMeans(num_workers=gpu_number, n_clusters=2).setFeaturesCol(
+            "features"
+        )
 
-        def assert_kmeans_model(model: SparkCumlKMeansModel) -> None:
+        def assert_kmeans_model(model: KMeansModel) -> None:
             assert len(model.cluster_centers_) == 2
             sorted_centers = sorted(model.cluster_centers_, key=lambda p: p)
             assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
@@ -118,7 +118,7 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
         path = tmp_path + "/kmeans_tests"
         model_path = f"{path}/kmeans_model"
         kmeans_model.write().overwrite().save(model_path)
-        kmeans_model_loaded = SparkCumlKMeansModel.load(model_path)
+        kmeans_model_loaded = KMeansModel.load(model_path)
 
         assert_kmeans_model(model=kmeans_model_loaded)
 
@@ -162,9 +162,11 @@ def test_compare_cuml(
         n_rows, n_cols, n_clusters, cluster_std=cluster_std, random_state=0
     )  # make_blobs creates a random dataset of isotropic gaussian blobs.
 
-    from cuml import KMeans
+    from cuml import KMeans as cuKMeans
 
-    cuml_kmeans = KMeans(n_clusters=n_clusters, output_type="numpy", tol=0.0, verbose=7)
+    cuml_kmeans = cuKMeans(
+        n_clusters=n_clusters, output_type="numpy", tol=0.0, verbose=7
+    )
 
     import cudf
 
@@ -177,7 +179,7 @@ def test_compare_cuml(
             spark, feature_type, data_type, X, None
         )
 
-        sparkcuml_kmeans = SparkCumlKMeans(
+        sparkcuml_kmeans = KMeans(
             num_workers=gpu_number, n_clusters=n_clusters, verbose=7
         ).setFeaturesCol(features_col)
         sparkcuml_model = sparkcuml_kmeans.fit(df)
@@ -226,7 +228,5 @@ def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
         feature_cols = ["c1", "c2", "c3", "c4", "c5"]
         schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
         df = spark.createDataFrame(data, schema=schema)
-        kmeans = SparkCumlKMeans(
-            num_workers=gpu_number, inputCols=feature_cols, n_clusters=2
-        )
+        kmeans = KMeans(num_workers=gpu_number, inputCols=feature_cols, n_clusters=2)
         kmeans.fit(df)

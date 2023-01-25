@@ -61,14 +61,12 @@ class _LinearRegressionParams(HasRegParam, HasElasticNetParam):
         )
 
 
-class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParams):
+class LinearRegression(_CumlEstimatorSupervised, _LinearRegressionParams):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
 
-    def setFeaturesCol(
-        self, value: Union[str, List[str]]
-    ) -> "SparkCumlLinearRegression":
+    def setFeaturesCol(self, value: Union[str, List[str]]) -> "LinearRegression":
         """
         Sets the value of `inputCol` or `inputCols`.
         """
@@ -78,13 +76,13 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParam
             self.set_params(inputCols=value)
         return self
 
-    def setRegParam(self, value: float) -> "SparkCumlLinearRegression":
+    def setRegParam(self, value: float) -> "LinearRegression":
         """
         Sets the value of :py:attr:`regParam`.
         """
         return self._set(regParam=value)  # type: ignore
 
-    def setElasticNetParam(self, value: float) -> "SparkCumlLinearRegression":
+    def setElasticNetParam(self, value: float) -> "LinearRegression":
         """
         Sets the value of :py:attr:`elasticNetParam`.
         """
@@ -98,7 +96,7 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParam
         else:
             raise RuntimeError("features col is not set")
 
-    def setLabelCol(self, value: str) -> "SparkCumlLinearRegression":
+    def setLabelCol(self, value: str) -> "LinearRegression":
         self._set(labelCol=value)  # type: ignore
         return self
 
@@ -192,8 +190,8 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParam
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "SparkCumlLinearRegressionModel":
-        return SparkCumlLinearRegressionModel.from_row(result)
+    def _create_pyspark_model(self, result: Row) -> "LinearRegressionModel":
+        return LinearRegressionModel.from_row(result)
 
     @classmethod
     def _cuml_cls(cls) -> List[type]:
@@ -209,7 +207,7 @@ class SparkCumlLinearRegression(_CumlEstimatorSupervised, _LinearRegressionParam
         return _lr_unsupported_params
 
 
-class SparkCumlLinearRegressionModel(_CumlModelSupervised):
+class LinearRegressionModel(_CumlModelSupervised):
     def __init__(
         self,
         coef: List[float],
@@ -220,7 +218,7 @@ class SparkCumlLinearRegressionModel(_CumlModelSupervised):
         super().__init__(dtype=dtype, n_cols=n_cols, coef=coef, intercept=intercept)
         self.coef = coef
         self.intercept = intercept
-        cuml_params = SparkCumlLinearRegression._get_cuml_params_default()
+        cuml_params = LinearRegression._get_cuml_params_default()
         self.set_params(**cuml_params)
 
     def _get_cuml_transform_func(
@@ -252,6 +250,4 @@ class SparkCumlLinearRegressionModel(_CumlModelSupervised):
         return _construct_lr, _predict
 
 
-_set_pyspark_cuml_cls_param_attrs(
-    SparkCumlLinearRegression, SparkCumlLinearRegressionModel
-)
+_set_pyspark_cuml_cls_param_attrs(LinearRegression, LinearRegressionModel)

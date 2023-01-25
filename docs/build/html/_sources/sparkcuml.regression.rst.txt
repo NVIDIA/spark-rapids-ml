@@ -1,0 +1,21 @@
+sparkcuml.regression package
+============================
+
+Submodules
+----------
+
+sparkcuml.regression.linear\_regression module
+----------------------------------------------
+
+.. automodule:: sparkcuml.regression.linear_regression
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: sparkcuml.regression
+   :members:
+   :undoc-members:
+   :show-inheritance:

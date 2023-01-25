@@ -26,7 +26,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import SparkSession
 
 from benchmark.utils import WithSparkSession
-from sparkcuml.decomposition import SparkCumlPCA
+from sparkcuml.feature import PCA as SparkCumlPCA
 
 
 def test_pca_bench(
@@ -143,7 +143,7 @@ if __name__ == "__main__":
             )
 
             report_dict = {
-                "run_id": run_id, 
+                "run_id": run_id,
                 "fit": fit_time,
                 "transform": transform_time,
                 "total": total_time,

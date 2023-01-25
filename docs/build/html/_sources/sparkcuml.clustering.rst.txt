@@ -1,22 +1,21 @@
-sparkcuml.decomposition package
-===============================
+sparkcuml.clustering package
+============================
 
 Submodules
 ----------
 
-sparkcuml.decomposition.pca module
+sparkcuml.clustering.kmeans module
 ----------------------------------
 
-.. automodule:: sparkcuml.decomposition.pca
+.. automodule:: sparkcuml.clustering.kmeans
    :members:
    :undoc-members:
    :show-inheritance:
 
-
 Module contents
 ---------------
 
-.. automodule:: sparkcuml.decomposition
+.. automodule:: sparkcuml.clustering
    :members:
    :undoc-members:
    :show-inheritance:

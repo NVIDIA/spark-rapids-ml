@@ -1,22 +1,21 @@
-sparkcuml.cluster package
+sparkcuml.feature package
 =========================
 
 Submodules
 ----------
 
-sparkcuml.cluster.kmeans module
--------------------------------
+sparkcuml.feature.pca module
+----------------------------
 
-.. automodule:: sparkcuml.cluster.kmeans
+.. automodule:: sparkcuml.feature.pca
    :members:
    :undoc-members:
    :show-inheritance:
 
-
 Module contents
 ---------------
 
-.. automodule:: sparkcuml.cluster
+.. automodule:: sparkcuml.feature
    :members:
    :undoc-members:
    :show-inheritance:
