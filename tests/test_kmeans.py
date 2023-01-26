@@ -19,7 +19,7 @@ from typing import List, Tuple
 import numpy as np
 import pytest
 
-from sparkcuml.clustering import KMeans, KMeansModel
+from spark_rapids_ml.clustering import KMeans, KMeansModel
 
 from .sparksession import CleanSparkSession
 from .utils import (

@@ -25,7 +25,7 @@ from pyspark.sql.functions import array
 from sklearn.datasets import make_regression
 from sklearn.model_selection import train_test_split
 
-from sparkcuml.utils import dtype_to_pyspark_type
+from spark_rapids_ml.utils import dtype_to_pyspark_type
 
 FeatureTypesAlias = namedtuple("FeatureTypesAlias", ("array", "multi_cols"))
 feature_types_alias = FeatureTypesAlias("array", "multi_cols")

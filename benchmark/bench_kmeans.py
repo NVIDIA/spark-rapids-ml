@@ -25,7 +25,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
 
 from benchmark.utils import WithSparkSession
-from sparkcuml.clustering import KMeans as SparkCumlKMeans
+from spark_rapids_ml.clustering import KMeans as SparkCumlKMeans
 
 from typing import Dict, Tuple, Any
 

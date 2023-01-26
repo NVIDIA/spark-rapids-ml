@@ -30,7 +30,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from sparkcuml.core import (
+from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
@@ -194,7 +194,7 @@ class KMeansModel(_CumlModel):
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
-            from sparkcuml.utils import cudf_to_cuml_array
+            from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_cols = n_cols
             kmeans.dtype = np.dtype(dtype)

@@ -1,7 +1,7 @@
-sparkcuml
-=========
+spark_rapids_ml
+===============
 
 .. toctree::
    :maxdepth: 4
 
-   sparkcuml
+   spark_rapids_ml

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from sparkcuml.utils import _get_default_params_from_func
+from spark_rapids_ml.utils import _get_default_params_from_func
 
 
 def test_get_default_params_from_func() -> None:

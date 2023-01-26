@@ -26,7 +26,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import SparkSession
 
 from benchmark.utils import WithSparkSession
-from sparkcuml.feature import PCA as SparkCumlPCA
+from spark_rapids_ml.feature import PCA as SparkCumlPCA
 
 
 def test_pca_bench(

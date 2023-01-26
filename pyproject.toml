@@ -1,5 +1,5 @@
 [project]
-name = "sparkcuml"
+name = "spark-rapids-ml"
 version = "0.0.1"
 authors = [
   { name="Jinfeng Li", email="jinfeng@nvidia.com" },
@@ -7,7 +7,7 @@ authors = [
   { name="Erik Ordentlich", email="eordentlich@nvidia.com" },
   { name="Lee Yang", email="leey@nvidia.com" }
 ]
-description = "CuML integration with Apache Spark"
+description = "Apache Spark integration with RAPIDS and CuML"
 readme = "README.md"
 requires-python = ">=3.8,<3.10"
 classifiers = [

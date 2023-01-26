@@ -18,7 +18,7 @@ from typing import Any, Dict, Tuple
 import numpy as np
 import pytest
 
-from sparkcuml.regression import LinearRegression, LinearRegressionModel
+from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 
 from .sparksession import CleanSparkSession
 from .utils import (

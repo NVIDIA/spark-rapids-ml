@@ -30,7 +30,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from sparkcuml.core import (
+from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
@@ -38,7 +38,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor, dtype_to_pyspark_type
+from spark_rapids_ml.utils import PartitionDescriptor, dtype_to_pyspark_type
 
 
 class PCA(_CumlEstimator):
@@ -277,7 +277,7 @@ class PCAModel(_CumlModel):
             pca = CumlPCAMG(output_type="cudf", **cuml_alg_params)
             pca._n_components = pca.n_components
 
-            from sparkcuml.utils import cudf_to_cuml_array
+            from spark_rapids_ml.utils import cudf_to_cuml_array
 
             pca.n_cols = self.n_cols
             pca.dtype = np.dtype(self.dtype)

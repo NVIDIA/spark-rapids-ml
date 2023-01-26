@@ -23,7 +23,7 @@ from pyspark import Row, TaskContext
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
-from sparkcuml.core import (
+from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
@@ -31,7 +31,7 @@ from sparkcuml.core import (
     _CumlModel,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import PartitionDescriptor
+from spark_rapids_ml.utils import PartitionDescriptor
 
 
 class CumlDummy(object):

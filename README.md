@@ -55,7 +55,7 @@ python -m build
 
 ### Build docs
 ```bash
-# sphinx-apidoc -f -o docs/source src/sparkcuml
+# sphinx-apidoc -f -o docs/source src/spark_rapids_ml
 cd docs
 make html
 ```

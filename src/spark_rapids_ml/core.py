@@ -58,8 +58,8 @@ from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
 from pyspark.sql.types import DoubleType, FloatType, IntegralType, Row, StructType
 
-from sparkcuml.common.cuml_context import CumlContext
-from sparkcuml.utils import (
+from spark_rapids_ml.common.cuml_context import CumlContext
+from spark_rapids_ml.utils import (
     _get_class_name,
     _get_default_params_from_func,
     _get_gpu_id,

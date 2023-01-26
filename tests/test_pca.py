@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 from sklearn.datasets import make_blobs
 
-from sparkcuml.feature import PCA, PCAModel
+from spark_rapids_ml.feature import PCA, PCAModel
 
 from .sparksession import CleanSparkSession
 from .utils import (

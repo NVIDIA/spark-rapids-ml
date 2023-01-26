@@ -30,7 +30,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from sparkcuml.core import (
+from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
@@ -38,7 +38,7 @@ from sparkcuml.core import (
     _CumlModelSupervised,
     _set_pyspark_cuml_cls_param_attrs,
 )
-from sparkcuml.utils import (
+from spark_rapids_ml.utils import (
     PartitionDescriptor,
     _get_default_params_from_func,
     cudf_to_cuml_array,
