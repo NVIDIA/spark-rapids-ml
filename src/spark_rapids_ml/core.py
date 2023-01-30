@@ -36,6 +36,8 @@ import numpy as np
 import pandas as pd
 from pyspark import TaskContext
 from pyspark.ml import Estimator, Model
+from pyspark.ml.functions import vector_to_array
+from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import (
     HasInputCol,
@@ -56,7 +58,14 @@ from pyspark.ml.util import (
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
-from pyspark.sql.types import DoubleType, FloatType, IntegralType, Row, StructType
+from pyspark.sql.types import (
+    ArrayType,
+    DoubleType,
+    FloatType,
+    IntegralType,
+    Row,
+    StructType,
+)
 
 from spark_rapids_ml.common.cuml_context import CumlContext
 from spark_rapids_ml.utils import (
@@ -344,21 +353,49 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
     def _pre_process_data(
         self, dataset: DataFrame
-    ) -> Tuple[List[Column], Optional[List[str]], int]:
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
         select_cols = []
         multi_col_names = None
+
+        # label column will be cast to feature type if needed.
+        feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
         if self.isDefined(self.inputCol):
-            select_cols.append(col(self.getOrDefault(self.inputCol)).alias(alias.data))
+            # Single Column
+            input_name = self.getInputCol()
+            input_datatype = dataset.schema[input_name].dataType
+
+            if isinstance(input_datatype, ArrayType):
+                # Array type
+                select_cols.append(col(input_name).alias(alias.data))
+                if isinstance(input_datatype.elementType, DoubleType):
+                    feature_type = DoubleType
+            elif isinstance(input_datatype, VectorUDT):
+                # Vector type
+                select_cols.append(
+                    vector_to_array(col(input_name)).alias(alias.data)  # type: ignore
+                )
+                feature_type = DoubleType
+            else:
+                raise ValueError("Unsupported input type.")
+
             dimension = len(dataset.first()[self.getInputCol()])  # type: ignore
+
         elif self.isDefined(self.inputCols):
+            # Multi columns
             multi_col_names = self.getInputCols()
             dimension = len(multi_col_names)
             for c in multi_col_names:
-                if isinstance(dataset.schema[c].dataType, IntegralType):
+                col_type = dataset.schema[c].dataType
+                if isinstance(col_type, IntegralType):
                     # Convert integral type to float.
-                    select_cols.append(col(c).cast(FloatType()).alias(c))
-                elif isinstance(dataset.schema[c].dataType, (FloatType, DoubleType)):
+                    select_cols.append(col(c).cast(feature_type()).alias(c))
+                elif isinstance(col_type, FloatType):
                     select_cols.append(col(c))
+                elif isinstance(col_type, DoubleType):
+                    select_cols.append(col(c))
+                    feature_type = DoubleType
                 else:
                     raise ValueError(
                         "All columns must be integral types or float/double types."
@@ -367,7 +404,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
         else:
             raise ValueError("Please set inputCol or inputCols")
 
-        return select_cols, multi_col_names, dimension
+        return select_cols, multi_col_names, dimension, feature_type
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
         """
@@ -386,7 +423,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         cls = self.__class__
 
-        select_cols, multi_col_names, dimension = self._pre_process_data(dataset)
+        select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
 
         dataset = dataset.select(*select_cols)
 
@@ -474,14 +511,25 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
 
     def _pre_process_data(
         self, dataset: DataFrame
-    ) -> Tuple[List[Column], Optional[List[str]], int]:
-        select_cols, multi_col_names, dimension = super()._pre_process_data(dataset)
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super()._pre_process_data(dataset)
 
         label_name = self.getLabelCol()
-        if isinstance(dataset.schema[label_name].dataType, IntegralType):
-            label_col = col(label_name).cast(FloatType()).alias(alias.label)
-        elif isinstance(dataset.schema[label_name].dataType, (FloatType, DoubleType)):
-            label_col = col(label_name).alias(alias.label)
+        label_datatype = dataset.schema[label_name].dataType
+        if isinstance(label_datatype, (IntegralType, FloatType, DoubleType)):
+            if isinstance(label_datatype, IntegralType) or not isinstance(
+                label_datatype, feature_type
+            ):
+                label_col = col(label_name).cast(feature_type()).alias(alias.label)
+            else:
+                label_col = col(label_name).alias(alias.label)
         else:
             raise ValueError(
                 "Label column must be integral types or float/double types."
@@ -489,7 +537,7 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
 
         select_cols.append(label_col)
 
-        return select_cols, multi_col_names, dimension
+        return select_cols, multi_col_names, dimension, feature_type
 
 
 class _CumlModel(
@@ -567,6 +615,36 @@ class _CumlModel(
         """
         raise NotImplementedError()
 
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[DataFrame, List[str], bool]:
+        """Pre-handle the dataset before transform."""
+        select_cols = []
+        input_is_multi_cols = True
+        if self.isDefined(self.inputCol):
+            # Single Column
+            col_name = self.getInputCol()
+            if isinstance(dataset.schema[col_name].dataType, VectorUDT):
+                # Vector type
+                # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
+                tmp_name = f"{alias.data}_c3BhcmtjdW1sCg=="
+                dataset = (
+                    dataset.withColumnRenamed(col_name, tmp_name)
+                    .withColumn(col_name, vector_to_array(col(tmp_name)))
+                    .drop(tmp_name)
+                )
+            elif not isinstance(dataset.schema[col_name].dataType, ArrayType):
+                # Array type
+                raise ValueError("Unsupported input type.")
+            select_cols.append(col_name)
+            input_is_multi_cols = False
+        elif self.isDefined(self.inputCols):
+            select_cols.extend(self.getInputCols())
+        else:
+            raise ValueError("Please set inputCol or inputCols")
+
+        return dataset, select_cols, input_is_multi_cols
+
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """
         Transforms the input dataset.
@@ -581,16 +659,7 @@ class _CumlModel(
         :py:class:`pyspark.sql.DataFrame`
             transformed dataset
         """
-
-        select_cols = []
-        input_is_multi_cols = True
-        if self.isDefined(self.inputCol):
-            select_cols.append(self.getInputCol())
-            input_is_multi_cols = False
-        elif self.isDefined(self.inputCols):
-            select_cols.extend(self.getInputCols())
-        else:
-            raise ValueError("Please set inputCol or inputCols")
+        dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -635,14 +704,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
-
-        features_col = []
-        single = True
-        if self.isDefined(self.inputCol):
-            features_col.append(self.getInputCol())
-        elif self.isDefined(self.inputCols):
-            single = False
-            features_col.extend(self.getInputCols())
+        dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
 
         pred_name = self.getOrDefault(self.predictionCol)
 
@@ -661,14 +723,14 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             self.set_gpu_device(context, is_local, True)
             cuml_object = construct_cuml_object_func()
             for pdf in iterator:
-                if single:
-                    data = np.array(list(pdf[features_col[0]]))
+                if not input_is_multi_cols:
+                    data = np.array(list(pdf[select_cols[0]]))
                 else:
-                    data = pdf[features_col]
+                    data = pdf[select_cols]
 
                 yield cuml_transform_func(cuml_object, data)
 
-        return dataset.withColumn(pred_name, predict_udf(struct(*features_col)))
+        return dataset.withColumn(pred_name, predict_udf(struct(*select_cols)))
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None

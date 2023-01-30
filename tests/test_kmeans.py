@@ -25,8 +25,8 @@ from .sparksession import CleanSparkSession
 from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
-    feature_types_alias,
     idfn,
+    pyspark_supported_feature_types,
 )
 
 
@@ -133,9 +133,7 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
         assert labels[2] == labels[3]
 
 
-@pytest.mark.parametrize(
-    "feature_type", [feature_types_alias.array, feature_types_alias.multi_cols]
-)
+@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])

@@ -25,6 +25,7 @@ from .utils import (
     array_equal,
     create_pyspark_dataframe,
     cuml_supported_data_types,
+    feature_types,
     idfn,
     make_regression_dataset,
     pyspark_supported_feature_types,
@@ -127,7 +128,13 @@ def test_linear_regression_model_basic(
         ) -> None:
             assert lhs.coef == rhs.coef
             assert lhs.intercept == lhs.intercept
-            assert lhs.dtype == np.dtype(data_type).name
+
+            # Vector type will be cast to array(double)
+            if feature_type == feature_types.vector:
+                assert lhs.dtype == np.dtype(np.float64).name
+            else:
+                assert lhs.dtype == np.dtype(data_type).name
+
             assert lhs.dtype == rhs.dtype
             assert lhs.n_cols == rhs.n_cols
             assert lhs.n_cols == data_shape[1]

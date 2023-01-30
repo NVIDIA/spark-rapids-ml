@@ -20,6 +20,7 @@ from typing import Any, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pyspark
+from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
 from sklearn.datasets import make_regression
@@ -27,10 +28,10 @@ from sklearn.model_selection import train_test_split
 
 from spark_rapids_ml.utils import dtype_to_pyspark_type
 
-FeatureTypesAlias = namedtuple("FeatureTypesAlias", ("array", "multi_cols"))
-feature_types_alias = FeatureTypesAlias("array", "multi_cols")
+FeatureTypes = namedtuple("FeatureTypes", ("vector", "array", "multi_cols"))
+feature_types = FeatureTypes("vector", "array", "multi_cols")
 
-pyspark_supported_feature_types = feature_types_alias._fields
+pyspark_supported_feature_types = feature_types._fields
 cuml_supported_data_types = [np.float32, np.float64]
 
 
@@ -97,8 +98,17 @@ def create_pyspark_dataframe(
     else:
         df = spark.createDataFrame(data.tolist(), ",".join(schema))
 
-    if feature_type == feature_types_alias.array:
+    if feature_type == feature_types.array:
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+        feature_cols = "features"
+    elif feature_type == feature_types.vector:
+        df = (
+            VectorAssembler()
+            .setInputCols(feature_cols)  # type: ignore
+            .setOutputCol("features")
+            .transform(df)
+            .drop(*feature_cols)
+        )
         feature_cols = "features"
 
     return df, feature_cols, label_col

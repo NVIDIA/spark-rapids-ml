@@ -27,8 +27,8 @@ from .utils import (
     array_equal,
     create_pyspark_dataframe,
     cuml_supported_data_types,
-    feature_types_alias,
     idfn,
+    pyspark_supported_feature_types,
 )
 
 
@@ -183,9 +183,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
         assert_pca_model(pca_model, pca_model_loaded)
 
 
-@pytest.mark.parametrize(
-    "feature_type", [feature_types_alias.array, feature_types_alias.multi_cols]
-)
+@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
