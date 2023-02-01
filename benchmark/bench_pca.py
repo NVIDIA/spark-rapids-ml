@@ -15,6 +15,7 @@
 #
 
 import argparse
+import datetime
 import time
 from typing import Tuple
 
@@ -26,7 +27,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import SparkSession
 
 from benchmark.utils import WithSparkSession
-from spark_rapids_ml.feature import PCA as SparkCumlPCA
+
 
 
 def test_pca_bench(
@@ -46,11 +47,15 @@ def test_pca_bench(
     df = spark.read.parquet(parquet_path)
     first_col = df.dtypes[0][0]
     first_col_type = df.dtypes[0][1]
-    is_single_col = True if 'array' in first_col_type else False
-    if is_single_col == False:
+    is_array_col = True if 'array' in first_col_type else False
+    is_vector_col = True if 'vector' in first_col_type else False
+    is_single_col = is_array_col or is_vector_col
+
+    if not is_single_col:
         input_cols = [c for c in df.schema.names]
 
     if num_gpus > 0:
+        from spark_rapids_ml.feature import PCA as SparkCumlPCA
         assert num_cpus <= 0
         start_time = time.time()
         if not no_cache:
@@ -85,13 +90,14 @@ def test_pca_bench(
     if num_cpus > 0:
         assert num_gpus <= 0
         start_time = time.time()
-        if is_single_col:
+        if is_array_col:
             vector_df = df.select(array_to_vector(df[first_col]).alias(first_col))
-        else:
+        elif not is_vector_col:
             vector_assembler = VectorAssembler(outputCol="features").setInputCols(input_cols)
-            vector_df = vector_assembler.transform(df)
+            vector_df = vector_assembler.transform(df).drop(*input_cols)
             first_col = "features"
-
+        else:
+            vector_df = df
 
         if not no_cache:
             vector_df = vector_df.cache()
@@ -127,11 +133,14 @@ if __name__ == "__main__":
     parser.add_argument("--report_path", type=str, default="")
     parser.add_argument("--parquet_path", type=str, default="")
     parser.add_argument("--spark_confs", action="append", default=[])
+    parser.add_argument("--no_shutdown", action='store_true', help="do not stop spark session when finished")
     args = parser.parse_args()
 
+    print(f"invoked time: {datetime.datetime.now()}")
+    
     report_pd = pd.DataFrame()
 
-    with WithSparkSession(args.spark_confs) as spark:
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         for run_id in range(args.num_runs):
             (fit_time, transform_time, total_time) = test_pca_bench(
                 spark,

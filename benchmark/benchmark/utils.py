@@ -20,18 +20,21 @@ from typing import List, Any, Callable
 
 
 class WithSparkSession(object):
-    def __init__(self, confs: List[str]) -> None:
+    def __init__(self, confs: List[str], shutdown: bool = True) -> None:
         builder = SparkSession.builder
         for conf in confs:
             key, value = conf.split("=")
             builder = builder.config(key, value)
         self.spark = builder.getOrCreate()
+        self.shutdown = shutdown
 
     def __enter__(self) -> SparkSession:
         return self.spark
 
     def __exit__(self, *args: Any) -> None:
-        self.spark.stop()
+        if self.shutdown:
+            print("stopping spark session")
+            self.spark.stop()
 
 
 def with_benchmark(phrase: str, action: Callable) -> Any:

@@ -22,12 +22,13 @@ import pandas as pd
 import pyspark.sql
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
-from sklearn.datasets import make_regression
+from sklearn.datasets import make_regression, make_low_rank_matrix
 
 from benchmark.utils import WithSparkSession
 from pyspark.mllib.random import RandomRDDs
 
-from cuml.datasets import make_blobs
+from sklearn.datasets import make_blobs
+
 
 
 def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
@@ -72,14 +73,14 @@ class DefaultDataGen(DataGenBase):
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[pyspark.sql.DataFrame, List[str]]:
         rdd = (RandomRDDs
-               .uniformVectorRDD(spark, self.num_rows, self.num_cols)
+               .uniformVectorRDD(spark, self.num_rows, self.num_cols, seed=self.random_state)
                .map(lambda nparray: nparray.tolist()))
 
         return spark.createDataFrame(rdd, schema=",".join(self.schema)), self.feature_cols
 
 
 class BlobsDataGen(DataGenBase):
-    """Generate random dataset using cuml.datasets.make_blobs,
+    """Generate random dataset using sklearn.datasets.make_blobs, 
        which creates blobs for bechmarking unsupervised clustering algorithms (e.g. KMeans)"""
 
     def __init__(self, n_clusters: int = 20, **kargs: Dict[str, Any]) -> None:
@@ -89,15 +90,42 @@ class BlobsDataGen(DataGenBase):
     def gen_dataframe(self, spark: SparkSession) -> Tuple[pyspark.sql.DataFrame, List[str]]:
         "More information about the implementation can be found in RegressionDataGen."
 
+        dtype = self.dtype
+
         def make_blobs_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            data, _ = make_blobs(self.num_rows, self.num_cols, self.n_clusters, random_state=self.random_state,
-                                 dtype=self.dtype)
-            data = data.tolist()
+            data, _ = make_blobs(self.num_rows, self.num_cols, centers=self.n_clusters, random_state=self.random_state)
+            data = data.astype(dtype)
             yield pd.DataFrame(data=data)
 
         return (spark
                 .range(0, self.num_rows, 1, 1)
                 .mapInPandas(make_blobs_udf, schema=",".join(self.schema))
+                ), self.feature_cols
+
+class LowRankMatrixDataGen(DataGenBase):
+    """Generate random dataset using sklearn.datasets.make_low_rank_matrix, 
+       which creates large low rank matrices for benchmarking dimensionality reduction algos like pca"""
+
+    def __init__(self, effective_rank: int = 10, **kargs: Dict[str, Any]) -> None:
+        super().__init__(**kargs)
+        self.effective_rank = effective_rank
+
+    def gen_dataframe(self, spark: SparkSession) -> Tuple[pyspark.sql.DataFrame, List[str]]:
+        "More information about the implementation can be found in RegressionDataGen."
+
+        dtype = self.dtype
+
+        def make_matrix_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
+            data = make_low_rank_matrix(self.num_rows,
+                                        self.num_cols,
+                                        effective_rank=self.effective_rank,
+                                        random_state=self.random_state)
+            data = data.astype(dtype)
+            yield pd.DataFrame(data=data)
+
+        return (spark
+                .range(0, self.num_rows, 1, 1)
+                .mapInPandas(make_matrix_udf, schema=",".join(self.schema))
                 ), self.feature_cols
 
 
@@ -116,6 +144,7 @@ class RegressionDataGen(DataGenBase):
             for pdf in iter:
                 total_rows += pdf.shape[0]
             # here we iterator all batches of a single partition to get total rows.
+            # use 10% of num_cols for number of informative features, following ratio for defaults
             X, y = make_regression(n_samples=total_rows, n_features=num_cols, noise=10, random_state=random_state)
             data = np.concatenate((X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1)
             del X
@@ -153,6 +182,14 @@ class DataGenProxy(DataGen):
                 num_cols=args.num_cols,
                 dtype=args.dtype,
                 random_state=args.random_state)
+        elif args.category == "low_rank_matrix":
+            print("LowRankMatrixDataGen!")
+            self.data_gen = LowRankMatrixDataGen(
+                effective_rank=args.effective_rank,
+                num_rows=args.num_rows,
+                num_cols=args.num_cols,
+                dtype=args.dtype,
+                random_state=args.random_state)
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[pyspark.sql.DataFrame, List[str]]:
         return self.data_gen.gen_dataframe(spark)
@@ -164,14 +201,17 @@ def parse_arguments():
     parser.add_argument("--num_cols", type=int, default=30)
     parser.add_argument("--dtype", type=str, choices=["float64", "float32"], default="float32")
     parser.add_argument("--random_state", type=int, default=0)
-    parser.add_argument("--feature_type", type=str, choices=["array", "multi_cols"], default="multi_cols")
+    parser.add_argument("--feature_type", type=str, choices=["array", "vector", "multi_cols"], default="multi_cols")
     parser.add_argument("--n_clusters", type=int, default=20,
-                        help="reauired for using BlobsDataGen and dummy otherwise")
+                        help="required for using BlobsDataGen and dummy otherwise")
+    parser.add_argument("--effective_rank", type=int, default=10,
+                        help="required for using LowRankMatrixGen and dummy otherwise")
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--output_num_files", type=int)
-    parser.add_argument("--overwrite", type=bool, default=False)
-    parser.add_argument("--category", type=str, choices=["regression", "default", "blobs"], default="default")
+    parser.add_argument("--overwrite", action='store_true')
+    parser.add_argument("--category", type=str, choices=["regression", "default", "blobs", "low_rank_matrix"], default="default")
     parser.add_argument("--spark_confs", action="append", default=[])
+    parser.add_argument("--no_shutdown", action='store_true', help="do not stop spark session when finished")
     return parser.parse_args()
 
 
@@ -187,11 +227,20 @@ if __name__ == "__main__":
     """
     args = parse_arguments()
 
-    with WithSparkSession(args.spark_confs) as spark:
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, feature_cols = DataGenProxy(args).gen_dataframe(spark)
 
         if args.feature_type == "array":
             df = df.withColumn("feature_array", array(*feature_cols)).drop(*feature_cols)
+        elif args.feature_type == "vector":
+            from pyspark.ml.feature import VectorAssembler
+            df = (
+                    VectorAssembler()
+                    .setInputCols(feature_cols)
+                    .setOutputCol("feature_array")
+                    .transform(df)
+                    .drop(*feature_cols)
+                 )
 
         if args.output_num_files is not None:
             df = df.repartition(args.output_num_files)

@@ -1,7 +1,8 @@
 #!/bin/bash
-SPARKCUML_ZIP=
+# set portion of path below after /dbfs/ to dbfs zip file location
+SPARK_RAPIDS_ML_ZIP=/dbfs/path/to/zip/file
 RAPIDS_VERSION=22.12.0
-SPARK_RAPIDS_VERSION=22.10.0
+SPARK_RAPIDS_VERSION=22.12.0
 
 curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar 
 
@@ -33,5 +34,5 @@ ldconfig
 /databricks/python/bin/pip install cudf-cu11==${RAPIDS_VERSION} cuml-cu11==${RAPIDS_VERSION} --extra-index-url=https://pypi.ngc.nvidia.com
 
 # install spark-cuml
-unzip ${SPARKCUML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
+unzip ${SPARK_RAPIDS_ML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 
