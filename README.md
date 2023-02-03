@@ -54,10 +54,11 @@ and cmake dependecies
       ```bash
       conda install -c rapidsai -c conda-forge cudf=22.04 python=3.8 -y
       ```
-5. [RAFT(23.02)](https://github.com/rapidsai/raft):
-    - raft provides only header files, so no build instructions for it.
+5. [RAFT(22.12)](https://github.com/rapidsai/raft):
+    - raft provides only header files, so no build instructions for it. Note we fix the version to
+      22.12 to avoid potential API compatibility issues in the future.
       ```bash
-      $ git clone -b branch-23.02 https://github.com/rapidsai/raft.git
+      $ git clone -b branch-22.12 https://github.com/rapidsai/raft.git
       ```
 6. export RAFT_PATH:
     ```bash
