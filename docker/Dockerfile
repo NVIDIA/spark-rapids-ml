@@ -90,6 +90,8 @@ RUN wget --quiet \
 ARG CONDA_CUDF_VER=22.04
 RUN conda install -c rapidsai -c conda-forge cudf=$CONDA_CUDF_VER python=3.8 -y
 
+# Note: the raft verion is fixed to 22.12, do not modify it when updating the spark-rapids-ml version.
+#       newer versions may fail the build process due to API incompatibility.
 ARG RAFT_VER=22.12
 RUN git clone -b branch-$RAFT_VER https://github.com/rapidsai/raft.git
 ENV RAFT_PATH=/raft
