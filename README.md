@@ -1,5 +1,5 @@
-# SparkCuML
-SparkCuML is a project to make the GPU-accelerated [RAPIDS cuML](https://docs.rapids.ai/api/cuml/stable/) python package run distibuted on [Apache Spark](https://spark.apache.org/).
+# Spark Rapids ML
+Spark Rapids ML is a python package enabling GPU accelerated distributed machine learning on [Apache Spark](https://spark.apache.org/).  It provides a pySpark ML compatible API and is powered by the GPU-accelerated [RAPIDS cuML](https://docs.rapids.ai/api/cuml/stable/) library.
 
 ## Installation
 We strongly suggest installing the python dependencies in conda environment
@@ -16,24 +16,7 @@ conda activate rapids-22.10
 pip install -r requirements.txt
 ```
 ## Usage
-### Run PCA (multi-node multi-gpu)
-```bash
-SPARK_MASTER=spark://hostname:port
-PYTHON_ENV_PATH=~/miniconda3/envs/cuspark/bin/python
-
-${SPARK_HOME}/bin/spark-submit --master ${SPARK_MASTER} \
-  --conf spark.task.resource.gpu.amount=1 \
-  --conf spark.executor.resource.gpu.amount=2 \
-  --conf spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh \
-  --conf spark.files=${SPARK_HOME}/examples/src/main/scripts/getGpusResources.sh \
-  --conf spark.pyspark.python=${PYTHON_ENV_PATH} \
-  cuspark_pca.py
-```
-
-### Run K-Means (single-gpu)
-```bash
-python cuspark_kmeans.py
-```
+TBD
 
 ## Development
 ### Run tests
