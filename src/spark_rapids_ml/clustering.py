@@ -39,6 +39,7 @@ from spark_rapids_ml.core import (
     CumlT,
     _CumlEstimator,
     _CumlModel,
+    _CumlModelSupervised,
 )
 from spark_rapids_ml.params import _CumlClass
 
@@ -186,7 +187,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasInputCols):
         return KMeansModel.from_row(result)
 
 
-class KMeansModel(KMeansClass, _CumlModel, _KMeansParams, HasInputCols):
+class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansParams, HasInputCols):
     def __init__(
         self,
         cluster_centers_: List[List[float]],
@@ -231,9 +232,7 @@ class KMeansModel(KMeansClass, _CumlModel, _KMeansParams, HasInputCols):
         )
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        ret_schema = StructType(
-            [StructField(self.getPredictionCol(), IntegerType(), False)]
-        )
+        ret_schema = "int"
         return ret_schema
 
     def _get_cuml_transform_func(
@@ -264,8 +263,8 @@ class KMeansModel(KMeansClass, _CumlModel, _KMeansParams, HasInputCols):
 
         def _transform_internal(
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
-        ) -> pd.DataFrame:
+        ) -> pd.Series:
             res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
-            return pd.DataFrame({output_col: res})
+            return pd.Series(res)
 
         return _construct_kmeans, _transform_internal

@@ -148,6 +148,8 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
 
         # test transform function
         label_df = kmeans_model.transform(df)
+        assert "features" in label_df.columns
+
         o_col = kmeans_model.getPredictionCol()
         labels = [row[o_col] for row in label_df.collect()]
 
@@ -205,7 +207,7 @@ def test_kmeans(
     from cuml import KMeans as cuKMeans
 
     cuml_kmeans = cuKMeans(
-        n_clusters=n_clusters, output_type="numpy", tol=0.0, verbose=7
+        n_clusters=n_clusters, output_type="numpy", tol=1.0e-20, verbose=7
     )
 
     import cudf
