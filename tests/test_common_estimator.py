@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, Tuple, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row, TaskContext
+from pyspark.ml.param.shared import HasInputCols, HasOutputCols
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
@@ -29,8 +30,8 @@ from spark_rapids_ml.core import (
     CumlT,
     _CumlEstimator,
     _CumlModel,
-    _set_pyspark_cuml_cls_param_attrs,
 )
+from spark_rapids_ml.params import _CumlClass
 from spark_rapids_ml.utils import PartitionDescriptor
 
 
@@ -46,7 +47,101 @@ class CumlDummy(object):
         self.c = c
 
 
-class SparkCumlDummyModel(_CumlModel):
+class SparkCumlDummyClass(_CumlClass):
+    @classmethod
+    def _cuml_cls(cls) -> List[type]:
+        return [CumlDummy]
+
+    @classmethod
+    def _param_mapping(cls) -> Mapping[str, str]:
+        return {}
+
+    @classmethod
+    def _param_excludes(cls) -> List[str]:
+        return ["b"]
+
+
+class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutputCols):
+    """
+    PySpark estimator of CumlDummy
+    """
+
+    def __init__(
+        self, m: int = 0, n: int = 0, partition_num: int = 0, **kwargs: Any
+    ) -> None:
+        super().__init__()
+        self.set_params(**kwargs)
+        self.m = m
+        self.n = n
+        self.partition_num = partition_num
+
+    def setInputCols(self, value: List[str]) -> "SparkCumlDummy":
+        return self._set(inputCols=value)
+
+    def setOutputCols(self, value: List[str]) -> "SparkCumlDummy":
+        return self._set(outputCols=value)
+
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        num_workers = self.getNumWorkers()
+        partition_num = self.partition_num
+        m = self.m
+        n = self.n
+
+        def _cuml_fit(
+            dfs: CumlInputType,
+            params: Dict[str, Any],
+        ) -> Dict[str, Any]:
+            context = TaskContext.get()
+            assert context is not None
+            assert "handle" in params
+            assert "part_sizes" in params
+            assert "n" in params
+
+            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
+
+            assert pd.rank == context.partitionId()
+            assert len(pd.parts_rank_size) == partition_num
+            assert pd.m == m
+            assert pd.n == n
+
+            assert INIT_PARAMETERS_NAME in params
+            init_params = params[INIT_PARAMETERS_NAME]
+            assert init_params == {"a": 100, "c": 3}
+            dummy = CumlDummy(**init_params)
+            assert dummy.a == 100
+            assert dummy.b == 2
+            assert dummy.c == 3
+
+            import time
+
+            # sleep for 1 sec to bypass https://issues.apache.org/jira/browse/SPARK-40932
+            time.sleep(1)
+
+            return {
+                "dtype": np.dtype(np.float32).name,
+                "n_cols": n,
+                "model_attribute_a": [1024],
+                "model_attribute_b": "hello dummy",
+            }
+
+        return _cuml_fit
+
+    def _out_schema(self) -> Union[StructType, str]:
+        return (
+            "dtype string, n_cols int, model_attribute_a int, model_attribute_b string"
+        )
+
+    def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
+        assert result.dtype == np.dtype(np.float32).name
+        assert result.n_cols == self.n
+        assert result.model_attribute_a == 1024
+        assert result.model_attribute_b == "hello dummy"
+        return SparkCumlDummyModel.from_row(result)
+
+
+class SparkCumlDummyModel(SparkCumlDummyClass, _CumlModel, HasInputCols, HasOutputCols):
     """
     PySpark model of CumlDummy
     """
@@ -58,15 +153,23 @@ class SparkCumlDummyModel(_CumlModel):
         model_attribute_a: int,
         model_attribute_b: str,
         not_used: int = 1,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             dtype=dtype,
             n_cols=n_cols,
             model_attribute_a=model_attribute_a,
             model_attribute_b=model_attribute_b,
-        )
+        )  # type: ignore
         self.model_attribute_a = model_attribute_a
         self.model_attribute_b = model_attribute_b
+        self.set_params(**kwargs)
+
+    def setInputCols(self, value: List[str]) -> "SparkCumlDummy":
+        return self._set(inputCols=value)
+
+    def setOutputCols(self, value: List[str]) -> "SparkCumlDummy":
+        return self._set(outputCols=value)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
@@ -100,97 +203,6 @@ class SparkCumlDummyModel(_CumlModel):
         return input_schema
 
 
-class SparkCumlDummy(_CumlEstimator):
-    """
-    PySpark estimator of CumlDummy
-    """
-
-    def __init__(
-        self, m: int = 0, n: int = 0, partition_num: int = 0, **kwargs: Any
-    ) -> None:
-        super().__init__()
-        self.set_params(**kwargs)
-        self.m = m
-        self.n = n
-        self.partition_num = partition_num
-
-    def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        num_workers = self.get_num_workers()
-        partition_num = self.partition_num
-        m = self.m
-        n = self.n
-
-        def _cuml_fit(
-            dfs: CumlInputType,
-            params: Dict[str, Any],
-        ) -> Dict[str, Any]:
-            context = TaskContext.get()
-            assert context is not None
-            assert "handle" in params
-            assert "part_sizes" in params
-            assert "n" in params
-
-            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
-
-            assert pd.rank == context.partitionId()
-            assert len(pd.parts_rank_size) == partition_num
-            assert pd.m == m
-            assert pd.n == n
-
-            assert INIT_PARAMETERS_NAME in params
-            init_params = params[INIT_PARAMETERS_NAME]
-            assert init_params["a"] == 100
-            assert "b" not in init_params
-            assert init_params["c"] == 3
-            dummy = CumlDummy(**init_params)
-            assert dummy.a == 100
-            assert dummy.b == 2
-            assert dummy.c == 3
-
-            import time
-
-            # sleep for 1 sec to bypass https://issues.apache.org/jira/browse/SPARK-40932
-            time.sleep(1)
-
-            return {
-                "dtype": np.dtype(np.float32).name,
-                "n_cols": n,
-                "model_attribute_a": [1024],
-                "model_attribute_b": "hello dummy",
-            }
-
-        return _cuml_fit
-
-    def _out_schema(self) -> Union[StructType, str]:
-        return (
-            "dtype string, n_cols int, model_attribute_a int, model_attribute_b string"
-        )
-
-    def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
-        assert result.dtype == np.dtype(np.float32).name
-        assert result.n_cols == self.n
-        assert result.model_attribute_a == 1024
-        assert result.model_attribute_b == "hello dummy"
-        return SparkCumlDummyModel.from_row(result)
-
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        return [CumlDummy]
-
-    @classmethod
-    def _not_supported_param(cls) -> List[str]:
-        """
-        For some reason, spark cuml may not support all the parameters.
-        In that case, we need to explicitly exclude them.
-        """
-        return ["b"]
-
-
-_set_pyspark_cuml_cls_param_attrs(SparkCumlDummy, SparkCumlDummyModel)
-
-
 def test_dummy(gpu_number: int, tmp_path: str) -> None:
     data = [
         [1.0, 4.0, 4.0, 4.0],
@@ -207,9 +219,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
 
     def assert_estimator(dummy: SparkCumlDummy) -> None:
         assert dummy.getInputCols() == input_cols
-        assert dummy.getOrDefault(dummy.a) == 100  # type: ignore
-        assert not dummy.hasParam("b")
-        assert dummy.getOrDefault(dummy.c) == 3  # type: ignore
+        assert dummy.cuml_params == {"a": 100, "c": 3}
 
     def ceiling_division(n: int, d: int) -> int:
         return -(n // -d)
@@ -236,9 +246,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
     def assert_model(model: SparkCumlDummyModel) -> None:
         assert model.model_attribute_a == 1024
         assert model.model_attribute_b == "hello dummy"
-        assert model.getOrDefault(model.a) == 100  # type: ignore
-        assert not model.hasParam("b")
-        assert model.getOrDefault(model.c) == 3  # type: ignore
+        assert model.cuml_params == {"a": 100, "c": 3}
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
     from .sparksession import CleanSparkSession

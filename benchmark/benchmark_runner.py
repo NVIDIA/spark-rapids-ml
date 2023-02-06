@@ -44,7 +44,7 @@ class BenchmarkBase:
         self._parser.add_argument("--transform_path", action="append", default=[],
                                   help="Input parquet format data path used for transform")
         self._parser.add_argument("--spark_confs", action="append", default=[])
-        self._parser.add_argument("--no_shutdown", action='store_true', 
+        self._parser.add_argument("--no_shutdown", action='store_true',
                                   help="do not stop spark session when finished")
         self.args_ = None
 
@@ -70,7 +70,7 @@ class BenchmarkLinearRegression(BenchmarkBase):
 
         df = spark.read.parquet(*self.args.train_path)
 
-        label_name = "label"   
+        label_name = "label"
         is_array_col = True if any(['array' in t[1] for t in df.dtypes]) else False
         is_vector_col = True if any(['vector' in t[1] for t in df.dtypes]) else False
         is_single_col = is_array_col or is_vector_col
@@ -152,5 +152,5 @@ if __name__ == "__main__":
     """
 
     print(f"invoked time: {datetime.datetime.now()}")
-    
+
     BenchmarkRunner().run()

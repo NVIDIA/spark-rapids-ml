@@ -73,7 +73,7 @@ def test_pca_bench(
             gpu_pca = gpu_pca.setInputCol(first_col).setOutputCol("pca_features")
         else:
             output_cols = ["o" + str(i) for i in range(n_components)]
-            gpu_pca = gpu_pca.setInputCol(input_cols).setOutputCol(output_cols)
+            gpu_pca = gpu_pca.setInputCols(input_cols).setOutputCols(output_cols)
 
         gpu_model = gpu_pca.fit(df)
         fit_time = time.time() - start_time
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(f"invoked time: {datetime.datetime.now()}")
-    
+
     report_pd = pd.DataFrame()
 
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:

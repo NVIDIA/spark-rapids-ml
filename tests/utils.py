@@ -16,16 +16,18 @@
 
 from collections import namedtuple
 from functools import lru_cache
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pyspark
 from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.param import Params
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
 from sklearn.datasets import make_regression
 from sklearn.model_selection import train_test_split
 
+from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.utils import dtype_to_pyspark_type
 
 FeatureTypes = namedtuple("FeatureTypes", ("vector", "array", "multi_cols"))
@@ -33,6 +35,16 @@ feature_types = FeatureTypes("vector", "array", "multi_cols")
 
 pyspark_supported_feature_types = feature_types._fields
 cuml_supported_data_types = [np.float32, np.float64]
+
+
+class CumlParams(_CumlParams, Params):
+    """For type-checking in tests only.
+
+    Defines a class that inherits from both Spark ML Params and _CumlParams, e.g. _CumlEstimator
+    and _CumlModel.
+    """
+
+    pass
 
 
 def idfn(val: Any) -> str:
@@ -130,3 +142,25 @@ def array_equal(
         a, b = np.abs(a), np.abs(b)
     res = (np.sum(np.abs(a - b) > unit_tol)) / a.size <= total_tol
     return res
+
+
+def assert_params(
+    instance: CumlParams, spark_params: Dict[str, Any], cuml_params: Dict[str, Any]
+) -> None:
+    for key in spark_params:
+        if instance.hasParam(key):
+            if instance.isDefined(key):
+                actual = instance.getOrDefault(key)
+                expected = spark_params[key]
+                assert (
+                    actual == expected
+                ), f"Value of '{key}' Param was {actual}, expected {expected}."
+            elif spark_params[key] != None:
+                assert False, f"Value of {key} Param is undefined."
+    for key in cuml_params:
+        if key in instance.cuml_params:
+            actual = instance.cuml_params[key]
+            expected = cuml_params[key]
+            assert (
+                actual == expected
+            ), f"Value of '{key}' cuml_param was {actual}, expected {expected}."

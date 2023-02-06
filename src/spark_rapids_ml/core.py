@@ -24,6 +24,7 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Mapping,
     Optional,
     Tuple,
     Type,
@@ -38,15 +39,7 @@ from pyspark import TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
-from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import (
-    HasInputCol,
-    HasInputCols,
-    HasLabelCol,
-    HasOutputCol,
-    HasOutputCols,
-    HasPredictionCol,
-)
+from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol
 from pyspark.ml.util import (
     DefaultParamsReader,
     DefaultParamsWriter,
@@ -68,9 +61,9 @@ from pyspark.sql.types import (
 )
 
 from spark_rapids_ml.common.cuml_context import CumlContext
+from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.utils import (
     _get_class_name,
-    _get_default_params_from_func,
     _get_gpu_id,
     _get_spark_session,
     _is_local,
@@ -109,7 +102,12 @@ class _CumlEstimatorWriter(MLWriter):
         self.instance = instance
 
     def saveImpl(self, path: str) -> None:
-        DefaultParamsWriter.saveMetadata(self.instance, path, self.sc)  # type: ignore
+        DefaultParamsWriter.saveMetadata(
+            self.instance,
+            path,
+            self.sc,
+            extraMetadata={"cuml_params": self.instance.cuml_params},
+        )  # type: ignore
 
 
 class _CumlEstimatorReader(MLReader):
@@ -125,6 +123,7 @@ class _CumlEstimatorReader(MLReader):
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         cuml_estimator = self.estimator_cls()
         DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
+        cuml_estimator.cuml_params = metadata["cuml_params"]
         return cuml_estimator
 
 
@@ -138,7 +137,7 @@ class _CumlModelWriter(MLWriter):
         self.instance: "_CumlModel" = instance
 
     def saveImpl(self, path: str) -> None:
-        DefaultParamsWriter.saveMetadata(self.instance, path, self.sc)  # type: ignore
+        DefaultParamsWriter.saveMetadata(self.instance, path, self.sc, extraMetadata={"cuml_params": self.instance.cuml_params})  # type: ignore
         data_path = os.path.join(path, "data")
         model_attributes = self.instance.get_model_attributes()
         model_attributes_str = json.dumps(model_attributes)
@@ -161,10 +160,11 @@ class _CumlModelReader(MLReader):
         model_attr_dict = json.loads(model_attr_str)
         instance = self.model_cls(**model_attr_dict)
         DefaultParamsReader.getAndSetParams(instance, metadata)
+        instance.cuml_params = metadata["cuml_params"]
         return instance
 
 
-class _CumlCommon(Params, MLWritable, MLReadable):
+class _CumlCommon(MLWritable, MLReadable):
     def __init__(self) -> None:
         super().__init__()
         self.logger = get_logger(self.__class__)
@@ -197,16 +197,6 @@ class _CumlCommon(Params, MLWritable, MLReadable):
 
         cupy.cuda.Device(gpu_id).use()
 
-    def set_params(self, **kwargs: Any) -> None:
-        """
-        Set the kwargs to model's parameters
-        """
-        for k, v in kwargs.items():
-            if self.hasParam(k):
-                self._set(**{str(k): v})  # type: ignore
-            else:
-                raise ValueError(f"Unsupported param '{k}'.")
-
     @staticmethod
     def initialize_cuml_logging(verbose: Optional[Union[bool, int]]) -> None:
         if verbose is not None:
@@ -226,65 +216,9 @@ class _CumlCommon(Params, MLWritable, MLReadable):
             cuml_logger.set_level(log_level)
 
 
-class _CumlEstimatorParams(HasInputCols, HasInputCol, HasOutputCol, HasOutputCols):
+class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
     """
-    The common parameters for all Spark CUML algorithms.
-    """
-
-    num_workers = Param(
-        Params._dummy(),  # type: ignore
-        "num_workers",
-        "The number of Spark CUML workers. Each CUML worker corresponds to one spark task.",
-        TypeConverters.toInt,
-    )
-
-    def get_num_workers(self) -> int:
-        return self.getOrDefault(self.num_workers)
-
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        """
-        Return the cuml python counterpart class name, which will be used to
-        auto generate pyspark parameters.
-        """
-        raise NotImplementedError()
-
-    @classmethod
-    def _not_supported_param(cls) -> List[str]:
-        """
-        For some reason, spark cuml may not support all the parameters.
-        In that case, we need to explicitly exclude them.
-        """
-        return []
-
-    @classmethod
-    def _get_cuml_params_default(cls) -> Dict[str, Any]:
-        """
-        Inspect the __init__ function of _cuml_cls() to get the
-        parameters and default values.
-        """
-        params = {}
-
-        for cls_type in cls._cuml_cls():
-            params.update(
-                _get_default_params_from_func(cls_type, cls._not_supported_param())
-            )
-        return params
-
-    def _gen_cuml_param(self) -> Dict[str, Any]:
-        """
-        Generate the CUML parameters according the pyspark estimator parameters.
-        """
-        params = {}
-        for k, _ in self._get_cuml_params_default().items():
-            params[k] = self.getOrDefault(k)
-
-        return params
-
-
-class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
-    """
-    The common estimator to handle the fit callback (_fit). It should handle
+    The common estimator to handle the fit callback (_fit). It should:
     1. set the default parameters
     2. validate the parameters
     3. prepare the dataset
@@ -294,13 +228,8 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
     def __init__(self) -> None:
         super().__init__()
-        self._set_pyspark_cuml_params()
+        self.initialize_cuml_params()
         self._setDefault(num_workers=1)  # type: ignore
-
-    def _set_pyspark_cuml_params(self) -> None:
-        # Auto set the parameters into the estimator
-        params = self._get_cuml_params_default()
-        self._setDefault(**params)  # type: ignore
 
     @abstractmethod
     def _out_schema(self) -> Union[StructType, str]:
@@ -356,37 +285,46 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
     ]:
+        input_col = None
+        input_cols = None
         select_cols = []
-        multi_col_names = None
 
         # label column will be cast to feature type if needed.
         feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
-        if self.isDefined(self.inputCol):
+
+        # Note: order is significant if multiple params are set, e.g. defaults vs. overrides
+        if self.hasParam("inputCols") and self.isDefined("inputCols"):
+            input_cols = self.getOrDefault("inputCols")
+        elif self.hasParam("inputCol") and self.isDefined("inputCol"):
+            input_col = self.getOrDefault("inputCol")
+        elif self.hasParam("featuresCol") and self.isDefined("featuresCol"):
+            input_col = self.getOrDefault("featuresCol")
+        else:
+            raise ValueError("Please set featuresCol, inputCol, or inputCols")
+
+        if input_col:
             # Single Column
-            input_name = self.getInputCol()
-            input_datatype = dataset.schema[input_name].dataType
+            input_datatype = dataset.schema[input_col].dataType
 
             if isinstance(input_datatype, ArrayType):
                 # Array type
-                select_cols.append(col(input_name).alias(alias.data))
+                select_cols.append(col(input_col).alias(alias.data))
                 if isinstance(input_datatype.elementType, DoubleType):
                     feature_type = DoubleType
             elif isinstance(input_datatype, VectorUDT):
                 # Vector type
                 select_cols.append(
-                    vector_to_array(col(input_name)).alias(alias.data)  # type: ignore
+                    vector_to_array(col(input_col)).alias(alias.data)  # type: ignore
                 )
                 feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
 
-            dimension = len(dataset.first()[self.getInputCol()])  # type: ignore
+            dimension = len(dataset.first()[input_col])  # type: ignore
 
-        elif self.isDefined(self.inputCols):
-            # Multi columns
-            multi_col_names = self.getInputCols()
-            dimension = len(multi_col_names)
-            for c in multi_col_names:
+        elif input_cols:
+            dimension = len(input_cols)
+            for c in input_cols:
                 col_type = dataset.schema[c].dataType
                 if isinstance(col_type, IntegralType):
                     # Convert integral type to float.
@@ -402,9 +340,10 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
                     )
 
         else:
-            raise ValueError("Please set inputCol or inputCols")
+            # should never get here
+            raise Exception("Unable to determine input column(s).")
 
-        return select_cols, multi_col_names, dimension, feature_type
+        return select_cols, input_cols, dimension, feature_type
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
         """
@@ -427,22 +366,20 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
         dataset = dataset.select(*select_cols)
 
-        if dataset.rdd.getNumPartitions() != self.get_num_workers():
+        if dataset.rdd.getNumPartitions() != self.getNumWorkers():
             dataset = self._repartition_dataset(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
         params: Dict[str, Any] = {
-            INIT_PARAMETERS_NAME: self._gen_cuml_param(),
+            INIT_PARAMETERS_NAME: self.cuml_params,
         }
 
-        num_workers = self.get_num_workers()
+        num_workers = self.getNumWorkers()
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
 
-        cuml_verbose = None
-        if self.hasParam("verbose"):
-            cuml_verbose = self.getOrDefault("verbose")
+        cuml_verbose = self.cuml_params.get("verbose", False)
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -494,7 +431,8 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
             .collect()[0]
         )
 
-        return self._copyValues(self._create_pyspark_model(ret))  # type: ignore
+        model = self._copyValues(self._create_pyspark_model(ret))
+        return self._copy_cuml_params(model)  # type: ignore
 
     def write(self) -> MLWriter:
         return _CumlEstimatorWriter(self)
@@ -506,7 +444,7 @@ class _CumlEstimator(_CumlCommon, Estimator, _CumlEstimatorParams):
 
 class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
     """
-    Base class for Cuml Supervised machine learning
+    Base class for Cuml Supervised machine learning.
     """
 
     def _pre_process_data(
@@ -540,9 +478,7 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
         return select_cols, multi_col_names, dimension, feature_type
 
 
-class _CumlModel(
-    _CumlCommon, Model, HasInputCol, HasInputCols, HasOutputCol, HasOutputCols
-):
+class _CumlModel(Model, _CumlCommon, _CumlParams):
     """
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """
@@ -558,6 +494,7 @@ class _CumlModel(
         Subclass must pass the model attributes which will be saved in model persistence.
         """
         super().__init__()
+        self.initialize_cuml_params()
 
         # model_data is the native data which will be saved for model persistence
         self._model_attributes = model_attributes
@@ -620,28 +557,40 @@ class _CumlModel(
     ) -> Tuple[DataFrame, List[str], bool]:
         """Pre-handle the dataset before transform."""
         select_cols = []
+        input_col = None
+        input_cols = None
         input_is_multi_cols = True
-        if self.isDefined(self.inputCol):
-            # Single Column
-            col_name = self.getInputCol()
-            if isinstance(dataset.schema[col_name].dataType, VectorUDT):
+
+        # Note: order is significant if multiple params are set, e.g. defaults vs. overrides
+        if self.hasParam("inputCols") and self.isDefined("inputCols"):
+            input_cols = self.getOrDefault("inputCols")
+        elif self.hasParam("inputCol") and self.isDefined("inputCol"):
+            input_col = self.getOrDefault("inputCol")
+        elif self.hasParam("featuresCol") and self.isDefined("featuresCol"):
+            input_col = self.getOrDefault("featuresCol")
+        else:
+            raise ValueError("Please set featuresCol, inputCol, or inputCols")
+
+        if input_col:
+            if isinstance(dataset.schema[input_col].dataType, VectorUDT):
                 # Vector type
                 # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
                 tmp_name = f"{alias.data}_c3BhcmtjdW1sCg=="
                 dataset = (
-                    dataset.withColumnRenamed(col_name, tmp_name)
-                    .withColumn(col_name, vector_to_array(col(tmp_name)))
+                    dataset.withColumnRenamed(input_col, tmp_name)
+                    .withColumn(input_col, vector_to_array(col(tmp_name)))
                     .drop(tmp_name)
                 )
-            elif not isinstance(dataset.schema[col_name].dataType, ArrayType):
+            elif not isinstance(dataset.schema[input_col].dataType, ArrayType):
                 # Array type
                 raise ValueError("Unsupported input type.")
-            select_cols.append(col_name)
+            select_cols.append(input_col)
             input_is_multi_cols = False
-        elif self.isDefined(self.inputCols):
-            select_cols.extend(self.getInputCols())
+        elif input_cols:
+            select_cols.extend(input_cols)
         else:
-            raise ValueError("Please set inputCol or inputCols")
+            # should never get here
+            raise Exception("Unable to determine input column(s).")
 
         return dataset, select_cols, input_is_multi_cols
 
@@ -738,7 +687,9 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
 
 
 def _set_pyspark_cuml_cls_param_attrs(
-    pyspark_estimator_class: Type[_CumlEstimator], pyspark_model_class: Type[_CumlModel]
+    pyspark_estimator_class: Type[_CumlEstimator],
+    pyspark_model_class: Type[_CumlModel],
+    param_map: Mapping[str, str] = {},
 ) -> None:
     """
     To set pyspark parameter attributes according to cuml parameters.
@@ -758,23 +709,28 @@ def _set_pyspark_cuml_cls_param_attrs(
 
     params_dict = pyspark_estimator_class._get_cuml_params_default()
 
-    def param_value_converter(v: Any) -> Any:
-        if isinstance(v, np.generic):
-            # convert numpy scalar values to corresponding python scalar values
-            return np.array(v).item()
-        if isinstance(v, dict):
-            return {k: param_value_converter(nv) for k, nv in v.items()}
-        if isinstance(v, list):
-            return [param_value_converter(nv) for nv in v]
-        return v
+    # def param_value_converter(v: Any) -> Any:
+    #     if isinstance(v, np.generic):
+    #         # convert numpy scalar values to corresponding python scalar values
+    #         return np.array(v).item()
+    #     if isinstance(v, dict):
+    #         return {k: param_value_converter(nv) for k, nv in v.items()}
+    #     if isinstance(v, list):
+    #         return [param_value_converter(nv) for nv in v]
+    #     return v
 
-    def set_param_attrs(attr_name: str, param_obj_: Param) -> None:
-        param_obj_.typeConverter = param_value_converter  # type: ignore
-        setattr(pyspark_estimator_class, attr_name, param_obj_)
-        setattr(pyspark_model_class, attr_name, param_obj_)
+    # def set_param_attrs(attr_name: str, param_obj_: Param) -> None:
+    #     param_obj_.typeConverter = param_value_converter  # type: ignore
+    #     setattr(pyspark_estimator_class, attr_name, param_obj_)
+    #     setattr(pyspark_model_class, attr_name, param_obj_)
 
-    for name in params_dict.keys():
-        doc = f"Refer to CUML doc of {', '.join(cuml_estimator_class_name)} for this param {name}"
+    # reverse_map = {v: k for k, v in param_map.items()}
+    # for name in params_dict.keys():
+    #     alias = f"alias of '{reverse_map[name]}', " if name in reverse_map else ""
+    #     doc = f"(cuML) {alias}refer to documentation for {', '.join(cuml_estimator_class_name)}."
 
-        param_obj = Param(Params._dummy(), name=name, doc=doc)  # type: ignore
-        set_param_attrs(name, param_obj)
+    #     param_obj = Param(Params._dummy(), name=name, doc=doc)  # type: ignore
+    #     set_param_attrs(name, param_obj)
+    for attr_name, default_value in params_dict.items():
+        setattr(pyspark_estimator_class, attr_name, default_value)
+        setattr(pyspark_model_class, attr_name, default_value)

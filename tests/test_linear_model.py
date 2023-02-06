@@ -23,6 +23,7 @@ from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 from .sparksession import CleanSparkSession
 from .utils import (
     array_equal,
+    assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
@@ -65,42 +66,93 @@ def train_with_cuml_linear_regression(
 
 
 @pytest.mark.parametrize("reg", [0.0, 0.7])
-def test_linear_regression_estimator_basic(tmp_path: str, reg: float) -> None:
-    # test estimator default param
-    lr = LinearRegression()
-    assert lr.getOrDefault("algorithm") == "eig"
-    assert lr.getOrDefault("solver") == "eig"
-    assert lr.getOrDefault("fit_intercept")
-    assert not lr.getOrDefault("normalize")
-    assert lr.getRegParam() == 0.0
-    assert lr.getOrDefault("loss") == "squared_loss"
-    assert lr.getElasticNetParam() == 0.0
-    assert lr.getOrDefault("max_iter") == 1000
+def test_linear_regression_params(tmp_path: str, reg: float) -> None:
+    # Default params
+    default_spark_params = {
+        "elasticNetParam": 0.0,
+        "fitIntercept": True,
+        "loss": "squaredError",
+        "maxIter": 100,
+        "regParam": 0.0,
+        "solver": "auto",
+        "standardization": True,
+        "tol": 1e-06,
+    }
+    default_cuml_params = {
+        "algorithm": "eig",
+        "alpha": 0.0,
+        "fit_intercept": True,
+        "l1_ratio": 0.0,
+        "max_iter": 100,
+        "normalize": True,
+        "solver": "eig",
+    }
+    default_lr = LinearRegression()
+    assert_params(default_lr, default_spark_params, default_cuml_params)
 
-    def assert_params(linear_reg: LinearRegression, l2: float) -> None:
-        assert linear_reg.getOrDefault("algorithm") == "svd"
-        assert not linear_reg.getOrDefault("fit_intercept")
-        assert linear_reg.getOrDefault("normalize")
-        assert linear_reg.getRegParam() == l2
-
-    lr = LinearRegression(algorithm="svd", fit_intercept=False, normalize=True)
-    lr.setRegParam(reg)
-    assert_params(lr, reg)
+    # Spark ML Params
+    spark_params = {
+        "fitIntercept": False,
+        "standardization": False,
+        "regParam": reg,
+        "solver": "normal",
+    }
+    spark_lr = LinearRegression(**spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(
+        {
+            "alpha": reg,
+            "fit_intercept": False,
+            "normalize": False,
+            "solver": "eig",
+        }
+    )
+    assert_params(spark_lr, expected_spark_params, expected_cuml_params)
 
     # Estimator persistence
     path = tmp_path + "/linear_regression_tests"
     estimator_path = f"{path}/linear_regression"
-    lr.write().overwrite().save(estimator_path)
-    lr_loaded = LinearRegression.load(estimator_path)
+    spark_lr.write().overwrite().save(estimator_path)
+    loaded_lr = LinearRegression.load(estimator_path)
+    assert_params(loaded_lr, expected_spark_params, expected_cuml_params)
 
-    assert_params(lr_loaded, reg)
+    # Unsupported value
+    spark_params = {"solver": "l-bfgs"}
+    with pytest.raises(
+        ValueError, match="Value 'l-bfgs' for 'solver' param is unsupported"
+    ):
+        unsupported_lr = LinearRegression(**spark_params)
+
+
+@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
+def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None:
+    data = [
+        [1, 4, 4, 4, 0],
+        [2, 2, 2, 2, 1],
+        [3, 3, 3, 2, 2],
+        [3, 3, 3, 2, 3],
+        [5, 2, 1, 3, 4],
+    ]
+
+    with CleanSparkSession() as spark:
+        feature_cols = ["c1", "c2", "c3", "c4"]
+        schema = (
+            ", ".join([f"{c} {data_type}" for c in feature_cols])
+            + f", label {data_type}"
+        )
+        df = spark.createDataFrame(data, schema=schema)
+        lr = LinearRegression(num_workers=gpu_number)
+        lr.setInputCols(feature_cols)
+        lr.fit(df)
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(10, 2)], ids=idfn)
 @pytest.mark.parametrize("reg", [0.0, 0.7])
-def test_linear_regression_model_basic(
+def test_linear_regression_basic(
     tmp_path: str,
     feature_type: str,
     data_type: np.dtype,
@@ -116,21 +168,26 @@ def test_linear_regression_model_basic(
 
         lr = LinearRegression()
         lr.setRegParam(reg)
-        lr.setFeaturesCol(features_col)
+
+        if feature_type == feature_types.multi_cols:
+            lr.setInputCols(features_col)
+            assert lr.getInputCols() == features_col
+        else:
+            lr.setFeaturesCol(features_col)
+            assert lr.getFeaturesCol() == features_col
+
         assert label_col is not None
         lr.setLabelCol(label_col)
-
-        assert lr.getFeaturesCol() == features_col
         assert lr.getLabelCol() == label_col
 
         def assert_model(
             lhs: LinearRegressionModel, rhs: LinearRegressionModel
         ) -> None:
-            assert lhs.coef == rhs.coef
-            assert lhs.intercept == lhs.intercept
+            assert lhs.coef_ == rhs.coef_
+            assert lhs.intercept_ == lhs.intercept_
 
             # Vector type will be cast to array(double)
-            if feature_type == feature_types.vector:
+            if feature_type == "vector":
                 assert lhs.dtype == np.dtype(np.float64).name
             else:
                 assert lhs.dtype == np.dtype(data_type).name
@@ -190,39 +247,24 @@ def test_linear_regression(
             spark, feature_type, data_type, X_train, y_train
         )
         assert label_col is not None
+
         slr = LinearRegression(num_workers=gpu_number, verbose=7, **other_params)
         slr.setRegParam(alpha)
+        slr.setStandardization(
+            False
+        )  # Spark default is True, but Cuml default is False
         slr.setElasticNetParam(l1_ratio)
-        slr.setFeaturesCol(features_col)
+        if feature_type == feature_types.multi_cols:
+            slr.setInputCols(features_col)
+        else:
+            slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
 
-        assert array_equal(cu_lr.coef_, slr_model.coef, 1e-3)
+        assert array_equal(cu_lr.coef_, slr_model.coef_, 1e-3)
 
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = slr_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
         assert array_equal(cu_expected, pred_result, 1e-3)
-
-
-@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
-def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None:
-    data = [
-        [1, 4, 4, 4, 0],
-        [2, 2, 2, 2, 1],
-        [3, 3, 3, 2, 2],
-        [3, 3, 3, 2, 3],
-        [5, 2, 1, 3, 4],
-    ]
-
-    with CleanSparkSession() as spark:
-        feature_cols = ["c1", "c2", "c3", "c4"]
-        schema = (
-            ", ".join([f"{c} {data_type}" for c in feature_cols])
-            + f", label {data_type}"
-        )
-        df = spark.createDataFrame(data, schema=schema)
-        lr = LinearRegression(num_workers=gpu_number)
-        lr.setFeaturesCol(feature_cols)
-        lr.fit(df)

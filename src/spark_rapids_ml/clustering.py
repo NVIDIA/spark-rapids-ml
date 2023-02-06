@@ -19,6 +19,9 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark.ml.clustering import _KMeansParams
+from pyspark.ml.linalg import Vector
+from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -36,11 +39,39 @@ from spark_rapids_ml.core import (
     CumlT,
     _CumlEstimator,
     _CumlModel,
-    _set_pyspark_cuml_cls_param_attrs,
 )
+from spark_rapids_ml.params import _CumlClass
 
 
-class KMeans(_CumlEstimator):
+class KMeansClass(_CumlClass):
+    @classmethod
+    def _cuml_cls(cls) -> List[type]:
+        from cuml import KMeans
+
+        return [KMeans]
+
+    @classmethod
+    def _param_mapping(cls) -> Dict[str, str]:
+        return {
+            "k": "n_clusters",
+            "maxIter": "max_iter",
+            "seed": "random_state",
+            "tol": "tol",
+        }
+
+    @classmethod
+    def _param_excludes(cls) -> List[str]:
+        """
+        For some reason, spark cuml may not support all the parameters.
+        In that case, we need to explicitly exclude them.
+        """
+        return [
+            "handle",
+            "output_type",
+        ]
+
+
+class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasInputCols):
     """
     KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.
     The algorithm initializes a set of k random centers then runs in iterations.
@@ -49,44 +80,60 @@ class KMeans(_CumlEstimator):
 
     Examples
     --------
-    >>> from sparkcuml.cluster import SparkCumlKMeans
+    >>> from spark_rapids_ml.clustering import KMeans
     TODO
     """
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
+        # restrict default seed to max value of 32-bit signed integer for CuML
+        self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
+        self.initialize_cuml_params()
         self.set_params(**kwargs)
-
-    def setK(self, value: int) -> "KMeans":
-        """
-        Sets the value of `n_clusters`.
-        """
-        self.set_params(n_clusters=value)
-        return self
 
     def setFeaturesCol(self, value: str) -> "KMeans":
         """
-        Sets the value of `inputCol` or `inputCols`.
+        Sets the value of :py:attr:`featuresCol`.
         """
-        if isinstance(value, str):
-            self.set_params(inputCol=value)
-        else:
-            self.set_params(inputCols=value)
-        return self
+        return self.set_params(featuresCol=value)
 
-    def setPredictionCol(self, value: str) -> "KMeans":
+    def setInputCols(self, value: List[str]) -> "KMeans":
         """
-        Sets the value of `outputCol`.
+        Sets the value of :py:attr:`inputCols`.
         """
-        self.set_params(outputCol=value)
-        return self
+        return self.set_params(inputCols=value)
+
+    def setK(self, value: int) -> "KMeans":
+        """
+        Sets the value of :py:attr:`k`.
+        """
+        return self.set_params(k=value)
 
     def setMaxIter(self, value: int) -> "KMeans":
         """
-        Sets the value of `max_iter`.
+        Sets the value of :py:attr:`maxIter`.
         """
-        self.set_params(max_iter=value)
-        return self
+        return self.set_params(maxIter=value)
+
+    def setPredictionCol(self, value: str) -> "KMeans":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        return self.set_params(predictionCol=value)
+
+    def setSeed(self, value: int) -> "KMeans":
+        """
+        Sets the value of :py:attr:`seed`.
+        """
+        if value > 0x07FFFFFFF:
+            raise ValueError("CuML seed value must be a 32-bit integer.")
+        return self.set_params(seed=value)
+
+    def setWeightCol(self, value: str) -> "KMeans":
+        """
+        Sets the value of :py:attr:`weightCol`.
+        """
+        raise ValueError("'weightCol' is not supported by cuML.")
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
@@ -138,25 +185,8 @@ class KMeans(_CumlEstimator):
     def _create_pyspark_model(self, result: Row) -> "KMeansModel":
         return KMeansModel.from_row(result)
 
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml import KMeans
 
-        return [KMeans]
-
-    @classmethod
-    def _not_supported_param(cls) -> List[str]:
-        """
-        For some reason, spark cuml may not support all the parameters.
-        In that case, we need to explicitly exclude them.
-        """
-        return [
-            "handle",
-            "output_type",
-        ]
-
-
-class KMeansModel(_CumlModel):
+class KMeansModel(KMeansClass, _CumlModel, _KMeansParams, HasInputCols):
     def __init__(
         self,
         cluster_centers_: List[List[float]],
@@ -166,12 +196,43 @@ class KMeansModel(_CumlModel):
         super().__init__(n_cols=n_cols, dtype=dtype, cluster_centers_=cluster_centers_)
 
         self.cluster_centers_ = cluster_centers_
-        cumlParams = KMeans._get_cuml_params_default()
-        self.set_params(**cumlParams)
+        self.initialize_cuml_params()
+
+    def setFeaturesCol(self, value: str) -> "KMeansModel":
+        """
+        Sets the value of :py:attr:`featuresCol`.
+        """
+        self.set_params(featuresCol=value)
+        return self
+
+    def setInputCols(self, value: List[str]) -> "KMeansModel":
+        """
+        Sets the value of :py:attr:`inputCols`.
+        """
+        return self._set(inputCols=value)
+
+    def setPredictionCol(self, value: str) -> "KMeansModel":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        self.set_params(predictionCol=value)
+        return self
+
+    def clusterCenters(self) -> List[List[float]]:
+        return self.cluster_centers_
+
+    @property
+    def hasSummary(self) -> bool:
+        return False
+
+    def predict(self, value: Vector) -> int:
+        raise NotImplementedError(
+            "'predict' method is not supported, use 'transform' instead."
+        )
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         ret_schema = StructType(
-            [StructField(self.getOutputCol(), IntegerType(), False)]
+            [StructField(self.getPredictionCol(), IntegerType(), False)]
         )
         return ret_schema
 
@@ -181,12 +242,10 @@ class KMeansModel(_CumlModel):
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
-        cuml_alg_params = {}
-        for k in KMeans._get_cuml_params_default():
-            cuml_alg_params[k] = self.getOrDefault(k)
+        cuml_alg_params = self.cuml_params.copy()
 
         cluster_centers_ = self.cluster_centers_
-        output_col = self.getOutputCol()
+        output_col = self.getPredictionCol()
         dtype = self.dtype
         n_cols = self.n_cols
 
@@ -210,35 +269,3 @@ class KMeansModel(_CumlModel):
             return pd.DataFrame({output_col: res})
 
         return _construct_kmeans, _transform_internal
-
-    def setFeaturesCol(self, value: str) -> "KMeansModel":
-        """
-        Sets the value of `inputCol` or `inputCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(inputCol=value)
-        else:
-            self.set_params(inputCols=value)
-        return self
-
-    def setPredictionCol(self, value: str) -> "KMeansModel":
-        """
-        Sets the value of `outputCol`.
-        """
-        self.set_params(outputCol=value)
-        return self
-
-    def getFeaturesCol(self) -> str:
-        """
-        Gets the value of `inputCol` or its default value.
-        """
-        return self.getOrDefault(self.inputCol)
-
-    def getPredictionCol(self) -> str:
-        """
-        Gets the value of `outputCol` or its default value.
-        """
-        return self.getOrDefault(self.outputCol)
-
-
-_set_pyspark_cuml_cls_param_attrs(KMeans, KMeansModel)

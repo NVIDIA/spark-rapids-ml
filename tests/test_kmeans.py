@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pytest
@@ -23,58 +23,13 @@ from spark_rapids_ml.clustering import KMeans, KMeansModel
 
 from .sparksession import CleanSparkSession
 from .utils import (
+    assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
+    feature_types,
     idfn,
     pyspark_supported_feature_types,
 )
-
-
-def test_kmeans_parameters(gpu_number: int, tmp_path: str) -> None:
-    """
-    Sparkcuml keeps the algorithmic parameters and their default values
-    exactly the same as cuml multi-node multi-GPU KMeans,
-    which follows scikit-learn convention.
-    Please refer to https://docs.rapids.ai/api/cuml/stable/api.html#cuml.dask.cluster.KMeans
-    """
-
-    default_kmeans = KMeans()
-    assert default_kmeans.getOrDefault("n_clusters") == 8
-    assert default_kmeans.getOrDefault("max_iter") == 300
-    assert default_kmeans.getOrDefault("tol") == 1e-4
-    assert not default_kmeans.getOrDefault("verbose")
-    assert default_kmeans.getOrDefault("random_state") == 1
-    assert default_kmeans.getOrDefault("init") == "scalable-k-means++"
-    assert default_kmeans.getOrDefault("oversampling_factor") == 2
-    assert default_kmeans.getOrDefault("max_samples_per_batch") == 1 << 15
-    assert default_kmeans.getOrDefault("num_workers") == 1
-    assert default_kmeans.get_num_workers() == 1
-
-    custom_params = {
-        "n_clusters": 10,
-        "max_iter": 100,
-        "tol": 1e-1,
-        "verbose": True,
-        "random_state": 5,
-        "init": "k-means||",
-        "oversampling_factor": 3,
-        "max_samples_per_batch": 45678,
-    }
-
-    def assertKmeansParameters(kmeans: KMeans) -> None:
-        for key in custom_params:
-            assert kmeans.getOrDefault(key) == custom_params[key]
-
-    custom_kmeans = KMeans(**custom_params)
-    assertKmeansParameters(kmeans=custom_kmeans)
-
-    # Estimator persistence
-    path = tmp_path + "/kmeans_tests"
-    estimator_path = f"{path}/kmeans"
-    custom_kmeans.write().overwrite().save(estimator_path)
-    custom_kmeans_loaded = KMeans.load(estimator_path)
-
-    assertKmeansParameters(kmeans=custom_kmeans_loaded)
 
 
 def assert_centers_equal(
@@ -90,7 +45,76 @@ def assert_centers_equal(
         assert a_center == pytest.approx(b_center, tolerance)
 
 
-def test_toy_example(gpu_number: int, tmp_path: str) -> None:
+def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
+    """
+    Sparkcuml keeps the algorithmic parameters and their default values
+    exactly the same as cuml multi-node multi-GPU KMeans,
+    which follows scikit-learn convention.
+    Please refer to https://docs.rapids.ai/api/cuml/stable/api.html#cuml.dask.cluster.KMeans
+    """
+
+    # Default constructor
+    default_spark_params = {
+        "k": 2,
+        "maxIter": 20,
+    }
+    default_cuml_params = {
+        "n_clusters": 2,
+        "max_iter": 20,
+        "tol": 0.0001,
+        "verbose": False,
+        "init": "scalable-k-means++",
+        "oversampling_factor": 2.0,
+        "max_samples_per_batch": 32768,
+        "num_workers": 1,
+    }
+    default_kmeans = KMeans()
+    assert_params(default_kmeans, default_spark_params, default_cuml_params)
+
+    # Spark Params constructor
+    spark_params = {"k": 10, "maxIter": 100}
+    spark_kmeans = KMeans(**spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update({"n_clusters": 10, "max_iter": 100})
+    assert_params(spark_kmeans, expected_spark_params, expected_cuml_params)
+
+    # cuml_params constructor
+    cuml_params = {
+        "n_clusters": 10,
+        "max_iter": 100,
+        "tol": 1e-1,
+        "verbose": True,
+        "random_state": 5,
+        "init": "k-means||",
+        "oversampling_factor": 3,
+        "max_samples_per_batch": 45678,
+    }
+    cuml_kmeans = KMeans(**cuml_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update({"k": 10, "maxIter": 100})
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(cuml_params)
+    assert_params(cuml_kmeans, expected_spark_params, expected_cuml_params)
+
+    # Estimator persistence
+    path = tmp_path + "/kmeans_tests"
+    estimator_path = f"{path}/kmeans"
+    cuml_kmeans.write().overwrite().save(estimator_path)
+    loaded_kmeans = KMeans.load(estimator_path)
+    assert_params(loaded_kmeans, expected_spark_params, expected_cuml_params)
+
+    # conflicting params
+    conflicting_params = {
+        "k": 2,
+        "n_clusters": 10,
+    }
+    with pytest.raises(ValueError, match="set one or the other"):
+        conflicting_kmeans = KMeans(**conflicting_params)
+
+
+def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
     data = [[1.0, 1.0], [1.0, 2.0], [3.0, 2.0], [4.0, 3.0]]
 
     with CleanSparkSession() as spark:
@@ -124,7 +148,7 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
 
         # test transform function
         label_df = kmeans_model.transform(df)
-        o_col = kmeans_model.getOutputCol()
+        o_col = kmeans_model.getPredictionCol()
         labels = [row[o_col] for row in label_df.collect()]
 
         assert len(labels) == 4
@@ -133,11 +157,29 @@ def test_toy_example(gpu_number: int, tmp_path: str) -> None:
         assert labels[2] == labels[3]
 
 
+@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
+def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
+    data = [
+        [1, 4, 4, 4, 0],
+        [2, 2, 2, 2, 1],
+        [3, 3, 3, 2, 2],
+        [3, 3, 3, 2, 3],
+        [5, 2, 1, 3, 4],
+    ]
+
+    with CleanSparkSession() as spark:
+        feature_cols = ["c1", "c2", "c3", "c4", "c5"]
+        schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
+        df = spark.createDataFrame(data, schema=schema)
+        kmeans = KMeans(num_workers=gpu_number, inputCols=feature_cols, n_clusters=2)
+        kmeans.fit(df)
+
+
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
-def test_compare_cuml(
+def test_kmeans(
     gpu_number: int,
     feature_type: str,
     data_shape: Tuple[int, int],
@@ -177,9 +219,15 @@ def test_compare_cuml(
             spark, feature_type, data_type, X, None
         )
 
-        sparkcuml_kmeans = KMeans(
-            num_workers=gpu_number, n_clusters=n_clusters, verbose=7
-        ).setFeaturesCol(features_col)
+        if feature_type == feature_types.multi_cols:
+            sparkcuml_kmeans = KMeans(
+                num_workers=gpu_number, n_clusters=n_clusters, verbose=7
+            ).setInputCols(features_col)
+        else:
+            sparkcuml_kmeans = KMeans(
+                num_workers=gpu_number, n_clusters=n_clusters, verbose=7
+            ).setFeaturesCol(features_col)
+
         sparkcuml_model = sparkcuml_kmeans.fit(df)
 
         cuml_cluster_centers = cuml_kmeans.cluster_centers_.tolist()
@@ -202,7 +250,7 @@ def test_compare_cuml(
         )  # map sparkcuml center id to cuml center id
 
         labelDf = sparkcuml_model.transform(df)
-        o_col = sparkcuml_model.getOutputCol()
+        o_col = sparkcuml_model.getPredictionCol()
         slabels = [row[o_col] for row in labelDf.collect()]
 
         clabels = cuml_kmeans.predict(gdf).tolist()
@@ -210,21 +258,3 @@ def test_compare_cuml(
         assert len(slabels) == len(clabels)
         to_clabels = [s2c[v] for v in slabels]
         assert to_clabels == clabels
-
-
-@pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
-def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
-    data = [
-        [1, 4, 4, 4, 0],
-        [2, 2, 2, 2, 1],
-        [3, 3, 3, 2, 2],
-        [3, 3, 3, 2, 3],
-        [5, 2, 1, 3, 4],
-    ]
-
-    with CleanSparkSession() as spark:
-        feature_cols = ["c1", "c2", "c3", "c4", "c5"]
-        schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
-        df = spark.createDataFrame(data, schema=schema)
-        kmeans = KMeans(num_workers=gpu_number, inputCols=feature_cols, n_clusters=2)
-        kmeans.fit(df)
