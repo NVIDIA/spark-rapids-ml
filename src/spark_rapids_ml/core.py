@@ -285,22 +285,12 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
     ]:
-        input_col = None
-        input_cols = None
         select_cols = []
 
         # label column will be cast to feature type if needed.
         feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
 
-        # Note: order is significant if multiple params are set, e.g. defaults vs. overrides
-        if self.hasParam("inputCols") and self.isDefined("inputCols"):
-            input_cols = self.getOrDefault("inputCols")
-        elif self.hasParam("inputCol") and self.isDefined("inputCol"):
-            input_col = self.getOrDefault("inputCol")
-        elif self.hasParam("featuresCol") and self.isDefined("featuresCol"):
-            input_col = self.getOrDefault("featuresCol")
-        else:
-            raise ValueError("Please set featuresCol, inputCol, or inputCols")
+        input_col, input_cols = self._get_input_columns()
 
         if input_col:
             # Single Column
@@ -557,19 +547,9 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
     ) -> Tuple[DataFrame, List[str], bool]:
         """Pre-handle the dataset before transform."""
         select_cols = []
-        input_col = None
-        input_cols = None
         input_is_multi_cols = True
 
-        # Note: order is significant if multiple params are set, e.g. defaults vs. overrides
-        if self.hasParam("inputCols") and self.isDefined("inputCols"):
-            input_cols = self.getOrDefault("inputCols")
-        elif self.hasParam("inputCol") and self.isDefined("inputCol"):
-            input_col = self.getOrDefault("inputCol")
-        elif self.hasParam("featuresCol") and self.isDefined("featuresCol"):
-            input_col = self.getOrDefault("featuresCol")
-        else:
-            raise ValueError("Please set featuresCol, inputCol, or inputCols")
+        input_col, input_cols = self._get_input_columns()
 
         if input_col:
             if isinstance(dataset.schema[input_col].dataType, VectorUDT):

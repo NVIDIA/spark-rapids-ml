@@ -1,10 +1,32 @@
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from pyspark.ml.param import Param, Params, TypeConverters
 
 from spark_rapids_ml.utils import _get_default_params_from_func
 
 P = TypeVar("P", bound="_CumlParams")
+
+
+class HasFeaturesCols(Params):
+    """
+    Mixin for param featuresCols: features column names for multi-column input.
+    """
+
+    featuresCols = Param(
+        Params._dummy(),  # type: ignore
+        "featuresCols",
+        "features column names for multi-column input.",
+        TypeConverters.toListString,
+    )
+
+    def __init__(self) -> None:
+        super(HasFeaturesCols, self).__init__()
+
+    def getFeaturesCols(self) -> List[str]:
+        """
+        Gets the value of featuresCols or its default value.
+        """
+        return self.getOrDefault(self.featuresCols)
 
 
 class HasNumWorkers(Params):
@@ -226,6 +248,41 @@ class _CumlParams(_CumlClass, HasNumWorkers):
             if k in to.cuml_params:
                 to.cuml_params[k] = v
         return to
+
+    def _get_input_columns(self) -> Tuple[Optional[str], Optional[List[str]]]:
+        """
+        Get input column(s) from any of inputCol, inputCols, featuresCol, or featuresCols.
+
+        Single-column setters, e.g. `setInputCol`, should allow either a single col name,
+        or a list of col names (to transparently support multi-column inputs), while storing
+        values in the appropriate underlying params, e.g. `inputCol` or `inputCols`.
+
+        Returns
+        -------
+        Tuple[Optional[str], Optional[List[str]]]
+            tuple of either a single column name or a list of multiple column names.
+
+        Raises
+        ------
+        ValueError
+            if none of the four supported input column params are set.
+        """
+        input_col = None
+        input_cols = None
+
+        # Note: order is significant if multiple params are set, e.g. defaults vs. overrides
+        if self.hasParam("inputCols") and self.isDefined("inputCols"):
+            input_cols = self.getOrDefault("inputCols")
+        elif self.hasParam("inputCol") and self.isDefined("inputCol"):
+            input_col = self.getOrDefault("inputCol")
+        elif self.hasParam("featuresCols") and self.isDefined("featuresCols"):
+            input_cols = self.getOrDefault("featuresCols")
+        elif self.hasParam("featuresCol") and self.isDefined("featuresCol"):
+            input_col = self.getOrDefault("featuresCol")
+        else:
+            raise ValueError("Please set inputCol(s) or featuresCol(s)")
+
+        return input_col, input_cols
 
     def _set_cuml_value(self, k: str, v: Any) -> None:
         """

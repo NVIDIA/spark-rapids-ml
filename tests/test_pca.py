@@ -254,14 +254,9 @@ def test_pca(
             else ["pca_feature_" + str(i) for i in range(n_components)]
         )
 
-        if feature_type == feature_types.multi_cols:
-            spark_pca = (
-                PCA(n_components=3).setInputCols(features_col).setOutputCols(output_col)
-            )
-        else:
-            spark_pca = (
-                PCA(n_components=3).setInputCol(features_col).setOutputCol(output_col)
-            )
+        spark_pca = (
+            PCA(n_components=3).setInputCol(features_col).setOutputCol(output_col)
+        )
 
         model = spark_pca.fit(train_df)
         assert array_equal(cu_pca.components_, model.components_, 1e-3, with_sign=False)

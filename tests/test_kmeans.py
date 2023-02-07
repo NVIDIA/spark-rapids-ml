@@ -173,7 +173,7 @@ def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
         feature_cols = ["c1", "c2", "c3", "c4", "c5"]
         schema = ", ".join([f"{c} {data_type}" for c in feature_cols])
         df = spark.createDataFrame(data, schema=schema)
-        kmeans = KMeans(num_workers=gpu_number, inputCols=feature_cols, n_clusters=2)
+        kmeans = KMeans(num_workers=gpu_number, featuresCols=feature_cols, n_clusters=2)
         kmeans.fit(df)
 
 
@@ -221,14 +221,9 @@ def test_kmeans(
             spark, feature_type, data_type, X, None
         )
 
-        if feature_type == feature_types.multi_cols:
-            sparkcuml_kmeans = KMeans(
-                num_workers=gpu_number, n_clusters=n_clusters, verbose=7
-            ).setInputCols(features_col)
-        else:
-            sparkcuml_kmeans = KMeans(
-                num_workers=gpu_number, n_clusters=n_clusters, verbose=7
-            ).setFeaturesCol(features_col)
+        sparkcuml_kmeans = KMeans(
+            num_workers=gpu_number, n_clusters=n_clusters, verbose=7
+        ).setFeaturesCol(features_col)
 
         sparkcuml_model = sparkcuml_kmeans.fit(df)
 

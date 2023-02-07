@@ -101,11 +101,15 @@ class PCA(PCAClass, _CumlEstimator, _PCAParams, HasInputCols, HasOutputCols):
         """
         return self.set_params(k=value)
 
-    def setInputCol(self, value: str) -> "PCA":
+    def setInputCol(self, value: Union[str, List[str]]) -> "PCA":
         """
-        Sets the value of :py:attr:`inputCol`.
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
         """
-        return self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
+        return self
 
     def setInputCols(self, value: List[str]) -> "PCA":
         """
@@ -113,11 +117,15 @@ class PCA(PCAClass, _CumlEstimator, _PCAParams, HasInputCols, HasOutputCols):
         """
         return self.set_params(inputCols=value)
 
-    def setOutputCol(self, value: str) -> "PCA":
+    def setOutputCol(self, value: Union[str, List[str]]) -> "PCA":
         """
-        Sets the value of :py:attr:`outputCol`.
+        Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
         """
-        return self.set_params(outputCol=value)
+        if isinstance(value, str):
+            self.set_params(outputCol=value)
+        else:
+            self.set_params(outputCols=value)
+        return self
 
     def setOutputCols(self, value: List[str]) -> "PCA":
         """
@@ -214,11 +222,15 @@ class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
 
         self.set_params(n_components=len(components_))
 
-    def setInputCol(self, value: str) -> "PCAModel":
+    def setInputCol(self, value: Union[str, List[str]]) -> "PCAModel":
         """
-        Sets the value of :py:attr:`inputCol`.
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
         """
-        return self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
+        return self
 
     def setInputCols(self, value: List[str]) -> "PCAModel":
         """
@@ -226,11 +238,15 @@ class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
         """
         return self.set_params(inputCols=value)
 
-    def setOutputCol(self, value: str) -> "PCAModel":
+    def setOutputCol(self, value: Union[str, List[str]]) -> "PCAModel":
         """
-        Sets the value of :py:attr:`outputCol`.
+        Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
         """
-        return self.set_params(outputCol=value)
+        if isinstance(value, str):
+            self.set_params(outputCol=value)
+        else:
+            self.set_params(outputCols=value)
+        return self
 
     def setOutputCols(self, value: List[str]) -> "PCAModel":
         """

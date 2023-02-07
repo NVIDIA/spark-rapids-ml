@@ -37,7 +37,7 @@ from spark_rapids_ml.core import (
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import _CumlClass
+from spark_rapids_ml.params import HasFeaturesCols, _CumlClass
 from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
@@ -80,29 +80,50 @@ class LinearRegression(
     LinearRegressionClass,
     _CumlEstimatorSupervised,
     _LinearRegressionParams,
-    HasInputCols,
+    HasFeaturesCols,
 ):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
 
-    def setFeaturesCol(self, value: str) -> "LinearRegression":
+    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
-        Sets the value of :py:attr:`featuresCol`.
+        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
         """
-        return self.set_params(featuresCol=value)
+        if self.isDefined(self.featuresCols):
+            return self.getFeaturesCols()
+        elif self.isDefined(self.featuresCol):
+            return self.getOrDefault("featuresCol")
+        else:
+            raise RuntimeError("featuresCol is not set")
 
-    def setInputCols(self, value: List[str]) -> "LinearRegression":
+    def setFeaturesCol(self, value: Union[str, List[str]]) -> "LinearRegression":
         """
-        Sets the value of :py:attr:`inputCols`.
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
-        return self.set_params(inputCols=value)
+        if isinstance(value, str):
+            self.set_params(featuresCol=value)
+        else:
+            self.set_params(featuresCols=value)
+        return self
+
+    def setFeaturesCols(self, value: List[str]) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`featuresCols`.
+        """
+        return self.set_params(featuresCols=value)
 
     def setMaxIter(self, value: int) -> "LinearRegression":
         """
         Sets the value of :py:attr:`maxIter`.
         """
         return self.set_params(maxIter=value)
+
+    def setPredictionCol(self, value: str) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        return self.set_params(predictionCol=value)
 
     def setRegParam(self, value: float) -> "LinearRegression":
         """
@@ -232,7 +253,10 @@ class LinearRegression(
 
 
 class LinearRegressionModel(
-    LinearRegressionClass, _CumlModelSupervised, _LinearRegressionParams, HasInputCols
+    LinearRegressionClass,
+    _CumlModelSupervised,
+    _LinearRegressionParams,
+    HasFeaturesCols,
 ):
     def __init__(
         self,
@@ -248,6 +272,39 @@ class LinearRegressionModel(
     @property
     def coefficients(self) -> List[float]:
         return self.coef_
+
+    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
+        """
+        if self.isDefined(self.featuresCols):
+            return self.getFeaturesCols()
+        elif self.isDefined(self.featuresCol):
+            return self.getOrDefault("featuresCol")
+        else:
+            raise RuntimeError("featuresCol is not set")
+
+    def setFeaturesCol(self, value: Union[str, List[str]]) -> "LinearRegressionModel":
+        """
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
+        """
+        if isinstance(value, str):
+            self.set_params(featuresCol=value)
+        else:
+            self.set_params(featuresCols=value)
+        return self
+
+    def setFeaturesCols(self, value: List[str]) -> "LinearRegressionModel":
+        """
+        Sets the value of :py:attr:`featuresCols`.
+        """
+        return self.set_params(featuresCols=value)
+
+    def setPredictionCol(self, value: str) -> "LinearRegressionModel":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        return self.set_params(predictionCol=value)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame

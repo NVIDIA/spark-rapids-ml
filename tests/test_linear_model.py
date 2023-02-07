@@ -144,7 +144,7 @@ def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None
         )
         df = spark.createDataFrame(data, schema=schema)
         lr = LinearRegression(num_workers=gpu_number)
-        lr.setInputCols(feature_cols)
+        lr.setFeaturesCol(feature_cols)
         lr.fit(df)
 
 
@@ -169,12 +169,8 @@ def test_linear_regression_basic(
         lr = LinearRegression()
         lr.setRegParam(reg)
 
-        if feature_type == feature_types.multi_cols:
-            lr.setInputCols(features_col)
-            assert lr.getInputCols() == features_col
-        else:
-            lr.setFeaturesCol(features_col)
-            assert lr.getFeaturesCol() == features_col
+        lr.setFeaturesCol(features_col)
+        assert lr.getFeaturesCol() == features_col
 
         assert label_col is not None
         lr.setLabelCol(label_col)
@@ -254,10 +250,7 @@ def test_linear_regression(
             False
         )  # Spark default is True, but Cuml default is False
         slr.setElasticNetParam(l1_ratio)
-        if feature_type == feature_types.multi_cols:
-            slr.setInputCols(features_col)
-        else:
-            slr.setFeaturesCol(features_col)
+        slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
 

@@ -135,7 +135,7 @@ def bench_alg(
         if is_single_col:
             gpu_estimator = gpu_estimator.setFeaturesCol(first_col)
         else:
-            gpu_estimator = gpu_estimator.setInputCols(input_cols)
+            gpu_estimator = gpu_estimator.setFeaturesCols(input_cols)
 
         gpu_model = gpu_estimator.fit(df)
         fit_time = time.time() - start_time
