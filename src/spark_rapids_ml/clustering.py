@@ -244,7 +244,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansParams, HasFeaturesC
             self.set_params(featuresCols=value)
         return self
 
-    def setFeaturesCols(self, value: List[str]) -> "KMeans":
+    def setFeaturesCols(self, value: List[str]) -> "KMeansModel":
         """
         Sets the value of :py:attr:`featuresCols`.
         """
