@@ -155,7 +155,7 @@ def test_pca_bench(
         # elif is_vector_col: 
         #    df_for_scoring = transformed_df.select(vector_to_array(feature_col), output_col)
 
-        pc_for_scoring = np.transpose(np.array(gpu_model.pc))
+        pc_for_scoring = gpu_model.pc.toArray()
 
     if num_cpus > 0:
         assert num_gpus <= 0
