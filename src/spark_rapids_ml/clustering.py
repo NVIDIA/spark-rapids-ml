@@ -42,6 +42,7 @@ from spark_rapids_ml.core import (
     _CumlModelSupervised,
 )
 from spark_rapids_ml.params import _CumlClass
+from spark_rapids_ml.utils import get_logger
 
 
 class KMeansClass(_CumlClass):
@@ -139,6 +140,8 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasInputCols):
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        cls = self.__class__
+
         def _cuml_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
@@ -160,6 +163,12 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasInputCols):
             kmeans_object.fit(
                 concated,
                 sample_weight=None,
+            )
+
+            logger = get_logger(cls)
+            # TBD: inertia is always 0 for some reason
+            logger.info(
+                f"iterations: {kmeans_object.n_iter_}, inertia: {kmeans_object.inertia_}"
             )
 
             return {

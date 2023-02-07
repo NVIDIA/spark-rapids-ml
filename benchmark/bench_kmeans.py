@@ -23,11 +23,67 @@ import numpy as np
 import pandas as pd
 from pyspark.ml.clustering import KMeans
 from pyspark.ml.feature import VectorAssembler
-from pyspark.ml.functions import array_to_vector
+from pyspark.ml.functions import array_to_vector, vector_to_array
+from pyspark.sql.functions import array, sum
+from pyspark.sql import DataFrame
+
+from pyspark.sql.types import StructType, StructField, DoubleType
+
 
 from benchmark.utils import WithSparkSession
 
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Iterator, Optional
+
+
+
+def score(
+    centers: np.ndarray,
+    transformed_df: DataFrame,
+    features_col: str,
+    prediction_col: str
+) -> float:
+    """Computes the sum of squared euclidean distances between vectors in the features_col
+    of transformed_df and the vector in centers having the corresponding index value in prediction_col.
+    This is the objective function being optimized by the kmeans algorithm.  It is also referred to as inertia.
+    
+    Parameters
+    ----------
+    centers
+        KMeans computed center/centroid vectors.
+    transformed_df
+        KMeansModel transformed data.
+    features_col
+        Name of features column.
+        Note: this column is assumed to be of pyspark sql 'array' type.
+    prediction_col
+        Name of prediction column (index of nearest centroid, as computed by KMeansModel.transform)
+
+    Returns
+    -------
+    float
+        The computed inertia score, per description above.
+        
+    """
+
+    sc = transformed_df.rdd.context
+    centers_bc = sc.broadcast(centers)
+    def partition_score_udf(pdf_iter: Iterator[pd.DataFrame]) -> Iterator[float]:
+        local_centers = centers_bc.value.astype(np.float64)
+        partition_score = 0.0
+        for pdf in pdf_iter:
+            input_vecs = np.array(list(pdf[features_col]),dtype=np.float64)
+            predictions = list(pdf[prediction_col])
+            center_vecs = local_centers[predictions, :]
+            partition_score += np.sum((input_vecs - center_vecs)**2)
+        yield pd.DataFrame({'partition_score': [partition_score]})
+    total_score = ( 
+        transformed_df.mapInPandas(partition_score_udf, 
+                                   StructType([StructField('partition_score',DoubleType(),True)]))
+                      .agg(sum('partition_score').alias('total_score'))
+                      .toPandas()
+    )
+    total_score = total_score['total_score'][0]
+    return total_score
 
 def bench_alg(
     n_clusters: int,
@@ -37,6 +93,7 @@ def bench_alg(
     num_cpus: int,
     no_cache: bool,
     parquet_path: str,
+    seed: Optional[int]
 ) -> Tuple[float, float, float]:
 
     fit_time = None
@@ -66,8 +123,13 @@ def bench_alg(
 
         start_time = time.time()
         gpu_estimator = (
-            SparkCumlKMeans(num_workers=num_gpus, n_clusters=n_clusters, max_iter=max_iter, tol=tol, init='random', verbose=6)
-            .setPredictionCol(output_col)
+            (  
+                SparkCumlKMeans(num_workers=num_gpus, n_clusters=n_clusters, max_iter=max_iter, tol=tol, init='random', verbose=6)
+                .setPredictionCol(output_col) 
+            ) if seed is None else (
+                SparkCumlKMeans(num_workers=num_gpus, n_clusters=n_clusters, max_iter=max_iter, tol=tol, init='random', verbose=6, random_state=seed)
+                .setPredictionCol(output_col)
+            )
         )
 
         if is_single_col:
@@ -80,12 +142,24 @@ def bench_alg(
         print(f"gpu fit took: {fit_time} sec")
 
         start_time = time.time()
-        gpu_model.transform(df).count()
+        transformed_df = gpu_model.setPredictionCol(output_col).transform(df)
+        # count doesn't trigger compute so do something not too compute intensive
+        transformed_df.agg(sum(output_col)).collect()
         transform_time = time.time() - start_time
         print(f"gpu transform took: {transform_time} sec")
 
         total_time = time.time() - func_start_time
         print(f"gpu total took: {total_time} sec")
+
+        df_for_scoring = transformed_df
+        feature_col = first_col
+        if not is_single_col:
+            feature_col = 'features_array'
+            df_for_scoring = transformed_df.select(array(*input_cols).alias('features_array'), output_col)
+        elif is_vector_col:
+            df_for_scoring = transformed_df.select(vector_to_array(feature_col), output_col)
+
+        cluster_centers = gpu_model.cluster_centers_
 
     if num_cpus > 0:
         assert num_gpus <= 0
@@ -106,17 +180,31 @@ def bench_alg(
 
         start_time = time.time()
         cpu_estimator = KMeans(initMode='random').setFeaturesCol(first_col).setPredictionCol(output_col).setK(n_clusters).setMaxIter(max_iter).setTol(tol)
+        if seed is not None:
+            cpu_estimator = cpu_estimator.setSeed(seed)
         cpu_model = cpu_estimator.fit(vector_df)
         fit_time = time.time() - start_time
         print(f"cpu fit took: {fit_time} sec")
 
+        print(f"spark ML: iterations: {cpu_model.summary.numIter}, inertia: {cpu_model.summary.trainingCost}")
+
         start_time = time.time()
-        cpu_model.transform(vector_df).count()
+        transformed_df = cpu_model.transform(vector_df)
+        transformed_df.agg(sum(output_col)).collect()
         transform_time = time.time() - start_time
         print(f"cpu transform took: {transform_time} sec")
 
         total_time = time.time() - func_start_time
         print(f"cpu total took: {total_time} sec")
+
+        feature_col = first_col
+        df_for_scoring = transformed_df.select(vector_to_array(feature_col).alias(feature_col), output_col)
+        cluster_centers = cpu_model.clusterCenters()
+
+    # either cpu or gpu mode is run, not both in same run
+    _score = score(np.array(cluster_centers), df_for_scoring, feature_col, output_col)
+    # note: seems that inertia matches score at iterations-1
+    print(f"score: {_score}")
 
     return (fit_time, transform_time, total_time)
 
@@ -126,6 +214,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_clusters", type=int, default=200)
     parser.add_argument("--max_iter", type=int, default=30)
     parser.add_argument("--tol", type=float, default=-1, help='sparkcuml requires tol to be negative in order to finish max_iters')
+    parser.add_argument("--seed", type=int, default=None, help='if set, seed of initial random centers, otherwise different centers chosen each run')
     parser.add_argument("--num_gpus", type=int, default=1, help='number of available GPUs. If num_gpus > 0, sparkcuml will run with the number of dataset partitions equal to num_gpus.')
     parser.add_argument("--num_cpus", type=int, default=6, help='number of available CPUs. If num_cpus > 0, spark will run and with the number of dataset partitions to num_cpus.')
     parser.add_argument("--no_cache", action='store_true', default=False, help='whether to enable dataframe repartition, cache and cout outside sparkcuml fit')
@@ -150,6 +239,7 @@ if __name__ == "__main__":
                 args.num_cpus,
                 args.no_cache,
                 args.parquet_path,
+                args.seed
             )
 
             report_dict = {

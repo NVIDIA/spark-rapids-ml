@@ -23,6 +23,7 @@ from typing import List, Any
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import sum
 
 from benchmark.utils import with_benchmark, WithSparkSession
 
@@ -66,6 +67,7 @@ class BenchmarkLinearRegression(BenchmarkBase):
         super().__init__()
         self._parse_arguments(argv)
 
+
     def run(self, spark: SparkSession) -> None:
 
         df = spark.read.parquet(*self.args.train_path)
@@ -82,10 +84,12 @@ class BenchmarkLinearRegression(BenchmarkBase):
 
         if self.args.gpu_workers > 0:
             from spark_rapids_ml.regression import LinearRegression
+            train_df = df
             lr = LinearRegression(num_workers=self.args.gpu_workers, verbose=7)
             lr.setFeaturesCol(features_col)
             lr.setLabelCol(label_name)
-            model = with_benchmark("SparkCuml LinearRegression training:", lambda: lr.fit(df))
+            model = with_benchmark("SparkCuml LinearRegression training:", lambda: lr.fit(train_df))
+            
 
         else:
             from pyspark.ml.regression import LinearRegression
@@ -104,6 +108,20 @@ class BenchmarkLinearRegression(BenchmarkBase):
             ) if not is_vector_col else df
 
             model = with_benchmark("Spark ML LinearRegression training:", lambda: spark_lr.fit(train_df))
+
+        df_with_preds = model.transform(train_df)
+
+        # model does not yet have col getters setters and uses default value for prediction col
+        prediction_col = model.getOrDefault(model.predictionCol)
+
+        # run a simple dummy computation to trigger transform. count is short circuited due to pandas_udf used internally
+        with_benchmark("Spark ML LinearRegression transform:", lambda: df_with_preds.agg(sum(prediction_col)).collect())
+
+        # compute prediction mse on training data
+        from pyspark.ml.evaluation import RegressionEvaluator
+        evaluator = RegressionEvaluator().setPredictionCol(prediction_col).setLabelCol(label_name)
+        mse = evaluator.evaluate(df_with_preds)
+        print(f"MSE:{mse}")
 
 
 class BenchmarkRunner:
