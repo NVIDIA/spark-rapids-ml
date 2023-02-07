@@ -387,13 +387,13 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             logger = get_logger(cls)
             logger.info("Initializing cuml context")
 
-            self.initialize_cuml_logging(cuml_verbose)
+            _CumlCommon.initialize_cuml_logging(cuml_verbose)
 
             context = BarrierTaskContext.get()
             partition_id = context.partitionId()
 
             # set gpu device
-            self.set_gpu_device(context, is_local)
+            _CumlCommon.set_gpu_device(context, is_local)
 
             with CumlContext(partition_id, num_workers, context) as cc:
                 # handle the input
@@ -622,7 +622,7 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
 
             context = TaskContext.get()
 
-            self.set_gpu_device(context, is_local, True)
+            _CumlCommon.set_gpu_device(context, is_local, True)
 
             # Construct the cuml counterpart object
             cuml_object = construct_cuml_object_func()
@@ -669,7 +669,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             from pyspark import TaskContext
 
             context = TaskContext.get()
-            self.set_gpu_device(context, is_local, True)
+            _CumlCommon.set_gpu_device(context, is_local, True)
             cuml_object = construct_cuml_object_func()
             for pdf in iterator:
                 if not input_is_multi_cols:

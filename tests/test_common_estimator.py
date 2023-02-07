@@ -89,6 +89,10 @@ class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutpu
         m = self.m
         n = self.n
 
+        # if the common framework tries to pickle the whole class,
+        # it will throw exception since dataset is not picklable.
+        self.test_pickle_dataframe = dataset
+
         def _cuml_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
@@ -178,6 +182,10 @@ class SparkCumlDummyModel(SparkCumlDummyClass, _CumlModel, HasInputCols, HasOutp
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
         model_attribute_a = self.model_attribute_a
+
+        # if the common framework tries to pickle the whole class,
+        # it will throw exception since dataset is not picklable.
+        self.test_pickle_dataframe = dataset
 
         def _construct_dummy() -> CumlT:
             dummy = CumlDummy(a=101, b=102, c=103)
