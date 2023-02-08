@@ -17,20 +17,18 @@
 import argparse
 import datetime
 import time
-from typing import Tuple
+from typing import Iterator, Tuple
 
 import numpy as np
 import pandas as pd
-from pyspark.ml.feature import PCA
+from pyspark.ml.feature import PCA, StandardScaler, VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
-from pyspark.ml.feature import VectorAssembler, StandardScaler
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, sum
-from pyspark.sql.types import StructType, StructField, DoubleType
-
-from typing import Iterator, Tuple
+from pyspark.sql.functions import array, col, sum
+from pyspark.sql.types import DoubleType, StructField, StructType
 
 from benchmark.utils import WithSparkSession
+
 
 def score(
     pc_vectors: np.ndarray,
@@ -43,24 +41,24 @@ def score(
     Also computes the sum of squares of the transformed_col vectors.  The larger the better.
 
     PCA projection should have been performed on mean removed input for the second metric to be relevant.
-    
+
     Parameters
     ----------
     pc_vectors
-        principal component vectors. 
+        principal component vectors.
         pc_vectors.shape assumed to be (dim, k).
     transformed_df
         PCAModel transformed data.
     transformed_col
-        Name of column with the PCA transformed data.  
+        Name of column with the PCA transformed data.
         Note: This column is expected to be of pyspark sql 'array' type.
-    
+
     Returns
     -------
     Tuple[float, float]
-        The components of the returned tuple are respectively the orthonormality score and 
-        the sum of squares of the transformed vectors. 
-        
+        The components of the returned tuple are respectively the orthonormality score and
+        the sum of squares of the transformed vectors.
+
     """
 
     pc_vectors = np.array(pc_vectors, dtype=np.float64)
@@ -75,8 +73,8 @@ def score(
             partition_score += np.sum(transformed_vecs**2)
         yield pd.DataFrame({'partition_score': [partition_score]})
 
-    total_score = ( 
-        transformed_df.mapInPandas(partition_score_udf, 
+    total_score = (
+        transformed_df.mapInPandas(partition_score_udf,
                                    StructType([StructField('partition_score',DoubleType(),True)]))
                       .agg(sum('partition_score').alias('total_score'))
                       .toPandas()
@@ -146,13 +144,29 @@ def test_pca_bench(
         total_time = time.time() - func_start_time
         print(f"gpu total took: {total_time} sec")
 
-        df_for_scoring = transformed_df.select(output_col)
+        # spark ml does not remove the mean in the transformed features, so do that here
+        # needed for scoring
         feature_col = output_col
+        df_for_scoring = transformed_df.select(array_to_vector(output_col).alias(output_col+"_vec"))
+        standard_scaler = (
+            StandardScaler()
+            .setWithStd(False)
+            .setWithMean(True)
+            .setInputCol(output_col+"_vec")
+            .setOutputCol(output_col+"_mean_removed")
+        )
+        scaler_model = standard_scaler.fit(df_for_scoring)
+        df_for_scoring = (
+            scaler_model
+            .transform(df_for_scoring)
+            .drop(output_col+"_vec")
+            .select(vector_to_array(output_col+"_mean_removed").alias(feature_col))
+        )
         if not is_single_col:
             feature_col = 'features_array'
             df_for_scoring = transformed_df.select(array(*output_cols).alias(feature_col))
         # restore and change when output is set to vector udt if input is vector udt
-        # elif is_vector_col: 
+        # elif is_vector_col:
         #    df_for_scoring = transformed_df.select(vector_to_array(feature_col), output_col)
 
         pc_for_scoring = gpu_model.pc.toArray()
@@ -198,7 +212,7 @@ def test_pca_bench(
 
         scaler_model = standard_scaler.fit(transformed_df)
         transformed_df = scaler_model.transform(transformed_df).drop(output_col)
-        
+
         feature_col = output_col+"_mean_removed"
         pc_for_scoring = cpu_model.pc.toArray()
         df_for_scoring = transformed_df.select(vector_to_array(feature_col).alias(feature_col))

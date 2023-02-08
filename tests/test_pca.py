@@ -238,9 +238,10 @@ def test_pca(
 
     cu_pca = cuPCA(n_components=n_components, output_type="numpy", verbose=7)
     cu_model = cu_pca.fit(X)
-    # TODO: adding mean to match Spark transform
-    # cu_result = cu_model.transform(X + np.array(cu_model.mean_, data_type))
-    cu_result = cu_model.transform(X)
+
+    # Spark does not remove the mean from the transformed data
+    # adding mean to input data to sanity-check the transformed mean approach in main class
+    cu_result = cu_model.transform(X + np.array(cu_model.mean_, data_type))
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
     with CleanSparkSession(conf) as spark:

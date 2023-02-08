@@ -197,6 +197,12 @@ class PCA(PCAClass, _CumlEstimator, _PCAParams, HasInputCols, HasOutputCols):
 
 
 class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
+    """Applies dimensionality reduction on an input DataFrame.
+
+    Note: Spark PCA does not automatically remove the mean of the input data, so use the
+    :py:class::`StandardScaler` to center the input data before invoking transform.
+    """
+
     def __init__(
         self,
         mean_: List[float],
@@ -313,6 +319,11 @@ class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
 
         cuml_alg_params = self.cuml_params.copy()
 
+        transformed_mean = np.matmul(
+            np.array(self.mean_, self.dtype),
+            np.array(self.components_, self.dtype).T,
+        )
+
         def _construct_pca() -> CumlT:
             """
 
@@ -342,13 +353,16 @@ class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
         def _transform_internal(
             pca_object: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.DataFrame:
-            # TODO: Spark doesn't auto-normalize the inputs like CuML, so add mean back
-            # df = df + np.array(self.mean_, self.dtype)
             res = pca_object.transform(df).to_numpy()
             # if num_components is 1, a 1-d numpy array is returned
             # convert to 2d for correct downstream behavior
+
             if len(res.shape) == 1:
                 res = np.expand_dims(res, 1)
+
+            # Spark does not remove the mean from the transformed data,
+            # but CuML does, so need to add the mean back to match Spark results
+            res += transformed_mean
 
             if self.isDefined(self.outputCols):
                 return pd.DataFrame(res, columns=self.getOutputCols())
