@@ -24,7 +24,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.param import Params
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
-from sklearn.datasets import make_regression
+from sklearn.datasets import make_classification, make_regression
 from sklearn.model_selection import train_test_split
 
 from spark_rapids_ml.params import _CumlParams
@@ -164,3 +164,36 @@ def assert_params(
             assert (
                 actual == expected
             ), f"Value of '{key}' cuml_param was {actual}, expected {expected}."
+
+
+@lru_cache(4)
+def _make_classification_dataset_from_cache(
+    nrows: int, ncols: int, **kwargs: Any
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Cache the dataset"""
+    return _make_classification_dataset_uncached(nrows, ncols, **kwargs)
+
+
+def _make_classification_dataset_uncached(
+    nrows: int, ncols: int, **kwargs: Any
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Create classification dataset.
+
+    return X_train, X_test, y_train, y_test
+    """
+    X, y = make_classification(
+        **kwargs, n_samples=nrows, n_features=ncols, random_state=0
+    )
+    return train_test_split(X, y, train_size=0.8, random_state=10)
+
+
+def make_classification_dataset(
+    datatype: np.dtype, nrows: int, ncols: int, **kwargs: Any
+) -> Iterator[np.ndarray]:
+    """Create classification dataset"""
+    if nrows * ncols < 1e8:  # Keep cache under 4 GB
+        dataset = _make_classification_dataset_from_cache(nrows, ncols, **kwargs)
+    else:
+        dataset = _make_classification_dataset_uncached(nrows, ncols, **kwargs)
+
+    return map(lambda arr: arr.astype(datatype), dataset)

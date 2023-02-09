@@ -209,7 +209,15 @@ class _CumlParams(_CumlClass, HasNumWorkers):
                     if k == cuml_param:
                         # also set matching Spark Param, if exists
                         # TODO: map cuml values back to Spark equivalents?
-                        self._set(**{str(spark_param): v})
+                        try:
+                            self._set(**{str(spark_param): v})
+                        except TypeError:
+                            # Spark params have a converter, which may not work
+                            # as expected. Eg, it can't convert float back to
+                            # str param.
+                            # TypeError: Invalid param value given for param "featureSubsetStrategy".
+                            # Could not convert <class 'float'> to string type
+                            pass
 
             if (
                 not self.hasParam(k)
