@@ -82,6 +82,15 @@ class LinearRegression(
     _LinearRegressionParams,
     HasFeaturesCols,
 ):
+    """TBD: finish docstring
+
+    Note
+    ----
+        Results for spark ML and spark rapids ml fit() will currently match in all regularization
+        cases only if features and labels are standardized in the input dataframe.  Otherwise,
+        they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
+    """
+
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
@@ -155,6 +164,12 @@ class LinearRegression(
         """
         return self.set_params(standardization=value)
 
+    def setTol(self, value: float) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`tol`.
+        """
+        return self.set_params(tol=value)
+
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
@@ -163,6 +178,8 @@ class LinearRegression(
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             init_parameters = params[INIT_PARAMETERS_NAME]
+
+            pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
 
             if init_parameters["alpha"] == 0:
                 # LR
@@ -190,6 +207,15 @@ class LinearRegression(
                         "normalize",
                         "verbose",
                     ]
+                    # spark ML normalizes sample portion of objective by the number of examples
+                    # but cuml does not for RidgeRegression (l1_ratio=0).   Induce similar behavior
+                    # to spark ml by scaling up the reg parameter by the number of examples.
+                    # With this, spark ML and spark rapids ML results match closely when features
+                    # and label columns are all standardized.
+                    init_parameters = init_parameters.copy()
+                    if "alpha" in init_parameters.keys():
+                        print(f"pdesc.m {pdesc.m}")
+                        init_parameters["alpha"] *= (float)(pdesc.m)
 
                 else:
                     # LR + L1, or LR + L1 + L2
@@ -197,11 +223,16 @@ class LinearRegression(
                     # So combine Lasso and ElasticNet here.
                     from cuml.solvers.cd_mg import CDMG as CumlLinearRegression
 
+                    # in this case, both spark ML and cuml CD normalize sample portion of
+                    # objective by the number of training examples, so no need to adjust
+                    # reg params
+
                     supported_params = [
                         "loss",
                         "alpha",
                         "l1_ratio",
                         "fit_intercept",
+                        "max_iter",
                         "normalize",
                         "tol",
                         "shuffle",
@@ -218,8 +249,6 @@ class LinearRegression(
                 output_type="cudf",
                 **init_parameters,
             )
-
-            pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
 
             linear_regression.fit(
                 dfs,
@@ -272,6 +301,10 @@ class LinearRegressionModel(
     @property
     def coefficients(self) -> List[float]:
         return self.coef_
+
+    @property
+    def intercept(self) -> float:
+        return self.intercept_
 
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """

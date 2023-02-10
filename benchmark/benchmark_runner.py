@@ -15,6 +15,7 @@
 #
 import argparse
 import datetime
+import numpy as np
 import sys
 from abc import abstractmethod
 from distutils.util import strtobool
@@ -65,6 +66,18 @@ class BenchmarkLinearRegression(BenchmarkBase):
 
     def __init__(self, argv: List[Any]) -> None:
         super().__init__()
+        self._parser.add_argument("--reg_param", type=float, default=0.0,
+                                  help="value for regParam regularization parameter")
+        self._parser.add_argument("--elastic_net", type=float, default=0.0,
+                                  help="value for elasticNetParam regularization parameter")
+        self._parser.add_argument("--tol", type=float, default=1.0e-6,
+                                  help="value for tol parameter controlling iterative solver")
+        self._parser.add_argument("--max_iter", type=int, default=100,
+                                  help="value for maxIter parameter controlling iterative solver")
+        self._parser.add_argument("--standardize", action ='store_true',
+                                  help="""standardize input features before training, default is to not standardize.
+                                          Note: regularization is applied in the standardized domain.""")
+
         self._parse_arguments(argv)
 
 
@@ -86,16 +99,10 @@ class BenchmarkLinearRegression(BenchmarkBase):
             from spark_rapids_ml.regression import LinearRegression
             train_df = df
             lr = LinearRegression(num_workers=self.args.gpu_workers, verbose=7)
-            lr.setFeaturesCol(features_col)
-            lr.setLabelCol(label_name)
-            model = with_benchmark("SparkCuml LinearRegression training:", lambda: lr.fit(train_df))
-            
-
+            benchmark_string = "SparkCuml LinearRegression training:"
         else:
             from pyspark.ml.regression import LinearRegression
-            spark_lr = LinearRegression()
-            spark_lr.setLabelCol(label_name)
-            spark_lr.setFeaturesCol("features")
+            lr = LinearRegression()
 
             train_df = (
                 df.select(array_to_vector(features_col).alias("features"), label_name)
@@ -107,7 +114,28 @@ class BenchmarkLinearRegression(BenchmarkBase):
                 .select("features", label_name)
             ) if not is_vector_col else df
 
-            model = with_benchmark("Spark ML LinearRegression training:", lambda: spark_lr.fit(train_df))
+            if is_array_col or not is_vector_col:
+                features_col = "features"
+
+            benchmark_string = "Spark ML LinearRegression training:"
+
+        lr.setFeaturesCol(features_col)
+        lr.setLabelCol(label_name)
+        lr.setRegParam(self.args.reg_param)
+        lr.setElasticNetParam(self.args.elastic_net)
+        lr.setMaxIter(self.args.max_iter)
+        lr.setTol(self.args.tol)
+        lr.setStandardization(self.args.standardize)
+
+        model = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
+
+        # placeholder try block till hasSummary is supported in gpu model
+        try:
+            if model.hasSummary:
+                print(f"total iterations: {model.summary.totalIterations}")
+                print(f"objective history: {model.summary.objectiveHistory}")
+        except:
+            print("model does not have hasSummary attribute")
 
         df_with_preds = model.transform(train_df)
 
@@ -120,10 +148,20 @@ class BenchmarkLinearRegression(BenchmarkBase):
         # compute prediction mse on training data
         from pyspark.ml.evaluation import RegressionEvaluator
         evaluator = RegressionEvaluator().setPredictionCol(prediction_col).setLabelCol(label_name)
-        mse = evaluator.evaluate(df_with_preds)
-        print(f"MSE:{mse}")
+        rmse = evaluator.evaluate(df_with_preds)
 
+        coefficients = np.array(model.coefficients)
+        coefs_l1 = np.sum(np.abs(coefficients))
+        coefs_l2 = np.sum(coefficients**2)
 
+        l2_penalty_factor = 0.5*lr.getRegParam()*(1.0-lr.getElasticNetParam())
+        l1_penalty_factor = lr.getRegParam()*lr.getElasticNetParam()
+        full_objective = 0.5*(rmse**2) + coefs_l2*l2_penalty_factor + coefs_l1*l1_penalty_factor
+
+        # note: results for spark ML and spark rapids ml will currently match in all regularization
+        # cases only if features and labels were standardized in the original dataset.  Otherwise,
+        # they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso)
+        print(f"RMSE:{rmse}, coefs l1:{coefs_l1}, coefs l2^2:{coefs_l2}, full_objective:{full_objective}, intercept:{model.intercept}")
 class BenchmarkRunner:
     def __init__(self):
         registered_algorithms = {

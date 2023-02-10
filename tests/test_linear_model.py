@@ -49,7 +49,7 @@ def train_with_cuml_linear_regression(
         if l1_ratio == 0.0:
             from cuml import Ridge
 
-            lr = Ridge(output_type="numpy", alpha=alpha)
+            lr = Ridge(output_type="numpy", alpha=alpha * len(y))
         elif l1_ratio == 1.0:
             from cuml import Lasso
 
