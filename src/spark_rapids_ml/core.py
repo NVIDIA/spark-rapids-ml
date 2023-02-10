@@ -292,7 +292,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         input_col, input_cols = self._get_input_columns()
 
-        if input_col:
+        if input_col != None:
             # Single Column
             input_datatype = dataset.schema[input_col].dataType
 
@@ -312,7 +312,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
             dimension = len(dataset.first()[input_col])  # type: ignore
 
-        elif input_cols:
+        elif input_cols != None:
             dimension = len(input_cols)
             for c in input_cols:
                 col_type = dataset.schema[c].dataType
@@ -559,7 +559,7 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
 
         input_col, input_cols = self._get_input_columns()
 
-        if input_col:
+        if input_col != None:
             if isinstance(dataset.schema[input_col].dataType, VectorUDT):
                 # Vector type
                 # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
@@ -574,7 +574,7 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
                 raise ValueError("Unsupported input type.")
             select_cols.append(input_col)
             input_is_multi_cols = False
-        elif input_cols:
+        elif input_cols != None:
             select_cols.extend(input_cols)
         else:
             # should never get here
