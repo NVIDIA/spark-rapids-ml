@@ -87,19 +87,32 @@ class _CumlClass(object):
         return []
 
     @classmethod
-    def _param_mapping(cls) -> Dict[str, str]:
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
         """
         Return a mapping of Spark ML Param names to CuML parameter names, which is used maintain
         associations from Spark params to CuML parameters.
+
+        If the Spark Param has no equivalent CuML parameter, the CuML name can be set to:
+        - empty string, if a defined Spark Param should just be silently ignored, or
+        - None, if a defined Spark Param should raise an error.
+
+        Note: standard Spark column Params, e.g. inputCol, featureCol, etc, should not be listed
+        in this mapping, since they are handled differently.
 
         Example
         -------
 
         .. code-block::python
 
-            # For PCA
+            # For KMeans
             return {
-                "k": "n_components"
+                "distanceMeasure": "",
+                "k": "n_clusters",
+                "initSteps": "",
+                "maxIter": "max_iter",
+                "seed": "random_state",
+                "tol": "tol",
+                "weightCol": None,
             }
         """
         return {}
@@ -150,8 +163,8 @@ class _CumlClass(object):
 
 class _CumlParams(_CumlClass, HasNumWorkers):
     """
-    Common parameters for all Spark CUML algorithms, along with utilties for synchronizing
-    between Spark ML Params and cuML class parameters.
+    Mix-in to handle common parameters for all Spark CUML algorithms, along with utilties
+    for synchronizing between Spark ML Params and cuML class parameters.
     """
 
     cuml_params: Dict[str, Any] = {}
@@ -172,10 +185,11 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         # update default values from Spark ML Param equivalents
         param_map = self._param_mapping()
 
-        for spark_param, cuml_param in param_map.items():
+        for spark_param in param_map.keys():
             if self.hasDefault(spark_param):
-                value = self.getOrDefault(spark_param)
-                self._set_cuml_value(cuml_param, value)
+                self._set_cuml_param(
+                    spark_param, self.getOrDefault(spark_param), silent=True
+                )
 
     def set_params(self: P, **kwargs: Any) -> P:
         """
@@ -199,10 +213,8 @@ class _CumlParams(_CumlClass, HasNumWorkers):
             if self.hasParam(k):
                 # standard Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
-                if k in param_map:
-                    # also set matching CuML parameter, if exists
-                    self._set_cuml_value(param_map[k], v)
-            if k in self.cuml_params and not self.hasParam(k):
+                self._set_cuml_param(k, v)
+            elif k in self.cuml_params:
                 # cuml param
                 self.cuml_params[k] = v
                 for spark_param, cuml_param in param_map.items():
@@ -219,11 +231,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
                             # Could not convert <class 'float'> to string type
                             pass
 
-            if (
-                not self.hasParam(k)
-                and k not in param_map
-                and k not in self.cuml_params
-            ):
+            else:
                 raise ValueError(f"Unsupported param '{k}'.")
         return self
 
@@ -234,7 +242,9 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         super().clear(param)
         param_map = self._param_mapping()
         if param.name in param_map:
-            self.cuml_params[param_map[param.name]] = self.getOrDefault(param.name)
+            cuml_param = param_map[param.name]
+            if cuml_param:
+                self.cuml_params[cuml_param] = self.getOrDefault(param.name)
 
     def _copy_cuml_params(self: P, to: P) -> P:
         """
@@ -292,9 +302,44 @@ class _CumlParams(_CumlClass, HasNumWorkers):
 
         return input_col, input_cols
 
+    def _set_cuml_param(
+        self, spark_param: str, spark_value: Any, silent: bool = False
+    ) -> None:
+        """Set a cuml_params parameter for a given Spark Param and value.
+
+        Parameters
+        ----------
+        spark_param : str
+            Spark ML Param name.
+        spark_value : Any
+            Value associated with the Spark ML Param.
+        silent: bool
+            Don't raise errors, default=False.
+
+        Raises
+        ------
+        ValueError
+            If the Spark Param is explictly not supported.
+        """
+        param_map = self._param_mapping()
+        if spark_param in param_map:
+            cuml_param = param_map[spark_param]
+            if cuml_param is None:
+                if not silent:
+                    # if Spark Param is mapped to None, raise error
+                    raise ValueError(
+                        f"Spark Param '{spark_param}' is not supported by CuML."
+                    )
+            elif cuml_param == "":
+                # if Spark Param is mapped to empty string, warn and continue
+                print(f"WARNING: Spark Param '{spark_param}' is not used by CuML.")
+            else:
+                # if Spark Param is mapped to CuML parameter, set cuml_params
+                self._set_cuml_value(cuml_param, spark_value)
+
     def _set_cuml_value(self, k: str, v: Any) -> None:
         """
-        Set a cuml_params parameter with a value.
+        Set a cuml_params parameter with a (mapped) value.
 
         If the value originated from a Spark ML Param, and a value mapping exists, the parameter
         will be set to the mapped value.  Generally, this is only useful for string/enum types.

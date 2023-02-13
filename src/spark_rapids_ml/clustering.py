@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -41,7 +41,7 @@ from spark_rapids_ml.core import (
     _CumlModel,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass
+from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import get_logger
 
 
@@ -53,12 +53,15 @@ class KMeansClass(_CumlClass):
         return [KMeans]
 
     @classmethod
-    def _param_mapping(cls) -> Dict[str, str]:
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
+            "distanceMeasure": None,
             "k": "n_clusters",
+            "initSteps": "",
             "maxIter": "max_iter",
             "seed": "random_state",
             "tol": "tol",
+            "weightCol": None,
         }
 
     @classmethod
@@ -73,7 +76,52 @@ class KMeansClass(_CumlClass):
         ]
 
 
-class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasFeaturesCols):
+class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
+    """
+    Shared Spark Params for KMeans and KMeansModel.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        # restrict default seed to max value of 32-bit signed integer for CuML
+        self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
+
+    def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
+        """
+        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
+        """
+        if self.isDefined(self.featuresCols):
+            return self.getFeaturesCols()
+        elif self.isDefined(self.featuresCol):
+            return self.getOrDefault("featuresCol")
+        else:
+            raise RuntimeError("featuresCol is not set")
+
+    def setFeaturesCol(self, value: str) -> "_KMeansCumlParams":
+        """
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
+        """
+        if isinstance(value, str):
+            self.set_params(featuresCol=value)
+        else:
+            self.set_params(featuresCols=value)
+        return self
+
+    def setFeaturesCols(self, value: List[str]) -> "_KMeansCumlParams":
+        """
+        Sets the value of :py:attr:`featuresCols`.
+        """
+        return self.set_params(featuresCols=value)
+
+    def setPredictionCol(self, value: str) -> "_KMeansCumlParams":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        self.set_params(predictionCol=value)
+        return self
+
+
+class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     """
     KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.
     The algorithm initializes a set of k random centers then runs in iterations.
@@ -88,37 +136,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasFeaturesCols):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
-        # restrict default seed to max value of 32-bit signed integer for CuML
-        self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
-        self.initialize_cuml_params()
         self.set_params(**kwargs)
-
-    def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
-        """
-        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
-        """
-        if self.isDefined(self.featuresCols):
-            return self.getFeaturesCols()
-        elif self.isDefined(self.featuresCol):
-            return self.getOrDefault("featuresCol")
-        else:
-            raise RuntimeError("featuresCol is not set")
-
-    def setFeaturesCol(self, value: Union[str, List[str]]) -> "KMeans":
-        """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(featuresCol=value)
-        else:
-            self.set_params(featuresCols=value)
-        return self
-
-    def setFeaturesCols(self, value: List[str]) -> "KMeans":
-        """
-        Sets the value of :py:attr:`featuresCols`.
-        """
-        return self.set_params(featuresCols=value)
 
     def setK(self, value: int) -> "KMeans":
         """
@@ -131,12 +149,6 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasFeaturesCols):
         Sets the value of :py:attr:`maxIter`.
         """
         return self.set_params(maxIter=value)
-
-    def setPredictionCol(self, value: str) -> "KMeans":
-        """
-        Sets the value of :py:attr:`predictionCol`.
-        """
-        return self.set_params(predictionCol=value)
 
     def setSeed(self, value: int) -> "KMeans":
         """
@@ -211,51 +223,18 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansParams, HasFeaturesCols):
         return KMeansModel.from_row(result)
 
 
-class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansParams, HasFeaturesCols):
+class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
     def __init__(
         self,
         cluster_centers_: List[List[float]],
         n_cols: int,
         dtype: str,
     ):
-        super().__init__(n_cols=n_cols, dtype=dtype, cluster_centers_=cluster_centers_)
+        super(KMeansModel, self).__init__(
+            n_cols=n_cols, dtype=dtype, cluster_centers_=cluster_centers_
+        )
 
         self.cluster_centers_ = cluster_centers_
-        self.initialize_cuml_params()
-
-    def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
-        """
-        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
-        """
-        if self.isDefined(self.featuresCols):
-            return self.getFeaturesCols()
-        elif self.isDefined(self.featuresCol):
-            return self.getOrDefault("featuresCol")
-        else:
-            raise RuntimeError("featuresCol is not set")
-
-    def setFeaturesCol(self, value: str) -> "KMeansModel":
-        """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
-        """
-        if isinstance(value, str):
-            self.set_params(featuresCol=value)
-        else:
-            self.set_params(featuresCols=value)
-        return self
-
-    def setFeaturesCols(self, value: List[str]) -> "KMeansModel":
-        """
-        Sets the value of :py:attr:`featuresCols`.
-        """
-        return self.set_params(featuresCols=value)
-
-    def setPredictionCol(self, value: str) -> "KMeansModel":
-        """
-        Sets the value of :py:attr:`predictionCol`.
-        """
-        self.set_params(predictionCol=value)
-        return self
 
     def clusterCenters(self) -> List[List[float]]:
         return self.cluster_centers_

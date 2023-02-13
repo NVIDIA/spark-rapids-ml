@@ -1,6 +1,7 @@
 .idea/
 __pycache__/
 dist/
+docs/build/
 */.ipynb_checkpoints/
 *.egg-info/
 

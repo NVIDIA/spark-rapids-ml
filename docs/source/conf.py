@@ -25,17 +25,12 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'pydata_sphinx_theme'
 
 html_static_path = ['_static']
-
-# Config numpydoc
-numpydoc_show_inherited_class_members = False
-numpydoc_class_members_toctree = False
 
 def setup(app):
     app.add_css_file("https://docs.rapids.ai/assets/css/custom.css")

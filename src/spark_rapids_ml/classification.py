@@ -16,7 +16,7 @@
 import base64
 import math
 import pickle
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -49,7 +49,7 @@ class RandomForestClassifierClass(_CumlClass):
         return ["handle", "output_type", "n_streams"]
 
     @classmethod
-    def _param_mapping(cls) -> Dict[str, str]:
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
             "maxBins": "n_bins",
             "maxDepth": "max_depth",

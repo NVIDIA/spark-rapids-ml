@@ -15,7 +15,7 @@
 #
 
 import itertools
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -41,7 +41,7 @@ from spark_rapids_ml.core import (
     _CumlEstimator,
     _CumlModel,
 )
-from spark_rapids_ml.params import _CumlClass
+from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
 
 
@@ -53,7 +53,7 @@ class PCAClass(_CumlClass):
         return [PCA]
 
     @classmethod
-    def _param_mapping(cls) -> Dict[str, str]:
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {"k": "n_components"}
 
     @classmethod
@@ -68,7 +68,45 @@ class PCAClass(_CumlClass):
         ]
 
 
-class PCA(PCAClass, _CumlEstimator, _PCAParams, HasInputCols, HasOutputCols):
+class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
+    """
+    Shared Spark Params for PCA and PCAModel.
+    """
+
+    def setInputCol(self, value: Union[str, List[str]]) -> "_PCACumlParams":
+        """
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
+        """
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
+        return self
+
+    def setInputCols(self, value: List[str]) -> "_PCACumlParams":
+        """
+        Sets the value of :py:attr:`inputCols`.
+        """
+        return self.set_params(inputCols=value)
+
+    def setOutputCol(self, value: Union[str, List[str]]) -> "_PCACumlParams":
+        """
+        Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
+        """
+        if isinstance(value, str):
+            self.set_params(outputCol=value)
+        else:
+            self.set_params(outputCols=value)
+        return self
+
+    def setOutputCols(self, value: List[str]) -> "_PCACumlParams":
+        """
+        Sets the value of :py:attr:`outputCols`.
+        """
+        return self.set_params(outputCols=value)
+
+
+class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     """
     PCA algorithm projects high-dimensional vectors into low-dimensional vectors
     while preserving the similarity of the vectors. This class provides GPU accleration for pyspark mllib PCA.
@@ -100,38 +138,6 @@ class PCA(PCAClass, _CumlEstimator, _PCAParams, HasInputCols, HasOutputCols):
         Sets the value of :py:attr:`k`.
         """
         return self.set_params(k=value)
-
-    def setInputCol(self, value: Union[str, List[str]]) -> "PCA":
-        """
-        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(inputCol=value)
-        else:
-            self.set_params(inputCols=value)
-        return self
-
-    def setInputCols(self, value: List[str]) -> "PCA":
-        """
-        Sets the value of :py:attr:`inputCols`.
-        """
-        return self.set_params(inputCols=value)
-
-    def setOutputCol(self, value: Union[str, List[str]]) -> "PCA":
-        """
-        Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
-        """
-        if isinstance(value, str):
-            self.set_params(outputCol=value)
-        else:
-            self.set_params(outputCols=value)
-        return self
-
-    def setOutputCols(self, value: List[str]) -> "PCA":
-        """
-        Sets the value of :py:attr:`outputCols`.
-        """
-        return self.set_params(outputCols=value)
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
@@ -196,7 +202,7 @@ class PCA(PCAClass, _CumlEstimator, _PCAParams, HasInputCols, HasOutputCols):
         return PCAModel.from_row(result)
 
 
-class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
+class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
     """Applies dimensionality reduction on an input DataFrame.
 
     Note: Spark PCA does not automatically remove the mean of the input data, so use the
@@ -227,38 +233,6 @@ class PCAModel(PCAClass, _CumlModel, _PCAParams, HasInputCols, HasOutputCols):
         self.singular_values_ = singular_values_
 
         self.set_params(n_components=len(components_))
-
-    def setInputCol(self, value: Union[str, List[str]]) -> "PCAModel":
-        """
-        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(inputCol=value)
-        else:
-            self.set_params(inputCols=value)
-        return self
-
-    def setInputCols(self, value: List[str]) -> "PCAModel":
-        """
-        Sets the value of :py:attr:`inputCols`.
-        """
-        return self.set_params(inputCols=value)
-
-    def setOutputCol(self, value: Union[str, List[str]]) -> "PCAModel":
-        """
-        Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
-        """
-        if isinstance(value, str):
-            self.set_params(outputCol=value)
-        else:
-            self.set_params(outputCols=value)
-        return self
-
-    def setOutputCols(self, value: List[str]) -> "PCAModel":
-        """
-        Sets the value of :py:attr:`outputCols`.
-        """
-        return self.set_params(outputCols=value)
 
     @property
     def mean(self) -> List[float]:

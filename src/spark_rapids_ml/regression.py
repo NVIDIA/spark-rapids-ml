@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -37,7 +37,7 @@ from spark_rapids_ml.core import (
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass
+from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
@@ -52,16 +52,20 @@ class LinearRegressionClass(_CumlClass):
         return [LinearRegression, Ridge, CD]
 
     @classmethod
-    def _param_mapping(cls) -> Dict[str, str]:
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
+            "aggregationDepth": "",
             "elasticNetParam": "l1_ratio",
+            "epsilon": "",
             "fitIntercept": "fit_intercept",
             "loss": "loss",
+            "maxBlockSizeInMB": "",
             "maxIter": "max_iter",
             "regParam": "alpha",
             "solver": "solver",
             "standardization": "normalize",
             "tol": "tol",
+            "weightCol": None,
         }
 
     @classmethod
@@ -76,11 +80,59 @@ class LinearRegressionClass(_CumlClass):
         return ["handle", "output_type"]
 
 
+class _LinearRegressionCumlParams(
+    _CumlParams, _LinearRegressionParams, HasFeaturesCols
+):
+    """
+    Shared Spark Params for LinearRegression and LinearRegressionModel.
+    """
+
+    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
+        """
+        if self.isDefined(self.featuresCols):
+            return self.getFeaturesCols()
+        elif self.isDefined(self.featuresCol):
+            return self.getOrDefault("featuresCol")
+        else:
+            raise RuntimeError("featuresCol is not set")
+
+    def setFeaturesCol(
+        self, value: Union[str, List[str]]
+    ) -> "_LinearRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
+        """
+        if isinstance(value, str):
+            self.set_params(featuresCol=value)
+        else:
+            self.set_params(featuresCols=value)
+        return self
+
+    def setFeaturesCols(self, value: List[str]) -> "_LinearRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`featuresCols`.
+        """
+        return self.set_params(featuresCols=value)
+
+    def setLabelCol(self, value: str) -> "_LinearRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`labelCol`.
+        """
+        return self.set_params(labelCol=value)
+
+    def setPredictionCol(self, value: str) -> "_LinearRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        return self.set_params(predictionCol=value)
+
+
 class LinearRegression(
     LinearRegressionClass,
     _CumlEstimatorSupervised,
-    _LinearRegressionParams,
-    HasFeaturesCols,
+    _LinearRegressionCumlParams,
 ):
     """TBD: finish docstring
 
@@ -95,44 +147,11 @@ class LinearRegression(
         super().__init__()
         self.set_params(**kwargs)
 
-    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
-        """
-        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
-        """
-        if self.isDefined(self.featuresCols):
-            return self.getFeaturesCols()
-        elif self.isDefined(self.featuresCol):
-            return self.getOrDefault("featuresCol")
-        else:
-            raise RuntimeError("featuresCol is not set")
-
-    def setFeaturesCol(self, value: Union[str, List[str]]) -> "LinearRegression":
-        """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(featuresCol=value)
-        else:
-            self.set_params(featuresCols=value)
-        return self
-
-    def setFeaturesCols(self, value: List[str]) -> "LinearRegression":
-        """
-        Sets the value of :py:attr:`featuresCols`.
-        """
-        return self.set_params(featuresCols=value)
-
     def setMaxIter(self, value: int) -> "LinearRegression":
         """
         Sets the value of :py:attr:`maxIter`.
         """
         return self.set_params(maxIter=value)
-
-    def setPredictionCol(self, value: str) -> "LinearRegression":
-        """
-        Sets the value of :py:attr:`predictionCol`.
-        """
-        return self.set_params(predictionCol=value)
 
     def setRegParam(self, value: float) -> "LinearRegression":
         """
@@ -145,12 +164,6 @@ class LinearRegression(
         Sets the value of :py:attr:`elasticNetParam`.
         """
         return self.set_params(elasticNetParam=value)
-
-    def setLabelCol(self, value: str) -> "LinearRegression":
-        """
-        Sets the value of :py:attr:`labelCol`.
-        """
-        return self.set_params(labelCol=value)
 
     def setLoss(self, value: str) -> "LinearRegression":
         """
@@ -284,8 +297,7 @@ class LinearRegression(
 class LinearRegressionModel(
     LinearRegressionClass,
     _CumlModelSupervised,
-    _LinearRegressionParams,
-    HasFeaturesCols,
+    _LinearRegressionCumlParams,
 ):
     def __init__(
         self,
@@ -301,43 +313,6 @@ class LinearRegressionModel(
     @property
     def coefficients(self) -> List[float]:
         return self.coef_
-
-    @property
-    def intercept(self) -> float:
-        return self.intercept_
-
-    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
-        """
-        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
-        """
-        if self.isDefined(self.featuresCols):
-            return self.getFeaturesCols()
-        elif self.isDefined(self.featuresCol):
-            return self.getOrDefault("featuresCol")
-        else:
-            raise RuntimeError("featuresCol is not set")
-
-    def setFeaturesCol(self, value: Union[str, List[str]]) -> "LinearRegressionModel":
-        """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(featuresCol=value)
-        else:
-            self.set_params(featuresCols=value)
-        return self
-
-    def setFeaturesCols(self, value: List[str]) -> "LinearRegressionModel":
-        """
-        Sets the value of :py:attr:`featuresCols`.
-        """
-        return self.set_params(featuresCols=value)
-
-    def setPredictionCol(self, value: str) -> "LinearRegressionModel":
-        """
-        Sets the value of :py:attr:`predictionCol`.
-        """
-        return self.set_params(predictionCol=value)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame

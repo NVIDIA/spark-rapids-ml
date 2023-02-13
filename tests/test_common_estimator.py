@@ -14,12 +14,14 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Mapping, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
+import pytest
 from pyspark import Row, TaskContext
+from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCols, HasOutputCols
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
@@ -33,6 +35,7 @@ from spark_rapids_ml.core import (
 )
 from spark_rapids_ml.params import _CumlClass
 from spark_rapids_ml.utils import PartitionDescriptor
+from tests.utils import assert_params
 
 
 class CumlDummy(object):
@@ -40,11 +43,12 @@ class CumlDummy(object):
     A dummy class to mimic a cuml python class
     """
 
-    def __init__(self, a=1, b=2, c=3) -> None:  # type: ignore
+    def __init__(self, a: float = 10.0, b: int = 20, k: int = 30, x: float = 40.0) -> None:  # type: ignore
         super().__init__()
-        self.a = a
-        self.b = b
-        self.c = c
+        self.a = a  # alpha
+        self.b = b  # dropped
+        self.k = k  # k
+        self.x = x  # extra, keep w/ default
 
 
 class SparkCumlDummyClass(_CumlClass):
@@ -53,15 +57,65 @@ class SparkCumlDummyClass(_CumlClass):
         return [CumlDummy]
 
     @classmethod
-    def _param_mapping(cls) -> Mapping[str, str]:
-        return {}
+    def _param_mapping(cls) -> Mapping[str, Optional[str]]:
+        return {
+            "alpha": "a",  # direct map, different names
+            "beta": None,  # unmapped, raise error if defined on Spark side
+            "gamma": "",  # unmapped, ignore value from Spark side
+            "k": "k",  # direct map, same name
+        }
 
     @classmethod
     def _param_excludes(cls) -> List[str]:
-        return ["b"]
+        return ["b"]  # dropped from CuML side
 
 
-class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutputCols):
+class _SparkDummyParams(Params):
+    """
+    Params for Spark Dummy class
+    """
+
+    alpha = Param(
+        Params._dummy(),  # type: ignore
+        "alpha",
+        "alpha dummy param",
+        TypeConverters.toFloat,
+    )
+
+    beta = Param(
+        Params._dummy(),  # type: ignore
+        "beta",
+        "beta dummy param ",
+        TypeConverters.toInt,
+    )
+
+    gamma = Param(
+        Params._dummy(),  # type: ignore
+        "gamma",
+        "gamma dummy param ",
+        TypeConverters.toString,
+    )
+
+    k = Param(
+        Params._dummy(),  # type: ignore
+        "k",
+        "k dummy param ",
+        TypeConverters.toInt,
+    )
+
+    def __init__(self, *args: Any):
+        super(_SparkDummyParams, self).__init__(*args)
+        self._setDefault(
+            alpha=1.0,
+            # beta=2,         # leave undefined to test mapping to None
+            gamma="three",
+            k=4,
+        )
+
+
+class SparkCumlDummy(
+    SparkCumlDummyClass, _CumlEstimator, _SparkDummyParams, HasInputCols, HasOutputCols
+):
     """
     PySpark estimator of CumlDummy
     """
@@ -69,6 +123,8 @@ class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutpu
     def __init__(
         self, m: int = 0, n: int = 0, partition_num: int = 0, **kwargs: Any
     ) -> None:
+        #
+
         super().__init__()
         self.set_params(**kwargs)
         self.m = m
@@ -80,6 +136,18 @@ class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutpu
 
     def setOutputCols(self, value: List[str]) -> "SparkCumlDummy":
         return self._set(outputCols=value)
+
+    def setAlpha(self, value: int) -> "SparkCumlDummy":
+        return self.set_params({"alpha": value})
+
+    def setBeta(self, value: int) -> "SparkCumlDummy":
+        raise ValueError("Not supported")
+
+    def setGamma(self, value: float) -> "SparkCumlDummy":
+        return self.set_params({"gamma": value})
+
+    def setK(self, value: str) -> "SparkCumlDummy":
+        return self.set_params({"k": value})
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame
@@ -112,11 +180,12 @@ class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutpu
 
             assert INIT_PARAMETERS_NAME in params
             init_params = params[INIT_PARAMETERS_NAME]
-            assert init_params == {"a": 100, "c": 3}
+            assert init_params == {"a": 100, "k": 4, "x": 40.0}
             dummy = CumlDummy(**init_params)
             assert dummy.a == 100
-            assert dummy.b == 2
-            assert dummy.c == 3
+            assert dummy.b == 20
+            assert dummy.k == 4
+            assert dummy.x == 40.0
 
             import time
 
@@ -145,7 +214,9 @@ class SparkCumlDummy(SparkCumlDummyClass, _CumlEstimator, HasInputCols, HasOutpu
         return SparkCumlDummyModel.from_row(result)
 
 
-class SparkCumlDummyModel(SparkCumlDummyClass, _CumlModel, HasInputCols, HasOutputCols):
+class SparkCumlDummyModel(
+    SparkCumlDummyClass, _CumlModel, _SparkDummyParams, HasInputCols, HasOutputCols
+):
     """
     PySpark model of CumlDummy
     """
@@ -188,7 +259,7 @@ class SparkCumlDummyModel(SparkCumlDummyClass, _CumlModel, HasInputCols, HasOutp
         self.test_pickle_dataframe = dataset
 
         def _construct_dummy() -> CumlT:
-            dummy = CumlDummy(a=101, b=102, c=103)
+            dummy = CumlDummy(a=101, b=102, k=103)
             return dummy
 
         def _dummy_transform(
@@ -196,7 +267,7 @@ class SparkCumlDummyModel(SparkCumlDummyClass, _CumlModel, HasInputCols, HasOutp
         ) -> pd.DataFrame:
             assert dummy.a == 101
             assert dummy.b == 102
-            assert dummy.c == 103
+            assert dummy.k == 103
 
             assert model_attribute_a == 1024
             if isinstance(df, pd.DataFrame):
@@ -209,6 +280,64 @@ class SparkCumlDummyModel(SparkCumlDummyClass, _CumlModel, HasInputCols, HasOutp
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return input_schema
+
+
+def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
+    # Default constructor
+    default_spark_params = {
+        "alpha": 1.0,  # a
+        # "beta": 2,            # should raise exception if defined
+        "gamma": "three",  # should be ignored
+        "k": 4,  # k
+    }
+    default_cuml_params = {
+        "a": 1.0,  # default value for Spark 'alpha'
+        # "b": 20               # should be dropped
+        "k": 4,  # default value for Spark 'k'
+        "x": 40.0,  # default value for CuML
+    }
+    default_dummy = SparkCumlDummy()
+    assert_params(default_dummy, default_spark_params, default_cuml_params)
+
+    # Spark constructor (with ignored param "gamma")
+    spark_params = {"alpha": 2.0, "gamma": "test", "k": 1}
+    spark_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update({"a": 2.0, "k": 1})
+    assert_params(spark_dummy, expected_spark_params, expected_cuml_params)
+
+    # CuML constructor
+    cuml_params = {"a": 1.1, "k": 2, "x": 3.3}
+    cuml_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **cuml_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(
+        {
+            "alpha": 1.1,
+            "k": 2,
+        }
+    )
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(cuml_params)
+    assert_params(cuml_dummy, expected_spark_params, expected_cuml_params)
+
+    # Estimator persistence
+    path = tmp_path + "/dummy_tests"
+    estimator_path = f"{path}/dummy_estimator"
+    cuml_dummy.write().overwrite().save(estimator_path)
+    loaded_dummy = SparkCumlDummy.load(estimator_path)
+    assert_params(loaded_dummy, expected_spark_params, expected_cuml_params)
+
+    # Spark constructor (with error param "beta")
+    spark_params = {"alpha": 2.0, "beta": 0, "k": 1}
+    with pytest.raises(ValueError, match="Spark Param 'beta' is not supported by CuML"):
+        spark_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **spark_params)
+
+    # CuML constructor (with unsupported param "b")
+    cuml_params = {"a": 1.1, "b": 0, "k": 2, "x": 3.3}
+    with pytest.raises(ValueError, match="Unsupported param 'b'"):
+        cuml_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **cuml_params)
 
 
 def test_dummy(gpu_number: int, tmp_path: str) -> None:
@@ -227,7 +356,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
 
     def assert_estimator(dummy: SparkCumlDummy) -> None:
         assert dummy.getInputCols() == input_cols
-        assert dummy.cuml_params == {"a": 100, "c": 3}
+        assert dummy.cuml_params == {"a": 100, "k": 4, "x": 40.0}
 
     def ceiling_division(n: int, d: int) -> int:
         return -(n // -d)
@@ -254,7 +383,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
     def assert_model(model: SparkCumlDummyModel) -> None:
         assert model.model_attribute_a == 1024
         assert model.model_attribute_b == "hello dummy"
-        assert model.cuml_params == {"a": 100, "c": 3}
+        assert model.cuml_params == {"a": 100, "k": 4, "x": 40.0}
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
     from .sparksession import CleanSparkSession
@@ -278,7 +407,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
             ret = transformed_df.collect()
             assert len(ret) == m
 
-            # Compare data.
+            # Compare data
             for x, y in zip(ret, data):
                 for i in range(n):
                     assert x[i] == y[i]
