@@ -292,7 +292,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         input_col, input_cols = self._get_input_columns()
 
-        if input_col != None:
+        if input_col is not None:
             # Single Column
             input_datatype = dataset.schema[input_col].dataType
 
@@ -312,7 +312,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
             dimension = len(dataset.first()[input_col])  # type: ignore
 
-        elif input_cols != None:
+        elif input_cols is not None:
             dimension = len(input_cols)
             for c in input_cols:
                 col_type = dataset.schema[c].dataType
@@ -445,18 +445,10 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
     Base class for Cuml Supervised machine learning.
     """
 
-    def _pre_process_data(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
-    ]:
-        (
-            select_cols,
-            multi_col_names,
-            dimension,
-            feature_type,
-        ) = super()._pre_process_data(dataset)
-
+    def _pre_process_label(
+        self, dataset: DataFrame, feature_type: Union[Type[FloatType], Type[DoubleType]]
+    ) -> Column:
+        """Convert label according to feature type by default"""
         label_name = self.getLabelCol()
         label_datatype = dataset.schema[label_name].dataType
         if isinstance(label_datatype, (IntegralType, FloatType, DoubleType)):
@@ -471,7 +463,21 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
                 "Label column must be integral types or float/double types."
             )
 
-        select_cols.append(label_col)
+        return label_col
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super()._pre_process_data(dataset)
+
+        select_cols.append(self._pre_process_label(dataset, feature_type))
 
         return select_cols, multi_col_names, dimension, feature_type
 
@@ -559,7 +565,7 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
 
         input_col, input_cols = self._get_input_columns()
 
-        if input_col != None:
+        if input_col is not None:
             if isinstance(dataset.schema[input_col].dataType, VectorUDT):
                 # Vector type
                 # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
@@ -574,7 +580,7 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
                 raise ValueError("Unsupported input type.")
             select_cols.append(input_col)
             input_is_multi_cols = False
-        elif input_cols != None:
+        elif input_cols is not None:
             select_cols.extend(input_cols)
         else:
             # should never get here

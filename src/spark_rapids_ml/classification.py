@@ -16,16 +16,25 @@
 import base64
 import math
 import pickle
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.ml.classification import _RandomForestClassifierParams
-from pyspark.ml.param.shared import HasFeaturesCol
-from pyspark.sql import DataFrame
-from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
+from pyspark.sql import Column, DataFrame
+from pyspark.sql.functions import col
+from pyspark.sql.types import (
+    DoubleType,
+    FloatType,
+    IntegerType,
+    IntegralType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
@@ -33,8 +42,9 @@ from spark_rapids_ml.core import (
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
+    alias,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass
+from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
 
 
 class RandomForestClassifierClass(_CumlClass):
@@ -74,16 +84,17 @@ class RandomForestClassifierClass(_CumlClass):
         }
 
 
-class RandomForestClassifier(
-    RandomForestClassifierClass,
-    _CumlEstimatorSupervised,
+class _RandomForestCumlParams(
+    _CumlParams,
     _RandomForestClassifierParams,
     HasFeaturesCol,
     HasFeaturesCols,
+    HasLabelCol,
 ):
-    def __init__(self, **kwargs: Any):
+    def __init__(self) -> None:
         super().__init__()
-        self.set_params(**kwargs)
+        # restrict default seed to max value of 32-bit signed integer for CuML
+        self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
 
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
@@ -96,7 +107,7 @@ class RandomForestClassifier(
         else:
             raise RuntimeError("featuresCol is not set")
 
-    def setFeaturesCol(self, value: Union[str, List[str]]) -> "RandomForestClassifier":
+    def setFeaturesCol(self, value: Union[str, List[str]]) -> "_RandomForestCumlParams":
         """
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
@@ -106,24 +117,49 @@ class RandomForestClassifier(
             self.set_params(featuresCols=value)
         return self
 
-    def setFeaturesCols(self, value: List[str]) -> "RandomForestClassifier":
+    def setFeaturesCols(self, value: List[str]) -> "_RandomForestCumlParams":
         """
         Sets the value of :py:attr:`featuresCols`.
         """
         return self.set_params(featuresCols=value)
 
-    def setLabelCol(self, value: str) -> "RandomForestClassifier":
+    def setLabelCol(self, value: str) -> "_RandomForestCumlParams":
         """
         Sets the value of :py:attr:`labelCol`.
         """
         self._set(labelCol=value)  # type: ignore
         return self
 
-    def setNumTrees(self, value: int) -> "RandomForestClassifier":
+    def setNumTrees(self, value: int) -> "_RandomForestCumlParams":
         """
         Sets the value of :py:attr:`numTrees`.
         """
         return self._set(numTrees=value)
+
+
+class RandomForestClassifier(
+    RandomForestClassifierClass,
+    _CumlEstimatorSupervised,
+    _RandomForestCumlParams,
+):
+    def __init__(self, **kwargs: Any):
+        super().__init__()
+        self.set_params(**kwargs)
+
+    def _pre_process_label(
+        self, dataset: DataFrame, feature_type: Union[Type[FloatType], Type[DoubleType]]
+    ) -> Column:
+        """Cuml RandomForestClassifier requires the int32 type of label column"""
+        label_name = self.getLabelCol()
+        label_datatype = dataset.schema[label_name].dataType
+        if isinstance(label_datatype, (IntegralType, FloatType, DoubleType)):
+            label_col = col(label_name).cast(IntegerType()).alias(alias.label)
+        else:
+            raise ValueError(
+                "Label column must be integral types or float/double types."
+            )
+
+        return label_col
 
     def _estimators_per_worker(self) -> List[int]:
         """Calculate the number of trees each task should train according to n_estimators"""
@@ -181,7 +217,7 @@ class RandomForestClassifier(
                 y = np.concatenate(y_list)  # type: ignore
 
             # Fit a random forest classifier model on the dataset (X, y)
-            rf.fit(X, y)
+            rf.fit(X, y, convert_dtype=False)
 
             # serialized_model is Dictionary type
             serialized_model = rf._get_serialized_model()
@@ -228,9 +264,7 @@ class RandomForestClassifier(
 class RandomForestClassificationModel(
     RandomForestClassifierClass,
     _CumlModelSupervised,
-    _RandomForestClassifierParams,
-    HasFeaturesCol,
-    HasFeaturesCols,
+    _RandomForestCumlParams,
 ):
     def __init__(
         self,
@@ -240,35 +274,6 @@ class RandomForestClassificationModel(
     ):
         super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
         self.treelite_model = treelite_model
-
-    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
-        """
-        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
-        """
-        if self.isDefined(self.featuresCols):
-            return self.getFeaturesCols()
-        elif self.isDefined(self.featuresCol):
-            return self.getOrDefault("featuresCol")
-        else:
-            raise RuntimeError("featuresCol is not set")
-
-    def setFeaturesCol(
-        self, value: Union[str, List[str]]
-    ) -> "RandomForestClassificationModel":
-        """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
-        """
-        if isinstance(value, str):
-            self.set_params(featuresCol=value)
-        else:
-            self.set_params(featuresCols=value)
-        return self
-
-    def setFeaturesCols(self, value: List[str]) -> "RandomForestClassificationModel":
-        """
-        Sets the value of :py:attr:`featuresCols`.
-        """
-        return self.set_params(featuresCols=value)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
