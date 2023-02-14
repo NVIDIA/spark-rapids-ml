@@ -645,6 +645,15 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
 class _CumlModelSupervised(_CumlModel, HasPredictionCol):
     """Cuml base model for supervised machine learning"""
 
+    @property  # type: ignore[misc]
+    def numFeatures(self) -> int:
+        """
+        Returns the number of features the model was trained on. If unknown, returns -1
+        """
+
+        num_features = self.n_cols if self.n_cols else -1
+        return num_features
+
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
         dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)

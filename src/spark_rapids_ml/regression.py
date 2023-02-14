@@ -134,13 +134,86 @@ class LinearRegression(
     _CumlEstimatorSupervised,
     _LinearRegressionCumlParams,
 ):
-    """TBD: finish docstring
+    """LinearRegression is a machine learning model where the response y is modeled
+    by a linear combination of the predictors in X. It implements cuML's GPU accelerated
+    LinearRegression algorithm based on cuML python library, and it can be used in
+    PySpark Pipeline and PySpark ML meta algorithms like
+    :py:class:`~pyspark.ml.tuning.CrossValidator`/
+    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
+    :py:class:`~pyspark.ml.classification.OneVsRest`
+
+    This supports multiple types of regularization:
+
+    * none (a.k.a. ordinary least squares)
+    * L2 (ridge regression)
+    * L1 (Lasso)
+    * L2 + L1 (elastic net)
+
+    LinearRegression automatically supports most of the parameters from both
+    :py:class:`~pyspark.ml.regression.LinearRegression` and in the constructors of
+    :py:class:`cuml.LinearRegression`, :py:class:`cuml.Ridge`, :py:class:`cuml.Lasso`
+    and :py:class:`cuml.ElasticNet`. And it will automatically map pyspark parameters
+    to cuML parameters.
 
     Note
     ----
         Results for spark ML and spark rapids ml fit() will currently match in all regularization
         cases only if features and labels are standardized in the input dataframe.  Otherwise,
         they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
+
+    Examples
+    --------
+    >>> from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
+    >>> from pyspark.ml.linalg import Vectors
+    >>>
+    >>> df = spark.createDataFrame([
+    ...     (6.5, Vectors.dense(1.0, 2.0)),
+    ...     (3.5, Vectors.sparse(2, {1: 2}))], ["label", "features"])
+    >>>
+    >>> lr = LinearRegression(regParam=0.0, solver="normal")
+    >>> lr.setMaxIter(5)
+    LinearRegression...
+    >>> model = lr.fit(df)
+    >>> model.setFeaturesCol("features")
+    LinearRegressionModel...
+    >>> model.setPredictionCol("newPrediction")
+    LinearRegressionModel...
+    >>> model.getMaxIter()
+    5
+    >>> model.coefficients
+    [3.000000000000001, 0.0]
+    >>> model.intercept
+    3.4999999999999996
+    >>> model.transform(df).show()
+    +-----+----------+------------------+
+    |label|  features|     newPrediction|
+    +-----+----------+------------------+
+    |  6.5|[1.0, 2.0]|               6.5|
+    |  3.5|[0.0, 2.0]|3.4999999999999996|
+    +-----+----------+------------------+
+
+    >>> lr_path = temp_path + "/rl"
+    >>> lr.save(lr_path)
+    >>> lr2 = LinearRegression.load(lr_path)
+    >>> lr2.getMaxIter()
+    5
+    >>> model_path = temp_path + "/lr_model"
+    >>> model.save(model_path)
+    >>> model2 = LinearRegressionModel.load(model_path)
+    >>> model.coefficients[0] == model2.coefficients[0]
+    True
+    >>> model.intercept == model2.intercept
+    True
+    >>> model.numFeatures
+    2
+    >>> model2.transform(df).show()
+    +-----+----------+------------------+
+    |label|  features|     newPrediction|
+    +-----+----------+------------------+
+    |  6.5|[1.0, 2.0]|               6.5|
+    |  3.5|[0.0, 2.0]|3.4999999999999996|
+    +-----+----------+------------------+
+
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -299,6 +372,8 @@ class LinearRegressionModel(
     _CumlModelSupervised,
     _LinearRegressionCumlParams,
 ):
+    """Model fitted by :class:`LinearRegression`."""
+
     def __init__(
         self,
         coef_: List[float],
