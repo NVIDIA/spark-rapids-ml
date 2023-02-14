@@ -76,6 +76,29 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
     def setInputCol(self, value: Union[str, List[str]]) -> "_PCACumlParams":
         """
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
+        Used when input vectors are stored in a single column.
+        
+        Examples
+        --------
+        >>> from spark_rapids_ml.feature import PCA
+        >>> data = [([1.0, 1.0],),
+        ...         ([2.0, 2.0],),
+        ...         ([3.0, 3.0],),]
+        >>> df = spark.createDataFrame(data, ["features"])
+        >>> gpu_pca = PCA(k=1).setInputCol("features")
+        >>> gpu_pca.getInputCol()
+        'features'
+        >>> gpu_model = gpu_pca.fit(df)
+
+        >>> from pyspark.ml.linalg import Vectors
+        >>> data = [(Vectors.dense([1.0, 1.0]),),
+        ...         (Vectors.dense([2.0, 2.0]),),
+        ...         (Vectors.dense([3.0, 3.0]),),]
+        >>> df = spark.createDataFrame(data, ["features"])
+        >>> gpu_pca = PCA(k=1).setInputCol("features")
+        >>> gpu_pca.getInputCol()
+        'features'
+        >>> gpu_model = gpu_pca.fit(df)
         """
         if isinstance(value, str):
             self.set_params(inputCol=value)
@@ -86,6 +109,18 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
     def setInputCols(self, value: List[str]) -> "_PCACumlParams":
         """
         Sets the value of :py:attr:`inputCols`.
+        Used when input vectors are stored as multiple feature columns. 
+
+        Examples
+        --------
+         >>> data = [(1.0, 1.0),
+         ...         (2.0, 2.0),
+         ...         (3.0, 3.0),]
+         >>> df = spark.createDataFrame(data, ["f1", "f2"])
+         >>> gpu_pca = PCA(k=1).setInputCols(["f1", "f2"])
+         >>> gpu_pca.getInputCols() 
+         ['f1', 'f2']
+         >>> gpu_model = gpu_pca.fit(df)
         """
         return self.set_params(inputCols=value)
 
@@ -108,24 +143,48 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     """
-    PCA algorithm projects high-dimensional vectors into low-dimensional vectors
-    while preserving the similarity of the vectors. This class provides GPU accleration for pyspark mllib PCA.
+    PCA algorithm learns principal component vectors to project high-dimensional vectors
+    into low-dimensional vectors, while preserving the similarity of the vectors. PCA 
+    has been used in dimensionality reduction, clustering, and data visualization on large 
+    datasets. This class provides GPU acceleration for pyspark distributed PCA.
 
     Examples
     --------
     >>> from spark_rapids_ml.feature import PCA
-    >>> data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
-    >>> topk = 1
-    >>> gpu_pca = PCA().setInputCol("features").setK(topk)
-    >>> df = spark.sparkContext.parallelize(data).map(lambda row: (row,)).toDF(["features"])
+    >>> data = [([1.0, 1.0],),
+    ...         ([2.0, 2.0],),
+    ...         ([3.0, 3.0],),]
+    >>> df = spark.createDataFrame(data, ["features"])
+    >>> gpu_pca = PCA(k=1, inputCol="features")
+    >>> gpu_pca.setOutputCol("pca_features")
+    PCA...
     >>> gpu_model = gpu_pca.fit(df)
+    >>> gpu_model.getK()
+    1
     >>> print(gpu_model.mean)
     [2.0, 2.0]
     >>> print(gpu_model.pc)
     DenseMatrix([[0.70710678],
-             [0.70710678]])
-    >>> print(gpu_model.explained_variance)
+                 [0.70710678]])
+    >>> print(gpu_model.explainedVariance)
     [1.0]
+    >>> gpu_pca.save("/tmp/pca")
+
+    Parameters
+    ----------
+    k: int
+        the number of components, or equivalently the dimension that all vectors will be projected to.   
+    inputCol: str
+        the name of the column that contains input vectors. inputCol should be set when input vectors are stored in a single column of a dataframe. 
+
+    inputCols: List[str]
+        the names of feature columns that form input vectors. inputCols should be set when input vectors are stored as multiple feature columns of a dataframe. 
+        
+    outputCol: str
+        the name of the column that stores output vectors. outputCol should be set when users expect to store output vectors in a single column.  
+
+    outputCols: List[str]
+        the name of the feature columns that form output vectors. outputCols should be set when users expect to store output vectors as multiple feature columns.   
 
     """
 
@@ -205,8 +264,28 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
 class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
     """Applies dimensionality reduction on an input DataFrame.
 
-    Note: Spark PCA does not automatically remove the mean of the input data, so use the
+    Note: Input vectors must be zero-centered to ensure PCA work properly. 
+    Spark PCA does not automatically remove the mean of the input data, so use the
     :py:class::`StandardScaler` to center the input data before invoking transform.
+
+    Examples
+    --------
+        >>> from spark_rapids_ml.feature import PCA
+        >>> data = [([-1.0, -1.0],),
+        ...         ([0.0, 0.0],),
+        ...         ([1.0, 1.0],),]
+        >>> df = spark.createDataFrame(data, ["features"])
+        >>> gpu_pca = PCA(k=1).setInputCol("features").setOutputCol("pca_features")
+        >>> gpu_model = gpu_pca.fit(df)
+        >>> reduced_df = gpu_model.transform(df)  
+        >>> reduced_df.show()
+        +---------------------+                                                      
+        |         pca_features|
+        +---------------------+
+        | [-1.414213562373095]|
+        |                [0.0]|
+        |  [1.414213562373095]|
+        +---------------------+
     """
 
     def __init__(
