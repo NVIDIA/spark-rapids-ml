@@ -67,7 +67,7 @@ class SparkCumlDummyClass(_CumlClass):
 
     @classmethod
     def _param_excludes(cls) -> List[str]:
-        return ["b"]  # dropped from CuML side
+        return ["b"]  # dropped from cuML side
 
 
 class _SparkDummyParams(Params):
@@ -294,7 +294,7 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
         "a": 1.0,  # default value for Spark 'alpha'
         # "b": 20               # should be dropped
         "k": 4,  # default value for Spark 'k'
-        "x": 40.0,  # default value for CuML
+        "x": 40.0,  # default value for cuML
     }
     default_dummy = SparkCumlDummy()
     assert_params(default_dummy, default_spark_params, default_cuml_params)
@@ -308,7 +308,7 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
     expected_cuml_params.update({"a": 2.0, "k": 1})
     assert_params(spark_dummy, expected_spark_params, expected_cuml_params)
 
-    # CuML constructor
+    # cuML constructor
     cuml_params = {"a": 1.1, "k": 2, "x": 3.3}
     cuml_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **cuml_params)
     expected_spark_params = default_spark_params.copy()
@@ -331,10 +331,10 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
 
     # Spark constructor (with error param "beta")
     spark_params = {"alpha": 2.0, "beta": 0, "k": 1}
-    with pytest.raises(ValueError, match="Spark Param 'beta' is not supported by CuML"):
+    with pytest.raises(ValueError, match="Spark Param 'beta' is not supported by cuML"):
         spark_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **spark_params)
 
-    # CuML constructor (with unsupported param "b")
+    # cuML constructor (with unsupported param "b")
     cuml_params = {"a": 1.1, "b": 0, "k": 2, "x": 3.3}
     with pytest.raises(ValueError, match="Unsupported param 'b'"):
         cuml_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **cuml_params)

@@ -7,7 +7,7 @@ authors = [
   { name="Erik Ordentlich", email="eordentlich@nvidia.com" },
   { name="Lee Yang", email="leey@nvidia.com" }
 ]
-description = "Apache Spark integration with RAPIDS and CuML"
+description = "Apache Spark integration with RAPIDS and cuML"
 readme = "README.md"
 requires-python = ">=3.8,<3.10"
 classifiers = [

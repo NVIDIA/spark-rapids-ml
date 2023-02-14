@@ -31,14 +31,14 @@ class HasFeaturesCols(Params):
 
 class HasNumWorkers(Params):
     """
-    Mixin for param num_workers: number of Spark CuML workers, where each worker corresponds to a
+    Mixin for param num_workers: number of Spark cuML workers, where each worker corresponds to a
     Spark task.
     """
 
     num_workers = Param(
         Params._dummy(),  # type: ignore
         "num_workers",
-        "(cuML) number of Spark CuML workers, where each CuML worker corresponds to one Spark task.",
+        "(cuML) number of Spark cuML workers, where each cuML worker corresponds to one Spark task.",
         TypeConverters.toInt,
     )
 
@@ -56,7 +56,7 @@ class _CumlClass(object):
     """
     Base class for all _CumlEstimator and _CumlModel implemenations.
 
-    Defines helper methods for mapping Spark ML Params to CuML class parameters.
+    Defines helper methods for mapping Spark ML Params to cuML class parameters.
     """
 
     @classmethod
@@ -89,10 +89,10 @@ class _CumlClass(object):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         """
-        Return a mapping of Spark ML Param names to CuML parameter names, which is used maintain
-        associations from Spark params to CuML parameters.
+        Return a mapping of Spark ML Param names to cuML parameter names, which is used maintain
+        associations from Spark params to cuML parameters.
 
-        If the Spark Param has no equivalent CuML parameter, the CuML name can be set to:
+        If the Spark Param has no equivalent cuML parameter, the cuML name can be set to:
         - empty string, if a defined Spark Param should just be silently ignored, or
         - None, if a defined Spark Param should raise an error.
 
@@ -120,8 +120,8 @@ class _CumlClass(object):
     @classmethod
     def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
         """
-        Return a dictionary of CuML parameter names and their mapping of Spark ML Param string
-        values to CuML string values.
+        Return a dictionary of cuML parameter names and their mapping of Spark ML Param string
+        values to cuML string values.
 
         If the mapped value is None, then the Spark value is unsupported, and an error will be
         raised.
@@ -177,9 +177,9 @@ class _CumlParams(_CumlClass, HasNumWorkers):
 
     def initialize_cuml_params(self) -> None:
         """
-        Set the default values of CuML parameters to match their Spark equivalents.
+        Set the default values of cuML parameters to match their Spark equivalents.
         """
-        # initialize cuml_params with defaults from CuML
+        # initialize cuml_params with defaults from cuML
         self.cuml_params = self._get_cuml_params_default()
 
         # update default values from Spark ML Param equivalents
@@ -193,7 +193,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
 
     def set_params(self: P, **kwargs: Any) -> P:
         """
-        Set the kwargs as Spark ML Params and/or CuML parameters, while maintaining parameter
+        Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
         and value mappings defined by the _CumlClass.
         """
         param_map = self._param_mapping()
@@ -237,7 +237,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
 
     def clear(self, param: Param) -> None:
         """
-        Reset a Spark ML Param to its default value, setting matching CuML parameter, if exists.
+        Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.
         """
         super().clear(param)
         param_map = self._param_mapping()
@@ -328,13 +328,13 @@ class _CumlParams(_CumlClass, HasNumWorkers):
                 if not silent:
                     # if Spark Param is mapped to None, raise error
                     raise ValueError(
-                        f"Spark Param '{spark_param}' is not supported by CuML."
+                        f"Spark Param '{spark_param}' is not supported by cuML."
                     )
             elif cuml_param == "":
                 # if Spark Param is mapped to empty string, warn and continue
-                print(f"WARNING: Spark Param '{spark_param}' is not used by CuML.")
+                print(f"WARNING: Spark Param '{spark_param}' is not used by cuML.")
             else:
-                # if Spark Param is mapped to CuML parameter, set cuml_params
+                # if Spark Param is mapped to cuML parameter, set cuml_params
                 self._set_cuml_value(cuml_param, spark_value)
 
     def _set_cuml_value(self, k: str, v: Any) -> None:
@@ -355,7 +355,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         ------
         ValueError
             If a value mapping exists, but the mapped value is None, this means that there is
-            no equivalent value for the CuML side, so an exception is raised.
+            no equivalent value for the cuML side, so an exception is raised.
         """
         value_map = self._param_value_mapping()
         if k not in value_map:

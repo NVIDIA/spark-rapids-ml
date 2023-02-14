@@ -83,7 +83,7 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
 
     def __init__(self) -> None:
         super().__init__()
-        # restrict default seed to max value of 32-bit signed integer for CuML
+        # restrict default seed to max value of 32-bit signed integer for cuML
         self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
 
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
@@ -155,7 +155,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         Sets the value of :py:attr:`seed`.
         """
         if value > 0x07FFFFFFF:
-            raise ValueError("CuML seed value must be a 32-bit integer.")
+            raise ValueError("cuML seed value must be a 32-bit integer.")
         return self.set_params(seed=value)
 
     def setWeightCol(self, value: str) -> "KMeans":

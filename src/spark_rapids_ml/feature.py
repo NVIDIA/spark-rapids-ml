@@ -414,7 +414,7 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
                 res = np.expand_dims(res, 1)
 
             # Spark does not remove the mean from the transformed data,
-            # but CuML does, so need to add the mean back to match Spark results
+            # but cuML does, so need to add the mean back to match Spark results
             res += transformed_mean
 
             if self.isDefined(self.outputCols):
