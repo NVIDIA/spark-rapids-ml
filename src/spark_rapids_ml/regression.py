@@ -389,6 +389,10 @@ class LinearRegressionModel(
     def coefficients(self) -> List[float]:
         return self.coef_
 
+    @property
+    def intercept(self) -> float:
+        return self.intercept_
+
     def _get_cuml_transform_func(
         self, dataset: DataFrame
     ) -> Tuple[

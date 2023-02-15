@@ -180,7 +180,9 @@ def test_linear_regression_basic(
             lhs: LinearRegressionModel, rhs: LinearRegressionModel
         ) -> None:
             assert lhs.coef_ == rhs.coef_
+            assert lhs.coefficients == rhs.coefficients
             assert lhs.intercept_ == lhs.intercept_
+            assert lhs.intercept == lhs.intercept
 
             # Vector type will be cast to array(double)
             if feature_type == "vector":
