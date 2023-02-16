@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
-from pyspark.ml.param.shared import HasInputCols
 from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
-from pyspark.sql import DataFrame
+from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
+    FloatType,
     IntegerType,
     StringType,
     StructField,
@@ -261,6 +261,28 @@ class LinearRegression(
         Sets the value of :py:attr:`tol`.
         """
         return self.set_params(tol=value)
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super()._pre_process_data(dataset)
+
+        # Ridge and LinearRegression can't train on the dataset which only has 1 feature
+        if dimension == 1 and (
+            self.cuml_params["alpha"] == 0 or self.cuml_params["l1_ratio"] == 0
+        ):
+            raise RuntimeError(
+                "LinearRegression doesn't support training data with 1 column"
+            )
+
+        return select_cols, multi_col_names, dimension, feature_type
 
     def _get_cuml_fit_func(
         self, dataset: DataFrame

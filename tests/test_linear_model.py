@@ -17,6 +17,7 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import pytest
+from pyspark.ml.linalg import Vectors
 
 from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 
@@ -26,7 +27,6 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
-    feature_types,
     idfn,
     make_regression_dataset,
     pyspark_supported_feature_types,
@@ -263,3 +263,31 @@ def test_linear_regression(
         result = slr_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
         assert array_equal(cu_expected, pred_result, 1e-3)
+
+
+params_exception = [
+    # params, if throwing exception
+    ({"alpha": 0}, True),  # LinearRegression throws exception
+    ({"alpha": 0.5, "l1_ratio": 0}, True),  # Ridge throws exception
+    ({"alpha": 0.5, "l1_ratio": 0.5}, False),  # ElasticNet and Lasso can work
+]
+
+
+@pytest.mark.parametrize("params_exception", params_exception)
+def test_fail_run_on_1_col(params_exception: Tuple[Dict[str, Any], bool]) -> None:
+    params, exception = params_exception
+    with CleanSparkSession() as spark:
+        df = spark.createDataFrame(
+            [(1.0, Vectors.dense(1.0)), (0.0, Vectors.sparse(1, [], []))],
+            ["label", "features"],
+        )
+        lr = LinearRegression(**params)
+
+        if exception:
+            with pytest.raises(
+                RuntimeError,
+                match="LinearRegression doesn't support training data with 1 column",
+            ):
+                lr.fit(df)
+        else:
+            lr.fit(df)

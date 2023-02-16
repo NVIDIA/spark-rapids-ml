@@ -109,7 +109,7 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
 
     def setFeaturesCols(self, value: List[str]) -> "_KMeansCumlParams":
         """
-        Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns. 
+        Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns.
         """
         return self.set_params(featuresCols=value)
 
@@ -132,26 +132,26 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     Parameters
     ----------
     k: int (default = 8)
-        the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.    
+        the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.
 
     maxIter: int (default = 300)
-        the maximum iterations the algorithm will run to learn the k centers. 
-        More iterations help generate more accurate centers.  
+        the maximum iterations the algorithm will run to learn the k centers.
+        More iterations help generate more accurate centers.
 
     seed: int (default = 1)
-        the random seed used by the algorithm to initialize a set of k random centers to start with. 
+        the random seed used by the algorithm to initialize a set of k random centers to start with.
 
     tol: float (default = 1e-4)
         early stopping criterion if centers do not change much after an iteration.
 
     featuresCol: str
-        the name of the column that contains input vectors. featuresCol should be set when input vectors are stored in a single column of a dataframe. 
+        the name of the column that contains input vectors. featuresCol should be set when input vectors are stored in a single column of a dataframe.
 
     featuresCols: List[str]
-        the names of feature columns that form input vectors. featureCols should be set when input vectors are stored as multiple feature columns of a dataframe. 
-        
+        the names of feature columns that form input vectors. featureCols should be set when input vectors are stored as multiple feature columns of a dataframe.
+
     predictionCol: str
-        the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.  
+        the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
 
     Examples
     --------
@@ -189,7 +189,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     +----------+----------+
     >>> gpu_kmeans.save("/tmp/kmeans")
     >>> gpu_model.save("/tmp/kmeans_model")
-        
+
     >>> from spark_rapids_ml.clustering import KMeans
     >>> from pyspark.ml.linalg import Vectors
     >>> data = [(Vectors.dense([0.0, 0.0]),),
@@ -208,7 +208,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     ...         (8.0, 9.0),]
     >>> df = spark.createDataFrame(data, ["f1", "f2"])
     >>> gpu_kmeans = KMeans(k=2).setFeaturesCols(["f1", "f2"])
-    >>> gpu_kmeans.getFeaturesCols() 
+    >>> gpu_kmeans.getFeaturesCols()
     ['f1', 'f2']
     >>> gpu_kmeans = gpu_kmeans.fit(df)
     """
@@ -307,6 +307,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
     KMeans gpu model for clustering input vectors to learned k centers.
     Refer to the KMeans class for learning the k centers.
     """
+
     def __init__(
         self,
         cluster_centers_: List[List[float]],
