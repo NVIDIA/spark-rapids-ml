@@ -1,8 +1,10 @@
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
+import cupy
 from pyspark.ml.param import Param, Params, TypeConverters
+from pyspark.sql import SparkSession
 
-from spark_rapids_ml.utils import _get_default_params_from_func
+from spark_rapids_ml.utils import _get_default_params_from_func, _is_local
 
 P = TypeVar("P", bound="_CumlParams")
 
@@ -27,29 +29,6 @@ class HasFeaturesCols(Params):
         Gets the value of featuresCols or its default value.
         """
         return self.getOrDefault(self.featuresCols)
-
-
-class HasNumWorkers(Params):
-    """
-    Mixin for param num_workers: number of Spark cuML workers, where each worker corresponds to a
-    Spark task.
-    """
-
-    num_workers = Param(
-        Params._dummy(),  # type: ignore
-        "num_workers",
-        "(cuML) number of Spark cuML workers, where each cuML worker corresponds to one Spark task.",
-        TypeConverters.toInt,
-    )
-
-    def __init__(self) -> None:
-        super(HasNumWorkers, self).__init__()
-
-    def getNumWorkers(self) -> int:
-        """
-        Gets the value of num_workers or its default value.
-        """
-        return self.getOrDefault(self.num_workers)
 
 
 class _CumlClass(object):
@@ -161,26 +140,44 @@ class _CumlClass(object):
         return params
 
 
-class _CumlParams(_CumlClass, HasNumWorkers):
+class _CumlParams(_CumlClass, Params):
     """
     Mix-in to handle common parameters for all Spark CUML algorithms, along with utilties
     for synchronizing between Spark ML Params and cuML class parameters.
     """
 
-    cuml_params: Dict[str, Any] = {}
+    _cuml_params: Dict[str, Any] = {}
+    _num_workers: Optional[int] = None
 
-    def setNumWorkers(self: P, value: int) -> P:
+    @property
+    def cuml_params(self) -> Dict[str, Any]:
         """
-        Sets the value of :py:attr:`num_workers`.
+        Returns the dictionary of parameters intended for the underlying cuML class.
         """
-        return self._set(num_workers=value)
+        return self._cuml_params
+
+    @property
+    def num_workers(self) -> int:
+        """
+        Number of Spark cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU.
+        """
+        return (
+            self._infer_num_workers()
+            if self._num_workers is None
+            else self._num_workers
+        )
+
+    @num_workers.setter
+    def num_workers(self, value: int) -> None:
+        self._num_workers = value
 
     def initialize_cuml_params(self) -> None:
         """
         Set the default values of cuML parameters to match their Spark equivalents.
         """
         # initialize cuml_params with defaults from cuML
-        self.cuml_params = self._get_cuml_params_default()
+        self._cuml_params = self._get_cuml_params_default()
 
         # update default values from Spark ML Param equivalents
         param_map = self._param_mapping()
@@ -214,7 +211,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
                 self._set_cuml_param(k, v, silent=False)
             elif k in self.cuml_params:
                 # cuml param
-                self.cuml_params[k] = v
+                self._cuml_params[k] = v
                 for spark_param, cuml_param in param_map.items():
                     if k == cuml_param:
                         # also set matching Spark Param, if exists
@@ -229,6 +226,9 @@ class _CumlParams(_CumlClass, HasNumWorkers):
                             # Could not convert <class 'float'> to string type
                             pass
 
+            elif k == "num_workers":
+                # special case, since not a Spark or cuML param
+                self._num_workers = v
             else:
                 raise ValueError(f"Unsupported param '{k}'.")
         return self
@@ -242,7 +242,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         if param.name in param_map:
             cuml_param = param_map[param.name]
             if cuml_param:
-                self.cuml_params[cuml_param] = self.getOrDefault(param.name)
+                self._cuml_params[cuml_param] = self.getOrDefault(param.name)
 
     def _copy_cuml_params(self: P, to: P) -> P:
         """
@@ -260,9 +260,9 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         :py:class:`_CumlParams`
             Other instance.
         """
-        for k, v in self.cuml_params.items():
-            if k in to.cuml_params:
-                to.cuml_params[k] = v
+        for k, v in self._cuml_params.items():
+            if k in to._cuml_params:
+                to._cuml_params[k] = v
         return to
 
     def _get_input_columns(self) -> Tuple[Optional[str], Optional[List[str]]]:
@@ -299,6 +299,50 @@ class _CumlParams(_CumlClass, HasNumWorkers):
             raise ValueError("Please set inputCol(s) or featuresCol(s)")
 
         return input_col, input_cols
+
+    def _infer_num_workers(self) -> int:
+        """
+        Try to infer the number of cuML workers (i.e. GPUs in cluster) from the Spark environment.
+        """
+        num_workers = 1
+        try:
+            spark = SparkSession.getActiveSession()
+            if spark:
+                sc = spark.sparkContext
+                if _is_local(sc):
+                    # assume using all local GPUs for Spark local mode
+                    num_workers = cupy.cuda.runtime.getDeviceCount()
+                else:
+                    num_executors = int(
+                        spark.conf.get("spark.executor.instances", "-1")
+                    )
+                    if num_executors == -1:
+                        jsc = spark.sparkContext._jsc.sc()
+                        num_executors = len(jsc.statusTracker().getExecutorInfos()) - 1
+
+                    gpus_per_executor = float(
+                        spark.conf.get("spark.executor.resource.gpu.amount", "1")
+                    )
+                    gpus_per_task = float(
+                        spark.conf.get("spark.task.resource.gpu.amount", "1")
+                    )
+
+                    if gpus_per_task != 1:
+                        msg = (
+                            "WARNING: cuML requires 1 GPU per task, "
+                            "'spark.task.resource.gpu.amount' is currently set to {}"
+                        )
+                        print(msg.format(gpus_per_task))
+                        gpus_per_task = 1
+
+                    num_workers = max(
+                        int(num_executors * gpus_per_executor / gpus_per_task), 1
+                    )
+        except Exception as e:
+            # ignore any exceptions and just use default value
+            print(e)
+
+        return num_workers
 
     def _set_cuml_param(
         self, spark_param: str, spark_value: Any, silent: bool = True
@@ -359,18 +403,18 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         value_map = self._param_value_mapping()
         if k not in value_map:
             # no value mapping required
-            self.cuml_params[k] = v
+            self._cuml_params[k] = v
         else:
             # value map exists
             supported_values = set([x for x in value_map[k].values() if x is not None])
             if v in supported_values:
                 # already a valid value
-                self.cuml_params[k] = v
+                self._cuml_params[k] = v
             else:
                 # try to map to a valid value
                 mapped_v = value_map[k].get(v, None)
                 if mapped_v:
-                    self.cuml_params[k] = mapped_v
+                    self._cuml_params[k] = mapped_v
                 else:
                     raise ValueError(
                         f"Value '{v}' for '{k}' param is unsupported, expected: {supported_values}"

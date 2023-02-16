@@ -156,7 +156,7 @@ class _RandomForestEstimator(
     def _estimators_per_worker(self) -> List[int]:
         """Calculate the number of trees each task should train according to n_estimators"""
         n_estimators = self.cuml_params["n_estimators"]
-        n_workers = self.getNumWorkers()
+        n_workers = self.num_workers
         if n_estimators < n_workers:
             raise ValueError("n_estimators cannot be lower than number of spark tasks.")
 

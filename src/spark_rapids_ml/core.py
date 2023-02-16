@@ -48,7 +48,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
-from pyspark.sql import Column, DataFrame
+from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
 from pyspark.sql.types import (
@@ -106,7 +106,10 @@ class _CumlEstimatorWriter(MLWriter):
             self.instance,
             path,
             self.sc,
-            extraMetadata={"cuml_params": self.instance.cuml_params},
+            extraMetadata={
+                "_cuml_params": self.instance._cuml_params,
+                "_num_workers": self.instance._num_workers,
+            },
         )  # type: ignore
 
 
@@ -123,7 +126,8 @@ class _CumlEstimatorReader(MLReader):
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         cuml_estimator = self.estimator_cls()
         DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
-        cuml_estimator.cuml_params = metadata["cuml_params"]
+        cuml_estimator._cuml_params = metadata["_cuml_params"]
+        cuml_estimator._num_workers = metadata["_num_workers"]
         return cuml_estimator
 
 
@@ -137,7 +141,15 @@ class _CumlModelWriter(MLWriter):
         self.instance: "_CumlModel" = instance
 
     def saveImpl(self, path: str) -> None:
-        DefaultParamsWriter.saveMetadata(self.instance, path, self.sc, extraMetadata={"cuml_params": self.instance.cuml_params})  # type: ignore
+        DefaultParamsWriter.saveMetadata(
+            self.instance,
+            path,
+            self.sc,
+            extraMetadata={
+                "_cuml_params": self.instance._cuml_params,
+                "_num_workers": self.instance._num_workers,
+            },
+        )
         data_path = os.path.join(path, "data")
         model_attributes = self.instance.get_model_attributes()
         model_attributes_str = json.dumps(model_attributes)
@@ -160,7 +172,8 @@ class _CumlModelReader(MLReader):
         model_attr_dict = json.loads(model_attr_str)
         instance = self.model_cls(**model_attr_dict)
         DefaultParamsReader.getAndSetParams(instance, metadata)
-        instance.cuml_params = metadata["cuml_params"]
+        instance._cuml_params = metadata["_cuml_params"]
+        instance._num_workers = metadata["_num_workers"]
         return instance
 
 
@@ -229,7 +242,6 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
     def __init__(self) -> None:
         super().__init__()
         self.initialize_cuml_params()
-        self._setDefault(num_workers=1)  # type: ignore
 
     @abstractmethod
     def _out_schema(self) -> Union[StructType, str]:
@@ -250,7 +262,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """
         Repartition the dataset to the desired number of workers.
         """
-        return dataset.repartition(self.getOrDefault(self.num_workers))
+        return dataset.repartition(self.num_workers)
 
     @abstractmethod
     def _get_cuml_fit_func(
@@ -358,9 +370,11 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
 
+        num_workers = self.num_workers
+
         dataset = dataset.select(*select_cols)
 
-        if dataset.rdd.getNumPartitions() != self.getNumWorkers():
+        if dataset.rdd.getNumPartitions() != num_workers:
             dataset = self._repartition_dataset(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
@@ -368,8 +382,6 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         params: Dict[str, Any] = {
             INIT_PARAMETERS_NAME: self.cuml_params,
         }
-
-        num_workers = self.getNumWorkers()
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
 
@@ -429,8 +441,11 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             .collect()[0]
         )
 
-        model = self._copyValues(self._create_pyspark_model(ret))
-        return self._copy_cuml_params(model)  # type: ignore
+        model = self._create_pyspark_model(ret)
+        model._num_workers = self._num_workers
+        self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
+        return model
 
     def write(self) -> MLWriter:
         return _CumlEstimatorWriter(self)

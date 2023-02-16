@@ -33,7 +33,7 @@ from spark_rapids_ml.core import (
     _CumlEstimator,
     _CumlModel,
 )
-from spark_rapids_ml.params import _CumlClass
+from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
 from tests.utils import assert_params
 
@@ -70,7 +70,7 @@ class SparkCumlDummyClass(_CumlClass):
         return ["b"]  # dropped from cuML side
 
 
-class _SparkDummyParams(Params):
+class _SparkDummyParams(_CumlParams):
     """
     Params for Spark Dummy class
     """
@@ -152,7 +152,7 @@ class SparkCumlDummy(
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        num_workers = self.getNumWorkers()
+        num_workers = self.num_workers
         partition_num = self.partition_num
         m = self.m
         n = self.n
@@ -357,6 +357,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
     def assert_estimator(dummy: SparkCumlDummy) -> None:
         assert dummy.getInputCols() == input_cols
         assert dummy.cuml_params == {"a": 100, "k": 4, "x": 40.0}
+        assert dummy.num_workers == gpu_number
 
     def ceiling_division(n: int, d: int) -> int:
         return -(n // -d)
@@ -384,6 +385,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         assert model.model_attribute_a == 1024
         assert model.model_attribute_b == "hello dummy"
         assert model.cuml_params == {"a": 100, "k": 4, "x": 40.0}
+        assert model.num_workers == gpu_number
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
     from .sparksession import CleanSparkSession
