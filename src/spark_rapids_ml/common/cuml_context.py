@@ -70,7 +70,6 @@ class CumlContext:
             # initialize TPC over UCX by setting environmental variables 
             os.environ["UCX_TLS"] = "tcp,cuda_copy,cuda_ipc"
             os.environ["UCXPY_IFNAME"] = my_ifname
-            os.environ["UCXPY_LOG_LEVEL"] = "DEBUG"
 
             self._ucx = UCX.get()
             self._ucx_port = self._ucx.listener_port()
@@ -78,7 +77,6 @@ class CumlContext:
             self._nccl_unique_id = base64.b64decode(json.loads(msgs[0])[0])
             ports = [json.loads(msg)[1] for msg in msgs]
             self._ucx_eps = asyncio.run(CumlContext._ucp_create_endpoints(self._ucx, list(zip(ips, ports))))
-            print(f"pid {self._rank} _server_endpoints : {self._ucx._server_endpoints}")
 
 
     @property
@@ -89,9 +87,8 @@ class CumlContext:
         if not self.enable:
             return self
 
-        # initialize nccl and inject it to the handle
+        # initialize nccl and inject it to the handle. A GPU must be assigned exclusively before init() is called
         self._nccl_comm = nccl()
-        print(f"rank {self._rank} gets self._nranks: {self._nranks}, self._nccl_unique_id: {self._nccl_unique_id}")
         self._nccl_comm.init(self._nranks, self._nccl_unique_id, self._rank)
 
         if self._require_ucx is False:
@@ -123,14 +120,14 @@ class CumlContext:
         raise ValueError("target_ip ${target_ip} does not exist")
 
     @staticmethod
-    async def _ucp_create_endpoints(ucx_worker, target_ip_ports, additional_timeout=3):
+    async def _ucp_create_endpoints(ucx_worker, target_ip_ports, additional_timeout=0.1):
         """
-            ucp initialization may need a larger additional_timeout a complex network environment
+            ucp initialization may require a larger additional_timeout a complex network environment
         """
         eps = [None] * len(target_ip_ports)
         for i in range(len(eps)):
             ip, port = target_ip_ports[i]
             ep = await ucx_worker.get_endpoint(ip, port)
-            await asyncio.sleep(additional_timeout)
             eps[i] = ep
+        await asyncio.sleep(additional_timeout)
         return eps
