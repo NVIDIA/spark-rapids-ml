@@ -12,6 +12,14 @@ Subpackages
 Submodules
 ----------
 
+spark\_rapids\_ml.classification module
+---------------------------------------
+
+.. automodule:: spark_rapids_ml.classification
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 spark\_rapids\_ml.clustering module
 -----------------------------------
 
@@ -36,10 +44,26 @@ spark\_rapids\_ml.feature module
    :undoc-members:
    :show-inheritance:
 
+spark\_rapids\_ml.params module
+-------------------------------
+
+.. automodule:: spark_rapids_ml.params
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 spark\_rapids\_ml.regression module
 -----------------------------------
 
 .. automodule:: spark_rapids_ml.regression
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+spark\_rapids\_ml.tree module
+-----------------------------
+
+.. automodule:: spark_rapids_ml.tree
    :members:
    :undoc-members:
    :show-inheritance:
