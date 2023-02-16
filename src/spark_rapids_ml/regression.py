@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.ml.param.shared import HasInputCols
-from pyspark.ml.regression import _LinearRegressionParams
+from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
 from pyspark.sql import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -38,6 +38,12 @@ from spark_rapids_ml.core import (
     _CumlModelSupervised,
 )
 from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
+from spark_rapids_ml.tree import (
+    _RandomForestClass,
+    _RandomForestCumlParams,
+    _RandomForestEstimator,
+    _RandomForestModel,
+)
 from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array
 
 
@@ -420,3 +426,44 @@ class LinearRegressionModel(
             return pd.Series(ret)
 
         return _construct_lr, _predict
+
+
+class _RandomForestRegressorClass(_RandomForestClass):
+    @classmethod
+    def _param_excludes(cls) -> List[str]:
+        excludes = super()._param_excludes()
+        excludes.append("accuracy_metric")
+        return excludes
+
+    @classmethod
+    def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
+        mapping = super()._param_value_mapping()
+        mapping["split_criterion"] = {"variance": "mse"}
+        return mapping
+
+
+class RandomForestRegressor(
+    _RandomForestRegressorClass,
+    _RandomForestEstimator,
+    _RandomForestCumlParams,
+    _RandomForestRegressorParams,
+):
+    def __init__(self, **kwargs: Any):
+        super().__init__()
+        self.set_params(**kwargs)
+
+    def is_classification(self) -> bool:
+        return False
+
+    def _create_pyspark_model(self, result: Row) -> "RandomForestRegressionModel":
+        return RandomForestRegressionModel.from_row(result)
+
+
+class RandomForestRegressionModel(
+    _RandomForestRegressorClass,
+    _RandomForestModel,
+    _RandomForestCumlParams,
+    _RandomForestRegressorParams,
+):
+    def is_classification(self) -> bool:
+        return False

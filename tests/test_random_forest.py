@@ -14,15 +14,21 @@
 # limitations under the License.
 #
 
-from typing import Tuple
+from typing import Tuple, TypeVar
 
 import numpy as np
 import pytest
 from cuml import accuracy_score
+from sklearn.metrics import r2_score
 
 from spark_rapids_ml.classification import (
     RandomForestClassificationModel,
     RandomForestClassifier,
+)
+from spark_rapids_ml.params import _CumlParams
+from spark_rapids_ml.regression import (
+    RandomForestRegressionModel,
+    RandomForestRegressor,
 )
 from tests.sparksession import CleanSparkSession
 from tests.utils import (
@@ -32,11 +38,18 @@ from tests.utils import (
     feature_types,
     idfn,
     make_classification_dataset,
+    make_regression_dataset,
     pyspark_supported_feature_types,
 )
 
+RandomForest = TypeVar("RandomForest", RandomForestClassifier, RandomForestRegressor)
+RandomForestModel = TypeVar(
+    "RandomForestModel", RandomForestClassificationModel, RandomForestRegressionModel
+)
 
-def test_random_forest_classifier_params(tmp_path: str) -> None:
+
+@pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
+def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
     # Default params
     default_spark_params = {
         "maxBins": 32,
@@ -52,7 +65,7 @@ def test_random_forest_classifier_params(tmp_path: str) -> None:
         "bootstrap": True,
         "max_features": "auto",
     }
-    est = RandomForestClassifier()
+    est = RFEstimator()
     assert_params(est, default_spark_params, default_cuml_params)
 
     # Spark ML Params
@@ -62,7 +75,7 @@ def test_random_forest_classifier_params(tmp_path: str) -> None:
         "numTrees": 17,
         "featureSubsetStrategy": "onethird",
     }
-    est = RandomForestClassifier(**spark_params)
+    est = RFEstimator(**spark_params)
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(spark_params)
     expected_cuml_params = default_cuml_params.copy()
@@ -83,34 +96,58 @@ def test_random_forest_classifier_params(tmp_path: str) -> None:
     loaded_est = RandomForestClassifier.load(estimator_path)
     assert_params(loaded_est, expected_spark_params, expected_cuml_params)
 
+    if RFEstimator == RandomForestRegressor:
+        est = RFEstimator(impurity="variance")
+        est.cuml_params["split_criterion"] == "mse"
 
+
+rf_est_model_classes = [
+    # (estimator, model, n_classes)
+    (RandomForestClassifier, RandomForestClassificationModel, 2),
+    (RandomForestClassifier, RandomForestClassificationModel, 4),
+    (RandomForestRegressor, RandomForestRegressionModel, -1),
+]
+
+
+@pytest.mark.parametrize("est_model_classes", rf_est_model_classes, ids=idfn)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(10, 8)], ids=idfn)
 @pytest.mark.parametrize("n_classes", [2, 4])
-def test_random_forest_classifier_basic(
+def test_random_forest_basic(
     tmp_path: str,
+    est_model_classes: Tuple[RandomForest, RandomForestModel, int],
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
     n_classes: int,
 ) -> None:
+    RFEstimator, RFEstimatorModel, n_classes = est_model_classes
+
     # Train a toy model
-    X, _, y, _ = make_classification_dataset(
-        datatype=data_type,
-        nrows=data_shape[0],
-        ncols=data_shape[1],
-        n_classes=n_classes,
-        n_informative=8,
-        n_redundant=0,
-        n_repeated=0,
-    )
+    if RFEstimator == RandomForestClassifier:
+        X, _, y, _ = make_classification_dataset(
+            datatype=data_type,
+            nrows=data_shape[0],
+            ncols=data_shape[1],
+            n_classes=n_classes,
+            n_informative=8,
+            n_redundant=0,
+            n_repeated=0,
+        )
+    else:
+        X, _, y, _ = make_regression_dataset(
+            datatype=data_type,
+            nrows=data_shape[0],
+            ncols=data_shape[1],
+        )
+
     with CleanSparkSession() as spark:
         df, features_col, label_col = create_pyspark_dataframe(
             spark, feature_type, data_type, X, y
         )
 
-        est = RandomForestClassifier()
+        est = RFEstimator()
 
         est.setFeaturesCol(features_col)
         assert est.getFeaturesCol() == features_col
@@ -119,9 +156,7 @@ def test_random_forest_classifier_basic(
         est.setLabelCol(label_col)
         assert est.getLabelCol() == label_col
 
-        def assert_model(
-            lhs: RandomForestClassificationModel, rhs: RandomForestClassificationModel
-        ) -> None:
+        def assert_model(lhs: _CumlParams, rhs: _CumlParams) -> None:
             assert lhs.cuml_params == rhs.cuml_params
 
             # Vector type will be cast to array(double)
@@ -138,16 +173,19 @@ def test_random_forest_classifier_basic(
         model = est.fit(df)
 
         # model persistence
-        path = tmp_path + "/random_forest_classifier_tests"
-        model_path = f"{path}/random_forest_classifier_tests"
+        path = tmp_path + "/random_forest_tests"
+        model_path = f"{path}/random_forest_tests"
         model.write().overwrite().save(model_path)
 
-        model_loaded = RandomForestClassificationModel.load(model_path)
+        model_loaded = RFEstimatorModel.load(model_path)
         assert_model(model, model_loaded)
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
-def test_random_forest_classifier_numeric_type(gpu_number: int, data_type: str) -> None:
+@pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
+def test_random_forest_numeric_type(
+    gpu_number: int, RFEstimator: RandomForest, data_type: str
+) -> None:
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -163,7 +201,7 @@ def test_random_forest_classifier_numeric_type(gpu_number: int, data_type: str) 
             + f", label {data_type}"
         )
         df = spark.createDataFrame(data, schema=schema)
-        lr = RandomForestClassifier(num_workers=gpu_number)
+        lr = RFEstimator(num_workers=gpu_number)
         lr.setFeaturesCol(feature_cols)
         lr.fit(df)
 
@@ -246,3 +284,70 @@ def test_random_forest_classifier(
             assert cu_acc == spark_acc
         else:
             assert cu_acc - spark_acc < 0.07
+
+
+@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
+@pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", cuml_supported_data_types)
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.parametrize("num_workers", num_workers)
+def test_random_forest_regressor(
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    num_workers: int,
+) -> None:
+
+    X_train, X_test, y_train, y_test = make_regression_dataset(
+        datatype=data_type,
+        nrows=data_shape[0],
+        ncols=data_shape[1],
+    )
+
+    rf_params = {
+        "n_estimators": 100,
+        "n_bins": 128,
+        "max_depth": 16,
+        "bootstrap": False,
+        "max_features": 1.0,
+        "random_state": 1.0,
+    }
+
+    from cuml import RandomForestRegressor as cuRf
+
+    cu_rf = cuRf(n_streams=1, **rf_params)
+    cu_rf.fit(X_train, y_train)
+    cu_preds = cu_rf.predict(X_test)
+
+    cu_acc = r2_score(y_test, cu_preds)
+
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    with CleanSparkSession(conf) as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+
+        assert label_col is not None
+        spark_rf = RandomForestRegressor(
+            num_workers=num_workers,
+            **rf_params,
+        )
+        spark_rf.setFeaturesCol(features_col)
+        spark_rf.setLabelCol(label_col)
+        spark_rf_model = spark_rf.fit(train_df)
+
+        test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
+
+        result = spark_rf_model.transform(test_df).collect()
+        pred_result = [row.prediction for row in result]
+        spark_acc = r2_score(y_test, np.array(pred_result))
+
+        # Since vector type will force to convert to array<double>
+        # which may cause precision issue for random forest.
+        if num_workers == 1 and not (
+            data_type == np.float32 and feature_type == feature_types.vector
+        ):
+            assert pytest.approx(cu_acc) == spark_acc
+        else:
+            assert cu_acc - spark_acc < 0.09
