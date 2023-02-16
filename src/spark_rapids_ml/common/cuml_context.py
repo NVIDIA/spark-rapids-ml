@@ -77,7 +77,7 @@ class CumlContext:
             msgs = context.allGather(json.dumps((nccl_uid, self._ucx_port)))
             self._nccl_unique_id = base64.b64decode(json.loads(msgs[0])[0])
             ports = [json.loads(msg)[1] for msg in msgs]
-            self._ucx_eps = asyncio.run(CumlContext._ucp_create_endpoints(self._ucx, list(zip(ip, ports))))
+            self._ucx_eps = asyncio.run(CumlContext._ucp_create_endpoints(self._ucx, list(zip(ips, ports))))
             print(f"pid {self._rank} _server_endpoints : {self._ucx._server_endpoints}")
 
 
@@ -91,6 +91,7 @@ class CumlContext:
 
         # initialize nccl and inject it to the handle
         self._nccl_comm = nccl()
+        print(f"rank {self._rank} gets self._nranks: {self._nranks}, self._nccl_unique_id: {self._nccl_unique_id}")
         self._nccl_comm.init(self._nranks, self._nccl_unique_id, self._rank)
 
         if self._require_ucx is False:

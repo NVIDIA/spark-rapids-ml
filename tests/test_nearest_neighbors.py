@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import pytest
+from pyspark import BarrierTaskContext
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.feature import PCA, PCAModel
@@ -27,5 +28,24 @@ def test_ucx(gpu_number: int, data_shape: Tuple[int, int]) -> None:
             spark, feature_type = feature_types.array, dtype= np.float32, data = X, label = None
         )
 
-        train_df = train_df.repartition(gpu_number)
-        train_df
+        dataset = train_df.repartition(gpu_number)
+
+        def _train_udf(pdf_iter):
+            from pyspark import BarrierTaskContext
+            context = BarrierTaskContext.get()
+            rank = context.partitionId()
+            with CumlContext(rank = rank, nranks = gpu_number, context = context, enable=True, require_ucx=True) as cc:
+                assert cc._ucx != None
+                assert cc._ucx_port != None
+                assert len(cc._ucx._server_endpoints) == gpu_number
+                assert len(cc._ucx._endpoints) == gpu_number
+                for pdf in pdf_iter:
+                    yield pdf
+
+        rdd = (
+            dataset.mapInPandas(_train_udf, schema=dataset.schema)  # type: ignore
+            .rdd.barrier()
+            .mapPartitions(lambda x: x)
+        )
+
+        rdd.count()
