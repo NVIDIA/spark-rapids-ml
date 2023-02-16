@@ -187,9 +187,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
 
         for spark_param in param_map.keys():
             if self.hasDefault(spark_param):
-                self._set_cuml_param(
-                    spark_param, self.getOrDefault(spark_param), silent=True
-                )
+                self._set_cuml_param(spark_param, self.getOrDefault(spark_param))
 
     def set_params(self: P, **kwargs: Any) -> P:
         """
@@ -213,7 +211,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
             if self.hasParam(k):
                 # standard Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
-                self._set_cuml_param(k, v)
+                self._set_cuml_param(k, v, silent=False)
             elif k in self.cuml_params:
                 # cuml param
                 self.cuml_params[k] = v
@@ -303,7 +301,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         return input_col, input_cols
 
     def _set_cuml_param(
-        self, spark_param: str, spark_value: Any, silent: bool = False
+        self, spark_param: str, spark_value: Any, silent: bool = True
     ) -> None:
         """Set a cuml_params parameter for a given Spark Param and value.
 
@@ -314,7 +312,7 @@ class _CumlParams(_CumlClass, HasNumWorkers):
         spark_value : Any
             Value associated with the Spark ML Param.
         silent: bool
-            Don't raise errors, default=False.
+            Don't warn or raise errors, default=True.
 
         Raises
         ------
@@ -332,7 +330,8 @@ class _CumlParams(_CumlClass, HasNumWorkers):
                     )
             elif cuml_param == "":
                 # if Spark Param is mapped to empty string, warn and continue
-                print(f"WARNING: Spark Param '{spark_param}' is not used by cuML.")
+                if not silent:
+                    print(f"WARNING: Spark Param '{spark_param}' is not used by cuML.")
             else:
                 # if Spark Param is mapped to cuML parameter, set cuml_params
                 self._set_cuml_value(cuml_param, spark_value)
