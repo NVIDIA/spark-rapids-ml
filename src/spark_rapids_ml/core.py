@@ -212,6 +212,13 @@ class _CumlCommon(MLWritable, MLReadable):
 
     @staticmethod
     def initialize_cuml_logging(verbose: Optional[Union[bool, int]]) -> None:
+        """Initializes the logger for cuML.
+
+        Parameters
+        ----------
+        verbose : Optional[Union[bool, int]]
+            If True, sets the log_level to 5.  If integer value, sets the log_level to the value.
+        """
         if verbose is not None:
             from cuml.common import logger as cuml_logger
 
@@ -523,6 +530,7 @@ class _CumlModel(Model, _CumlCommon, _CumlParams):
         self.n_cols = n_cols
 
     def get_model_attributes(self) -> Optional[Dict[str, Any]]:
+        """Return model attributes as a dictionary."""
         return self._model_attributes
 
     @classmethod

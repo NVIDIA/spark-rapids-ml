@@ -415,11 +415,35 @@ class LinearRegressionModel(
 
     @property
     def coefficients(self) -> List[float]:
+        """
+        Model coefficients.
+        """
         return self.coef_
 
     @property
+    def hasSummary(self) -> bool:
+        """
+        Indicates whether a training summary exists for this model instance.
+        """
+        return False
+
+    @property
     def intercept(self) -> float:
+        """
+        Model intercept.
+        """
         return self.intercept_
+
+    @property
+    def scale(self) -> float:
+        """
+        Since "huber" loss is not supported by cuML, just returns the value 1.0 for API compatibility.
+        """
+        return 1.0
+
+    def evaluate(self, dataset: DataFrame) -> None:
+        """(Not supported) Evaluates the model on a test dataset."""
+        raise NotImplementedError
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
@@ -474,7 +498,7 @@ class RandomForestRegressor(
         super().__init__()
         self.set_params(**kwargs)
 
-    def is_classification(self) -> bool:
+    def _is_classification(self) -> bool:
         return False
 
     def _create_pyspark_model(self, result: Row) -> "RandomForestRegressionModel":
@@ -487,5 +511,5 @@ class RandomForestRegressionModel(
     _RandomForestCumlParams,
     _RandomForestRegressorParams,
 ):
-    def is_classification(self) -> bool:
+    def _is_classification(self) -> bool:
         return False

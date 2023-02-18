@@ -298,10 +298,17 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
 
     @property
     def mean(self) -> List[float]:
+        """
+        Returns the mean of the input vectors.
+        """
         return self.mean_
 
     @property
     def pc(self) -> DenseMatrix:
+        """
+        Returns a principal components Matrix.
+        Each column is one principal component.
+        """
         numRows = len(self.components_)
         numCols = self.n_cols
         values = list(itertools.chain.from_iterable(self.components_))
@@ -309,11 +316,11 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
         return DenseMatrix(numCols, numRows, values, False)  # type: ignore
 
     @property
-    def components(self) -> List[List[float]]:
-        return self.components_
-
-    @property
     def explainedVariance(self) -> DenseVector:
+        """
+        Returns a vector of proportions of variance
+        explained by each principal component.
+        """
         return DenseVector(self.explained_variance_ratio_)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:

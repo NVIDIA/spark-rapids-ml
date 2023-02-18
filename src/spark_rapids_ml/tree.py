@@ -24,8 +24,13 @@ import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.ml.classification import _RandomForestClassifierParams
+from pyspark.ml.linalg import Vector
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
-from pyspark.ml.tree import _RandomForestParams, _TreeRegressorParams
+from pyspark.ml.tree import (
+    _DecisionTreeModel,
+    _RandomForestParams,
+    _TreeRegressorParams,
+)
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
@@ -149,7 +154,7 @@ class _RandomForestEstimator(
         self.set_params(**kwargs)
 
     @abstractmethod
-    def is_classification(self) -> bool:
+    def _is_classification(self) -> bool:
         """Indicate if it is regression or classification estimator"""
         raise NotImplementedError()
 
@@ -172,7 +177,7 @@ class _RandomForestEstimator(
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         n_estimators_per_worker = self._estimators_per_worker()
 
-        is_classification = self.is_classification()
+        is_classification = self._is_classification()
 
         def _rf_fit(
             dfs: CumlInputType,
@@ -268,8 +273,45 @@ class _RandomForestModel(
         super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
         self.treelite_model = treelite_model
 
+    @property
+    def featureImportances(self) -> Vector:
+        """Estimate the importance of each feature."""
+        raise NotImplementedError
+
+    @property
+    def toDebugString(self) -> str:
+        """Full description of model."""
+        raise NotImplementedError
+
+    @property
+    def totalNumNodes(self) -> int:
+        """Total number of nodes, summed over all trees in the ensemble."""
+        raise NotImplementedError
+
+    @property
+    def trees(self) -> List[_DecisionTreeModel]:
+        """Trees in this ensemble. Warning: These have null parent Estimators."""
+        raise NotImplementedError
+
+    @property
+    def treeWeights(self) -> List[float]:
+        """Return the weights for each tree."""
+        raise NotImplementedError
+
+    def predict(self, value: Vector) -> float:
+        """
+        (Not supported) Predict label for the given features.
+        """
+        raise NotImplementedError
+
+    def predictLeaf(self, value: Vector) -> float:
+        """
+        (Not supported) Predict the indices of the leaves corresponding to the feature vector.
+        """
+        raise NotImplementedError
+
     @abstractmethod
-    def is_classification(self) -> bool:
+    def _is_classification(self) -> bool:
         """Indicate if it is regression or classification model"""
         raise NotImplementedError()
 
@@ -281,7 +323,7 @@ class _RandomForestModel(
     ]:
         treelite_model = self.treelite_model
 
-        is_classification = self.is_classification()
+        is_classification = self._is_classification()
 
         def _construct_rf() -> CumlT:
             model = pickle.loads(base64.b64decode(treelite_model))

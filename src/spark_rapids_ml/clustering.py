@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 from pyspark.ml.clustering import _KMeansParams
 from pyspark.ml.linalg import Vector
-from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -321,13 +320,16 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         self.cluster_centers_ = cluster_centers_
 
     def clusterCenters(self) -> List[List[float]]:
+        """Returns the list of cluster centers."""
         return self.cluster_centers_
 
     @property
     def hasSummary(self) -> bool:
+        """Indicates whether a training summary exists for this model instance."""
         return False
 
     def predict(self, value: Vector) -> int:
+        """(Not supported) Predict label for the given features."""
         raise NotImplementedError(
             "'predict' method is not supported, use 'transform' instead."
         )

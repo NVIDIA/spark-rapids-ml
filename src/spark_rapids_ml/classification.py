@@ -64,7 +64,7 @@ class RandomForestClassifier(
     def _create_pyspark_model(self, result: Row) -> "RandomForestClassificationModel":
         return RandomForestClassificationModel.from_row(result)
 
-    def is_classification(self) -> bool:
+    def _is_classification(self) -> bool:
         return True
 
 
@@ -74,5 +74,15 @@ class RandomForestClassificationModel(
     _RandomForestCumlParams,
     _RandomForestClassifierParams,
 ):
-    def is_classification(self) -> bool:
+    def _is_classification(self) -> bool:
         return True
+
+    @property
+    def hasSummary(self) -> bool:
+        """Indicates whether a training summary exists for this model instance."""
+        return False
+
+    @property
+    def numClasses(self) -> int:
+        """Number of classes (values which the label can take)."""
+        raise NotImplementedError
