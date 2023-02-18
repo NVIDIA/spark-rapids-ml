@@ -358,6 +358,10 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If enable or disable NCCL communication"""
         return True
 
+    def _require_ucx(self) -> bool:
+        """If enable or disable ucx over NCCL"""
+        return False
+
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
@@ -395,6 +399,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         cuml_verbose = self.cuml_params.get("verbose", False)
 
         enable_nccl = self._enable_nccl()
+        require_ucx = self._require_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -410,7 +415,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             # set gpu device
             _CumlCommon.set_gpu_device(context, is_local)
 
-            with CumlContext(partition_id, num_workers, context, enable_nccl) as cc:
+            with CumlContext(partition_id, num_workers, context, enable_nccl, require_ucx) as cc:
                 # handle the input
                 # inputs = [(X, Optional(y)), (X, Optional(y))]
                 logger.info("Loading data into python worker memory")
