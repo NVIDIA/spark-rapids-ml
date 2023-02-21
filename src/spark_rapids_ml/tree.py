@@ -63,7 +63,7 @@ class _RandomForestClass(_CumlClass):
 
     @classmethod
     def _param_excludes(cls) -> List[str]:
-        return ["handle", "output_type", "n_streams"]
+        return ["handle", "output_type"]
 
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
@@ -152,6 +152,10 @@ class _RandomForestEstimator(
     def __init__(self, **kwargs: Any):
         super().__init__()
         self.set_params(**kwargs)
+        if "n_streams" not in kwargs:
+            # cuML will throw exception when running spark cuML on the node with multi-gpus
+            # when n_streams > 0
+            self._set_cuml_value("n_streams", 1)
 
     @abstractmethod
     def _is_classification(self) -> bool:
@@ -189,19 +193,17 @@ class _RandomForestEstimator(
             context = BarrierTaskContext.get()
             part_id = context.partitionId()
 
+            rf_params = params[INIT_PARAMETERS_NAME]
+            rf_params.pop("n_estimators")
+
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
             else:
                 from cuml import RandomForestRegressor as cuRf
 
-            rf_params = params[INIT_PARAMETERS_NAME]
-            rf_params.pop("n_estimators")
-            # Force n_streams=1 to avoid exception of running random forest
-            # on the node with multi-gpus
             rf = cuRf(
                 n_estimators=n_estimators_per_worker[part_id],
                 output_type="cudf",
-                n_streams=1,
                 **rf_params,
             )
 

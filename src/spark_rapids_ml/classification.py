@@ -37,7 +37,7 @@ class RandomForestClassifier(
     _RandomForestClassifierParams,
 ):
     def __init__(self, **kwargs: Any):
-        super().__init__()
+        super().__init__(**kwargs)
         self.set_params(**kwargs)
 
     def setNumTrees(self, value: int) -> "RandomForestClassifier":
