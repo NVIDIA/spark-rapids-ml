@@ -3,6 +3,7 @@ from typing import Any, Dict, Tuple
 import numpy as np
 import pytest
 from pyspark import BarrierTaskContext
+from pyspark.sql.functions import monotonically_increasing_id 
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.common.cuml_context import CumlContext
