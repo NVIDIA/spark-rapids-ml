@@ -16,7 +16,12 @@ conda activate rapids-22.10
 pip install -r requirements.txt
 ```
 ## Usage
-TBD
+```bash
+git clone ssh://git@gitlab-master.nvidia.com:12051/nvspark/spark-cuml.git
+cd spark-cuml
+pip install -e .
+```
+TBD: add more info
 
 ## Development
 ### Run tests

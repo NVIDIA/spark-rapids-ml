@@ -236,6 +236,12 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             raise ValueError("cuML seed value must be a 32-bit integer.")
         return self.set_params(seed=value)
 
+    def setTol(self, value: float) -> "KMeans":
+        """
+        Sets the value of :py:attr:`tol`.
+        """
+        return self.set_params(tol=value)
+
     def setWeightCol(self, value: str) -> "KMeans":
         """
         Sets the value of :py:attr:`weightCol`.
