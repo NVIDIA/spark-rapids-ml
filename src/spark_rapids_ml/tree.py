@@ -144,6 +144,11 @@ class _RandomForestCumlParams(
         self._set(labelCol=value)  # type: ignore
         return self
 
+    def setSeed(self, value: int) -> "_RandomForestCumlParams":
+        if value > 0x07FFFFFFF:
+            raise ValueError("cuML seed value must be a 32-bit integer.")
+        return self.set_params(seed=value)
+
 
 class _RandomForestEstimator(
     _CumlEstimatorSupervised,
@@ -279,6 +284,11 @@ class _RandomForestModel(
     def featureImportances(self) -> Vector:
         """Estimate the importance of each feature."""
         raise NotImplementedError
+
+    @property
+    def getNumTrees(self) -> int:
+        """Number of trees in ensemble."""
+        return self.getOrDefault("numTrees")
 
     @property
     def toDebugString(self) -> str:

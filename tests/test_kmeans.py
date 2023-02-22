@@ -14,10 +14,12 @@
 # limitations under the License.
 #
 
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
+from pyspark.ml.clustering import KMeans as SparkKMeans
+from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 
 from spark_rapids_ml.clustering import KMeans, KMeansModel
 
@@ -30,6 +32,9 @@ from .utils import (
     idfn,
     pyspark_supported_feature_types,
 )
+
+KMeansType = TypeVar("KMeansType", Type[KMeans], Type[SparkKMeans])
+KMeansModelType = TypeVar("KMeansModelType", Type[KMeansModel], Type[SparkKMeansModel])
 
 
 def assert_centers_equal(
@@ -181,6 +186,7 @@ def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.slow
 def test_kmeans(
     gpu_number: int,
     feature_type: str,
@@ -255,3 +261,103 @@ def test_kmeans(
         assert len(slabels) == len(clabels)
         to_clabels = [s2c[v] for v in slabels]
         assert to_clabels == clabels
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize(
+    "kmeans_types", [(SparkKMeans, SparkKMeansModel), (KMeans, KMeansModel)]
+)
+def test_kmeans_spark_compat(
+    kmeans_types: Tuple[KMeansType, KMeansModelType],
+    tmp_path: str,
+) -> None:
+    # based on https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.feature.PCA.htm
+    _KMeans, _KMeansModel = kmeans_types
+
+    with CleanSparkSession() as spark:
+        from pyspark.ml.linalg import Vectors
+
+        data = [
+            (Vectors.dense([0.0, 0.0]), 2.0),
+            (Vectors.dense([1.0, 1.0]), 2.0),
+            (Vectors.dense([9.0, 8.0]), 2.0),
+            (Vectors.dense([8.0, 9.0]), 2.0),
+        ]
+        df = spark.createDataFrame(data, ["features", "weighCol"])
+
+        kmeans = _KMeans(k=2)
+        kmeans.setSeed(1)
+        kmeans.setMaxIter(10)
+        if isinstance(kmeans, SparkKMeans):
+            kmeans.setWeightCol("weighCol")
+        else:
+            with pytest.raises(ValueError):
+                kmeans.setWeightCol("weighCol")
+
+        assert kmeans.getMaxIter() == 10
+        assert kmeans.getK() == 2
+        assert kmeans.getSeed() == 1
+
+        kmeans.clear(kmeans.maxIter)
+        assert kmeans.getMaxIter() == 20
+
+        model = kmeans.fit(df)
+
+        assert model.getDistanceMeasure() == "euclidean"
+
+        model.setPredictionCol("newPrediction")
+        assert model.getPredictionCol() == "newPrediction"
+
+        example = df.head()
+        if example:
+            if isinstance(model, SparkKMeansModel):
+                model.predict(example.features)
+            else:
+                with pytest.raises(NotImplementedError):
+                    model.predict(example.features)
+
+        centers = model.clusterCenters()
+        # [array([0.5, 0.5]), array([8.5, 8.5])]
+        assert len(centers) == 2
+
+        sorted_centers = sorted([x.tolist() for x in centers])
+        expected_centers = [[0.5, 0.5], [8.5, 8.5]]
+        assert sorted_centers == expected_centers
+
+        transformed = model.transform(df).select("features", "newPrediction")
+        rows = transformed.collect()
+        # [Row(features=DenseVector([0.0, 0.0]), newPrediction=0),
+        #  Row(features=DenseVector([1.0, 1.0]), newPrediction=0),
+        #  Row(features=DenseVector([9.0, 8.0]), newPrediction=1),
+        #  Row(features=DenseVector([8.0, 9.0]), newPrediction=1)]
+
+        assert rows[0].newPrediction == rows[1].newPrediction
+        assert rows[2].newPrediction == rows[3].newPrediction
+
+        if isinstance(model, SparkKMeansModel):
+            assert model.hasSummary == True
+            summary = model.summary
+            assert summary.k == 2
+            assert summary.clusterSizes == [2, 2]
+            assert summary.trainingCost == 4.0
+        else:
+            assert model.hasSummary == False
+
+        kmeans_path = tmp_path + "/kmeans"
+        kmeans.save(kmeans_path)
+        kmeans2 = _KMeans.load(kmeans_path)
+        assert kmeans2.getK() == 2
+
+        model_path = tmp_path + "/kmeans_model"
+        model.save(model_path)
+        model2 = _KMeansModel.load(model_path)
+        assert model2.hasSummary == False
+
+        assert all(model.clusterCenters()[0] == model2.clusterCenters()[0])
+        # array([ True,  True], dtype=bool)
+
+        assert all(model.clusterCenters()[1] == model2.clusterCenters()[1])
+        # array([ True,  True], dtype=bool)
+
+        assert model.transform(df).take(1) == model2.transform(df).take(1)
+        # True

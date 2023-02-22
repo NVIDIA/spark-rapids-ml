@@ -14,10 +14,13 @@
 # limitations under the License.
 #
 
-from typing import Any, Dict, Tuple
+from typing import Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
+from pyspark.ml.feature import PCA as SparkPCA
+from pyspark.ml.feature import PCAModel as SparkPCAModel
+from pyspark.ml.linalg import DenseMatrix, Vectors
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.feature import PCA, PCAModel
@@ -28,10 +31,12 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
-    feature_types,
     idfn,
     pyspark_supported_feature_types,
 )
+
+PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
+PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 
 
 def test_fit(gpu_number: int) -> None:
@@ -222,6 +227,7 @@ def test_pca_numeric_type(gpu_number: int, data_type: str) -> None:
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.slow
 def test_pca(
     gpu_number: int,
     feature_type: str,
@@ -275,3 +281,71 @@ def test_pca(
             spark_result = transform_df.toPandas().to_numpy()
 
         assert array_equal(cu_result, spark_result, 1e-2, with_sign=False)
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("pca_types", [(SparkPCA, SparkPCAModel), (PCA, PCAModel)])
+def test_pca_spark_compat(
+    pca_types: Tuple[PCAType, PCAModelType],
+    tmp_path: str,
+) -> None:
+    # based on https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.feature.PCA.htm
+    _PCA, _PCAModel = pca_types
+
+    with CleanSparkSession() as spark:
+        data = [
+            (Vectors.sparse(5, [(1, 1.0), (3, 7.0)]),),
+            (Vectors.dense([2.0, 0.0, 3.0, 4.0, 5.0]),),
+            (Vectors.dense([4.0, 0.0, 0.0, 6.0, 7.0]),),
+        ]
+        df = spark.createDataFrame(data, ["features"])
+
+        pca = _PCA(k=2, inputCol="features")
+        pca.setOutputCol("pca_features")
+        assert pca.getInputCol() == "features"
+        assert pca.getK() == 2
+        assert pca.getOutputCol() == "pca_features"
+
+        model = pca.fit(df)
+        model.setOutputCol("output")
+        assert model.getOutputCol() == "output"
+
+        output = model.transform(df).collect()[0].output
+        expected_output = [1.6485728230883814, -4.0132827005162985]
+        assert array_equal(output, expected_output, with_sign=False)
+
+        variance = model.explainedVariance.toArray()
+        expected_variance = [0.7943932532230531, 0.20560674677694699]
+        assert array_equal(variance, expected_variance)
+
+        pc = model.pc
+        expected_pc = DenseMatrix(
+            5,
+            2,
+            [
+                -0.4486,
+                0.133,
+                -0.1252,
+                0.2165,
+                -0.8477,
+                -0.2842,
+                -0.0562,
+                0.7636,
+                -0.5653,
+                -0.1156,
+            ],
+            False,
+        )
+        assert array_equal(pc.toArray(), expected_pc.toArray(), with_sign=False)
+
+        pcaPath = tmp_path + "/pca"
+        pca.save(pcaPath)
+        loadedPca = _PCA.load(pcaPath)
+        assert loadedPca.getK() == pca.getK()
+
+        modelPath = tmp_path + "/pca-model"
+        model.save(modelPath)
+        loadedModel = _PCAModel.load(modelPath)
+        assert loadedModel.pc == model.pc
+        assert loadedModel.explainedVariance == model.explainedVariance
+        assert loadedModel.transform(df).take(1) == model.transform(df).take(1)

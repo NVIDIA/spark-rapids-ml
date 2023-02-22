@@ -18,7 +18,7 @@ import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
-from pyspark.ml.linalg import DenseVector
+from pyspark.ml.linalg import Vector, Vectors
 from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
@@ -415,12 +415,12 @@ class LinearRegressionModel(
         self.intercept_ = intercept_
 
     @property
-    def coefficients(self) -> DenseVector:
+    def coefficients(self) -> Vector:
         """
         Model coefficients.
         """
         # TBD: for large enough dimension, SparseVector is returned. Need to find out how to match
-        return DenseVector(self.coef_)
+        return Vectors.dense(self.coef_)
 
     @property
     def hasSummary(self) -> bool:

@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
+from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors
+from pyspark.ml.regression import LinearRegression as SparkLinearRegression
+from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
+from pyspark.sql.functions import array
 
 from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 
@@ -32,6 +36,14 @@ from .utils import (
     pyspark_supported_feature_types,
 )
 
+LinearRegressionType = TypeVar(
+    "LinearRegressionType", Type[LinearRegression], Type[SparkLinearRegression]
+)
+LinearRegressionModelType = TypeVar(
+    "LinearRegressionModelType",
+    Type[LinearRegressionModel],
+    Type[SparkLinearRegressionModel],
+)
 
 # @lru_cache(4) TODO fixme: TypeError: Unhashable Type” Numpy.Ndarray
 def train_with_cuml_linear_regression(
@@ -271,6 +283,113 @@ params_exception = [
     ({"alpha": 0.5, "l1_ratio": 0}, True),  # Ridge throws exception
     ({"alpha": 0.5, "l1_ratio": 0.5}, False),  # ElasticNet and Lasso can work
 ]
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLinearRegression, SparkLinearRegressionModel),
+        (LinearRegression, LinearRegressionModel),
+    ],
+)
+def test_linear_regression_spark_compat(
+    lr_types: Tuple[LinearRegressionType, LinearRegressionModelType],
+    tmp_path: str,
+) -> None:
+    _LinearRegression, _LinearRegressionModel = lr_types
+
+    X = np.array(
+        [
+            [-0.20515826, 1.4940791],
+            [0.12167501, 0.7610377],
+            [1.4542735, 0.14404356],
+            [-0.85409576, 0.3130677],
+            [2.2408931, 0.978738],
+            [-0.1513572, 0.95008844],
+            [-0.9772779, 1.867558],
+            [0.41059852, -0.10321885],
+        ]
+    )
+    weight = np.ones([8])
+    y = np.array(
+        [
+            2.0374513,
+            22.403986,
+            139.4456,
+            -76.19584,
+            225.72075,
+            -0.6784152,
+            -65.54835,
+            37.30829,
+        ]
+    )
+
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        df = spark.createDataFrame(
+            np.concatenate((X, weight.reshape(8, 1), y.reshape(8, 1)), axis=1).tolist(),
+            ",".join(schema),
+        )
+        df = df.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        lr = _LinearRegression(regParam=0.1, solver="normal")
+        assert lr.getRegParam() == 0.1
+
+        lr.setFeaturesCol("features")
+        lr.setMaxIter(5)
+        lr.setRegParam(0.0)
+        lr.setLabelCol("label")
+        if isinstance(lr, SparkLinearRegression):
+            lr.setWeightCol("weight")
+        else:
+            with pytest.raises((ValueError, AttributeError)):
+                lr.setWeightCol("weight")
+
+        assert lr.getFeaturesCol() == "features"
+        assert lr.getMaxIter() == 5
+        assert lr.getRegParam() == 0.0
+        assert lr.getLabelCol() == "label"
+
+        model = lr.fit(df)
+        coefficients = model.coefficients.toArray()
+        expected_coefficients = [94.46689350900762, 14.33532962562045]
+        assert array_equal(coefficients, expected_coefficients)
+
+        intercept = model.intercept
+        assert np.isclose(intercept, -3.3089753423400734e-07)
+
+        example = df.head()
+        if example:
+            if isinstance(model, SparkLinearRegressionModel):
+                model.predict(example.features)
+            else:
+                with pytest.raises((NotImplementedError, AttributeError)):
+                    model.predict(example.features)
+
+        model.setPredictionCol("prediction")
+        output = model.transform(df).head()
+        # Row(weight=1.0, label=2.0374512672424316, features=DenseVector([-0.2052, 1.4941]), prediction=2.037452415464224)
+        assert np.isclose(output.prediction, 2.037452415464224)
+
+        lr_path = tmp_path + "/lr"
+        lr.save(lr_path)
+
+        lr2 = _LinearRegression.load(lr_path)
+        assert lr2.getMaxIter() == 5
+
+        model_path = tmp_path + "/lr_model"
+        model.save(model_path)
+
+        model2 = _LinearRegressionModel.load(model_path)
+        assert model.coefficients.toArray()[0] == model2.coefficients.toArray()[0]
+        assert model.intercept == model2.intercept
+        assert model.transform(df).take(1) == model2.transform(df).take(1)
+        assert model.numFeatures == 2
 
 
 @pytest.mark.parametrize("params_exception", params_exception)

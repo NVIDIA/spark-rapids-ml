@@ -325,9 +325,9 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
 
         self.cluster_centers_ = cluster_centers_
 
-    def clusterCenters(self) -> List[List[float]]:
+    def clusterCenters(self) -> List[np.ndarray]:
         """Returns the list of cluster centers."""
-        return self.cluster_centers_
+        return [np.array(x) for x in self.cluster_centers_]
 
     @property
     def hasSummary(self) -> bool:
