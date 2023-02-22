@@ -13,7 +13,9 @@ CURDIR = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 PROJECT_ROOT = os.path.normpath(os.path.join(CURDIR, os.path.pardir))
 SRC_PATHS = [
   "src/spark_rapids_ml",
-  "tests"
+  "tests",
+  "benchmark/benchmark",
+  "benchmark/gen_data.py",
 ]
 
 
