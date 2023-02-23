@@ -442,7 +442,6 @@ def test_random_forest_classifier_spark_compat(
             with pytest.raises((NotImplementedError, AttributeError)):
                 assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
 
-
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, 0.0),)], ["features"])
         example = test0.head()
         if example:
