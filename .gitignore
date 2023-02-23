@@ -30,3 +30,8 @@ target/
 */spark-warehouse
 */.vscode
 */.clang-format
+__pycache__/
+dist/
+docs/build/
+*/.ipynb_checkpoints/
+*.egg-info/

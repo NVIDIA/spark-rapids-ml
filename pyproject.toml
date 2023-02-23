@@ -1,0 +1,25 @@
+[project]
+name = "spark-rapids-ml"
+version = "0.0.1"
+authors = [
+  { name="Jinfeng Li", email="jinfeng@nvidia.com" },
+  { name="Bobby Wang", email="bobwang@nvidia.com" },
+  { name="Erik Ordentlich", email="eordentlich@nvidia.com" },
+  { name="Lee Yang", email="leey@nvidia.com" }
+]
+description = "Apache Spark integration with RAPIDS and cuML"
+readme = "README.md"
+requires-python = ">=3.8,<3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Environment :: GPU :: NVIDIA CUDA :: 11",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.5",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

@@ -1,10 +1,10 @@
-# Contributing to RAPIDS ML for Spark
-If you are interested in contributing to cuML, your contributions will fall
+# Contributing to Spark Rapids ML
+If you are interested in contributing to Spark Rapids ML, your contributions will fall
 into three categories:
 1. You want to report a bug, feature request, or documentation issue
     - File an issue
     describing what you encountered or what you want to see changed.
-    - The RAPIDS team will evaluate the issues and triage them, scheduling
+    - The Spark-Rapids-ML team will evaluate the issues and triage them, scheduling
     them for a release. If you believe the issue needs priority attention
     comment on the issue to notify the team.
 2. You want to propose a new Feature and implement it
@@ -27,6 +27,10 @@ TODO: update after Github repo is created.
 
 ### Code Formatting
 
+#### Python
+This project follows the
+[Black Code Style](https://black.readthedocs.io/en/stable/the_black_code_style/index.html).
+The project also requires type annotation.  The tools `isort`, `black`, and `mypy` can be used to check compliance and for auto-formatting.  See [run_test.sh](run_test.sh)
 
 #### Scala
 
@@ -39,6 +43,7 @@ This project follows the official
 This project follows the
 [Oracle Java code conventions](http://www.oracle.com/technetwork/java/codeconvtoc-136057.html)
 and the Scala conventions detailed above, preferring the latter.
+
 
 ### Sign your work
 

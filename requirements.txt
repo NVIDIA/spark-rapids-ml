@@ -1,0 +1,9 @@
+black
+mypy
+numpydoc
+pydata-sphinx-theme
+pylint
+pyspark
+pytest
+scikit-learn
+sphinx<6.0
