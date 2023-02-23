@@ -1,5 +1,4 @@
 from typing import Any, Dict, Tuple
-
 import numpy as np
 import pytest
 from pyspark import BarrierTaskContext

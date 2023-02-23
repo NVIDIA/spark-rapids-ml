@@ -139,8 +139,12 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
     def kneighbors(self, query_df: DataFrame) -> DataFrame:
         query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
         union_df = self.data_df.union(query_df)
-        rdd = self._fit(union_df)
-        print(rdd)
+        rdd = self._fit(union_df, return_model=False)
+
+        #print(type(rdd))
+        print(rdd.collect())
+        #df = rdd.toDF()
+        #df.show()
         return pd.DataFrame()
 
     def _require_ucx(self) -> bool:

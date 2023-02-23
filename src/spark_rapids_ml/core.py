@@ -35,7 +35,7 @@ from typing import (
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import TaskContext
+from pyspark import TaskContext, RDD
 from pyspark.ml import Estimator, Model
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
@@ -48,6 +48,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
+
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
@@ -362,7 +363,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If enable or disable ucx over NCCL"""
         return False
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+    def _fit(self, dataset: DataFrame, return_model:bool = True) -> Union["_CumlModel", RDD]:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -443,15 +444,20 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             if enable_nccl:
                 context.barrier()
 
-            if context.partitionId() == 0:
+            if return_model == True:
+                if context.partitionId() == 0:
+                    yield pd.DataFrame(data=result)
+            else:
                 yield pd.DataFrame(data=result)
 
-        ret = (
+        barrier_rdd = (
             dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
             .rdd.barrier()
-            .mapPartitions(lambda x: x)
-            .collect()[0]
         )
+        if return_model == False:
+            return barrier_rdd.rdd
+
+        ret = barrier_rdd.mapPartitions(lambda x : x).collect()[0] 
 
         model = self._create_pyspark_model(ret)
         model._num_workers = self._num_workers
