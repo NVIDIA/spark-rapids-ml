@@ -16,6 +16,7 @@ SRC_PATHS = [
   "tests",
   "benchmark/benchmark",
   "benchmark/gen_data.py",
+  "benchmark/benchmark_runner.py"
 ]
 
 
