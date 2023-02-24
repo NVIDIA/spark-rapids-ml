@@ -1,3 +1,4 @@
+## Running notebooks on Databricks
 Assuming you already have a Databricks account, to run notebooks on Databricks do the following:
 - If you don't already have it, install [databricks cli](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/cli/) and create and save an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html) to your workspace using the workspace UI.  You may need to create a new profile, in which case it should be supplied via the `--profile` option to all `databricks` cli commands issued below.
 - Inside the [src](../../src/) directory, create a zip file of the `spark_rapids_ml` directory via `zip -r spark_rapids_ml.zip spark_rapids_ml` command at the top level of the repo and copy to a location in dbfs using the databricks cli command `databricks fs cp spark_rapids_ml.zip <dbfs:/dbfs location>` 
