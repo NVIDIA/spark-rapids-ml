@@ -244,24 +244,28 @@ class _RandomForestEstimator(
 
                 final_model_bytes = pickle.dumps(rf._get_serialized_model())
                 final_model = base64.b64encode(final_model_bytes).decode("utf-8")
-                return {
+                result = {
                     "treelite_model": [final_model],
                     "dtype": rf.dtype.name,
                     "n_cols": rf.n_cols,
                 }
+                if is_classification:
+                    result["num_classes"] = rf.num_classes
+                return result
             else:
                 return {}
 
         return _rf_fit
 
     def _out_schema(self) -> Union[StructType, str]:
-        return StructType(
-            [
-                StructField("treelite_model", StringType(), False),
-                StructField("n_cols", IntegerType(), False),
-                StructField("dtype", StringType(), False),
-            ]
-        )
+        fields = [
+            StructField("treelite_model", StringType(), False),
+            StructField("n_cols", IntegerType(), False),
+            StructField("dtype", StringType(), False),
+        ]
+        if self._is_classification():
+            fields.append(StructField("num_classes", IntegerType(), False))
+        return StructType(fields)
 
     def _enable_nccl(self) -> bool:
         return False
@@ -276,8 +280,18 @@ class _RandomForestModel(
         n_cols: int,
         dtype: str,
         treelite_model: str,
+        num_classes: int = -1,  # only for classification
     ):
-        super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
+        if self._is_classification():
+            super().__init__(
+                dtype=dtype,
+                n_cols=n_cols,
+                treelite_model=treelite_model,
+                num_classes=num_classes,
+            )
+        else:
+            super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
+
         self.treelite_model = treelite_model
 
     @property
