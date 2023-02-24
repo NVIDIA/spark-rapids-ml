@@ -16,11 +16,16 @@ conda activate rapids-22.10
 pip install -r requirements.txt
 ```
 ## Usage
+To run some example [Jupyter Notebooks](notebooks/) on a server with at least one GPU, run the following first
 ```bash
-git clone ssh://git@gitlab-master.nvidia.com:12051/nvspark/spark-cuml.git
-cd spark-cuml
+git clone --branch spark-cuml https://github.com/NVIDIA/spark-rapids-ml.git
+cd spark-rapids-ml
 pip install -e .
 ```
+and then follow these [steps](notebooks/README.md).
+
+Instructions for running the notebooks in a Databricks Spark cluster (assuming you have a Databricks account) can be found [here](notebooks/databricks/README.md).
+
 TBD: add more info
 
 ## Development
@@ -38,6 +43,7 @@ pip install -e .
 
 ### Build package
 ```bash
+pip install build
 python -m build
 ```
 
