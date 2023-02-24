@@ -513,5 +513,13 @@ class RandomForestRegressionModel(
     _RandomForestCumlParams,
     _RandomForestRegressorParams,
 ):
+    def __init__(
+        self,
+        n_cols: int,
+        dtype: str,
+        treelite_model: str,
+    ):
+        super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
+
     def _is_classification(self) -> bool:
         return False

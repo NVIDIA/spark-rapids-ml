@@ -134,15 +134,13 @@ rf_est_model_classes = [
 @pytest.mark.parametrize("est_model_classes", rf_est_model_classes, ids=idfn)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
-@pytest.mark.parametrize("data_shape", [(10, 8)], ids=idfn)
-@pytest.mark.parametrize("n_classes", [2, 4])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 def test_random_forest_basic(
     tmp_path: str,
     est_model_classes: Tuple[RandomForest, RandomForestModel, int],
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
-    n_classes: int,
 ) -> None:
     RFEstimator, RFEstimatorModel, n_classes = est_model_classes
 
@@ -190,6 +188,10 @@ def test_random_forest_basic(
             assert lhs.dtype == rhs.dtype
             assert lhs.n_cols == rhs.n_cols
             assert lhs.n_cols == data_shape[1]
+
+            if RFEstimator == RandomForestClassifier:
+                assert lhs.numClasses == rhs.numClasses
+                assert lhs.numClasses == n_classes
 
         # train a model
         model = est.fit(df)

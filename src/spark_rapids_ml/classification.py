@@ -74,6 +74,21 @@ class RandomForestClassificationModel(
     _RandomForestCumlParams,
     _RandomForestClassifierParams,
 ):
+    def __init__(
+        self,
+        n_cols: int,
+        dtype: str,
+        treelite_model: str,
+        num_classes: int,
+    ):
+        super().__init__(
+            dtype=dtype,
+            n_cols=n_cols,
+            treelite_model=treelite_model,
+            num_classes=num_classes,
+        )
+        self._num_classes = num_classes
+
     def _is_classification(self) -> bool:
         return True
 
@@ -85,4 +100,4 @@ class RandomForestClassificationModel(
     @property
     def numClasses(self) -> int:
         """Number of classes (values which the label can take)."""
-        raise NotImplementedError
+        return self._num_classes
