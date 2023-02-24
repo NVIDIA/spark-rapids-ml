@@ -454,8 +454,9 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
             .rdd.barrier()
         )
+
         if return_model == False:
-            return barrier_rdd.rdd
+            return barrier_rdd.mapPartitions(lambda x : x)
 
         ret = barrier_rdd.mapPartitions(lambda x : x).collect()[0] 
 

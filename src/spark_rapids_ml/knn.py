@@ -139,12 +139,25 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
     def kneighbors(self, query_df: DataFrame) -> DataFrame:
         query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
         union_df = self.data_df.union(query_df)
-        rdd = self._fit(union_df, return_model=False)
+        pipelinedrdd = self._fit(union_df, return_model=False)
+        df = pipelinedrdd.repartition(self.num_workers).toDF()
+        df.show()
+        from pyspark.sql.functions import explode
+        distances_df = df.select(explode(df.distances).alias("queries"))
+        distances_df.show(truncate=False)
+        indices_df = df.select(explode(df.indices).alias("indices"))
+        indices_df.show(truncate=False)
+        #query_id = df.select(explode(df.query_id).alias("query_id"))
+        #query_id.show()
+        #query_df = df.select(explode(df.query).alias("query_features"))
+        #query_df.show(truncate=False)
+        query_df = df.select(explode(['query_id', 'query']))
+        query_df.show()
 
-        #print(type(rdd))
-        print(rdd.collect())
-        #df = rdd.toDF()
-        #df.show()
+        item_id = df.select(explode(df.item_id).alias("item_id"))
+        item_id.show()
+        item_df = df.select(explode(df.item).alias("item_features"))
+        item_df.show(truncate=False)
         return pd.DataFrame()
 
     def _require_ucx(self) -> bool:
@@ -156,7 +169,9 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
                 StructField("distances", ArrayType(ArrayType(DoubleType(), False), False), False),
                 StructField("indices", ArrayType(ArrayType(IntegerType(), False), False), False),
                 StructField("query", ArrayType(ArrayType(DoubleType(), False), False), False),
-                StructField("index", ArrayType(ArrayType(DoubleType(), False), False), False),
+                StructField("query_id", ArrayType(IntegerType(), False), False),
+                StructField("item", ArrayType(ArrayType(DoubleType(), False), False), False),
+                StructField("item_id", ArrayType(IntegerType(), False), False),
             ]
         )
 
@@ -234,11 +249,27 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
             query = [ary.tolist() for ary in query]
             index = [ary.tolist() for ary in index]
 
+            query_id = []
+            start = 0
+            for r, s in query_parts_to_ranks:
+                if r == rank:
+                    query_id.append(list(range(start, start + s)))
+                start += s
+
+            item_id = []
+            start = 0
+            for r, s in index_parts_to_ranks:
+                if r == rank:
+                    item_id.append(list(range(start, start + s)))
+                start += s
+                    
             return {
                 "distances": distances,
                 "indices": indices,
+                "query_id": query_id,
                 "query": query,
-                "index": index,
+                "item_id": item_id,
+                "item": index,
             }
         return _cuml_fit
 
