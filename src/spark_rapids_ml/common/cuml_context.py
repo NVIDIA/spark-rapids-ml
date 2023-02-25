@@ -64,10 +64,11 @@ class CumlContext:
         else:
             tasks = context.getTaskInfos()
             ips = [task.address.split(":")[0] for task in tasks]
+
+            # set environmental variables according to https://github.com/rapidsai/ucx-py
+            # the code occasionally run fail without setting the variables
             my_ip = ips[self._rank]
             my_ifname = CumlContext.get_ifname_from_ip(my_ip)
-
-            # initialize TPC over UCX by setting environmental variables 
             os.environ["UCX_TLS"] = "tcp,cuda_copy,cuda_ipc"
             os.environ["UCXPY_IFNAME"] = my_ifname
 
