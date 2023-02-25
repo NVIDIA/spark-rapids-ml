@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'sparkcuml'
+project = 'spark-rapids-ml'
 copyright = '2023, NVIDIA'
 author = 'NVIDIA'
 release = '0.0.1'
@@ -19,6 +19,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
+    'sphinx.ext.githubpages',
 ]
 
 templates_path = ['_templates']
