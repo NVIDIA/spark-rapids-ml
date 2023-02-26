@@ -21,29 +21,26 @@ from .utils import (
     pyspark_supported_feature_types,
 )
 
-def test_toy(gpu_number: int) -> None:
-    data = [(0, [1.0, 1.0],),
-            (1, [2.0, 2.0],),
-            (2, [3.0, 3.0],),
-            (3, [4.0, 4.0],)]
+def test_example(gpu_number: int) -> None:
+    data = [([1.0, 1.0],), 
+            ([2.0, 2.0],), 
+            ([3.0, 3.0],),
+            ([4.0, 4.0],),
+            ([5.0, 5.0],),
+            ([6.0, 6.0],),
+            ([7.0, 7.0],),
+            ([8.0, 8.0],),]
 
-    query = [(4, [0.0, 0.0],),
-             (5, [4.0, 4.0],)]
+    query = [([0.0, 0.0],), 
+             ([1.0, 1.0],),
+             ([4.1, 4.1],),
+             ([8.0, 8.0],),
+             ([9.0, 9.0],),]
 
+    topk = 2
 
-    topk = 1
-
-    #from cuml import NearestNeighbors as cuNN
-    #cu_nn = cuNN(n_neighbors=topk, output_type="numpy", verbose = 7)
-    #cu_nn = cu_nn.fit(data)
-    #cu_result = cu_nn.kneighbors(query) 
-    #print(cu_result[0])
-    #print(cu_result[1])
-
-    data_type = np.float32
     with CleanSparkSession() as spark:
-        data_type = "float" if data_type == np.float32 else "double"
-        schema = f"id int, features array<{data_type}>"
+        schema = f"features array<float>"
         data_df = spark.createDataFrame(data, schema)
         query_df = spark.createDataFrame(query, schema)
 
@@ -52,7 +49,33 @@ def test_toy(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setK(topk)
 
         gpu_knn = gpu_knn.fit(data_df)
-        res = gpu_knn.kneighbors(query_df)
+        (knn_df, data_df) = gpu_knn.kneighbors(query_df)
+        distances_df = knn_df.select("distances")
+        indices_df = knn_df.select("indices")
+
+        
+        import math
+        distances = distances_df.toPandas().to_numpy()
+        distances.show()
+        print(distances.toPandas())
+        print(distances.toPandas().to_numpy())
+        indices = indices_df.toPandas().to_numpy()
+
+        assert array_equal(distances[0], [math.sqrt(2.), math.sqrt(8.)])
+        assert indices[0] == [0, 1]
+
+        assert array_equal(distances[1], [0., math.sqrt(2.)])
+        assert indices[1] == [0, 1]
+
+        assert array_equal(distances[2], [math.sqrt(0.01 + 0.01), math.sqrt(0.81 + 0.81)])
+        assert indices[2] == [3, 4]
+
+        assert array_equal(distances[3], [0., math.sqrt(2.)])
+        assert indices[3] == [7, 6]
+
+        assert array_equal(distances[4], [math.sqrt(2.), math.sqrt(8.)])
+        assert indices[4] == [7, 6]
+
 
     
 

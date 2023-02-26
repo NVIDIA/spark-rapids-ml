@@ -89,8 +89,8 @@ CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatc
 
 
 # Global constant for defining column alias
-Alias = namedtuple("Alias", ("data", "label"))
-alias = Alias("cuml_values", "cuml_label")
+Alias = namedtuple("Alias", ("data", "label", "row_number"))
+alias = Alias("cuml_values", "cuml_label", "df_row_number")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -429,7 +429,8 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                     else:
                         features = np.array(list(pdf[alias.data]))
                     label = pdf[alias.label] if alias.label in pdf.columns else None
-                    inputs.append((features, label))
+                    row_number = np.array(list(pdf[alias.row_number])) if alias.row_number in pdf.columns else None
+                    inputs.append((features, label, row_number))
 
                 params["handle"] = cc.handle
                 params["part_sizes"] = sizes

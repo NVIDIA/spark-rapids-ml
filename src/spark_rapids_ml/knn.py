@@ -14,14 +14,15 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Tuple, Union, Optional
+from typing import Any, Callable, Dict, List, Tuple, Union, Optional, Type
 
 import numpy as np
 import pandas as pd
-from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import lit
+from pyspark.sql import DataFrame, Column
+from pyspark.sql.functions import lit, col
 from pyspark.sql.types import (
     ArrayType,
+    FloatType,
     DoubleType,
     IntegerType,
     Row,
@@ -84,7 +85,28 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
         self.set_params(outputCol=value)
         return self
 
-class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams):
+class _CumlEstimatorNearestNeighbors(_CumlEstimatorSupervised):
+    """
+    Base class for Cuml Nearest Neighbor.
+    """
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super()._pre_process_data(dataset)
+
+        select_cols.append(col(alias.row_number))
+
+        return select_cols, multi_col_names, dimension, feature_type
+    
+class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _NearestNeighborsCumlParams):
     """
     Examples
     --------
@@ -110,6 +132,7 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
         self.set_params(**kwargs)
         self.label_isdata = 0
         self.label_isquery = 1
+        self.row_number_col = alias.row_number
         self.set_params(labelCol=alias.label)
 
     def setK(self, value: int) -> "NearestNeighbors":
@@ -124,19 +147,35 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
 
     def fit(self, dataset: DataFrame) -> "NearestNeighbors":
         self.data_df = dataset.withColumn(alias.label, lit(self.label_isdata))
+        self.data_df = self.df_zip_with_index(self.data_df)
         return self
 
     def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame]:
+        query_default_num_partitions = query_df.rdd.getNumPartitions()
         query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
+        query_df = self.df_zip_with_index(query_df)
         union_df = self.data_df.union(query_df)
+
         pipelinedrdd = self._fit(union_df, return_model=False)
-        pipelinedrdd = pipelinedrdd.repartition(self.num_workers)
+        pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)
+        #pipelinedrdd = pipelinedrdd.sortBy(lambda row : row["query_index"], True, query_default_num_partitions)
         query_res_rdd = pipelinedrdd.flatMap(lambda row : list(zip(row["query_index"], row["query"], row["indices"], row["distances"])))
         data_rdd = pipelinedrdd.flatMap(lambda row : list(zip(row["item_index"], row["item"])))
 
-        knn_df = query_res_rdd.toDF(schema="query_index int, query_features array<float>, nn_indices array<int>, nn_distances array<float>")
+        knn_df = query_res_rdd.toDF(schema="query_index int, query_features array<float>, indices array<int>, distances array<float>")
+        knn_df = knn_df.sort("query_index")
         data_df = data_rdd.toDF(schema="item_index int, item_features array<float>")
+        data_df = data_df.sort("item_index")
         return (knn_df, data_df)
+
+    def df_zip_with_index(self, df):
+        out_schema = StructType(
+            [StructField(self.row_number_col, IntegerType(), False)]
+            + df.schema.fields
+        )
+        zipped_rdd = df.rdd.zipWithIndex()
+        new_rdd = zipped_rdd.map(lambda row : [row[1]] + list(row[0]))
+        return new_rdd.toDF(schema = out_schema)
 
     def _require_ucx(self) -> bool:
         return True
@@ -162,6 +201,7 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
+
             from pyspark import BarrierTaskContext
             context = BarrierTaskContext.get()
             rank = context.partitionId()
@@ -175,27 +215,33 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
 
             item = []
             query = []
-            for x_array, label_array in dfs:
+            item_row_number = []
+            query_row_number = []
+            for x_array, label_array, row_number_array in dfs:
                 item_filter = [True if label_array[i] == label_isdata else False for i in range(len(x_array))]
                 query_filter = [False if label_array[i] == label_isdata else True for i in range(len(x_array))]
+
                 item.append(x_array[item_filter])
                 query.append(x_array[query_filter])
 
-            assert(len(item) == len(query))
-            item_query_sizes = [len(chunk) for chunk in item] + [len(chunk) for chunk in query]
+                item_row_number.append(row_number_array[item_filter].tolist())
+                query_row_number.append(row_number_array[query_filter].tolist())
 
+            assert(len(item) == len(query))
+            assert(len(item) == len(item_row_number))
+            assert(len(item) == len(query_row_number))
+
+            item_query_sizes = [len(chunk) for chunk in item] + [len(chunk) for chunk in query]
             import json
-            messages = context.allGather(message=json.dumps((rank, item_query_sizes)))
-            rank_sizes = [json.loads(msg) for msg in messages]
-            
+            messages = context.allGather(message=json.dumps((rank, item_query_sizes, item_row_number)))
+            triplets = [json.loads(msg) for msg in messages]
+
             item_parts_to_ranks = [] 
             query_parts_to_ranks = [] 
-
-            for r, sizes in rank_sizes:
+            for r, sizes, _ in triplets:
                 half_len = len(sizes) // 2
                 item_parts_to_ranks += [(r, size) for size in sizes[:half_len]]
                 query_parts_to_ranks += [(r, size) for size in sizes[half_len:]]
-                
             item_nrows = sum(pair[1] for pair in item_parts_to_ranks)
             query_nrows = sum(pair[1] for pair in query_parts_to_ranks)
 
@@ -220,26 +266,28 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorSupervised, _Nearest
             query = [ary.tolist() for ary in query]
             item = [ary.tolist() for ary in item]
 
-            query_id = []
-            start = 0
-            for r, s in query_parts_to_ranks:
-                if r == rank:
-                    query_id.append(list(range(start, start + s)))
-                start += s
+            # id mapping
+            id2row = {}
+            count = 0
+            for r, _, item_rn in triplets:
+                for chunk in item_rn:
+                    chunk_id2row = [(count + i, chunk[i]) for i in range(len(chunk))]
+                    id2row.update(chunk_id2row)
+                    count += len(chunk) 
 
-            item_id = []
-            start = 0
-            for r, s in item_parts_to_ranks:
-                if r == rank:
-                    item_id.append(list(range(start, start + s)))
-                start += s
+            transformed_indices = []
+            for two_d in indices:
+                res = []
+                for row in two_d:
+                    res.append([id2row[cuid] for cuid in row])
+                transformed_indices.append(res) 
                     
             return {
                 "distances": distances,
-                "indices": indices,
-                "query_index": query_id,
+                "indices": transformed_indices,
+                "query_index": query_row_number,
                 "query": query,
-                "item_index": item_id,
+                "item_index": item_row_number, #item_id,
                 "item": item,
             }
         return _cuml_fit
