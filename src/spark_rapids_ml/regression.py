@@ -496,6 +496,65 @@ class RandomForestRegressor(
     _RandomForestCumlParams,
     _RandomForestRegressorParams,
 ):
+    """RandomForestRegressor implements a Random Forest regressor model which
+    fits multiple decision tree in an ensemble. It implements cuML's
+    GPU accelerated RandomForestRegressor algorithm based on cuML python library,\
+    and it can be used in PySpark Pipeline and PySpark ML meta algorithms like
+    :py:class:`~pyspark.ml.tuning.CrossValidator`/
+    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
+    :py:class:`~pyspark.ml.classification.OneVsRest`
+
+    The distributed algorithm uses an *embarrassingly-parallel* approach. For a
+    forest with `N` trees being built on `w` workers, each worker simply builds `N/w`
+    trees on the data it has available locally. In many cases, partitioning the
+    data so that each worker builds trees on a subset of the total dataset works
+    well, but it generally requires the data to be well-shuffled in advance.
+
+    RandomForestRegressor automatically supports most of the parameters from both
+    :py:class:`~pyspark.ml.regression.RandomForestRegressor` and in the constructors of
+    :py:class:`cuml.RandomForestRegressor`. And it can automatically map pyspark parameters
+    to cuML parameters.
+
+    Examples
+    --------
+    >>> from spark_rapids_ml.regression import RandomForestRegressor, RandomForestRegressionModel
+    >>> from numpy import allclose
+    >>> from pyspark.ml.linalg import Vectors
+    >>> df = spark.createDataFrame([
+    ...     (1.0, Vectors.dense(1.0)),
+    ...     (0.0, Vectors.sparse(1, [], []))], ["label", "features"])
+    >>> rf = RandomForestRegressor(numTrees=2, maxDepth=2)
+    >>> rf.setSeed(42)
+    RandomForestRegressor_...
+    >>> model = rf.fit(df)
+    >>> model.getBootstrap()
+    True
+    >>> model.getSeed()
+    42
+    >>> test0 = spark.createDataFrame([(Vectors.dense(-1.0),)], ["features"])
+    >>> result = model.transform(test0).head()
+    >>> result.prediction
+    0.0
+    >>> model.numFeatures
+    1
+    >>> model.getNumTrees
+    2
+    >>> test1 = spark.createDataFrame([(Vectors.sparse(1, [0], [1.0]),)], ["features"])
+    >>> model.transform(test1).head().prediction
+    1.0
+    >>> rfr_path = temp_path + "/rfr"
+    >>> rf.save(rfr_path)
+    >>> rf2 = RandomForestRegressor.load(rfr_path)
+    >>> rf2.getNumTrees()
+    2
+    >>> model_path = temp_path + "/rfr_model"
+    >>> model.save(model_path)
+    >>> model2 = RandomForestRegressionModel.load(model_path)
+    >>> model.transform(test0).take(1) == model2.transform(test0).take(1)
+    True
+
+    """
+
     def __init__(self, **kwargs: Any):
         super().__init__()
         self.set_params(**kwargs)
@@ -513,6 +572,10 @@ class RandomForestRegressionModel(
     _RandomForestCumlParams,
     _RandomForestRegressorParams,
 ):
+    """
+    Model fitted by :class:`RandomForestRegressor`.
+    """
+
     def __init__(
         self,
         n_cols: int,

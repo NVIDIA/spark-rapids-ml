@@ -36,6 +36,70 @@ class RandomForestClassifier(
     _RandomForestCumlParams,
     _RandomForestClassifierParams,
 ):
+    """RandomForestClassifier implements a Random Forest classifier model which
+    fits multiple decision tree classifiers in an ensemble. It supports both
+    binary and multiclass labels. It implements cuML's GPU accelerated
+    RandomForestClassifier algorithm based on cuML python library,
+    and it can be used in PySpark Pipeline and PySpark ML meta algorithms like
+    :py:class:`~pyspark.ml.tuning.CrossValidator`/
+    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
+    :py:class:`~pyspark.ml.classification.OneVsRest`
+
+    The distributed algorithm uses an *embarrassingly-parallel* approach. For a
+    forest with `N` trees being built on `w` workers, each worker simply builds `N/w`
+    trees on the data it has available locally. In many cases, partitioning the
+    data so that each worker builds trees on a subset of the total dataset works
+    well, but it generally requires the data to be well-shuffled in advance.
+
+    RandomForestClassifier automatically supports most of the parameters from both
+    :py:class:`~pyspark.ml.regression.RandomForestClassifier` and in the constructors of
+    :py:class:`cuml.RandomForestClassifier`. And it can automatically map pyspark parameters
+    to cuML parameters.
+
+    Examples
+    --------
+    >>> import numpy
+    >>> from numpy import allclose
+    >>> from pyspark.ml.linalg import Vectors
+    >>> from pyspark.ml.feature import StringIndexer
+    >>> df = spark.createDataFrame([
+    ...     (1.0, Vectors.dense(1.0)),
+    ...     (0.0, Vectors.sparse(1, [], []))], ["label", "features"])
+    >>> stringIndexer = StringIndexer(inputCol="label", outputCol="indexed")
+    >>> si_model = stringIndexer.fit(df)
+    >>> td = si_model.transform(df)
+    >>> from spark_rapids_ml.classification import RandomForestClassifier, RandomForestClassificationModel
+    >>> rf = RandomForestClassifier(numTrees=3, maxDepth=2, labelCol="indexed", seed=42)
+    >>> model = rf.fit(td)
+    >>> model.getLabelCol()
+    'indexed'
+    >>> model.setFeaturesCol("features")
+    RandomForestClassificationModel_...
+    >>> model.getBootstrap()
+    True
+    >>> test0 = spark.createDataFrame([(Vectors.dense(-1.0),)], ["features"])
+    >>> result = model.transform(test0).head()
+    >>> result.prediction
+    0.0
+    >>> test1 = spark.createDataFrame([(Vectors.sparse(1, [0], [1.0]),)], ["features"])
+    >>> model.transform(test1).head().prediction
+    1.0
+    >>>
+    >>> rfc_path = temp_path + "/rfc"
+    >>> rf.save(rfc_path)
+    >>> rf2 = RandomForestClassifier.load(rfc_path)
+    >>> rf2.getNumTrees()
+    3
+    >>> model_path = temp_path + "/rfc_model"
+    >>> model.save(model_path)
+    >>> model2 = RandomForestClassificationModel.load(model_path)
+    >>> model2.getNumTrees
+    3
+    >>> model.transform(test0).take(1) == model2.transform(test0).take(1)
+    True
+
+    """
+
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         self.set_params(**kwargs)
@@ -74,6 +138,10 @@ class RandomForestClassificationModel(
     _RandomForestCumlParams,
     _RandomForestClassifierParams,
 ):
+    """
+    Model fitted by :class:`RandomForestClassifier`.
+    """
+
     def __init__(
         self,
         n_cols: int,
