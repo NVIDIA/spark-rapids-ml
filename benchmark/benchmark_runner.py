@@ -50,7 +50,7 @@ class BenchmarkBase:
             "--gpu_workers",
             type=int,
             default=0,
-            help="if gpu_workers > 0, How many gpu workers to be used for SparkCuml, "
+            help="if gpu_workers > 0, How many gpu workers to be used for Spark Rapids ML"
             "else do the benchmark on Spark ML library ",
         )
         self._parser.add_argument(
@@ -151,7 +151,7 @@ class BenchmarkLinearRegression(BenchmarkBase):
             lr = LinearRegression(
                 num_workers=self.args.gpu_workers, verbose=7, **params
             )
-            benchmark_string = "SparkCuml LinearRegression training:"
+            benchmark_string = "Spark Rapids ML LinearRegression training:"
         else:
             from pyspark.ml.regression import LinearRegression
 
@@ -263,7 +263,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
             rfc = RandomForestClassifier(
                 num_workers=self.args.gpu_workers, verbose=7, **params
             )
-            benchmark_string = "SparkCuml RandomForestClassifier"
+            benchmark_string = "Spark Rapids ML RandomForestClassifier"
         else:
             from pyspark.ml.classification import RandomForestClassifier
 
@@ -279,6 +279,13 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
 
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getOrDefault(model.predictionCol)
+
+        # run a simple dummy computation to trigger transform. count is short
+        # circuited due to pandas_udf used internally
+        with_benchmark(
+            f"{benchmark_string} transform:",
+            lambda: df_with_preds.agg(sum(prediction_col)).collect(),
+        )
 
         df_with_preds = df_with_preds.select(
             col(prediction_col).cast("double").alias(prediction_col), label_name
@@ -300,9 +307,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
                 .setLabelCol(label_name)
             )
 
-        accuracy = with_benchmark(
-            f"{benchmark_string} evaluating:", lambda: evaluator.evaluate(df_with_preds)
-        )
+        accuracy = evaluator.evaluate(df_with_preds)
 
         print(f"{benchmark_string} accuracy: {accuracy}")
 
@@ -347,7 +352,7 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
             rf = RandomForestRegressor(
                 num_workers=self.args.gpu_workers, verbose=7, **params
             )
-            benchmark_string = "SparkCuml RandomForestRegressor"
+            benchmark_string = "Spark Rapids ML RandomForestRegressor"
         else:
             from pyspark.ml.regression import RandomForestRegressor
 
@@ -364,6 +369,13 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getOrDefault(model.predictionCol)
 
+        # run a simple dummy computation to trigger transform. count is short
+        # circuited due to pandas_udf used internally
+        with_benchmark(
+            f"{benchmark_string} transform:",
+            lambda: df_with_preds.agg(sum(prediction_col)).collect(),
+        )
+
         # compute prediction mse on training data
         from pyspark.ml.evaluation import RegressionEvaluator
 
@@ -372,9 +384,8 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
             .setPredictionCol(prediction_col)
             .setLabelCol(label_name)
         )
-        rmse = with_benchmark(
-            f"{benchmark_string} evaluating:", lambda: evaluator.evaluate(df_with_preds)
-        )
+        rmse = evaluator.evaluate(df_with_preds)
+
         print(f"{benchmark_string} RMSE: {rmse}")
 
 
