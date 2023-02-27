@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# NOTE: DISABLE AUTO-MERGE FROM 23.02 to 23.04
 # A workflow to keep BASE branch up-to-date from HEAD branch
 name: auto-merge HEAD to BASE
 
