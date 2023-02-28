@@ -17,19 +17,28 @@ import asyncio
 import base64
 import json
 import os
-import psutil
-from typing import Any, Optional
+from typing import Any, List, Optional, Tuple
 
+import psutil
 from pylibraft.common import Handle
 from pyspark import BarrierTaskContext
-from raft_dask.common.comms_utils import inject_comms_on_handle_coll_only, inject_comms_on_handle
-from raft_dask.common.nccl import nccl
 from raft_dask.common import UCX
+from raft_dask.common.comms_utils import (
+    inject_comms_on_handle,
+    inject_comms_on_handle_coll_only,
+)
+from raft_dask.common.nccl import nccl
+from ucp import Endpoint
 
 
 class CumlContext:
     def __init__(
-        self, rank: int, nranks: int, context: BarrierTaskContext, enable: bool, require_ucx: bool = False
+        self,
+        rank: int,
+        nranks: int,
+        context: BarrierTaskContext,
+        enable: bool,
+        require_ucx: bool = False,
     ) -> None:
         """
         Initialize the nccl unique id for workers.
@@ -41,7 +50,7 @@ class CumlContext:
         self.enable = enable
         self._handle: Optional[Handle] = None
         if not enable:
-            return 
+            return
 
         self._rank = rank
         self._nranks = nranks
@@ -50,7 +59,7 @@ class CumlContext:
         self._handle = Handle(n_streams=0)
         self._nccl_comm: Optional[nccl] = None
         self._nccl_unique_id = None
-        self._ucx = None
+        self._ucx: Optional[UCX] = None
         self._ucx_port = None
         self._ucx_eps = None
 
@@ -77,8 +86,9 @@ class CumlContext:
             msgs = context.allGather(json.dumps((nccl_uid, self._ucx_port)))
             self._nccl_unique_id = base64.b64decode(json.loads(msgs[0])[0])
             ports = [json.loads(msg)[1] for msg in msgs]
-            self._ucx_eps = asyncio.run(CumlContext._ucp_create_endpoints(self._ucx, list(zip(ips, ports))))
-
+            self._ucx_eps = asyncio.run(
+                CumlContext._ucp_create_endpoints(self._ucx, list(zip(ips, ports)))
+            )
 
     @property
     def handle(self) -> Optional[Handle]:
@@ -98,13 +108,19 @@ class CumlContext:
             )
         else:
             inject_comms_on_handle(
-                self._handle, self._nccl_comm, self._ucx.get_worker(), self._ucx_eps, self._nranks, self._rank, True
+                self._handle,
+                self._nccl_comm,
+                self._ucx.get_worker(),  # type: ignore
+                self._ucx_eps,
+                self._nranks,
+                self._rank,
+                True,
             )
         return self
 
     def __exit__(self, *args: Any) -> None:
         if not self.enable:
-            return 
+            return
         assert self._nccl_comm is not None
         self._nccl_comm.destroy()
         del self._nccl_comm
@@ -112,18 +128,22 @@ class CumlContext:
         del self._handle
 
     @staticmethod
-    def get_ifname_from_ip(target_ip: str):
-        if_addrs_dict = psutil.net_if_addrs() 
+    def get_ifname_from_ip(target_ip: str) -> str:
+        if_addrs_dict = psutil.net_if_addrs()
         for ifname in if_addrs_dict:
             ip = if_addrs_dict[ifname][0].address
             if ip == target_ip:
                 return ifname
-        raise ValueError("target_ip ${target_ip} does not exist")
+        raise ValueError(f"target_ip ${target_ip} does not exist")
 
     @staticmethod
-    async def _ucp_create_endpoints(ucx_worker, target_ip_ports, additional_timeout=0.1):
+    async def _ucp_create_endpoints(
+        ucx_worker: UCX,
+        target_ip_ports: List[Tuple[str, int]],
+        additional_timeout: float = 0.1,
+    ) -> Endpoint:
         """
-            ucp initialization may require a larger additional_timeout a complex network environment
+        ucp initialization may require a larger additional_timeout a complex network environment
         """
         eps = [None] * len(target_ip_ports)
         for i in range(len(eps)):

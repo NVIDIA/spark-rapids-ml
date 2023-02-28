@@ -35,7 +35,7 @@ from typing import (
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import TaskContext, RDD
+from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
@@ -48,7 +48,6 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
-
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
@@ -82,8 +81,10 @@ if TYPE_CHECKING:
 else:
     CumlT = Any
 
-_SinglePdDataFrameBatchType = Tuple[pd.DataFrame, Optional[pd.DataFrame]]
-_SingleNpArrayBatchType = Tuple[np.ndarray, Optional[np.ndarray]]
+_SinglePdDataFrameBatchType = Tuple[
+    pd.DataFrame, Optional[pd.DataFrame], Optional[pd.DataFrame]
+]
+_SingleNpArrayBatchType = Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]
 # CumlInputType is type of [(feature, label), ...]
 CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatchType]]
 
@@ -363,7 +364,9 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If enable or disable ucx over NCCL"""
         return False
 
-    def _fit(self, dataset: DataFrame, return_model:bool = True) -> Union["_CumlModel", RDD]:
+    def _fit(
+        self, dataset: DataFrame, return_model: bool = True
+    ) -> Union["_CumlModel", RDD]:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -416,7 +419,9 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             # set gpu device
             _CumlCommon.set_gpu_device(context, is_local)
 
-            with CumlContext(partition_id, num_workers, context, enable_nccl, require_ucx) as cc:
+            with CumlContext(
+                partition_id, num_workers, context, enable_nccl, require_ucx
+            ) as cc:
                 # handle the input
                 # inputs = [(X, Optional(y)), (X, Optional(y))]
                 logger.info("Loading data into python worker memory")
@@ -429,7 +434,11 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                     else:
                         features = np.array(list(pdf[alias.data]))
                     label = pdf[alias.label] if alias.label in pdf.columns else None
-                    row_number = np.array(list(pdf[alias.row_number])) if alias.row_number in pdf.columns else None
+                    row_number = (
+                        np.array(list(pdf[alias.row_number]))
+                        if alias.row_number in pdf.columns
+                        else None
+                    )
                     inputs.append((features, label, row_number))
 
                 params["handle"] = cc.handle
@@ -451,15 +460,14 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             else:
                 yield pd.DataFrame(data=result)
 
-        barrier_rdd = (
-            dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
-            .rdd.barrier()
-        )
+        barrier_rdd = dataset.mapInPandas(
+            _train_udf, schema=self._out_schema()
+        ).rdd.barrier()  # type: ignore
 
         if return_model == False:
-            return barrier_rdd.mapPartitions(lambda x : x)
+            return barrier_rdd.mapPartitions(lambda x: x)
 
-        ret = barrier_rdd.mapPartitions(lambda x : x).collect()[0] 
+        ret = barrier_rdd.mapPartitions(lambda x: x).collect()[0]
 
         model = self._create_pyspark_model(ret)
         model._num_workers = self._num_workers

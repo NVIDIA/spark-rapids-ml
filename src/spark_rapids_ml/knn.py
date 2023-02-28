@@ -14,16 +14,18 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Tuple, Union, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
+import cudf
 import numpy as np
 import pandas as pd
-from pyspark.sql import DataFrame, Column
-from pyspark.sql.functions import lit, col
+from pyspark.ml.param.shared import HasInputCol, HasLabelCol, Param
+from pyspark.sql import Column, DataFrame
+from pyspark.sql.functions import col, lit
 from pyspark.sql.types import (
     ArrayType,
-    FloatType,
     DoubleType,
+    FloatType,
     IntegerType,
     Row,
     StructField,
@@ -40,13 +42,13 @@ from spark_rapids_ml.core import (
     alias,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
-from pyspark.ml.param.shared import HasInputCol, HasLabelCol 
-import cudf
+
 
 class NearestNeighborsClass(_CumlClass):
     @classmethod
     def _cuml_cls(cls) -> List[type]:
         from cuml import NearestNeighbors as cumlNearestNeighbors
+
         return [cumlNearestNeighbors]
 
     @classmethod
@@ -63,27 +65,22 @@ class NearestNeighborsClass(_CumlClass):
             "algo_params",
             "metric_expanded",
             "metric_params",
-            "output_type"
+            "output_type",
         ]
+
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
     """
     Shared Spark Params for NearestNeighbor and NearestNeighborModel.
     """
 
-    def setInputCol(self, value: str) -> "NearestNeighbors":
+    def setInputCol(self, value: str) -> "_NearestNeighborsCumlParams":
         """
         Sets the value of `inputCol`.
         """
         self.set_params(inputCol=value)
         return self
 
-    def setOutputCol(self, value: str) -> "NearestNeighbors":
-        """
-        Sets the value of `outputCol`.
-        """
-        self.set_params(outputCol=value)
-        return self
 
 class _CumlEstimatorNearestNeighbors(_CumlEstimatorSupervised):
     """
@@ -105,13 +102,18 @@ class _CumlEstimatorNearestNeighbors(_CumlEstimatorSupervised):
         select_cols.append(col(alias.row_number))
 
         return select_cols, multi_col_names, dimension, feature_type
-    
-class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _NearestNeighborsCumlParams):
+
+
+class NearestNeighbors(
+    NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _NearestNeighborsCumlParams
+):
     """
     Examples
     --------
     >>> from sparkcuml.neighbors import NearestNeighbors
-    >>> data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
+    >>> data = [([1.0, 1.0],),
+    ...         ([2.0, 2.0],),
+    ...         ([3.0, 3.0],),]
     >>> topk = 2
     >>> gpu_knn = NearestNeighbors().setInputCol("features").setK(topk)
     >>> data_df = spark.SparkContext.parallelize(data).map(lambda row: (row,)).toDF(["features"])
@@ -145,7 +147,7 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _N
     def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
         return NearestNeighborsModel.from_row(result)
 
-    def fit(self, dataset: DataFrame) -> "NearestNeighbors":
+    def fit(self, dataset: DataFrame, params: Optional[Dict[Param[Any], Any]] = None) -> "NearestNeighbors":  # type: ignore
         self.data_df = dataset.withColumn(alias.label, lit(self.label_isdata))
         self.data_df = self.df_zip_with_index(self.data_df)
         return self
@@ -157,25 +159,25 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _N
         union_df = self.data_df.union(query_df)
 
         pipelinedrdd = self._fit(union_df, return_model=False)
-        pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)
-        #pipelinedrdd = pipelinedrdd.sortBy(lambda row : row["query_index"], True, query_default_num_partitions)
-        query_res_rdd = pipelinedrdd.flatMap(lambda row : list(zip(row["query_index"], row["query"], row["indices"], row["distances"])))
-        data_rdd = pipelinedrdd.flatMap(lambda row : list(zip(row["item_index"], row["item"])))
+        pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
+        res_rdd = pipelinedrdd.flatMap(
+            lambda row: list(zip(row["query_index"], row["indices"], row["distances"]))
+        )
+        res_df = res_rdd.toDF(
+            schema="query_index int, indices array<int>, distances array<float>"
+        )
+        res_df = res_df.sort("query_index")
+        distances_df = res_df.select("distances")
+        indices_df = res_df.select("indices")
+        return (distances_df, indices_df)
 
-        knn_df = query_res_rdd.toDF(schema="query_index int, query_features array<float>, indices array<int>, distances array<float>")
-        knn_df = knn_df.sort("query_index")
-        data_df = data_rdd.toDF(schema="item_index int, item_features array<float>")
-        data_df = data_df.sort("item_index")
-        return (knn_df, data_df)
-
-    def df_zip_with_index(self, df):
+    def df_zip_with_index(self, df: DataFrame) -> DataFrame:
         out_schema = StructType(
-            [StructField(self.row_number_col, IntegerType(), False)]
-            + df.schema.fields
+            [StructField(self.row_number_col, IntegerType(), False)] + df.schema.fields
         )
         zipped_rdd = df.rdd.zipWithIndex()
-        new_rdd = zipped_rdd.map(lambda row : [row[1]] + list(row[0]))
-        return new_rdd.toDF(schema = out_schema)
+        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
+        return new_rdd.toDF(schema=out_schema)
 
     def _require_ucx(self) -> bool:
         return True
@@ -183,12 +185,13 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _N
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
             [
-                StructField("distances", ArrayType(ArrayType(DoubleType(), False), False), False),
-                StructField("indices", ArrayType(ArrayType(IntegerType(), False), False), False),
-                StructField("query", ArrayType(ArrayType(DoubleType(), False), False), False),
                 StructField("query_index", ArrayType(IntegerType(), False), False),
-                StructField("item", ArrayType(ArrayType(DoubleType(), False), False), False),
-                StructField("item_index", ArrayType(IntegerType(), False), False),
+                StructField(
+                    "distances", ArrayType(ArrayType(DoubleType(), False), False), False
+                ),
+                StructField(
+                    "indices", ArrayType(ArrayType(IntegerType(), False), False), False
+                ),
             ]
         )
 
@@ -197,47 +200,64 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _N
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
 
         label_isdata = self.label_isdata
+
         def _cuml_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
 
             from pyspark import BarrierTaskContext
+
             context = BarrierTaskContext.get()
             rank = context.partitionId()
 
             from cuml.neighbors.nearest_neighbors_mg import NearestNeighborsMG as cumlNN
+
             nn_object = cumlNN(
                 handle=params["handle"],
                 n_neighbors=params[INIT_PARAMETERS_NAME]["n_neighbors"],
-                verbose = params[INIT_PARAMETERS_NAME]["verbose"],
+                verbose=params[INIT_PARAMETERS_NAME]["verbose"],
             )
 
-            item = []
-            query = []
+            item = np.empty(
+                (0, params["n"]), dtype=np.float32
+            )  # Cuml NN only supports np.float32
+            query = np.empty((0, params["n"]), dtype=np.float32)
             item_row_number = []
             query_row_number = []
             for x_array, label_array, row_number_array in dfs:
-                item_filter = [True if label_array[i] == label_isdata else False for i in range(len(x_array))]
-                query_filter = [False if label_array[i] == label_isdata else True for i in range(len(x_array))]
+                item_filter = [
+                    True if label_array[i] == label_isdata else False
+                    for i in range(len(x_array))
+                ]
+                query_filter = [
+                    False if label_array[i] == label_isdata else True
+                    for i in range(len(x_array))
+                ]
 
-                item.append(x_array[item_filter])
-                query.append(x_array[query_filter])
+                item = np.concatenate((item, x_array[item_filter]), axis=0)
+                query = np.concatenate((query, x_array[query_filter]), axis=0)
 
-                item_row_number.append(row_number_array[item_filter].tolist())
-                query_row_number.append(row_number_array[query_filter].tolist())
+                item_row_number += row_number_array[item_filter].tolist()
+                query_row_number += row_number_array[query_filter].tolist()
 
-            assert(len(item) == len(query))
-            assert(len(item) == len(item_row_number))
-            assert(len(item) == len(query_row_number))
+            item = [item]
+            query = [query]
+            item_row_number = [item_row_number]
+            query_row_number = [query_row_number]
 
-            item_query_sizes = [len(chunk) for chunk in item] + [len(chunk) for chunk in query]
+            item_query_sizes = [len(chunk) for chunk in item] + [
+                len(chunk) for chunk in query
+            ]
             import json
-            messages = context.allGather(message=json.dumps((rank, item_query_sizes, item_row_number)))
+
+            messages = context.allGather(
+                message=json.dumps((rank, item_query_sizes, item_row_number))
+            )
             triplets = [json.loads(msg) for msg in messages]
 
-            item_parts_to_ranks = [] 
-            query_parts_to_ranks = [] 
+            item_parts_to_ranks = []
+            query_parts_to_ranks = []
             for r, sizes, _ in triplets:
                 half_len = len(sizes) // 2
                 item_parts_to_ranks += [(r, size) for size in sizes[:half_len]]
@@ -246,16 +266,16 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _N
             query_nrows = sum(pair[1] for pair in query_parts_to_ranks)
 
             res_tuple: Tuple[List[np.array], List[np.array]] = nn_object.kneighbors(
-                index = item, 
-                index_parts_to_ranks = item_parts_to_ranks, 
-                index_nrows = item_nrows,
-                query = query,
-                query_parts_to_ranks = query_parts_to_ranks,
-                query_nrows = query_nrows,
-                ncols = params['n'],
-                rank = rank,
-                n_neighbors = params[INIT_PARAMETERS_NAME]["n_neighbors"],
-                convert_dtype = False, # only np.float32 is supported in cuml. Should set to True for all other types
+                index=[item],
+                index_parts_to_ranks=item_parts_to_ranks,
+                index_nrows=item_nrows,
+                query=query,
+                query_parts_to_ranks=query_parts_to_ranks,
+                query_nrows=query_nrows,
+                ncols=params["n"],
+                rank=rank,
+                n_neighbors=params[INIT_PARAMETERS_NAME]["n_neighbors"],
+                convert_dtype=False,  # only np.float32 is supported in cuml. Should set to True for all other types
             )
 
             distances: List[np.array] = res_tuple[0]
@@ -273,56 +293,52 @@ class NearestNeighbors(NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _N
                 for chunk in item_rn:
                     chunk_id2row = [(count + i, chunk[i]) for i in range(len(chunk))]
                     id2row.update(chunk_id2row)
-                    count += len(chunk) 
+                    count += len(chunk)
 
             transformed_indices = []
             for two_d in indices:
                 res = []
                 for row in two_d:
                     res.append([id2row[cuid] for cuid in row])
-                transformed_indices.append(res) 
-                    
+                transformed_indices.append(res)
+
             return {
+                "query_index": query_row_number,
                 "distances": distances,
                 "indices": transformed_indices,
-                "query_index": query_row_number,
-                "query": query,
-                "item_index": item_row_number, #item_id,
-                "item": item,
             }
+
         return _cuml_fit
 
-class NearestNeighborsModel(NearestNeighborsClass, _CumlModel, _NearestNeighborsCumlParams):
-    def __init__(
-            self,
-            distances: List[List[float]],
-            indices: List[List[int]],
-            query_index: List[int],
-            query: List[List[float]],
-            item_index: List[int],
-            item: List[List[float]],
-        ):
-            super().__init__(
-                distances=distances,
-                indices=indices,
-                query_index = query_index,
-                query=query,
-                item_index=item_index,
-                item=item,
-            )
 
-            cumlParams = NearestNeighbors._get_cuml_params_default()
-            self.set_params(**cumlParams)
+class NearestNeighborsModel(
+    NearestNeighborsClass, _CumlModel, _NearestNeighborsCumlParams
+):
+    def __init__(
+        self,
+        query_index: List[int],
+        distances: List[List[float]],
+        indices: List[List[int]],
+    ):
+        super().__init__(
+            query_index=query_index,
+            distances=distances,
+            indices=indices,
+        )
+
+        cumlParams = NearestNeighbors._get_cuml_params_default()
+        self.set_params(**cumlParams)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         pass
 
     def _get_cuml_transform_func(
-            self, dataset: DataFrame
-        ) -> Tuple[
-            Callable[..., CumlT],
-            Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        ]:
+        self, dataset: DataFrame
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
         pass
+
 
 _set_pyspark_cuml_cls_param_attrs(NearestNeighbors, NearestNeighborsModel)
