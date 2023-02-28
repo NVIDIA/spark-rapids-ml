@@ -13,21 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import List, Iterator, Optional, Union
-
 import time
+from typing import Any, Dict, Iterator, List, Optional, Union
+
 import numpy as np
 import pandas as pd
 from pyspark.ml.clustering import KMeans as SparkKMeans
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
-from pyspark.sql.functions import array, sum
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import StructType, StructField, DoubleType
-from spark_rapids_ml.clustering import KMeans
+from pyspark.sql.functions import array, col, sum
+from pyspark.sql.types import DoubleType, StructField, StructType
 
 from benchmark.base import BenchmarkBase
 from benchmark.utils import with_benchmark
+from spark_rapids_ml.clustering import KMeans
 
 
 class BenchmarkKMeans(BenchmarkBase):
@@ -43,15 +43,20 @@ class BenchmarkKMeans(BenchmarkBase):
         "leafCol",
     ]
 
-    def add_arguments(self):
-        self._parser.add_argument("--no_cache", action='store_true', default=False, help='whether to enable dataframe repartition, cache and cout outside sparkcuml fit')
+    def add_arguments(self) -> None:
+        self._parser.add_argument(
+            "--no_cache",
+            action="store_true",
+            default=False,
+            help="whether to enable dataframe repartition, cache and cout outside sparkcuml fit",
+        )
 
-
-    def score(self,
+    def score(
+        self,
         centers: np.ndarray,
         transformed_df: DataFrame,
         features_col: str,
-        prediction_col: str
+        prediction_col: str,
     ) -> float:
         """Computes the sum of squared euclidean distances between vectors in the features_col
         of transformed_df and the vector in centers having the corresponding index value in prediction_col.
@@ -78,22 +83,28 @@ class BenchmarkKMeans(BenchmarkBase):
 
         sc = transformed_df.rdd.context
         centers_bc = sc.broadcast(centers)
-        def partition_score_udf(pdf_iter: Iterator[pd.DataFrame]) -> Iterator[float]:
+
+        def partition_score_udf(
+            pdf_iter: Iterator[pd.DataFrame],
+        ) -> Iterator[pd.DataFrame]:
             local_centers = centers_bc.value.astype(np.float64)
             partition_score = 0.0
             for pdf in pdf_iter:
-                input_vecs = np.array(list(pdf[features_col]),dtype=np.float64)
+                input_vecs = np.array(list(pdf[features_col]), dtype=np.float64)
                 predictions = list(pdf[prediction_col])
                 center_vecs = local_centers[predictions, :]
-                partition_score += np.sum((input_vecs - center_vecs)**2)
-            yield pd.DataFrame({'partition_score': [partition_score]})
+                partition_score += np.sum((input_vecs - center_vecs) ** 2)
+            yield pd.DataFrame({"partition_score": [partition_score]})
+
         total_score = (
-            transformed_df.mapInPandas(partition_score_udf,
-                                    StructType([StructField('partition_score',DoubleType(),True)]))
-                        .agg(sum('partition_score').alias('total_score'))
-                        .toPandas()
-        )
-        total_score = total_score['total_score'][0]
+            transformed_df.mapInPandas(
+                partition_score_udf,  # type: ignore
+                StructType([StructField("partition_score", DoubleType(), True)]),
+            )
+            .agg(sum("partition_score").alias("total_score"))
+            .toPandas()
+        )  # type: ignore
+        total_score = total_score["total_score"][0]  # type: ignore
         return total_score
 
     def run_once(
@@ -102,7 +113,7 @@ class BenchmarkKMeans(BenchmarkBase):
         df: DataFrame,
         features_col: Union[str, List[str]],
         label_name: Optional[str],
-    ) -> None:
+    ) -> Dict[str, Any]:
         num_gpus = self.args.num_gpus
         num_cpus = self.args.num_cpus
         no_cache = self.args.no_cache
@@ -112,8 +123,8 @@ class BenchmarkKMeans(BenchmarkBase):
 
         first_col = df.dtypes[0][0]
         first_col_type = df.dtypes[0][1]
-        is_array_col = True if 'array' in first_col_type else False
-        is_vector_col = True if 'vector' in first_col_type else False
+        is_array_col = True if "array" in first_col_type else False
+        is_vector_col = True if "vector" in first_col_type else False
         is_single_col = is_array_col or is_vector_col
         if not is_single_col:
             input_cols = [c for c in df.schema.names]
@@ -122,19 +133,21 @@ class BenchmarkKMeans(BenchmarkBase):
         if num_gpus > 0:
             assert num_cpus <= 0
             if not no_cache:
-                def cache_df(df):
+
+                def gpu_cache_df(df: DataFrame) -> DataFrame:
                     df = df.repartition(num_gpus).cache()
                     df.count()
                     return df
-                df, prepare_time = with_benchmark("prepare dataset",
-                                                  lambda: cache_df(df))
+
+                df, prepare_time = with_benchmark(
+                    "prepare dataset", lambda: gpu_cache_df(df)
+                )
 
             params = self.spark_cuml_params
             print(f"Passing {params} to KMeans")
 
-            gpu_estimator = (
-                KMeans(num_workers=num_gpus, **params)
-                    .setPredictionCol(output_col)
+            gpu_estimator = KMeans(num_workers=num_gpus, **params).setPredictionCol(
+                output_col
             )
 
             if is_single_col:
@@ -143,15 +156,13 @@ class BenchmarkKMeans(BenchmarkBase):
                 gpu_estimator = gpu_estimator.setFeaturesCols(input_cols)
 
             gpu_model, fit_time = with_benchmark(
-                "gpu fit",
-                lambda: gpu_estimator.fit(df)
+                "gpu fit", lambda: gpu_estimator.fit(df)
             )
 
             transformed_df = gpu_model.setPredictionCol(output_col).transform(df)
             # count doesn't trigger compute so do something not too compute intensive
             _, transform_time = with_benchmark(
-                "gpu transform",
-                lambda: transformed_df.agg(sum(output_col)).collect()
+                "gpu transform", lambda: transformed_df.agg(sum(output_col)).collect()
             )
 
             total_time = round(time.time() - func_start_time, 2)
@@ -160,10 +171,14 @@ class BenchmarkKMeans(BenchmarkBase):
             df_for_scoring = transformed_df
             feature_col = first_col
             if not is_single_col:
-                feature_col = 'features_array'
-                df_for_scoring = transformed_df.select(array(*input_cols).alias('features_array'), output_col)
+                feature_col = "features_array"
+                df_for_scoring = transformed_df.select(
+                    array(*input_cols).alias("features_array"), output_col
+                )
             elif is_vector_col:
-                df_for_scoring = transformed_df.select(vector_to_array(feature_col), output_col)
+                df_for_scoring = transformed_df.select(
+                    vector_to_array(col(feature_col)), output_col
+                )
 
             cluster_centers = gpu_model.cluster_centers_
 
@@ -172,21 +187,23 @@ class BenchmarkKMeans(BenchmarkBase):
             if is_array_col:
                 vector_df = df.select(array_to_vector(df[first_col]).alias(first_col))
             elif not is_vector_col:
-                vector_assembler = VectorAssembler(outputCol="features").setInputCols(input_cols)
+                vector_assembler = VectorAssembler(outputCol="features").setInputCols(
+                    input_cols
+                )
                 vector_df = vector_assembler.transform(df).drop(*input_cols)
                 first_col = "features"
             else:
                 vector_df = df
 
             if not no_cache:
-                def cache_df(df):
+
+                def cpu_cache_df(df: DataFrame) -> DataFrame:
                     df = df.cache()
                     df.count()
                     return df
 
                 vector_df, prepare_time = with_benchmark(
-                    "prepare dataset",
-                    lambda: cache_df(df)
+                    "prepare dataset", lambda: cpu_cache_df(df)
                 )
 
             params = self.spark_params
@@ -198,32 +215,35 @@ class BenchmarkKMeans(BenchmarkBase):
                 .setPredictionCol(output_col)
             )
 
-
             cpu_model, fit_time = with_benchmark(
-                "cpu fit",
-                lambda: cpu_estimator.fit(vector_df)
+                "cpu fit", lambda: cpu_estimator.fit(vector_df)
             )
 
-            print(f"spark ML: iterations: {cpu_model.summary.numIter}, inertia: {cpu_model.summary.trainingCost}")
+            print(
+                f"spark ML: iterations: {cpu_model.summary.numIter}, inertia: {cpu_model.summary.trainingCost}"
+            )
 
-            def transform():
-                transformed_df = cpu_model.transform(vector_df)
+            def cpu_transform(df: DataFrame) -> None:
+                transformed_df = cpu_model.transform(df)
                 transformed_df.agg(sum(output_col)).collect()
 
             _, transform_time = with_benchmark(
-                "cpu transform",
-                transform
+                "cpu transform", lambda: cpu_transform(vector_df)
             )
 
             total_time = time.time() - func_start_time
             print(f"cpu total took: {total_time} sec")
 
             feature_col = first_col
-            df_for_scoring = transformed_df.select(vector_to_array(feature_col).alias(feature_col), output_col)
+            df_for_scoring = transformed_df.select(
+                vector_to_array(col(feature_col)).alias(feature_col), output_col
+            )
             cluster_centers = cpu_model.clusterCenters()
 
         # either cpu or gpu mode is run, not both in same run
-        score = self.score(np.array(cluster_centers), df_for_scoring, feature_col, output_col)
+        score = self.score(
+            np.array(cluster_centers), df_for_scoring, feature_col, output_col
+        )
         # note: seems that inertia matches score at iterations-1
         print(f"score: {score}")
 

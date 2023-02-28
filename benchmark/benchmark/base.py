@@ -33,7 +33,7 @@ class BenchmarkBase:
     unsupported_params: List[str] = []
 
     _parser: argparse.ArgumentParser
-    _args: Optional[argparse.Namespace] = None
+    _args: argparse.Namespace
     _spark_args: List[str] = []
     _cuml_args: List[str] = []
 
@@ -167,7 +167,7 @@ class BenchmarkBase:
         print()
 
     @property
-    def args(self) -> Optional[argparse.Namespace]:
+    def args(self) -> argparse.Namespace:
         """Return all parsed command line arguments."""
         return self._args
 

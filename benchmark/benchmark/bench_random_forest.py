@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
-from pyspark.ml.classification import RandomForestClassifier as SparkRandomForestClassifier
+from pyspark.ml.classification import (
+    RandomForestClassifier as SparkRandomForestClassifier,
+)
 from pyspark.ml.evaluation import (
     BinaryClassificationEvaluator,
     MulticlassClassificationEvaluator,
@@ -23,11 +25,12 @@ from pyspark.ml.evaluation import (
 from pyspark.ml.regression import RandomForestRegressor as SparkRandomForestRegressor
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
-from spark_rapids_ml.classification import RandomForestClassifier
-from spark_rapids_ml.regression import RandomForestRegressor
 
 from benchmark.base import BenchmarkBase
 from benchmark.utils import with_benchmark
+from spark_rapids_ml.classification import RandomForestClassifier
+from spark_rapids_ml.regression import RandomForestRegressor
+
 
 class BenchmarkRandomForestClassifier(BenchmarkBase):
     test_cls = RandomForestClassifier
@@ -47,7 +50,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         df: DataFrame,
         features_col: Union[str, List[str]],
         label_col: Optional[str],
-    ) -> None:
+    ) -> Dict[str, Any]:
         assert label_col is not None
         assert self.args is not None
 
@@ -56,9 +59,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
             params = self.spark_cuml_params
             print(f"Passing {params} to RandomForestClassifier")
 
-            rfc = RandomForestClassifier(
-                num_workers=self.args.num_gpus, **params
-            )
+            rfc = RandomForestClassifier(num_workers=self.args.num_gpus, **params)
             benchmark_string = "Spark Rapids ML RandomForestClassifier"
         else:
             params = self.spark_params
@@ -70,7 +71,9 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         rfc.setFeaturesCol(features_col)
         rfc.setLabelCol(label_col)
 
-        model, training_time = with_benchmark(f"{benchmark_string} training:", lambda: rfc.fit(df))
+        model, training_time = with_benchmark(
+            f"{benchmark_string} training:", lambda: rfc.fit(df)
+        )
 
         df_with_preds = model.transform(df)
 
@@ -133,16 +136,13 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
         df: DataFrame,
         features_col: Union[str, List[str]],
         label_col: Optional[str],
-    ) -> None:
+    ) -> Dict[str, Any]:
         assert label_col is not None
-        assert self.args is not None
 
         if self.args.num_gpus > 0:
             params = self.spark_cuml_params
             print(f"Passing {params} to RandomForestRegressor")
-            rf = RandomForestRegressor(
-                num_workers=self.args.num_gpus, **params
-            )
+            rf = RandomForestRegressor(num_workers=self.args.num_gpus, **params)
             benchmark_string = "Spark Rapids ML RandomForestRegressor"
         else:
             params = self.spark_params
@@ -154,7 +154,9 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
         rf.setFeaturesCol(features_col)
         rf.setLabelCol(label_col)
 
-        model, training_time = with_benchmark(f"{benchmark_string} training:", lambda: rf.fit(df))
+        model, training_time = with_benchmark(
+            f"{benchmark_string} training:", lambda: rf.fit(df)
+        )
 
         df_with_preds = model.transform(df)
 
@@ -184,6 +186,5 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
             "training_time": training_time,
             "transform_time": transform_time,
             "rmse": rmse,
-
         }
         return results

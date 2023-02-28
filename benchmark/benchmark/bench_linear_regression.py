@@ -16,13 +16,13 @@
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
+from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import sum
-from pyspark.ml.regression import LinearRegression as SparkLinearRegression
-from spark_rapids_ml.regression import LinearRegression
 
 from benchmark.base import BenchmarkBase
 from benchmark.utils import with_benchmark
+from spark_rapids_ml.regression import LinearRegression
 
 
 class BenchmarkLinearRegression(BenchmarkBase):
@@ -43,7 +43,6 @@ class BenchmarkLinearRegression(BenchmarkBase):
     ) -> Dict[str, Any]:
 
         assert label_name is not None
-        assert self.args is not None
 
         if self.args.num_gpus > 0:
             params = self.spark_cuml_params
@@ -120,6 +119,6 @@ class BenchmarkLinearRegression(BenchmarkBase):
             "coefs_l1": coefs_l1,
             "coefs_l2": coefs_l2,
             "full_objective": full_objective,
-            "intercept": model.intercept
+            "intercept": model.intercept,
         }
         return results
