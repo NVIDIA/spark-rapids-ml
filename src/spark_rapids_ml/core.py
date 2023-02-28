@@ -368,9 +368,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If _fit returns a model or a RDD"""
         return True
 
-    def _fit(
-        self, dataset: DataFrame
-    ) -> Union["_CumlModel", RDD]:
+    def _fit(self, dataset: DataFrame) -> Union["_CumlModel", RDD]:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -465,9 +463,11 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             else:
                 yield pd.DataFrame(data=result)
 
-        pipelined_rdd = dataset.mapInPandas(
-            _train_udf, schema=self._out_schema()
-        ).rdd.barrier().mapPartitions(lambda x : x)  # type: ignore
+        pipelined_rdd = (
+            dataset.mapInPandas(_train_udf, schema=self._out_schema())
+            .rdd.barrier()
+            .mapPartitions(lambda x: x)
+        )  # type: ignore
 
         if return_model == False:
             return pipelined_rdd

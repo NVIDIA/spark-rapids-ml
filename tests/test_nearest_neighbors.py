@@ -74,7 +74,9 @@ def test_example(gpu_number: int) -> None:
 @pytest.mark.parametrize("data_shape", [(1000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
-@pytest.mark.parametrize("batch_size", [100, 10000]) # larger batch_size higher query throughput, yet more memory
+@pytest.mark.parametrize(
+    "batch_size", [100, 10000]
+)  # larger batch_size higher query throughput, yet more memory
 def test_nearest_neighbors(
     gpu_number: int,
     feature_type: str,
@@ -108,7 +110,9 @@ def test_nearest_neighbors(
             spark, feature_type, data_type, X, None
         )
 
-        sparkcuml_knn = NearestNeighbors(n_neighbors=n_neighbors, inputCol=features_col, batch_size=batch_size)
+        sparkcuml_knn = NearestNeighbors(
+            n_neighbors=n_neighbors, inputCol=features_col, batch_size=batch_size
+        )
 
         # obtain spark results
         sparkcuml_knn = sparkcuml_knn.fit(data_df)

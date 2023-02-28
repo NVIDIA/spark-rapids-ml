@@ -19,7 +19,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark.ml.param.shared import HasInputCol, HasLabelCol, Param, Params, TypeConverters
+from pyspark.ml.param.shared import (
+    HasInputCol,
+    HasLabelCol,
+    Param,
+    Params,
+    TypeConverters,
+)
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, lit
 from pyspark.sql.types import (
@@ -48,12 +54,15 @@ class NearestNeighborsClass(_CumlClass):
     @classmethod
     def _cuml_cls(cls) -> List[type]:
         from cuml import NearestNeighbors as cumlNearestNeighbors
-        from cuml.neighbors.nearest_neighbors_mg import NearestNeighborsMG # to include the batch_size parameter that exists in the MG class
+        from cuml.neighbors.nearest_neighbors_mg import (
+            NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
+        )
+
         return [cumlNearestNeighbors, NearestNeighborsMG]
 
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {'k' : 'n_neighbors'}
+        return {"k": "n_neighbors"}
 
     @classmethod
     def _param_excludes(cls) -> List[str]:
@@ -74,8 +83,12 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
     Shared Spark Params for NearestNeighbor and NearestNeighborModel.
     """
 
-    k = Param(Params._dummy(), "k", "The number nearest neighbors to retrieve. Must be >= 1.",
-              typeConverter=TypeConverters.toInt)
+    k = Param(
+        Params._dummy(),
+        "k",
+        "The number nearest neighbors to retrieve. Must be >= 1.",
+        typeConverter=TypeConverters.toInt,
+    )
 
     def setInputCol(self, value: str) -> "_NearestNeighborsCumlParams":
         """
