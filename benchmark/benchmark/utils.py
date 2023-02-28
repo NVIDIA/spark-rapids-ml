@@ -44,9 +44,10 @@ def with_benchmark(phrase: str, action: Callable) -> Any:
     result = action()
     end = time()
     print("-" * 100)
-    print("{} takes {} seconds".format(phrase, round(end - start, 2)))
+    duration = round(end - start, 2)
+    print("{}: {} seconds".format(phrase, duration))
     print("-" * 100)
-    return result
+    return result, duration
 
 
 def inspect_default_params_from_func(

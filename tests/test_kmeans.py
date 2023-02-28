@@ -60,6 +60,7 @@ def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
 
     # Default constructor
     default_spark_params = {
+        "initMode": "k-means||",
         "k": 2,
         "maxIter": 20,
     }
@@ -68,7 +69,7 @@ def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
         "max_iter": 20,
         "tol": 0.0001,
         "verbose": False,
-        "init": "scalable-k-means++",
+        "init": "k-means||",
         "oversampling_factor": 2.0,
         "max_samples_per_batch": 32768,
         "num_workers": 1,

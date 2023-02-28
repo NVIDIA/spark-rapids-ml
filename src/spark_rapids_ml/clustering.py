@@ -55,6 +55,7 @@ class KMeansClass(_CumlClass):
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
             "distanceMeasure": None,
+            "initMode": "init",
             "k": "n_clusters",
             "initSteps": "",
             "maxIter": "max_iter",
