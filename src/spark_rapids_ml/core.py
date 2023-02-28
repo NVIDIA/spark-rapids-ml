@@ -364,8 +364,12 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If enable or disable ucx over NCCL"""
         return False
 
+    def _return_model(self) -> bool:
+        """If _fit returns a model or a RDD"""
+        return True
+
     def _fit(
-        self, dataset: DataFrame, return_model: bool = True
+        self, dataset: DataFrame
     ) -> Union["_CumlModel", RDD]:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
@@ -404,6 +408,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         enable_nccl = self._enable_nccl()
         require_ucx = self._require_ucx()
+        return_model = self._return_model()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -460,14 +465,14 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             else:
                 yield pd.DataFrame(data=result)
 
-        barrier_rdd = dataset.mapInPandas(
+        pipelined_rdd = dataset.mapInPandas(
             _train_udf, schema=self._out_schema()
-        ).rdd.barrier()  # type: ignore
+        ).rdd.barrier().mapPartitions(lambda x : x)  # type: ignore
 
         if return_model == False:
-            return barrier_rdd.mapPartitions(lambda x: x)
+            return pipelined_rdd
 
-        ret = barrier_rdd.mapPartitions(lambda x: x).collect()[0]
+        ret = pipelined_rdd.collect()[0]
 
         model = self._create_pyspark_model(ret)
         model._num_workers = self._num_workers

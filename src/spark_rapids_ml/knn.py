@@ -19,7 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark.ml.param.shared import HasInputCol, HasLabelCol, Param
+from pyspark.ml.param.shared import HasInputCol, HasLabelCol, Param, Params, TypeConverters
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, lit
 from pyspark.sql.types import (
@@ -48,12 +48,12 @@ class NearestNeighborsClass(_CumlClass):
     @classmethod
     def _cuml_cls(cls) -> List[type]:
         from cuml import NearestNeighbors as cumlNearestNeighbors
-
-        return [cumlNearestNeighbors]
+        from cuml.neighbors.nearest_neighbors_mg import NearestNeighborsMG # to include the batch_size parameter that exists in the MG class
+        return [cumlNearestNeighbors, NearestNeighborsMG]
 
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {}
+        return {'k' : 'n_neighbors'}
 
     @classmethod
     def _param_excludes(cls) -> List[str]:
@@ -73,6 +73,9 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
     """
     Shared Spark Params for NearestNeighbor and NearestNeighborModel.
     """
+
+    k = Param(Params._dummy(), "k", "The number nearest neighbors to retrieve. Must be >= 1.",
+              typeConverter=TypeConverters.toInt)
 
     def setInputCol(self, value: str) -> "_NearestNeighborsCumlParams":
         """
@@ -110,17 +113,17 @@ class NearestNeighbors(
     """
     Examples
     --------
-    >>> from sparkcuml.neighbors import NearestNeighbors
+    >>> from spark_rapids_ml.knn import NearestNeighbors
     >>> data = [([1.0, 1.0],),
     ...         ([2.0, 2.0],),
     ...         ([3.0, 3.0],),]
     >>> topk = 2
     >>> gpu_knn = NearestNeighbors().setInputCol("features").setK(topk)
-    >>> data_df = spark.SparkContext.parallelize(data).map(lambda row: (row,)).toDF(["features"])
+    >>> data_df = spark.createDataFrame(data, ["features"])
     >>> gpu_knn.fit(data_df)
     >>> query = [[1.0, 1.0], [3.0, 3.0]]
-    >>> query_df = spark.SparkContext.parallelize(query).map(lambda row: (row,)).toDF(["features"])
-    >>> distances_df, indices_df = gpu_knn.kneighbors(query_df, return_distance=True)
+    >>> query_df = spark.createDataFrame(query, ["features"])
+    >>> distances_df, indices_df = gpu_knn.kneighbors(query_df)
     >>> distances_df.show()
     [0, 1.414]
     [0, 1.414]
@@ -141,7 +144,7 @@ class NearestNeighbors(
         """
         Sets the value of `k`.
         """
-        self.set_params(n_neighbors=value)
+        self.set_params(k=value)
         return self
 
     def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
@@ -158,7 +161,7 @@ class NearestNeighbors(
         query_df = self.df_zip_with_index(query_df)
         union_df = self.data_df.union(query_df)
 
-        pipelinedrdd = self._fit(union_df, return_model=False)
+        pipelinedrdd = self._fit(union_df)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
         res_rdd = pipelinedrdd.flatMap(
             lambda row: list(zip(row["query_index"], row["indices"], row["distances"]))
@@ -181,6 +184,9 @@ class NearestNeighbors(
 
     def _require_ucx(self) -> bool:
         return True
+
+    def _return_model(self) -> bool:
+        return False
 
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
@@ -339,6 +345,3 @@ class NearestNeighborsModel(
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
         pass
-
-
-_set_pyspark_cuml_cls_param_attrs(NearestNeighbors, NearestNeighborsModel)
