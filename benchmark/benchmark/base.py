@@ -245,11 +245,11 @@ class BenchmarkBase:
         ) as spark:
             for _ in range(self._args.num_runs):
                 df, features_col, label_col = self.train_df(spark)
-                results, benchmark_run_time = with_benchmark(
-                    "benchmark run time: ",
+                results, benchmark_time = with_benchmark(
+                    "benchmark time: ",
                     lambda: self.run_once(spark, df, features_col, label_col),
                 )
-                results["benchmark_run_time"] = benchmark_run_time
+                results["benchmark_time"] = benchmark_time
                 run_results.append(results)
 
         # dictionary results
@@ -263,6 +263,7 @@ class BenchmarkBase:
         print("Results (pandas DataFrame):")
         report_pdf = pd.DataFrame(run_results)
         print(report_pdf)
+        print("-" * 100)
 
         # save results to disk
         if self._args.report_path != "":

@@ -16,10 +16,10 @@
 import argparse
 import sys
 
-from bench_kmeans import BenchmarkKMeans
-from bench_linear_regression import BenchmarkLinearRegression
-from bench_pca import BenchmarkPCA
-from bench_random_forest import (
+from benchmark.bench_kmeans import BenchmarkKMeans
+from benchmark.bench_linear_regression import BenchmarkLinearRegression
+from benchmark.bench_pca import BenchmarkPCA
+from benchmark.bench_random_forest import (
     BenchmarkRandomForestClassifier,
     BenchmarkRandomForestRegressor,
 )
