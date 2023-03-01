@@ -464,10 +464,10 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                 yield pd.DataFrame(data=result)
 
         pipelined_rdd = (
-            dataset.mapInPandas(_train_udf, schema=self._out_schema())
+            dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
             .rdd.barrier()
             .mapPartitions(lambda x: x)
-        )  # type: ignore
+        )
 
         if return_model == False:
             return pipelined_rdd

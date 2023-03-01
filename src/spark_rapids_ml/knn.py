@@ -244,30 +244,32 @@ class NearestNeighbors(
             query = np.empty((0, params["n"]), dtype=np.float32)
             item_row_number = []
             query_row_number = []
+
             for x_array, label_array, row_number_array in dfs:
                 item_filter = [
-                    True if label_array[i] == label_isdata else False
+                    True if label_array[i] == label_isdata else False  # type: ignore
                     for i in range(len(x_array))
                 ]
                 query_filter = [
-                    False if label_array[i] == label_isdata else True
+                    False if label_array[i] == label_isdata else True  # type: ignore
                     for i in range(len(x_array))
                 ]
 
                 item = np.concatenate((item, x_array[item_filter]), axis=0)
                 query = np.concatenate((query, x_array[query_filter]), axis=0)
 
-                item_row_number += row_number_array[item_filter].tolist()
-                query_row_number += row_number_array[query_filter].tolist()
+                item_row_number += row_number_array[item_filter].tolist()  # type: ignore
+                query_row_number += row_number_array[query_filter].tolist()  # type: ignore
 
-            item = [item]
-            query = [query]
+            item = [item]  # type: ignore
+            query = [query]  # type: ignore
             item_row_number = [item_row_number]
             query_row_number = [query_row_number]
 
             item_query_sizes = [len(chunk) for chunk in item] + [
                 len(chunk) for chunk in query
             ]
+
             import json
 
             messages = context.allGather(
@@ -284,8 +286,8 @@ class NearestNeighbors(
             item_nrows = sum(pair[1] for pair in item_parts_to_ranks)
             query_nrows = sum(pair[1] for pair in query_parts_to_ranks)
 
-            res_tuple: Tuple[List[np.array], List[np.array]] = nn_object.kneighbors(
-                index=[item],
+            res_tuple: Tuple[List[np.ndarray], List[np.ndarray]] = nn_object.kneighbors(
+                index=item,
                 index_parts_to_ranks=item_parts_to_ranks,
                 index_nrows=item_nrows,
                 query=query,
@@ -297,16 +299,16 @@ class NearestNeighbors(
                 convert_dtype=False,  # only np.float32 is supported in cuml. Should set to True for all other types
             )
 
-            distances: List[np.array] = res_tuple[0]
-            indices: List[np.array] = res_tuple[1]
+            distances: List[np.ndarray] = res_tuple[0]
+            indices: List[np.ndarray] = res_tuple[1]
 
             distances = [ary.tolist() for ary in distances]
             indices = [ary.tolist() for ary in indices]
-            query = [ary.tolist() for ary in query]
-            item = [ary.tolist() for ary in item]
+            query = [ary.tolist() for ary in query]  # type: ignore
+            item = [ary.tolist() for ary in item]  # type: ignore
 
             # id mapping
-            id2row = {}
+            id2row: Dict[int, int] = {}
             count = 0
             for r, _, item_rn in triplets:
                 for chunk in item_rn:
