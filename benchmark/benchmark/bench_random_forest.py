@@ -15,35 +15,47 @@
 #
 from typing import Any, Dict, List, Optional, Union
 
-from pyspark.ml.classification import (
-    RandomForestClassifier as SparkRandomForestClassifier,
-)
 from pyspark.ml.evaluation import (
     BinaryClassificationEvaluator,
     MulticlassClassificationEvaluator,
 )
-from pyspark.ml.regression import RandomForestRegressor as SparkRandomForestRegressor
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
 
-from spark_rapids_ml.classification import RandomForestClassifier
-from spark_rapids_ml.regression import RandomForestRegressor
-
 from .base import BenchmarkBase
-from .utils import with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark
 
 
 class BenchmarkRandomForestClassifier(BenchmarkBase):
-    test_cls = RandomForestClassifier
-    unsupported_params = test_cls._param_excludes() + [
-        "featuresCol",
-        "labelCol",
-        "predictionCol",
-        "probabilityCol",
-        "rawPredictionCol",
-        "weightCol",
-        "leafCol",
-    ]
+    def _supported_class_params(self) -> Dict[str, Any]:
+        from pyspark.ml.classification import RandomForestClassifier
+
+        # pyspark paramters
+        params = inspect_default_params_from_func(
+            RandomForestClassifier,
+            [
+                "featuresCol",
+                "labelCol",
+                "predictionCol",
+                "probabilityCol",
+                "rawPredictionCol",
+                "weightCol",
+                "leafCol",
+            ],
+        )
+        # must replace the None to the correct type
+        params["seed"] = int
+
+        # cuML paramters
+        params["n_streams"] = (
+            int,
+            "cuML parameters, number of parallel streams used for forest building",
+        )
+        params["max_batch_size"] = (
+            int,
+            "cuML parameters, maximum number of nodes that can be processed in a given batch",
+        )
+        return params
 
     def run_once(
         self,
@@ -55,17 +67,18 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         assert label_col is not None
         assert self.args is not None
 
+        params = self.class_params
+        print(f"Passing {params} to RandomForestClassifier")
+
         if self.args.num_gpus > 0:
-            params = self.spark_cuml_params
-            print(f"Passing {params} to RandomForestClassifier")
+            from spark_rapids_ml.classification import RandomForestClassifier
 
             rfc = RandomForestClassifier(num_workers=self.args.num_gpus, **params)
             benchmark_string = "Spark Rapids ML RandomForestClassifier"
         else:
-            params = self.spark_params
-            print(f"Passing {params} to SparkRandomForestClassifier")
+            from pyspark.ml.classification import RandomForestClassifier
 
-            rfc = SparkRandomForestClassifier(**params)
+            rfc = RandomForestClassifier(**params)
             benchmark_string = "Spark ML RandomForestClassifier"
 
         rfc.setFeaturesCol(features_col)
@@ -121,14 +134,26 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
 
 
 class BenchmarkRandomForestRegressor(BenchmarkBase):
-    test_cls = RandomForestRegressor
-    unsupported_params = [
-        "featuresCol",
-        "labelCol",
-        "predictionCol",
-        "weightCol",
-        "leafCol",
-    ]
+    def _supported_class_params(self) -> Dict[str, Any]:
+        from pyspark.ml.regression import RandomForestRegressor
+
+        params = inspect_default_params_from_func(
+            RandomForestRegressor,
+            ["featuresCol", "labelCol", "predictionCol", "weightCol", "leafCol"],
+        )
+        # must replace the None to the correct type
+        params["seed"] = int
+
+        # cuML paramters
+        params["n_streams"] = (
+            int,
+            "cuML parameters, number of parallel streams used for forest building",
+        )
+        params["max_batch_size"] = (
+            int,
+            "cuML parameters, maximum number of nodes that can be processed in a given batch",
+        )
+        return params
 
     def run_once(
         self,
@@ -139,16 +164,20 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
     ) -> Dict[str, Any]:
         assert label_col is not None
 
+        params = self.class_params
+        print(f"Passing {params} to RandomForestRegressor")
+
         if self.args.num_gpus > 0:
-            params = self.spark_cuml_params
-            print(f"Passing {params} to RandomForestRegressor")
-            rf = RandomForestRegressor(num_workers=self.args.num_gpus, **params)
+            from spark_rapids_ml.regression import RandomForestRegressor
+
+            rf = RandomForestRegressor(
+                num_workers=self.args.num_gpus, verbose=7, **params
+            )
             benchmark_string = "Spark Rapids ML RandomForestRegressor"
         else:
-            params = self.spark_params
-            print(f"Passing {params} to SparkRandomForestRegressor")
+            from pyspark.ml.regression import RandomForestRegressor
 
-            rf = SparkRandomForestRegressor(**params)
+            rf = RandomForestRegressor(**params)
             benchmark_string = "Spark ML RandomForestRegressor"
 
         rf.setFeaturesCol(features_col)

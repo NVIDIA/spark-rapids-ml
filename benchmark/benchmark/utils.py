@@ -63,6 +63,7 @@ def inspect_default_params_from_func(
         # Remove parameters without a default value and those in the unsupported_set
         if (
             parameter.default is not parameter.empty
+            and parameter.default is not None
             and parameter.name not in unsupported_set
         ):
             filtered_params_dict[parameter.name] = parameter.default
