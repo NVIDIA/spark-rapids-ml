@@ -18,32 +18,36 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from pyspark.ml.feature import PCA as SparkPCA
 from pyspark.ml.feature import StandardScaler, VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array, col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
-from spark_rapids_ml.feature import PCA
-
 from .base import BenchmarkBase
-from .utils import with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark
 
 
 class BenchmarkPCA(BenchmarkBase):
-    test_cls = PCA
-    unsupported_params = test_cls._param_excludes() + [
-        "featuresCol",
-        "labelCol",
-        "predictionCol",
-        "probabilityCol",
-        "rawPredictionCol",
-        "weightCol",
-        "leafCol",
-    ]
+    def _supported_class_params(self) -> Dict[str, Any]:
+        from pyspark.ml.feature import PCA
 
-    def add_arguments(self) -> None:
+        params = inspect_default_params_from_func(
+            PCA,
+            [
+                "featuresCol",
+                "labelCol",
+                "predictionCol",
+                "probabilityCol",
+                "rawPredictionCol",
+                "weightCol",
+                "leafCol",
+            ],
+        )
+        params["k"] = int
+        return params
+
+    def _add_extra_arguments(self) -> None:
         self._parser.add_argument(
             "--no_cache",
             action="store_true",
@@ -129,6 +133,8 @@ class BenchmarkPCA(BenchmarkBase):
             input_cols = [c for c in df.schema.names]
 
         if num_gpus > 0:
+            from spark_rapids_ml.feature import PCA
+
             assert num_cpus <= 0
             if not no_cache:
 
@@ -141,7 +147,7 @@ class BenchmarkPCA(BenchmarkBase):
                     "prepare session and dataset", lambda: gpu_cache_df(df)
                 )
 
-            params = self.spark_cuml_params
+            params = self.class_params
             print(f"Passing {params} to PCA")
 
             gpu_pca = PCA(num_workers=num_gpus, **params)
@@ -207,6 +213,8 @@ class BenchmarkPCA(BenchmarkBase):
             pc_for_scoring = gpu_model.pc.toArray()
 
         if num_cpus > 0:
+            from pyspark.ml.feature import PCA
+
             assert num_gpus <= 0
             if is_array_col:
                 vector_df = df.select(array_to_vector(df[first_col]).alias(first_col))
@@ -232,10 +240,10 @@ class BenchmarkPCA(BenchmarkBase):
 
             output_col = "pca_features"
 
-            params = self.spark_params
+            params = self.class_params
             print(f"Passing {params} to SparkPCA")
 
-            cpu_pca = SparkPCA(**params).setInputCol(first_col).setOutputCol(output_col)
+            cpu_pca = PCA(**params).setInputCol(first_col).setOutputCol(output_col)
 
             cpu_model, fit_time = with_benchmark(
                 "cpu fit", lambda: cpu_pca.fit(vector_df)

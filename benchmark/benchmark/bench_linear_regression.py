@@ -16,24 +16,21 @@
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import sum
 
-from spark_rapids_ml.regression import LinearRegression
-
 from .base import BenchmarkBase
-from .utils import with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark
 
 
 class BenchmarkLinearRegression(BenchmarkBase):
-    test_cls = LinearRegression
-    unsupported_params = test_cls._param_excludes() + [
-        "featuresCol",
-        "labelCol",
-        "predictionCol",
-        "weightCol",
-    ]
+    def _supported_class_params(self) -> Dict[str, Any]:
+        from pyspark.ml.regression import LinearRegression
+
+        params = inspect_default_params_from_func(
+            LinearRegression, ["featuresCol", "labelCol", "predictionCol", "weightCol"]
+        )
+        return params
 
     def run_once(
         self,
@@ -45,17 +42,18 @@ class BenchmarkLinearRegression(BenchmarkBase):
 
         assert label_name is not None
 
-        if self.args.num_gpus > 0:
-            params = self.spark_cuml_params
-            print(f"Passing {params} to LinearRegression")
+        params = self.class_params
+        print(f"Passing {params} to LinearRegression")
 
-            lr = LinearRegression(num_workers=self.args.num_gpus, **params)
+        if self.args.num_gpus > 0:
+            from spark_rapids_ml.regression import LinearRegression
+
+            lr = LinearRegression(num_workers=self.args.num_gpus, verbose=7, **params)
             benchmark_string = "Spark Rapids ML LinearRegression training"
         else:
-            params = self.spark_params
-            print(f"Passing {params} to SparkLinearRegression")
+            from pyspark.ml.regression import LinearRegression
 
-            lr = SparkLinearRegression(**params)
+            lr = LinearRegression(**params)
             benchmark_string = "Spark ML LinearRegression training"
 
         lr.setFeaturesCol(features_col)

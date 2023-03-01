@@ -18,33 +18,37 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from pyspark.ml.clustering import KMeans as SparkKMeans
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array, col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
-from spark_rapids_ml.clustering import KMeans
-
 from .base import BenchmarkBase
-from .utils import with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark
 
 
 class BenchmarkKMeans(BenchmarkBase):
-    test_cls = KMeans
-    unsupported_params = test_cls._param_excludes() + [
-        "distanceMeasure",
-        "featuresCol",
-        "labelCol",
-        "predictionCol",
-        "probabilityCol",
-        "rawPredictionCol",
-        "weightCol",
-        "leafCol",
-    ]
+    def _supported_class_params(self) -> Dict[str, Any]:
+        from pyspark.ml.clustering import KMeans
 
-    def add_arguments(self) -> None:
+        params = inspect_default_params_from_func(
+            KMeans,
+            [
+                "distanceMeasure",
+                "featuresCol",
+                "labelCol",
+                "predictionCol",
+                "probabilityCol",
+                "rawPredictionCol",
+                "weightCol",
+                "leafCol",
+            ],
+        )
+        params["seed"] = 1
+        return params
+
+    def _add_extra_arguments(self) -> None:
         self._parser.add_argument(
             "--no_cache",
             action="store_true",
@@ -132,6 +136,8 @@ class BenchmarkKMeans(BenchmarkBase):
         output_col = "cluster_idx"
 
         if num_gpus > 0:
+            from spark_rapids_ml.clustering import KMeans
+
             assert num_cpus <= 0
             if not no_cache:
 
@@ -144,7 +150,7 @@ class BenchmarkKMeans(BenchmarkBase):
                     "prepare dataset", lambda: gpu_cache_df(df)
                 )
 
-            params = self.spark_cuml_params
+            params = self.class_params
             print(f"Passing {params} to KMeans")
 
             gpu_estimator = KMeans(num_workers=num_gpus, **params).setPredictionCol(
@@ -184,6 +190,8 @@ class BenchmarkKMeans(BenchmarkBase):
             cluster_centers = gpu_model.cluster_centers_
 
         if num_cpus > 0:
+            from pyspark.ml.clustering import KMeans
+
             assert num_gpus <= 0
             if is_array_col:
                 vector_df = df.select(array_to_vector(df[first_col]).alias(first_col))
@@ -207,13 +215,11 @@ class BenchmarkKMeans(BenchmarkBase):
                     "prepare dataset", lambda: cpu_cache_df(df)
                 )
 
-            params = self.spark_params
+            params = self.class_params
             print(f"Passing {params} to KMeans")
 
             cpu_estimator = (
-                SparkKMeans(**params)
-                .setFeaturesCol(first_col)
-                .setPredictionCol(output_col)
+                KMeans(**params).setFeaturesCol(first_col).setPredictionCol(output_col)
             )
 
             cpu_model, fit_time = with_benchmark(

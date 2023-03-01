@@ -150,7 +150,7 @@ if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
             --num_cols 3000 \
             --dtype "float64" \
             --feature_type "array" \
-            --output_dir "/tmp/classification/5k_3k_float64.parquet" \
+            --output_dir "/tmp/regression/5k_3k_float64.parquet" \
             --spark_conf "spark.master=local[*]" \
             --spark_confs "spark.driver.memory=128g"
     fi
@@ -158,8 +158,8 @@ if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
     python ./benchmark/benchmark_runner.py random_forest_regressor \
         --num_gpus 1 \
         --num_cpus 0 \
-        --train_path "/tmp/classification/5k_3k_float64.parquet" \
-        --transform_path "./tmp/classification/transform" \
+        --train_path "/tmp/regression/5k_3k_float64.parquet" \
+        --transform_path "./tmp/regression/transform" \
         --report_path "report_rf_regressor.csv" \
         --spark_confs "spark.master=local[12]" \
         --spark_confs "spark.driver.memory=128g" \

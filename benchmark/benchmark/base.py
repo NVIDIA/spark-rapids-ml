@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import argparse
-import inspect
 import pprint
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 from pyspark.ml.feature import VectorAssembler
@@ -26,38 +24,26 @@ from pyspark.ml.functions import array_to_vector
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col
 
-from spark_rapids_ml.core import _CumlEstimator
-
-from .utils import WithSparkSession, with_benchmark
+from .utils import WithSparkSession, to_bool, with_benchmark
 
 
 class BenchmarkBase:
     """Based class for benchmarking.
 
     This class handles command line argument parsing and execution of the benchmark.
-
-    Attributes
-    ----------
-    test_cls : Type[_CumlEstimator]
-        Class under test, which should be a subclass of _CumlEstimator.
-
-    unsupported_params: List[str]
-        List of Spark ML Params and/or cuML parameters which should not be exposed as command line arguments.
     """
-
-    test_cls: Type[_CumlEstimator]
-    unsupported_params: List[str] = []
 
     _parser: argparse.ArgumentParser
     _args: argparse.Namespace
-    _spark_args: List[str] = []
-    _cuml_args: List[str] = []
+    _class_params: Dict[str, Any]
 
     def __init__(self, argv: List[Any]) -> None:
         """Parses command line arguments for the class under test."""
         print("=" * 100)
-        print(f"Benchmarking: {self.test_cls}")
+        print(self.__class__.__name__)
+        print("=" * 100)
 
+        # common params for all benchmark classes
         self._parser = argparse.ArgumentParser()
         self._parser.add_argument(
             "--num_gpus",
@@ -100,86 +86,63 @@ class BenchmarkBase:
             help="do not stop spark session when finished",
         )
 
-        # add command line arguments for class under test
-        self._add_spark_arguments()
-        self._add_cuml_arguments()
-
-        self.add_arguments()
+        self._add_class_arguments()
+        self._add_extra_arguments()
         self._parse_arguments(argv)
 
-    def _add_spark_arguments(self) -> None:
-        """
-        Adds parser arguments for the Spark ML Params of the class under test.
+    def _add_extra_arguments(self) -> None:
+        """Add command line arguments for the benchmarking environment."""
+        pass
 
-        To exclude an ML Param, just add it to `unsupported_params`.
+    def _add_class_arguments(self) -> None:
         """
-        # create a default instance to extract params
-        instance = self.test_cls()
+        Add command line arguments for the parameters to be supplied to the class under test.
 
-        for param in instance.params:
-            if param.name not in self.unsupported_params:
-                name = param.name
-                default = (
-                    instance.getOrDefault(name) if instance.hasDefault(name) else None
-                )
-                value_type = inspect.signature(param.typeConverter).return_annotation
-                inspect.signature(param.typeConverter).return_annotation
-                help = param.doc
-                self._spark_args.append(name)
+        The default implementation automatically constructs arguments from the dictionary returned
+        from the :py:func:`_supported_class_params()` method.
+        """
+        for name, value in self._supported_class_params().items():
+            (value, help) = value if isinstance(value, tuple) else (value, None)
+            help = "PySpark parameter" if help is None else help
+            if value is None:
+                raise RuntimeError("Must convert None value to the correct type")
+            elif type(value) is type:
+                # value is already type
+                self._parser.add_argument("--" + name, type=value, help=help)
+            elif type(value) is bool:
                 self._parser.add_argument(
-                    "--" + name, type=value_type, default=default, help=help
+                    "--" + name, type=to_bool, default=value, help=help
                 )
-
-    def _add_cuml_arguments(self) -> None:
-        """
-        Adds parser arguments for the unmapped cuML parameters of the class under test.
-
-        cuML parameters that are mapped to Spark ML Params must be set via the Spark Param name.
-        To exclude a parameter, just add it to `unsupported_params`.
-        """
-        # create a default instance to extract params
-        instance = self.test_cls()
-        param_mapping = instance._param_mapping().values()
-        param_excludes = instance._param_excludes()
-
-        for k, v in instance.cuml_params.items():
-            if (
-                k not in self.unsupported_params
-                and k not in param_mapping
-                and k not in param_excludes
-            ):
-                name = k
-                default = v
-                value_type = type(v)
-                help = "cuML parameter"
-                self._cuml_args.append(name)
+            else:
+                # get the type from the value
                 self._parser.add_argument(
-                    "--" + name, type=value_type, default=default, help=help
+                    "--" + name, type=type(value), default=value, help=help
                 )
+
+    def _supported_class_params(self) -> Dict[str, Any]:
+        """
+        Return a dictionary of parameter names to values/types for the class under test.
+
+        These parameters will be exposed as command line arguments.
+        """
+        return {}
 
     def _parse_arguments(self, argv: List[Any]) -> None:
-        """Parse command line arguments while separating out the parameters intended for the class under test."""
+        """Parse all command line arguments, separating out the parameters for the class under test."""
         pp = pprint.PrettyPrinter()
 
         self._args = self._parser.parse_args(argv)
-        print("\ncommand line arguments:")
+        print("command line arguments:")
         pp.pprint(vars(self._args))
 
-        self._spark_params = {
+        supported_class_params = self._supported_class_params()
+        self._class_params = {
             k: v
             for k, v in vars(self._args).items()
-            if k in self._spark_args and v is not None
+            if k in supported_class_params and v is not None
         }
-        print("\nspark_params:")
-        pp.pprint(self._spark_params)
-
-        self._cuml_params = {
-            k: v
-            for k, v in vars(self._args).items()
-            if k in self._cuml_args and v is not None
-        }
-        print("\ncuml_params:")
-        pp.pprint(self._cuml_params)
+        print("\nclass params:")
+        pp.pprint(self._class_params)
         print()
 
     @property
@@ -188,25 +151,8 @@ class BenchmarkBase:
         return self._args
 
     @property
-    def spark_params(self) -> Dict[str, Any]:
-        """Return parsed command line arguments intended for Spark ML Params of the class under test."""
-        return self._spark_params.copy()
-
-    @property
-    def cuml_params(self) -> Dict[str, Any]:
-        """Return parsed command line arguments intended for cuML parameters of the class under test."""
-        return self._cuml_params.copy()
-
-    @property
-    def spark_cuml_params(self) -> Dict[str, Any]:
-        """Return all parsed command line arguments indended for the class under test."""
-        params = self._spark_params.copy()
-        params.update(self._cuml_params)
-        return params
-
-    def add_arguments(self) -> None:
-        """Add additional command line parser arguments."""
-        pass
+    def class_params(self) -> Dict[str, Any]:
+        return self._class_params
 
     def train_df(
         self, spark: SparkSession
