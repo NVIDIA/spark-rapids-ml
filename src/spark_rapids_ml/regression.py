@@ -478,12 +478,6 @@ class LinearRegressionModel(
 
 class _RandomForestRegressorClass(_RandomForestClass):
     @classmethod
-    def _param_excludes(cls) -> List[str]:
-        excludes = super()._param_excludes()
-        excludes.append("accuracy_metric")
-        return excludes
-
-    @classmethod
     def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
         mapping = super()._param_value_mapping()
         mapping["split_criterion"] = {"variance": "mse"}

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array, col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
-from benchmark.base import BenchmarkBase
-from benchmark.utils import with_benchmark
 from spark_rapids_ml.clustering import KMeans
+
+from .base import BenchmarkBase
+from .utils import with_benchmark
 
 
 class BenchmarkKMeans(BenchmarkBase):

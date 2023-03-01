@@ -26,10 +26,11 @@ from pyspark.ml.regression import RandomForestRegressor as SparkRandomForestRegr
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
 
-from benchmark.base import BenchmarkBase
-from benchmark.utils import with_benchmark
 from spark_rapids_ml.classification import RandomForestClassifier
 from spark_rapids_ml.regression import RandomForestRegressor
+
+from .base import BenchmarkBase
+from .utils import with_benchmark
 
 
 class BenchmarkRandomForestClassifier(BenchmarkBase):
@@ -54,7 +55,6 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         assert label_col is not None
         assert self.args is not None
 
-        results = {}
         if self.args.num_gpus > 0:
             params = self.spark_cuml_params
             print(f"Passing {params} to RandomForestClassifier")
