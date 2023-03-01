@@ -22,26 +22,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import Row
-from pyspark.ml.classification import _RandomForestClassifierParams
 from pyspark.ml.linalg import Vector
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
-from pyspark.ml.tree import (
-    _DecisionTreeModel,
-    _RandomForestParams,
-    _TreeRegressorParams,
-)
-from pyspark.sql import Column, DataFrame
-from pyspark.sql.functions import col
-from pyspark.sql.types import (
-    DoubleType,
-    FloatType,
-    IntegerType,
-    IntegralType,
-    StringType,
-    StructField,
-    StructType,
-)
+from pyspark.ml.tree import _DecisionTreeModel
+from pyspark.sql import DataFrame
+from pyspark.sql.types import IntegerType, StringType, StructField, StructType
 
 from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
@@ -49,7 +34,6 @@ from spark_rapids_ml.core import (
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
-    alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
 
@@ -63,7 +47,20 @@ class _RandomForestClass(_CumlClass):
 
     @classmethod
     def _param_excludes(cls) -> List[str]:
-        return ["handle", "output_type"]
+        return [
+            "handle",
+            "output_type",
+            "accuracy_metric",
+            "dtype",
+            "criterion",
+            "min_weight_fraction_leaf",
+            "max_leaf_nodes",
+            "min_impurity_split",
+            "oob_score",
+            "n_jobs",
+            "warm_start",
+            "class_weight",
+        ]
 
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:

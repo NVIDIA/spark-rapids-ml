@@ -20,9 +20,10 @@ from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import sum
 
-from benchmark.base import BenchmarkBase
-from benchmark.utils import with_benchmark
 from spark_rapids_ml.regression import LinearRegression
+
+from .base import BenchmarkBase
+from .utils import with_benchmark
 
 
 class BenchmarkLinearRegression(BenchmarkBase):
