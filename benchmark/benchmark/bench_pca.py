@@ -287,7 +287,6 @@ class BenchmarkPCA(BenchmarkBase):
         print(f"orthonormality score: {orthonormality}, variance score {variance}")
 
         report_dict = {
-            "prepare": prepare_time,
             "fit": fit_time,
             "transform": transform_time,
             "total": total_time,
@@ -299,5 +298,8 @@ class BenchmarkPCA(BenchmarkBase):
             "no_cache": self.args.no_cache,
             "train_path": self.args.train_path,
         }
+
+        if not no_cache:
+            report_dict["prepare_time"] = prepare_time
 
         return report_dict
