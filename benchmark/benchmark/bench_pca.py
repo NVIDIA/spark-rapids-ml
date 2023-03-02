@@ -300,6 +300,6 @@ class BenchmarkPCA(BenchmarkBase):
         }
 
         if not no_cache:
-            report_dict["prepare_time"] = prepare_time
+            report_dict["prepare"] = prepare_time
 
         return report_dict
