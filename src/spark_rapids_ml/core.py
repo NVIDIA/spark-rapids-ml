@@ -91,7 +91,7 @@ CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatc
 
 # Global constant for defining column alias
 Alias = namedtuple("Alias", ("data", "label", "row_number"))
-alias = Alias("cuml_values", "cuml_label", "df_row_number")
+alias = Alias("cuml_values", "cuml_label", "zipid")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -454,10 +454,10 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 
-            if enable_nccl:
-                context.barrier()
-
             if return_model == True:
+                if enable_nccl:
+                    context.barrier()
+
                 if context.partitionId() == 0:
                     yield pd.DataFrame(data=result)
             else:

@@ -12,29 +12,29 @@ from .utils import array_equal, create_pyspark_dataframe, idfn
 
 def test_example(gpu_number: int) -> None:
     data = [
-        ([1.0, 1.0],),
-        ([2.0, 2.0],),
-        ([3.0, 3.0],),
-        ([4.0, 4.0],),
-        ([5.0, 5.0],),
-        ([6.0, 6.0],),
-        ([7.0, 7.0],),
-        ([8.0, 8.0],),
+        ([1.0, 1.0], "a"),
+        ([2.0, 2.0], "b"),
+        ([3.0, 3.0], "c"),
+        ([4.0, 4.0], "d"),
+        ([5.0, 5.0], "e"),
+        ([6.0, 6.0], "f"),
+        ([7.0, 7.0], "g"),
+        ([8.0, 8.0], "h"),
     ]
 
     query = [
-        ([0.0, 0.0],),
-        ([1.0, 1.0],),
-        ([4.1, 4.1],),
-        ([8.0, 8.0],),
-        ([9.0, 9.0],),
+        ([0.0, 0.0], "aa"),
+        ([1.0, 1.0], "bb"),
+        ([4.1, 4.1], "cc"),
+        ([8.0, 8.0], "dd"),
+        ([9.0, 9.0], "ee"),
     ]
 
     topk = 2
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(2)}
     with CleanSparkSession(conf) as spark:
-        schema = f"features array<float>"
+        schema = f"features array<float>, metadata string"
         data_df = spark.createDataFrame(data, schema)
         query_df = spark.createDataFrame(query, schema)
 
@@ -43,9 +43,16 @@ def test_example(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setK(topk)
 
         gpu_knn = gpu_knn.fit(data_df)
-        distances_df, indices_df = gpu_knn.kneighbors(query_df)
+        query_df_withid, item_df_withid, knn_df = gpu_knn.kneighbors(query_df)
+        query_df_withid.show()
+        item_df_withid.show()
+        knn_df.show()
 
+        # check knn results
         import math
+
+        distances_df = knn_df.select("distances")
+        indices_df = knn_df.select("indices")
 
         distances = distances_df.collect()
         distances = [r[0] for r in distances]
@@ -68,6 +75,57 @@ def test_example(gpu_number: int) -> None:
 
         assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
         assert indices[4] == [7, 6]
+
+
+def test_example_with_id(gpu_number: int) -> None:
+    data = [
+        (101, [1.0, 1.0], "a"),
+        (102, [2.0, 2.0], "b"),
+        (103, [3.0, 3.0], "c"),
+        (104, [4.0, 4.0], "d"),
+        (105, [5.0, 5.0], "e"),
+        (106, [6.0, 6.0], "f"),
+        (107, [7.0, 7.0], "g"),
+        (108, [8.0, 8.0], "h"),
+    ]
+
+    query = [
+        (201, [0.0, 0.0], "aa"),
+        (202, [1.0, 1.0], "bb"),
+        (203, [4.1, 4.1], "cc"),
+        (204, [8.0, 8.0], "dd"),
+        (205, [9.0, 9.0], "ee"),
+    ]
+
+    topk = 2
+
+    with CleanSparkSession() as spark:
+        schema = f"id int, features array<float>, metadata string"
+        data_df = spark.createDataFrame(data, schema)
+        query_df = spark.createDataFrame(query, schema)
+
+        gpu_knn = NearestNeighbors(num_workers=gpu_number)
+        gpu_knn = gpu_knn.setInputCol("features")
+        gpu_knn = gpu_knn.setIdCol("id")
+        gpu_knn = gpu_knn.setK(topk)
+
+        gpu_knn = gpu_knn.fit(data_df)
+        query_df, item_df, knn_df = gpu_knn.kneighbors(query_df)
+        query_df.show()
+        item_df.show()
+        knn_df.show()
+
+        distances_df = knn_df.select("distances")
+        indices_df = knn_df.select("indices")
+
+        indices = indices_df.collect()
+        indices = [r[0] for r in indices]
+
+        assert indices[0] == [101, 102]
+        assert indices[1] == [101, 102]
+        assert indices[2] == [104, 105]
+        assert indices[3] == [108, 107]
+        assert indices[4] == [108, 107]
 
 
 @pytest.mark.parametrize("feature_type", ["array"])
@@ -117,8 +175,10 @@ def test_nearest_neighbors(
         # obtain spark results
         sparkcuml_knn = sparkcuml_knn.fit(data_df)
         query_df = data_df
-        distances_df, indices_df = sparkcuml_knn.kneighbors(query_df)
+        (query_df_withid, item_df_withid, knn_df) = sparkcuml_knn.kneighbors(query_df)
 
+        distances_df = knn_df.select("distances")
+        indices_df = knn_df.select("indices")
         # compare spark results with cuml results
         distances = distances_df.collect()
         distances = [r[0] for r in distances]

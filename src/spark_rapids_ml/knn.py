@@ -90,6 +90,13 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
         typeConverter=TypeConverters.toInt,
     )
 
+    id_col = Param(
+        Params._dummy(),
+        "id_col",
+        "id column name.",
+        typeConverter=TypeConverters.toString,
+    )
+
     def setInputCol(self, value: str) -> "_NearestNeighborsCumlParams":
         """
         Sets the value of `inputCol`.
@@ -97,8 +104,28 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
         self.set_params(inputCol=value)
         return self
 
+    def setIdCol(self, value: str) -> "_NearestNeighborsCumlParams":
+        """
+        Sets the value of `id_col`. If not set, zipWithIndex will be used and the row order is not guaranted to be deterministic.
+        """
+        self.set_params(id_col=value)
+        return self
 
-class _CumlEstimatorNearestNeighbors(_CumlEstimatorSupervised):
+    def getIdCol(self) -> str:
+        """
+        Gets the value of `id_col`.
+        """
+        col_name = (
+            self.getOrDefault("id_col")
+            if self.isDefined("id_col")
+            else alias.row_number
+        )
+        return col_name
+
+
+class _CumlEstimatorNearestNeighbors(
+    _CumlEstimatorSupervised, _NearestNeighborsCumlParams
+):
     """
     Base class for Cuml Nearest Neighbor.
     """
@@ -115,7 +142,11 @@ class _CumlEstimatorNearestNeighbors(_CumlEstimatorSupervised):
             feature_type,
         ) = super()._pre_process_data(dataset)
 
-        select_cols.append(col(alias.row_number))
+        if self.hasParam("id_col") and self.isDefined("id_col"):
+            label_name = self.getOrDefault("id_col")
+            select_cols.append(col(label_name).alias(alias.row_number))
+        else:
+            select_cols.append(col(alias.row_number))
 
         return select_cols, multi_col_names, dimension, feature_type
 
@@ -164,30 +195,39 @@ class NearestNeighbors(
         return NearestNeighborsModel.from_row(result)
 
     def fit(self, dataset: DataFrame, params: Optional[Dict[Param[Any], Any]] = None) -> "NearestNeighbors":  # type: ignore
-        self.data_df = dataset.withColumn(alias.label, lit(self.label_isdata))
-        self.data_df = self.df_zip_with_index(self.data_df)
+        self.item_df = dataset
+        if not self.isDefined("id_col"):
+            self.item_df = self._df_zip_with_index(self.item_df)
+
+        self.processed_item_df = self.item_df.withColumn(
+            alias.label, lit(self.label_isdata)
+        )
         return self
 
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame]:
+    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
         query_default_num_partitions = query_df.rdd.getNumPartitions()
-        query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
-        query_df = self.df_zip_with_index(query_df)
-        union_df = self.data_df.union(query_df)
+        if not self.isDefined("id_col"):
+            query_df = self._df_zip_with_index(query_df)
+        processed_query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
+
+        union_df = self.processed_item_df.union(processed_query_df)
 
         pipelinedrdd = self._fit(union_df)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
-        res_rdd = pipelinedrdd.flatMap(
-            lambda row: list(zip(row["query_index"], row["indices"], row["distances"]))
+        knn_rdd = pipelinedrdd.flatMap(
+            lambda row: list(zip(row["query_id"], row["indices"], row["distances"]))
         )
-        res_df = res_rdd.toDF(
-            schema="query_index int, indices array<int>, distances array<float>"
-        )
-        res_df = res_df.sort("query_index")
-        distances_df = res_df.select("distances")
-        indices_df = res_df.select("indices")
-        return (distances_df, indices_df)
+        knn_df = knn_rdd.toDF(
+            schema=f"query_{self.getIdCol()} int, indices array<int>, distances array<float>"
+        ).sort(f"query_{self.getIdCol()}")
 
-    def df_zip_with_index(self, df: DataFrame) -> DataFrame:
+        return (query_df, self.item_df, knn_df)
+
+    def _df_zip_with_index(self, df: DataFrame) -> DataFrame:
+        """
+        Add an row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
+        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
+        """
         out_schema = StructType(
             [StructField(self.row_number_col, IntegerType(), False)] + df.schema.fields
         )
@@ -204,7 +244,7 @@ class NearestNeighbors(
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
             [
-                StructField("query_index", ArrayType(IntegerType(), False), False),
+                StructField("query_id", ArrayType(IntegerType(), False), False),
                 StructField(
                     "distances", ArrayType(ArrayType(DoubleType(), False), False), False
                 ),
@@ -266,23 +306,21 @@ class NearestNeighbors(
             item_row_number = [item_row_number]
             query_row_number = [query_row_number]
 
-            item_query_sizes = [len(chunk) for chunk in item] + [
-                len(chunk) for chunk in query
-            ]
-
+            item_size: List[int] = [len(chunk) for chunk in item]
+            query_size: List[int] = [len(chunk) for chunk in query]
+            assert len(item_size) == len(query_size)
             import json
 
             messages = context.allGather(
-                message=json.dumps((rank, item_query_sizes, item_row_number))
+                message=json.dumps((rank, item_size, query_size, item_row_number))
             )
-            triplets = [json.loads(msg) for msg in messages]
+            rank_stats = [json.loads(msg) for msg in messages]
 
             item_parts_to_ranks = []
             query_parts_to_ranks = []
-            for r, sizes, _ in triplets:
-                half_len = len(sizes) // 2
-                item_parts_to_ranks += [(r, size) for size in sizes[:half_len]]
-                query_parts_to_ranks += [(r, size) for size in sizes[half_len:]]
+            for m_rank, m_item_size, m_query_size, _ in rank_stats:
+                item_parts_to_ranks += [(m_rank, size) for size in m_item_size]
+                query_parts_to_ranks += [(m_rank, size) for size in m_query_size]
             item_nrows = sum(pair[1] for pair in item_parts_to_ranks)
             query_nrows = sum(pair[1] for pair in query_parts_to_ranks)
 
@@ -310,8 +348,8 @@ class NearestNeighbors(
             # id mapping
             id2row: Dict[int, int] = {}
             count = 0
-            for r, _, item_rn in triplets:
-                for chunk in item_rn:
+            for _, _, _, m_item_row_number in rank_stats:
+                for chunk in m_item_row_number:
                     chunk_id2row = [(count + i, chunk[i]) for i in range(len(chunk))]
                     id2row.update(chunk_id2row)
                     count += len(chunk)
@@ -324,7 +362,7 @@ class NearestNeighbors(
                 transformed_indices.append(res)
 
             return {
-                "query_index": query_row_number,
+                "query_id": query_row_number,
                 "distances": distances,
                 "indices": transformed_indices,
             }
