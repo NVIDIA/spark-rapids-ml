@@ -106,7 +106,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
 
     def setIdCol(self, value: str) -> "_NearestNeighborsCumlParams":
         """
-        Sets the value of `id_col`. If not set, zipWithIndex will be used and the row order is not guaranted to be deterministic.
+        Sets the value of `id_col`. If not set, an id column will be added with column name `id`. The id column is used to specify nearest neighbor vectors by associated id value.
         """
         self.set_params(id_col=value)
         return self
@@ -143,8 +143,8 @@ class _CumlEstimatorNearestNeighbors(
         ) = super()._pre_process_data(dataset)
 
         if self.hasParam("id_col") and self.isDefined("id_col"):
-            label_name = self.getOrDefault("id_col")
-            select_cols.append(col(label_name).alias(alias.row_number))
+            id_col_name = self.getOrDefault("id_col")
+            select_cols.append(col(id_col_name).alias(alias.row_number))
         else:
             select_cols.append(col(alias.row_number))
 
@@ -158,22 +158,40 @@ class NearestNeighbors(
     Examples
     --------
     >>> from spark_rapids_ml.knn import NearestNeighbors
-    >>> data = [([1.0, 1.0],),
-    ...         ([2.0, 2.0],),
-    ...         ([3.0, 3.0],),]
+    >>> data = [(0, [1.0, 1.0]),
+    ...         (1, [2.0, 2.0]),
+    ...         (2, [3.0, 3.0]),]
+    >>> data_df = spark.createDataFrame(data, schema="id int, features array<float>")
+    >>> query = [(3, [1.0, 1.0]),
+    ...          (4, [3.0, 3.0]),]
+    >>> query_df = spark.createDataFrame(query, schema="id int, features array<float>")
     >>> topk = 2
-    >>> gpu_knn = NearestNeighbors().setInputCol("features").setK(topk)
-    >>> data_df = spark.createDataFrame(data, ["features"])
+    >>> gpu_knn = NearestNeighbors().setInputCol("features").setIdCol("id").setK(topk)
     >>> gpu_knn.fit(data_df)
-    >>> query = [[1.0, 1.0], [3.0, 3.0]]
-    >>> query_df = spark.createDataFrame(query, ["features"])
-    >>> distances_df, indices_df = gpu_knn.kneighbors(query_df)
-    >>> distances_df.show()
-    [0, 1.414]
-    [0, 1.414]
-    >>> indices_df.show()
-    [0, 1]
-    [2, 1]
+    NearestNeighbors_084799c72508
+    >>> (query_df, data_df, knn_df) = gpu_knn.kneighbors(query_df)
+    >>> knn_df.show()
+    +--------+-------+----------------+
+    |query_id|indices|       distances|
+    +--------+-------+----------------+
+    |       3| [0, 1]|[0.0, 1.4142135]|
+    |       4| [2, 1]|[0.0, 1.4142135]|
+    +--------+-------+----------------+
+    >>> query_df.show()
+    +---+----------+
+    | id|  features|
+    +---+----------+
+    |  3|[1.0, 1.0]|
+    |  4|[3.0, 3.0]|
+    +---+----------+
+    >>> data_df.show()
+    +---+----------+
+    | id|  features|
+    +---+----------+
+    |  0|[1.0, 1.0]|
+    |  1|[2.0, 2.0]|
+    |  2|[3.0, 3.0]|
+    +---+----------+
     """
 
     def __init__(self, **kwargs: Any) -> None:
