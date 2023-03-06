@@ -117,6 +117,7 @@ class BenchmarkKMeans(BenchmarkBase):
         spark: SparkSession,
         df: DataFrame,
         features_col: Union[str, List[str]],
+        transform_df: Optional[DataFrame],
         label_name: Optional[str],
     ) -> Dict[str, Any]:
         num_gpus = self.args.num_gpus

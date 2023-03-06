@@ -35,8 +35,9 @@ class BenchmarkLinearRegression(BenchmarkBase):
     def run_once(
         self,
         spark: SparkSession,
-        df: DataFrame,
+        train_df: DataFrame,
         features_col: Union[str, List[str]],
+        transform_df: Optional[DataFrame],
         label_name: Optional[str],
     ) -> Dict[str, Any]:
 
@@ -59,7 +60,7 @@ class BenchmarkLinearRegression(BenchmarkBase):
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
 
-        model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(df))
+        model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
 
         # placeholder try block till hasSummary is supported in gpu model
         try:
@@ -69,7 +70,9 @@ class BenchmarkLinearRegression(BenchmarkBase):
         except:
             print("model does not have hasSummary attribute")
 
-        df_with_preds = model.transform(df)
+        eval_df = train_df if transform_df is None else transform_df
+
+        df_with_preds = model.transform(eval_df)
 
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getOrDefault(model.predictionCol)

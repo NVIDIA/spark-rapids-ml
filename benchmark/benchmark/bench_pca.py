@@ -114,6 +114,7 @@ class BenchmarkPCA(BenchmarkBase):
         spark: SparkSession,
         df: DataFrame,
         features_col: Union[str, List[str]],
+        transform_df: Optional[DataFrame],
         label_name: Optional[str],
     ) -> Dict[str, Any]:
         n_components = self.args.k

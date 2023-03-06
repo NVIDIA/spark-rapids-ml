@@ -60,8 +60,9 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
     def run_once(
         self,
         spark: SparkSession,
-        df: DataFrame,
+        train_df: DataFrame,
         features_col: Union[str, List[str]],
+        transform_df: Optional[DataFrame],
         label_col: Optional[str],
     ) -> Dict[str, Any]:
         assert label_col is not None
@@ -85,10 +86,12 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         rfc.setLabelCol(label_col)
 
         model, training_time = with_benchmark(
-            f"{benchmark_string} training:", lambda: rfc.fit(df)
+            f"{benchmark_string} training:", lambda: rfc.fit(train_df)
         )
 
-        df_with_preds = model.transform(df)
+        eval_df = train_df if transform_df is None else transform_df
+
+        df_with_preds = model.transform(eval_df)
 
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getOrDefault(model.predictionCol)
@@ -158,8 +161,9 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
     def run_once(
         self,
         spark: SparkSession,
-        df: DataFrame,
+        train_df: DataFrame,
         features_col: Union[str, List[str]],
+        transform_df: Optional[DataFrame],
         label_col: Optional[str],
     ) -> Dict[str, Any]:
         assert label_col is not None
@@ -184,10 +188,12 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
         rf.setLabelCol(label_col)
 
         model, training_time = with_benchmark(
-            f"{benchmark_string} training:", lambda: rf.fit(df)
+            f"{benchmark_string} training:", lambda: rf.fit(train_df)
         )
 
-        df_with_preds = model.transform(df)
+        eval_df = train_df if transform_df is None else transform_df
+
+        df_with_preds = model.transform(eval_df)
 
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getOrDefault(model.predictionCol)
