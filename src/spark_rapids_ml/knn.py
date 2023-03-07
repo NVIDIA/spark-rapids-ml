@@ -406,10 +406,10 @@ class NearestNeighborsModel(
         cumlParams = NearestNeighbors._get_cuml_params_default()
         self.set_params(**cumlParams)
 
-    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:  # type: ignore
         pass
 
-    def _get_cuml_transform_func(
+    def _get_cuml_transform_func(  # type: ignore
         self, dataset: DataFrame
     ) -> Tuple[
         Callable[..., CumlT],

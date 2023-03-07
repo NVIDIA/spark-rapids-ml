@@ -40,7 +40,6 @@ class BenchmarkLinearRegression(BenchmarkBase):
         transform_df: Optional[DataFrame],
         label_name: Optional[str],
     ) -> Dict[str, Any]:
-
         assert label_name is not None
 
         params = self.class_params

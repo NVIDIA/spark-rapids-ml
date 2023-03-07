@@ -112,7 +112,7 @@ class BenchmarkPCA(BenchmarkBase):
     def run_once(
         self,
         spark: SparkSession,
-        df: DataFrame,
+        train_df: DataFrame,
         features_col: Union[str, List[str]],
         transform_df: Optional[DataFrame],
         label_name: Optional[str],
@@ -124,14 +124,14 @@ class BenchmarkPCA(BenchmarkBase):
 
         func_start_time = time.time()
 
-        first_col = df.dtypes[0][0]
-        first_col_type = df.dtypes[0][1]
+        first_col = train_df.dtypes[0][0]
+        first_col_type = train_df.dtypes[0][1]
         is_array_col = True if "array" in first_col_type else False
         is_vector_col = True if "vector" in first_col_type else False
         is_single_col = is_array_col or is_vector_col
 
         if not is_single_col:
-            input_cols = [c for c in df.schema.names]
+            input_cols = [c for c in train_df.schema.names]
 
         if num_gpus > 0:
             from spark_rapids_ml.feature import PCA
@@ -144,8 +144,8 @@ class BenchmarkPCA(BenchmarkBase):
                     df.count()
                     return df
 
-                df, prepare_time = with_benchmark(
-                    "prepare session and dataset", lambda: gpu_cache_df(df)
+                train_df, prepare_time = with_benchmark(
+                    "prepare session and dataset", lambda: gpu_cache_df(train_df)
                 )
 
             params = self.class_params
@@ -160,7 +160,9 @@ class BenchmarkPCA(BenchmarkBase):
                 output_cols = ["o" + str(i) for i in range(n_components)]
                 gpu_pca = gpu_pca.setInputCols(input_cols).setOutputCols(output_cols)
 
-            gpu_model, fit_time = with_benchmark("gpu fit", lambda: gpu_pca.fit(df))
+            gpu_model, fit_time = with_benchmark(
+                "gpu fit", lambda: gpu_pca.fit(train_df)
+            )
 
             def gpu_transform(df: DataFrame) -> DataFrame:
                 transformed_df = gpu_model.transform(df)
@@ -173,7 +175,7 @@ class BenchmarkPCA(BenchmarkBase):
                 return transformed_df
 
             transformed_df, transform_time = with_benchmark(
-                "gpu transform", lambda: gpu_transform(df)
+                "gpu transform", lambda: gpu_transform(train_df)
             )
 
             total_time = round(time.time() - func_start_time, 2)
@@ -218,15 +220,17 @@ class BenchmarkPCA(BenchmarkBase):
 
             assert num_gpus <= 0
             if is_array_col:
-                vector_df = df.select(array_to_vector(df[first_col]).alias(first_col))
+                vector_df = train_df.select(
+                    array_to_vector(train_df[first_col]).alias(first_col)
+                )
             elif not is_vector_col:
                 vector_assembler = VectorAssembler(outputCol="features").setInputCols(
                     input_cols
                 )
-                vector_df = vector_assembler.transform(df).drop(*input_cols)
+                vector_df = vector_assembler.transform(train_df).drop(*input_cols)
                 first_col = "features"
             else:
-                vector_df = df
+                vector_df = train_df
 
             if not no_cache:
 
