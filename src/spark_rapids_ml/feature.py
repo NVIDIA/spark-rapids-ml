@@ -198,7 +198,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
 
             pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
             pca_object.fit(
-                [x for x, _ in dfs],
+                [x for x, _, _ in dfs],
                 pdesc.m,
                 pdesc.n,
                 pdesc.parts_rank_size,

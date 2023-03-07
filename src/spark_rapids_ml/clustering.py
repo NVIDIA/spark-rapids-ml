@@ -265,7 +265,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 output_type="cudf",
                 **params[INIT_PARAMETERS_NAME],
             )
-            df_list = [x for (x, _) in dfs]
+            df_list = [x for (x, _, _) in dfs]
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
             else:
