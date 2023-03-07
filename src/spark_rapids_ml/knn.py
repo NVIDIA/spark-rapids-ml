@@ -19,8 +19,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark.ml.functions import vector_to_array
+from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
     HasInputCol,
+    HasInputCols,
     HasLabelCol,
     Param,
     Params,
@@ -44,7 +47,6 @@ from spark_rapids_ml.core import (
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModel,
-    _set_pyspark_cuml_cls_param_attrs,
     alias,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
@@ -78,7 +80,7 @@ class NearestNeighborsClass(_CumlClass):
         ]
 
 
-class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
+class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
     """
     Shared Spark Params for NearestNeighbor and NearestNeighborModel.
     """
@@ -97,12 +99,23 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol):
         typeConverter=TypeConverters.toString,
     )
 
-    def setInputCol(self, value: str) -> "_NearestNeighborsCumlParams":
+    def setInputCol(
+        self, value: Union[str, List[str]]
+    ) -> "_NearestNeighborsCumlParams":
         """
-        Sets the value of `inputCol`.
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
-        self.set_params(inputCol=value)
+        if isinstance(value, str):
+            self.set_params(inputCol=value)
+        else:
+            self.set_params(inputCols=value)
         return self
+
+    def setInputCols(self, value: List[str]) -> "_NearestNeighborsCumlParams":
+        """
+        Sets the value of :py:attr:`inputCols`. Used when input vectors are stored as multiple feature columns.
+        """
+        return self.set_params(inputCols=value)
 
     def setIdCol(self, value: str) -> "_NearestNeighborsCumlParams":
         """
@@ -141,6 +154,15 @@ class _CumlEstimatorNearestNeighbors(
             dimension,
             feature_type,
         ) = super()._pre_process_data(dataset)
+
+        # if input format is vectorUDT, convert data type from float64 to float32
+        input_col, _ = self._get_input_columns()
+        if input_col is not None and isinstance(
+            dataset.schema[input_col].dataType, VectorUDT
+        ):
+            select_cols[0] = vector_to_array(col(input_col), dtype="float32").alias(
+                alias.data
+            )
 
         if self.hasParam("id_col") and self.isDefined("id_col"):
             id_col_name = self.getOrDefault("id_col")
@@ -293,13 +315,12 @@ class NearestNeighbors(
             nn_object = cumlNN(
                 handle=params["handle"],
                 n_neighbors=params[INIT_PARAMETERS_NAME]["n_neighbors"],
+                output_type="numpy",
                 verbose=params[INIT_PARAMETERS_NAME]["verbose"],
             )
 
-            item = np.empty(
-                (0, params["n"]), dtype=np.float32
-            )  # Cuml NN only supports np.float32
-            query = np.empty((0, params["n"]), dtype=np.float32)
+            item_list = []
+            query_list = []
             item_row_number = []
             query_row_number = []
 
@@ -313,14 +334,19 @@ class NearestNeighbors(
                     for i in range(len(x_array))
                 ]
 
-                item = np.concatenate((item, x_array[item_filter]), axis=0)
-                query = np.concatenate((query, x_array[query_filter]), axis=0)
+                item_list.append(x_array[item_filter])
+                query_list.append(x_array[query_filter])
 
                 item_row_number += row_number_array[item_filter].tolist()  # type: ignore
                 query_row_number += row_number_array[query_filter].tolist()  # type: ignore
 
-            item = [item]  # type: ignore
-            query = [query]  # type: ignore
+            if isinstance(item_list[0], pd.DataFrame):
+                item = [pd.concat(item_list)]
+                query = [pd.concat(query_list)]
+            else:
+                item = [np.concatenate(item_list)]
+                query = [np.concatenate(query_list)]
+
             item_row_number = [item_row_number]
             query_row_number = [query_row_number]
 
@@ -360,8 +386,6 @@ class NearestNeighbors(
 
             distances = [ary.tolist() for ary in distances]
             indices = [ary.tolist() for ary in indices]
-            query = [ary.tolist() for ary in query]  # type: ignore
-            item = [ary.tolist() for ary in item]  # type: ignore
 
             # id mapping
             id2row: Dict[int, int] = {}
