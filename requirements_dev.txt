@@ -1,0 +1,8 @@
+-r requirements.txt
+black
+mypy
+numpydoc
+pydata-sphinx-theme
+pylint
+pytest
+sphinx<6.0
