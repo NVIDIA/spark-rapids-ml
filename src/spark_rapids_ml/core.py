@@ -35,7 +35,7 @@ from typing import (
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import TaskContext
+from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
@@ -81,15 +81,17 @@ if TYPE_CHECKING:
 else:
     CumlT = Any
 
-_SinglePdDataFrameBatchType = Tuple[pd.DataFrame, Optional[pd.DataFrame]]
-_SingleNpArrayBatchType = Tuple[np.ndarray, Optional[np.ndarray]]
+_SinglePdDataFrameBatchType = Tuple[
+    pd.DataFrame, Optional[pd.DataFrame], Optional[pd.DataFrame]
+]
+_SingleNpArrayBatchType = Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]
 # CumlInputType is type of [(feature, label), ...]
 CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatchType]]
 
 
 # Global constant for defining column alias
-Alias = namedtuple("Alias", ("data", "label"))
-alias = Alias("cuml_values", "cuml_label")
+Alias = namedtuple("Alias", ("data", "label", "row_number"))
+alias = Alias("cuml_values", "cuml_label", "id")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -358,7 +360,15 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If enable or disable NCCL communication"""
         return True
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+    def _require_ucx(self) -> bool:
+        """If enable or disable ucx over NCCL"""
+        return False
+
+    def _return_model(self) -> bool:
+        """If _fit returns a model or a RDD"""
+        return True
+
+    def _fit(self, dataset: DataFrame) -> Union["_CumlModel", RDD]:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -395,6 +405,8 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         cuml_verbose = self.cuml_params.get("verbose", False)
 
         enable_nccl = self._enable_nccl()
+        require_ucx = self._require_ucx()
+        return_model = self._return_model()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -410,7 +422,9 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             # set gpu device
             _CumlCommon.set_gpu_device(context, is_local)
 
-            with CumlContext(partition_id, num_workers, context, enable_nccl) as cc:
+            with CumlContext(
+                partition_id, num_workers, context, enable_nccl, require_ucx
+            ) as cc:
                 # handle the input
                 # inputs = [(X, Optional(y)), (X, Optional(y))]
                 logger.info("Loading data into python worker memory")
@@ -423,7 +437,12 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                     else:
                         features = np.array(list(pdf[alias.data]))
                     label = pdf[alias.label] if alias.label in pdf.columns else None
-                    inputs.append((features, label))
+                    row_number = (
+                        np.array(list(pdf[alias.row_number]))
+                        if alias.row_number in pdf.columns
+                        else None
+                    )
+                    inputs.append((features, label, row_number))
 
                 params["handle"] = cc.handle
                 params["part_sizes"] = sizes
@@ -435,18 +454,25 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 
-            if enable_nccl:
-                context.barrier()
+            if return_model == True:
+                if enable_nccl:
+                    context.barrier()
 
-            if context.partitionId() == 0:
+                if context.partitionId() == 0:
+                    yield pd.DataFrame(data=result)
+            else:
                 yield pd.DataFrame(data=result)
 
-        ret = (
+        pipelined_rdd = (
             dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
             .rdd.barrier()
             .mapPartitions(lambda x: x)
-            .collect()[0]
         )
+
+        if return_model == False:
+            return pipelined_rdd
+
+        ret = pipelined_rdd.collect()[0]
 
         model = self._create_pyspark_model(ret)
         model._num_workers = self._num_workers
