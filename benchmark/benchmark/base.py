@@ -176,7 +176,7 @@ class BenchmarkBase:
             if any(["array" in t[1] for t in df.dtypes]):
                 # Array Type
                 selected_cols.append(
-                    array_to_vector(col(features_col)).alias("features")
+                    array_to_vector(col(features_col)).alias("features")  # type: ignore
                 )
                 features_col = "features"  # type: ignore
             elif not any(["vector" in t[1] for t in df.dtypes]):
