@@ -1,61 +1,53 @@
 # Spark Rapids ML
-Spark Rapids ML is a python package enabling GPU accelerated distributed machine learning on [Apache Spark](https://spark.apache.org/).  It provides a pySpark ML compatible API and is powered by the GPU-accelerated [RAPIDS cuML](https://docs.rapids.ai/api/cuml/stable/) library.
 
-## Installation
-We strongly suggest installing the python dependencies in conda environment
-```bash
-conda create -n rapids-22.10 -c rapidsai -c nvidia -c conda-forge \
-    cuml=22.10 python=3.9 cudatoolkit=11.5
+Spark Rapids ML enables GPU accelerated distributed machine learning on [Apache Spark](https://spark.apache.org/).  It provides several PySpark ML compatible algorithms powered by the [RAPIDS cuML](https://docs.rapids.ai/api/cuml/stable/) library, along with a compatible Scala API for the PCA algorithm.
+
+These APIs seek to minimize any code changes to end user Spark code.  After your environment is configured to support GPUs (with drivers, CUDA toolkit, and RAPIDS dependencies), you should be able to just change an import statement or class name to take advantage of GPU acceleration.
+
+**Python**
+```python
+# from pyspark.ml.feature import PCA
+from spark_rapids_ml.feature import PCA
+
+pca = (
+    PCA()
+    .setK(3)
+    .setInputCol("features")
+    .setOutputCol("pca_features")
+)
+pca.fit(df)
 ```
 
-You can choose the latest version from [rapids.ai](https://rapids.ai/start.html#get-rapids).
-
-Once you have the `rapids-22.10` conda environment, install the required packages.
-```bash
-conda activate rapids-22.10
-pip install -r requirements.txt
-```
-## Usage
-To run some example [Jupyter Notebooks](notebooks/) on a server with at least one GPU, run the following first
-```bash
-git clone --branch spark-cuml https://github.com/NVIDIA/spark-rapids-ml.git
-cd spark-rapids-ml
-pip install -e .
-```
-and then follow these [steps](notebooks/README.md).
-
-Instructions for running the notebooks in a Databricks Spark cluster (assuming you have a Databricks account) can be found [here](notebooks/databricks/README.md).
-
-TBD: add more info
-
-## Development
-### Run tests
-```bash
-pip install -e .
-./run_test.sh --runslow
+**Scala**
+```scala
+// val pca = new org.apache.spark.ml.feature.PCA()
+val pca = new com.nvidia.spark.ml.feature.PCA()
+  .setK(3)
+  .setInputCol("features")
+  .setOutputCol("pca_features")
+  .fit(df)
 ```
 
-### Run benchmarks
-```bash
-pip install -e .
-./run_benchmark.sh
-```
+## Supported Algorithms
 
-### Build package
-```bash
-pip install build
-python -m build
-```
+The following table shows the currently supported algorithms.  The goal is to expand this over time with support from the underlying RAPIDS cuML libraries.  If you would like support for a specific algorithm, please file a [git issue](https://github.com/NVIDIA/spark-rapids-ml/issues) to help us prioritize.
 
-### Build docs
-```bash
-# sphinx-apidoc -f -o docs/source src/spark_rapids_ml
-cd docs
-make html
-```
+| Spark ML Algorithm     | Python | Scala |
+| :--------------------- | :----: | :---: |
+| K-Means                |   √    |       |
+| k-NN (*)               |   √    |       |
+| LinearRegression       |   √    |       |
+| PCA                    |   √    |   √   |
+| RandomForestClassifier |   √    |       |
+| RandomForestRegressor  |   √    |       |
 
-### Preview docs
-```
-cd docs/build/html
-python -m http.server 8080
-```
+Note: Spark does not provide a k-NN implementation, but it does have an [LSH-based Approximate Nearest Neighbor](https://spark.apache.org/docs/latest/ml-features.html#approximate-nearest-neighbor-search) implementation.
+
+## Getting started
+
+- For Pyspark (Python) users, see [this guide](README_python.md).
+- For Spark (Scala) users, see [this guide](README_scala.md).
+
+## Contibuting
+
+We welcome community contributions!  Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) to get started.

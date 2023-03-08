@@ -1,42 +1,70 @@
 ## Running notebooks on Databricks
-Assuming you already have a Databricks account, to run notebooks on Databricks do the following:
-- If you don't already have it, install [databricks cli](https://docs.databricks.com/dev-tools/cli/index.html) and create and save an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html) to your workspace using the workspace UI.  You may need to create a new profile, in which case it should be supplied via the `--profile` option to all `databricks` cli commands issued below.
-- Inside the [src](../../src/) directory, create a zip file of the `spark_rapids_ml` directory via `zip -r spark_rapids_ml.zip spark_rapids_ml` command at the top level of the repo and copy to a location in dbfs using the databricks cli command `databricks fs cp spark_rapids_ml.zip <dbfs:/dbfs location>` 
-- Edit the file [init-pip-cuda-11.8.sh](init-pip-cuda-11.8.sh) to set the `SPARK_RAPIDS_ML_ZIP` variable to the `dbfs` location used above and upload the resulting modifed `.sh` file to some location in `dbfs` using the `databricks` cli.  Make a note of this `dbfs:/` path for use below.  Note that the setting for `SPARK_RAPIDS_ML_ZIP` here starts with `/dbfs/` which is where the `dbfs` filesystem is mounted in the databricks runtime containers.  The init script does the following:
-  - configures the nodes with a more recent version of the CUDA runtime (11.8) required for Spark Rapids ML dependencies.
-  - downloads and installs the Spark-Rapids SQL Plugin for accelerating the data loading and Spark SQL portions of ML jobs.
-  - installs the cuXX dependencies via pip
-- Create a cluster using Databricks 10.4LTS runtime using at least 2 single-gpu based workers and add the following configs to the respective Cluster Config fields/tabs/drop downs (e.g., under `Advanced options` in AWS Databricks):
-  - add the `init-pip-cuda-11.8.sh` file `dbfs` location used above to the `Init Scripts` field/tab
-  - add the following configs to the `Spark config` field that appears when selecting the `Spark` tab.
-    ```
-    spark.task.resource.gpu.amount 1
-    spark.databricks.delta.preview.enabled true
-    spark.python.worker.reuse true
-    spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-22.10.0.jar:/databricks/spark/python
-    spark.sql.execution.arrow.maxRecordsPerBatch 100000
-    spark.rapids.memory.gpu.minAllocFraction 0.0001
-    spark.plugins com.nvidia.spark.SQLPlugin
-    spark.locality.wait 0s
-    spark.sql.cache.serializer com.nvidia.spark.ParquetCachedBatchSerializer
-    spark.rapids.memory.gpu.pooling.enabled false
-    spark.rapids.sql.explain ALL
-    spark.rapids.memory.gpu.reserve 20
-    spark.sql.execution.sortBeforeRepartition false
-    spark.rapids.sql.python.gpu.enabled true
-    spark.rapids.memory.pinnedPool.size 2G
-    spark.python.daemon.module rapids.daemon_databricks
-    spark.rapids.sql.batchSizeBytes 512m
-    spark.sql.adaptive.enabled false
-    spark.databricks.delta.optimizeWrite.enabled false
-    spark.rapids.sql.concurrentGpuTasks 2
-    spark.sql.execution.arrow.pyspark.enabled true
-    ```
-  - add the following environment variable settings to the `Environment variables` field of the `Spark` tab.
-    ```
-    LIBCUDF_CUFILE_POLICY=OFF
-    LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64
-    NCCL_DEBUG=INFO
-    ```
+
+If you already have a Databricks account, you can run the example notebooks on a Databricks cluster, as follows:
+- Install the [databricks-cli](https://docs.databricks.com/dev-tools/cli/index.html).
+- Configure it with your workspace URL and an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html).  For demonstration purposes, we will configure a new [connection profile](https://docs.databricks.com/dev-tools/cli/index.html#connection-profiles) named `spark-rapids-ml`.
+  ```
+  export PROFILE=spark-rapids-ml
+  databricks configure --token --profile ${PROFILE}
+  ```
+- Create a zip file for the `spark-rapids-ml` package.
+  ```
+  cd spark-rapids-ml/src
+  zip -r spark_rapids_ml.zip spark_rapids_ml
+  ```
+- Copy the zip file to DBFS, setting `SAVE_DIR` to the directory of your choice.
+  ```"
+  export SAVE_DIR="/path/to/save/artifacts"
+  databricks fs cp spark_rapids_ml.zip dbfs:${SAVE_DIR} --profile ${PROFILE}
+  ```
+- Edit the [init-pip-cuda-11.8.sh](init-pip-cuda-11.8.sh) init script to set the `SPARK_RAPIDS_ML_ZIP` variable to the DBFS location used above.
+  ```
+  cd spark-rapids-ml/notebooks/databricks
+  sed -i "s;/path/to/zip/file;${SAVE_DIR};" init-pip-cuda-11.8.sh
+  ```
+  **Note**: the `databricks` CLI requires the `dbfs:` prefix for all DBFS paths, but inside the spark nodes, DBFS will be mounted to a local `/dbfs` volume, so the path prefixes will be slightly different depending on the context.
+
+  **Note**: this init script does the following on each Spark node:
+  - updates the CUDA runtime to 11.8 (required for Spark Rapids ML dependencies).
+  - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
+  - installs various `cuXX` dependencies via pip.
+- Copy the modified `init-pip-cuda-11.8.sh` init script to DBFS.
+  ```
+  databricks fs cp init-pip-cuda-11.8.sh dbfs:${SAVE_DIR} --profile ${PROFILE}
+  ```
+- Create a cluster using **Databricks 10.4 LTS Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
+  - **Init Scripts**
+    - add the DBFS path to the uploaded init script, e.g. `dbfs:/path/to/save/artifacts/init-pip-cuda-11.8.sh`.
+  - **Spark**
+    - **Spark config**
+      ```
+      spark.task.resource.gpu.amount 1
+      spark.databricks.delta.preview.enabled true
+      spark.python.worker.reuse true
+      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-22.10.0.jar:/databricks/spark/python
+      spark.sql.execution.arrow.maxRecordsPerBatch 100000
+      spark.rapids.memory.gpu.minAllocFraction 0.0001
+      spark.plugins com.nvidia.spark.SQLPlugin
+      spark.locality.wait 0s
+      spark.sql.cache.serializer com.nvidia.spark.ParquetCachedBatchSerializer
+      spark.rapids.memory.gpu.pooling.enabled false
+      spark.rapids.sql.explain ALL
+      spark.rapids.memory.gpu.reserve 20
+      spark.sql.execution.sortBeforeRepartition false
+      spark.rapids.sql.python.gpu.enabled true
+      spark.rapids.memory.pinnedPool.size 2G
+      spark.python.daemon.module rapids.daemon_databricks
+      spark.rapids.sql.batchSizeBytes 512m
+      spark.sql.adaptive.enabled false
+      spark.databricks.delta.optimizeWrite.enabled false
+      spark.rapids.sql.concurrentGpuTasks 2
+      spark.sql.execution.arrow.pyspark.enabled true
+      ```
+    - **Environment variables**
+      ```
+      LIBCUDF_CUFILE_POLICY=OFF
+      LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64
+      NCCL_DEBUG=INFO
+      ```
 - Start the configured cluster.
 - Select your workspace and upload the desired [notebook](../) via `Import` in the drop down menu for your workspace.

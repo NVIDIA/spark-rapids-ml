@@ -17,6 +17,7 @@ import asyncio
 import base64
 import json
 import os
+from asyncio import AbstractEventLoop
 from typing import Any, List, Optional, Tuple
 
 import psutil
@@ -62,6 +63,7 @@ class CumlContext:
         self._ucx: Optional[UCX] = None
         self._ucx_port = None
         self._ucx_eps = None
+        self._loop: Optional[AbstractEventLoop] = None
 
         nccl_uid = ""
         if context.partitionId() == 0:
@@ -72,12 +74,12 @@ class CumlContext:
             self._nccl_unique_id = base64.b64decode(nccl_uids[0])
         else:
             tasks = context.getTaskInfos()
-            ips = [task.address.split(":")[0] for task in tasks]
+            self._ips = [task.address.split(":")[0] for task in tasks]
 
             # set environmental variables according to https://github.com/rapidsai/ucx-py
             # the code occasionally run fail without setting the variables
             # TODO: will have to figure how to make this more flexible to take advantage of higher speed interconnects on multi-gpu nodes
-            my_ip = ips[self._rank]
+            my_ip = self._ips[self._rank]
             my_ifname = CumlContext.get_ifname_from_ip(my_ip)
             os.environ["UCX_TLS"] = "tcp,cuda_copy,cuda_ipc"
             os.environ["UCXPY_IFNAME"] = my_ifname
@@ -86,10 +88,7 @@ class CumlContext:
             self._ucx_port = self._ucx.listener_port()
             msgs = context.allGather(json.dumps((nccl_uid, self._ucx_port)))
             self._nccl_unique_id = base64.b64decode(json.loads(msgs[0])[0])
-            ports = [json.loads(msg)[1] for msg in msgs]
-            self._ucx_eps = asyncio.run(
-                CumlContext._ucp_create_endpoints(self._ucx, list(zip(ips, ports)))
-            )
+            self._ports = [json.loads(msg)[1] for msg in msgs]
 
     @property
     def handle(self) -> Optional[Handle]:
@@ -108,6 +107,16 @@ class CumlContext:
                 self._handle, self._nccl_comm, self._nranks, self._rank, True
             )
         else:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
+            self._ucx_eps = self._loop.run_until_complete(
+                asyncio.ensure_future(
+                    CumlContext._ucp_create_endpoints(
+                        self._ucx, list(zip(self._ips, self._ports))
+                    )
+                )
+            )
+
             inject_comms_on_handle(
                 self._handle,
                 self._nccl_comm,
@@ -127,6 +136,10 @@ class CumlContext:
         del self._nccl_comm
 
         del self._handle
+
+        if self._loop is not None:
+            asyncio.get_event_loop().stop()
+            asyncio.get_event_loop().close()
 
     @staticmethod
     def get_ifname_from_ip(target_ip: str) -> str:

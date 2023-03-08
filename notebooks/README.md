@@ -1,30 +1,38 @@
-## Running notebooks locally
-To run notebooks locally using Spark local mode on a server with 1 or more NVIDIA GPUs do the following:
-- Follow the installation and usage instructions in the top-level [README](../../README.md) 
-- Install `jupyter`:
+# Running notebooks locally
+
+To run notebooks using Spark local mode on a server with one or more NVIDIA GPUs:
+1. Follow the [installation instructions](../README_python.md#installation) to setup your environment.
+2. Install `jupyter` into the conda environment.
     ```bash
     pip install jupyter
     ```
-- Set `SPARK_HOME` by running the command 
+3. Set `SPARK_HOME`.
     ```bash
     export SPARK_HOME=$( pip show pyspark | grep Location | grep -o '/.*' )/pyspark
     ls $SPARK_HOME/bin/pyspark
     ```
-- In the directory [notebooks](../notebooks) directory, run the following command to start pyspark in local mode with a jupyter notebook serving as the shell input:
+4. In the notebooks directory, start PySpark in local mode with the Jupyter UI.
     ```bash
-    PYSPARK_DRIVER_PYTHON=jupyter PYSPARK_DRIVER_PYTHON_OPTS='notebook --ip=0.0.0.0' CUDA_VISIBLE_DEVICES=0 \
-    $SPARK_HOME/bin/pyspark --master local[12] --driver-memory 128g --conf spark.sql.execution.arrow.pyspark.enabled=true
+    cd spark-rapids-ml/notebooks
+
+    PYSPARK_DRIVER_PYTHON=jupyter \
+    PYSPARK_DRIVER_PYTHON_OPTS='notebook --ip=0.0.0.0' \
+    CUDA_VISIBLE_DEVICES=0 \
+    $SPARK_HOME/bin/pyspark --master local[12] \
+    --driver-memory 128g \
+    --conf spark.sql.execution.arrow.pyspark.enabled=true
     ```
-- Follow the instructions printed by the above command to connect a browser to the jupyter notebook server.
-- From the `jupyter` file browser open and run any of the notebooks in [notebooks](../notebooks).
-- If your server is remote with no direct `http` access, but you have `ssh` access, you can connect via an `ssh` tunnel:
+5. Follow the instructions printed by the above command to browse to the Jupyter notebook server.
+6. In the Jupyter file browser, open and run any of the notebooks.
+7. **OPTIONAL**: If your server is remote with no direct `http` access, but you have `ssh` access, you can connect via an `ssh` tunnel, as follows:
     ```bash
-    ssh -A -L 8888:127.0.0.1:8888 -L 4040:127.0.0.1:4040 -L user_name@host
+    export USER=<your_username>
+    export HOST=<your_hostname>
+    ssh -A -L 8888:127.0.0.1:8888 -L 4040:127.0.0.1:4040 -L $USER@$HOST
     ```
-    and then navigate your local browser to the URL printed by the above command (use the one with `127.0.0.1`).
-- If you have multiple GPUs in your server, replace the `CUDA_VISIBLE_DEVICES` setting with a comma separated list of the corresponding indices.  For example, for 2 GPUs use `CUDA_VISIBLE_DEVICES=0,1` in the above command.
+    Then, browse to the `127.0.0.1` URL printed by the command in step 4.
+8. **OPTIONAL**: If you have multiple GPUs in your server, replace the `CUDA_VISIBLE_DEVICES` setting in step 4 with a comma-separated list of the corresponding indices.  For example, for two GPUs use `CUDA_VISIBLE_DEVICES=0,1`.
 
-
-## Running in the cloud:
-See [databricks](databricks/README.md) for instructions on how to run the notebooks in a Databricks Spark cluster.
+## Running notebooks on Databricks
+See [these instructions](databricks/README.md) for running the notebooks in a Databricks Spark cluster.
 
