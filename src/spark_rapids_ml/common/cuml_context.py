@@ -17,6 +17,7 @@ import asyncio
 import base64
 import json
 import os
+from asyncio import AbstractEventLoop
 from typing import Any, List, Optional, Tuple
 
 import psutil
@@ -62,7 +63,7 @@ class CumlContext:
         self._ucx: Optional[UCX] = None
         self._ucx_port = None
         self._ucx_eps = None
-        self._loop = None
+        self._loop: Optional[AbstractEventLoop] = None
 
         nccl_uid = ""
         if context.partitionId() == 0:
@@ -110,7 +111,9 @@ class CumlContext:
             asyncio.set_event_loop(self._loop)
             self._ucx_eps = self._loop.run_until_complete(
                 asyncio.ensure_future(
-                    CumlContext._ucp_create_endpoints(self._ucx, list(zip(self._ips, self._ports)))
+                    CumlContext._ucp_create_endpoints(
+                        self._ucx, list(zip(self._ips, self._ports))
+                    )
                 )
             )
 
@@ -136,6 +139,7 @@ class CumlContext:
 
         if self._loop is not None:
             asyncio.get_event_loop().stop()
+            asyncio.get_event_loop().close()
 
     @staticmethod
     def get_ifname_from_ip(target_ip: str) -> str:

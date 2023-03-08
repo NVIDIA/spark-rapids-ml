@@ -1,50 +1,67 @@
-from typing import Tuple
-
-import numpy as np
-import pytest
 import asyncio
 import json
+from typing import Iterator, List, Tuple
+
+import numpy as np
+import pandas as pd
+import pytest
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.common.cuml_context import CumlContext
 from spark_rapids_ml.core import _CumlCommon
-from spark_rapids_ml.utils import _get_spark_session, _is_local 
+from spark_rapids_ml.utils import _get_spark_session, _is_local
 
+from .conftest import _gpu_number
 from .sparksession import CleanSparkSession
 from .utils import create_pyspark_dataframe, feature_types
 
-from .conftest import _gpu_number
 
 @pytest.mark.parametrize("gpu_number_used", range(1, _gpu_number + 1))
-def test_ucx_over_nccl(gpu_number_used: int, data_shape: Tuple[int, int] = (1000, 20)) -> None:
+def test_ucx_over_nccl(
+    gpu_number_used: int, data_shape: Tuple[int, int] = (1000, 20)
+) -> None:
     """
-        If fails, try:
-        Run "export UCXPY_LOG_LEVEL=DEBUG" in termninal to enable UCX logging
+    If fails, try:
+    Run "export UCXPY_LOG_LEVEL=DEBUG" in termninal to enable UCX logging
     """
-    gpu_number = gpu_number_used 
+    gpu_number = gpu_number_used
     X, _ = make_blobs(n_samples=data_shape[0], n_features=data_shape[1], random_state=0)
 
     with CleanSparkSession() as spark:
         train_df, features_col, _ = create_pyspark_dataframe(
-            spark, feature_type = feature_types.array, dtype= np.float32, data = X, label = None
+            spark,
+            feature_type=feature_types.array,
+            dtype=np.float32,  # type: ignore
+            data=X,
+            label=None,
         )
 
         dataset = train_df.repartition(gpu_number)
 
         is_local = _is_local(_get_spark_session().sparkContext)
-        def _train_udf(pdf_iter):
+
+        def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
+
             context = BarrierTaskContext.get()
             rank = context.partitionId()
 
-            # ucx requires nccl, and nccl initialization requires gpu assignment  
+            # ucx requires nccl, and nccl initialization requires gpu assignment
             _CumlCommon.set_gpu_device(context, is_local)
-            with CumlContext(rank = rank, nranks = gpu_number, context = context, enable=True, require_ucx=True) as cc:
+            with CumlContext(
+                rank=rank,
+                nranks=gpu_number,
+                context=context,
+                enable=True,
+                require_ucx=True,
+            ) as cc:
 
-                async def do_allGather():
+                async def do_allGather() -> List[str]:
                     loop = asyncio.get_running_loop()
-                    result = await loop.run_in_executor(None, context.allGather, json.dumps("hello"))
-                    return result 
+                    result = await loop.run_in_executor(
+                        None, context.allGather, json.dumps("hello")
+                    )
+                    return result
 
                 cc._loop.run_until_complete(asyncio.ensure_future(do_allGather()))
 
