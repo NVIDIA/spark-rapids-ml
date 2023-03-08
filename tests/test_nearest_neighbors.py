@@ -7,7 +7,12 @@ from sklearn.datasets import make_blobs
 from spark_rapids_ml.knn import NearestNeighbors
 
 from .sparksession import CleanSparkSession
-from .utils import array_equal, create_pyspark_dataframe, idfn
+from .utils import (
+    array_equal,
+    create_pyspark_dataframe,
+    idfn,
+    pyspark_supported_feature_types,
+)
 
 
 def test_example(gpu_number: int) -> None:
@@ -128,13 +133,16 @@ def test_example_with_id(gpu_number: int) -> None:
         assert indices[4] == [108, 107]
 
 
-@pytest.mark.parametrize("feature_type", ["array"])
+@pytest.mark.parametrize(
+    "feature_type", pyspark_supported_feature_types
+)  # vector feature type will be converted to float32 to be compatible with cuml multi-gpu NearestNeighbors Class
 @pytest.mark.parametrize("data_shape", [(1000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize(
     "batch_size", [100, 10000]
 )  # larger batch_size higher query throughput, yet more memory
+@pytest.mark.slow
 def test_nearest_neighbors(
     gpu_number: int,
     feature_type: str,
@@ -169,8 +177,8 @@ def test_nearest_neighbors(
         )
 
         sparkcuml_knn = NearestNeighbors(
-            n_neighbors=n_neighbors, inputCol=features_col, batch_size=batch_size
-        )
+            n_neighbors=n_neighbors, batch_size=batch_size
+        ).setInputCol(features_col)
 
         # obtain spark results
         sparkcuml_knn = sparkcuml_knn.fit(data_df)

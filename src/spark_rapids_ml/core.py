@@ -438,7 +438,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                         features = np.array(list(pdf[alias.data]))
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
-                        np.array(list(pdf[alias.row_number]))
+                        pdf[alias.row_number]
                         if alias.row_number in pdf.columns
                         else None
                     )

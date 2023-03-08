@@ -21,16 +21,49 @@ into three categories:
 
 ## Code contributions
 
-### Your first issue
-TODO: update after Github repo is created.
+### Submit an issue
+For any bugs or new feature requests, file a [git issue](https://github.com/NVIDIA/spark-rapids-ml/issues).  If you are unsure if the bug or feature request has been addressed before, just search through prior issues and PRs (including closed ones).
 
+### Submit a PR
+Before submitting a PR, make sure to run the following to check for any errors or regressions.
+```bash
+# install development dependencies
+pip install -r requirements_dev.txt
 
-### Code Formatting
+# make sure package is installed
+pip install -e .
+
+# run code formatting, type checking and unit tests
+# during development, you can omit the '--runslow' option to ignore the slower tests
+./run_test.sh --runslow
+
+# run performance benchmarks
+./run_benchmark.sh
+```
+
+### Build pip package
+```bash
+pip install build
+python -m build
+```
+
+### Build and preview docs
+```bash
+# if adding new files/modules, run this first:
+# sphinx-apidoc -f -o docs/source src/spark_rapids_ml
+cd docs
+make html
+
+# preview docs
+cd build/html
+python -m http.server 8080
+```
+### Code formatting
 
 #### Python
 This project follows the
-[Black Code Style](https://black.readthedocs.io/en/stable/the_black_code_style/index.html).
-The project also requires type annotation.  The tools `isort`, `black`, and `mypy` can be used to check compliance and for auto-formatting.  See [run_test.sh](run_test.sh)
+[Black Code Style](https://black.readthedocs.io/en/stable/the_black_code_style/index.html) and the [NumpyDoc docstring](https://numpydoc.readthedocs.io/en/latest/format.html) standard.
+The project also requires type annotation.  The tools `isort`, `black`, and `mypy` can be used to check compliance and for auto-formatting.  The [run_test.sh](run_test.sh) script will check code formatting and type annotations before running the unit tests.
 
 #### Scala
 
