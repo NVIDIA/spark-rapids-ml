@@ -154,13 +154,13 @@ class BenchmarkBase:
     def class_params(self) -> Dict[str, Any]:
         return self._class_params
 
-    def train_df(
-        self, spark: SparkSession
+    def input_dataframe(
+        self, spark: SparkSession, *paths: str
     ) -> Tuple[DataFrame, Union[str, List[str]], str]:
         """Return a Spark DataFrame for benchmarking, along with the input and label column names."""
         assert self._args is not None
 
-        df = spark.read.parquet(*self._args.train_path)
+        df = spark.read.parquet(*paths)
 
         # Label column label is "label" which is hardcoded by gen_data.py
         label_col = "label"
@@ -176,7 +176,7 @@ class BenchmarkBase:
             if any(["array" in t[1] for t in df.dtypes]):
                 # Array Type
                 selected_cols.append(
-                    array_to_vector(col(features_col)).alias("features")
+                    array_to_vector(col(features_col)).alias("features")  # type: ignore
                 )
                 features_col = "features"  # type: ignore
             elif not any(["vector" in t[1] for t in df.dtypes]):
@@ -206,10 +206,21 @@ class BenchmarkBase:
             self._args.spark_confs, shutdown=(not self._args.no_shutdown)
         ) as spark:
             for _ in range(self._args.num_runs):
-                df, features_col, label_col = self.train_df(spark)
+                train_df, features_col, label_col = self.input_dataframe(
+                    spark, *self._args.train_path
+                )
+
+                transform_df: Optional[DataFrame] = None
+                if len(self._args.transform_path) > 0:
+                    transform_df, _, _ = self.input_dataframe(
+                        spark, *self._args.transform_path
+                    )
+
                 results, benchmark_time = with_benchmark(
                     "benchmark time: ",
-                    lambda: self.run_once(spark, df, features_col, label_col),
+                    lambda: self.run_once(
+                        spark, train_df, features_col, transform_df, label_col
+                    ),
                 )
                 results["benchmark_time"] = benchmark_time
                 run_results.append(results)
@@ -236,8 +247,9 @@ class BenchmarkBase:
     def run_once(
         self,
         spark: SparkSession,
-        df: DataFrame,
+        train_df: DataFrame,
         features_col: Union[str, List[str]],
+        transform_df: Optional[DataFrame],
         label_col: Optional[str],
     ) -> Dict[str, Any]:
         """Run a single iteration of benchmarks for the class under test, returning a summary of
