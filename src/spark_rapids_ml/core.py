@@ -447,6 +447,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                 params["handle"] = cc.handle
                 params["part_sizes"] = sizes
                 params["n"] = dimension
+                params["loop"] = cc._loop
 
                 logger.info("Invoking cuml fit")
 

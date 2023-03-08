@@ -16,6 +16,7 @@
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
+import asyncio
 import cudf
 import numpy as np
 import pandas as pd
@@ -355,9 +356,16 @@ class NearestNeighbors(
             assert len(item_size) == len(query_size)
             import json
 
-            messages = context.allGather(
-                message=json.dumps((rank, item_size, query_size, item_row_number))
-            )
+            async def do_allGather():
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(
+                    None, 
+                    context.allGather,
+                    json.dumps((rank, item_size, query_size, item_row_number))
+                )
+                return result
+            messages = params["loop"].run_until_complete(asyncio.ensure_future(do_allGather()))
+
             rank_stats = [json.loads(msg) for msg in messages]
 
             item_parts_to_ranks = []
