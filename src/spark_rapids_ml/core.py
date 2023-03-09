@@ -93,6 +93,10 @@ CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatc
 Alias = namedtuple("Alias", ("data", "label", "row_number"))
 alias = Alias("cuml_values", "cuml_label", "id")
 
+# Global prediction names
+Pred = namedtuple("Pred", ("prediction", "probability"))
+pred = Pred("prediction", "probability")
+
 
 class _CumlEstimatorWriter(MLWriter):
     """
@@ -704,11 +708,23 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         num_features = self.n_cols if self.n_cols else -1
         return num_features
 
+    def _is_single_pred(self, input_schema: StructType) -> bool:
+        """Indicate if the transform is only predicting 1 column"""
+        schema = self._out_schema(input_schema)
+        if isinstance(schema, str):
+            return False if "," in schema else True
+        elif isinstance(schema, StructType):
+            return False if len(schema.names) > 1 else True
+
+    def _handle_multi_predication(
+        self, dataset: DataFrame, pred_struct_col_name: str
+    ) -> DataFrame:
+        """For the multiple predictions, the subclass needs to handle it accordingly"""
+        return dataset
+
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
         dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
-
-        pred_name = self.getOrDefault(self.predictionCol)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -732,7 +748,28 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
 
                 yield cuml_transform_func(cuml_object, data)
 
-        return dataset.withColumn(pred_name, predict_udf(struct(*select_cols)))
+        pred_name = self.getOrDefault(self.predictionCol)
+        pred_col = predict_udf(struct(*select_cols))
+
+        if self._is_single_pred(dataset.schema):
+            return dataset.withColumn(pred_name, pred_col)
+        else:
+            # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
+            pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
+            dataset = dataset.withColumn(pred_struct_col_name, pred_col)
+
+            # 1. Add predicationCol in the base class
+            dataset = dataset.withColumn(
+                pred_name, getattr(col(pred_struct_col_name), pred.prediction)
+            )
+
+            # 2. Handle other prediction columns in the subclass
+            dataset = self._handle_multi_predication(dataset, pred_struct_col_name)
+
+            # 3. Drop the unused column
+            dataset = dataset.drop(pred_struct_col_name)
+
+            return dataset
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None

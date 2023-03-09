@@ -13,28 +13,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Type, Union
+from typing import Any, Callable, Tuple, Type, Union
 
+import cudf
+import numpy as np
+import pandas as pd
 from pyspark import Row
 from pyspark.ml.classification import _RandomForestClassifierParams
+from pyspark.ml.functions import array_to_vector
+from pyspark.ml.param.shared import HasProbabilityCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
-from pyspark.sql.types import DoubleType, FloatType, IntegerType, IntegralType
+from pyspark.sql.types import (
+    DoubleType,
+    FloatType,
+    IntegerType,
+    IntegralType,
+    StructType,
+)
 
-from spark_rapids_ml.core import alias
+from spark_rapids_ml.core import CumlT, alias, pred
 from spark_rapids_ml.tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
     _RandomForestEstimator,
     _RandomForestModel,
 )
+from spark_rapids_ml.utils import dtype_to_pyspark_type
+
+
+class _RFClassifierParams(_RandomForestClassifierParams, HasProbabilityCol):
+    def __init__(self, *args: Any):
+        super().__init__(*args)
 
 
 class RandomForestClassifier(
     _RandomForestClass,
     _RandomForestEstimator,
     _RandomForestCumlParams,
-    _RandomForestClassifierParams,
+    _RFClassifierParams,
 ):
     """RandomForestClassifier implements a Random Forest classifier model which
     fits multiple decision tree classifiers in an ensemble. It supports both
@@ -136,7 +153,7 @@ class RandomForestClassificationModel(
     _RandomForestClass,
     _RandomForestModel,
     _RandomForestCumlParams,
-    _RandomForestClassifierParams,
+    _RFClassifierParams,
 ):
     """
     Model fitted by :class:`RandomForestClassifier`.
@@ -156,6 +173,40 @@ class RandomForestClassificationModel(
             num_classes=num_classes,
         )
         self._num_classes = num_classes
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
+        _construct_rf, _ = super()._get_cuml_transform_func(dataset)
+
+        def _predict(rf: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
+            data = {}
+            rf.update_labels = False
+            data[pred.prediction] = rf.predict(pdf)
+            data[pred.probability] = pd.Series(list(rf.predict_proba(pdf)))
+            print(data)
+            return pd.DataFrame(data)
+
+        return _construct_rf, _predict
+
+    def _handle_multi_predication(
+        self, dataset: DataFrame, pred_struct_col_name: str
+    ) -> DataFrame:
+        probability_col = self.getProbabilityCol()
+        dataset = dataset.withColumn(
+            probability_col,
+            array_to_vector(getattr(col(pred_struct_col_name), pred.probability)),
+        )
+        return dataset
+
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        assert self.dtype is not None
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+        schema = f"{pred.prediction} {pyspark_type}, {pred.probability} array<{pyspark_type}>"
+        return schema
 
     def _is_classification(self) -> bool:
         return True
