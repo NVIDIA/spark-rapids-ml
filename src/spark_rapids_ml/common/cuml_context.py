@@ -50,6 +50,8 @@ class CumlContext:
         """
         self.enable = enable
         self._handle: Optional[Handle] = None
+        self._loop: Optional[AbstractEventLoop] = None
+
         if not enable:
             return
 
@@ -63,7 +65,6 @@ class CumlContext:
         self._ucx: Optional[UCX] = None
         self._ucx_port = None
         self._ucx_eps = None
-        self._loop: Optional[AbstractEventLoop] = None
 
         nccl_uid = ""
         if context.partitionId() == 0:
