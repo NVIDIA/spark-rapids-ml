@@ -26,8 +26,8 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists
 
 RUN apt-get update -y \
-    && apt install -y git numactl python3.8 python3-pip software-properties-common wget zip \
-    && python3 -m pip install --upgrade pip \
+    && apt install -y git numactl python3.8 python3-pip python-is-python3 software-properties-common wget zip \
+    && python -m pip install --upgrade pip \
     && rm -rf /var/lib/apt/lists
 
 # install RAPIDS
@@ -55,4 +55,4 @@ WORKDIR /spark-rapids-ml
 RUN pip install --no-cache -r requirements_dev.txt \
     && pip install --no-cache -e .
 
-SHELL ["conda", "run", "--no-capture-output", "-n", "base", "/bin/bash", "-c"]
+SHELL ["/bin/bash", "-c"]
