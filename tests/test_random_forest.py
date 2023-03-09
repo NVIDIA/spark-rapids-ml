@@ -106,7 +106,7 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
             "n_bins": 17,
             "max_depth": 9,
             "n_estimators": 17,
-            "max_features": "0.3333",
+            "max_features": str(1 / 3.0),
         }
     )
     assert_params(est, expected_spark_params, expected_cuml_params)
