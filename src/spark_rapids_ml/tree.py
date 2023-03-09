@@ -87,7 +87,7 @@ class _RandomForestClass(_CumlClass):
     def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
         return {
             "max_features": {
-                "onethird": "0.3333",
+                "onethird": str(1 / 3.0),
                 "all": "1.0",
                 "auto": "auto",
                 "sqrt": "sqrt",
@@ -185,6 +185,8 @@ class _RandomForestEstimator(
 
         is_classification = self._is_classification()
 
+        total_trees = self.cuml_params["n_estimators"]
+
         def _rf_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
@@ -197,6 +199,14 @@ class _RandomForestEstimator(
 
             rf_params = params[INIT_PARAMETERS_NAME]
             rf_params.pop("n_estimators")
+
+            if rf_params["max_features"] == "auto":
+                if total_trees == 1:
+                    rf_params["max_features"] = 1.0
+                else:
+                    rf_params["max_features"] = (
+                        "sqrt" if is_classification else (1 / 3.0)
+                    )
 
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
