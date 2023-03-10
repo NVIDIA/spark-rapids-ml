@@ -1,0 +1,673 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; spark-rapids-ml 0.0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d" />
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    <p class="title logo__title">spark-rapids-ml 0.0.1 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+</div>
+
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Alias">Alias (class in spark_rapids_ml.core)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.utils.PartitionDescriptor.build">build() (spark_rapids_ml.utils.PartitionDescriptor class method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.clusterCenters">clusterCenters() (spark_rapids_ml.clustering.KMeansModel method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.coefficients">coefficients (spark_rapids_ml.regression.LinearRegressionModel property)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.utils.cudf_to_cuml_array">cudf_to_cuml_array() (in module spark_rapids_ml.utils)</a>
+</li>
+      <li><a href="spark_rapids_ml.common.html#spark_rapids_ml.common.cuml_context.CumlContext">CumlContext (class in spark_rapids_ml.common.cuml_context)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.data">data (spark_rapids_ml.core.Alias attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.utils.dtype_to_pyspark_type">dtype_to_pyspark_type() (in module spark_rapids_ml.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.evaluate">evaluate() (spark_rapids_ml.regression.LinearRegressionModel method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.explainedVariance">explainedVariance (spark_rapids_ml.feature.PCAModel property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.params.HasFeaturesCols.featuresCols">featuresCols (spark_rapids_ml.params.HasFeaturesCols attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.common.html#spark_rapids_ml.common.cuml_context.CumlContext.get_ifname_from_ip">get_ifname_from_ip() (spark_rapids_ml.common.cuml_context.CumlContext static method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.utils.get_logger">get_logger() (in module spark_rapids_ml.utils)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.params.HasFeaturesCols.getFeaturesCols">getFeaturesCols() (spark_rapids_ml.params.HasFeaturesCols method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.common.html#spark_rapids_ml.common.cuml_context.CumlContext.handle">handle (spark_rapids_ml.common.cuml_context.CumlContext property)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.params.HasFeaturesCols">HasFeaturesCols (class in spark_rapids_ml.params)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.hasSummary">hasSummary (spark_rapids_ml.classification.RandomForestClassificationModel property)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.hasSummary">(spark_rapids_ml.clustering.KMeansModel property)</a>
+</li>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.hasSummary">(spark_rapids_ml.regression.LinearRegressionModel property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.intercept">intercept (spark_rapids_ml.regression.LinearRegressionModel property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans">KMeans (class in spark_rapids_ml.clustering)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansClass">KMeansClass (class in spark_rapids_ml.clustering)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel">KMeansModel (class in spark_rapids_ml.clustering)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.label">label (spark_rapids_ml.core.Alias attribute)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression">LinearRegression (class in spark_rapids_ml.regression)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionClass">LinearRegressionClass (class in spark_rapids_ml.regression)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel">LinearRegressionModel (class in spark_rapids_ml.regression)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.mean">mean (spark_rapids_ml.feature.PCAModel property)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml">spark_rapids_ml</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.classification">spark_rapids_ml.classification</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.clustering">spark_rapids_ml.clustering</a>
+</li>
+        <li><a href="spark_rapids_ml.common.html#module-spark_rapids_ml.common">spark_rapids_ml.common</a>
+</li>
+        <li><a href="spark_rapids_ml.common.html#module-spark_rapids_ml.common.cuml_context">spark_rapids_ml.common.cuml_context</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.core">spark_rapids_ml.core</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.feature">spark_rapids_ml.feature</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.params">spark_rapids_ml.params</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.regression">spark_rapids_ml.regression</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.tree">spark_rapids_ml.tree</a>
+</li>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.utils">spark_rapids_ml.utils</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses">numClasses (spark_rapids_ml.classification.RandomForestClassificationModel property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.utils.PartitionDescriptor">PartitionDescriptor (class in spark_rapids_ml.utils)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.pc">pc (spark_rapids_ml.feature.PCAModel property)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCA">PCA (class in spark_rapids_ml.feature)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAClass">PCAClass (class in spark_rapids_ml.feature)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel">PCAModel (class in spark_rapids_ml.feature)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.predict">predict() (spark_rapids_ml.clustering.KMeansModel method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel">RandomForestClassificationModel (class in spark_rapids_ml.classification)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassifier">RandomForestClassifier (class in spark_rapids_ml.classification)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressionModel">RandomForestRegressionModel (class in spark_rapids_ml.regression)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressor">RandomForestRegressor (class in spark_rapids_ml.regression)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.row_number">row_number (spark_rapids_ml.core.Alias attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.scale">scale (spark_rapids_ml.regression.LinearRegressionModel property)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setElasticNetParam">setElasticNetParam() (spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setK">setK() (spark_rapids_ml.clustering.KMeans method)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCA.setK">(spark_rapids_ml.feature.PCA method)</a>
+</li>
+      </ul></li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setLoss">setLoss() (spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setMaxIter">setMaxIter() (spark_rapids_ml.clustering.KMeans method)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setMaxIter">(spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
+      </ul></li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassifier.setNumTrees">setNumTrees() (spark_rapids_ml.classification.RandomForestClassifier method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setRegParam">setRegParam() (spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setSeed">setSeed() (spark_rapids_ml.clustering.KMeans method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setStandardization">setStandardization() (spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setTol">setTol() (spark_rapids_ml.clustering.KMeans method)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setTol">(spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
+      </ul></li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setWeightCol">setWeightCol() (spark_rapids_ml.clustering.KMeans method)</a>
+</li>
+      <li>
+    spark_rapids_ml
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.classification
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.classification">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    spark_rapids_ml.clustering
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.clustering">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.common
+
+      <ul>
+        <li><a href="spark_rapids_ml.common.html#module-spark_rapids_ml.common">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.common.cuml_context
+
+      <ul>
+        <li><a href="spark_rapids_ml.common.html#module-spark_rapids_ml.common.cuml_context">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.core
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.core">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.feature
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.feature">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.params
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.params">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.regression
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.regression">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.tree
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.tree">module</a>
+</li>
+      </ul></li>
+      <li>
+    spark_rapids_ml.utils
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#module-spark_rapids_ml.utils">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <!-- Previous / next buttons -->
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            <div class="bd-footer-content__inner"></div>
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright 2023, NVIDIA.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://sphinx-doc.org/">Sphinx</a> 5.3.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

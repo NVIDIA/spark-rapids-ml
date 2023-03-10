@@ -1,0 +1,54 @@
+#
+# Copyright (c) 2023, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+title: Spark Rapids ML
+description: >- # this means to ignore newlines until "baseurl:"
+  Spark Rapids ML enables GPU accelerated distributed machine learning on Apache Spark
+  powered by the RAPIDS cuML library.
+baseurl: "/spark-rapids-ml" # the subpath of your site, e.g. /blog
+url: "nvidia.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+
+aux_links:
+  "Spark Rapids ML on GitHub":
+    - "//github.com/nvidia/spark-rapids-ml"
+
+# Build settings
+remote_theme: pmarsceill/just-the-docs
+plugins:
+  - jekyll-feed
+
+# Exclude from processing.
+# The following items will not be processed, by default.
+# Any item listed under the `exclude:` key here will be automatically added to
+# the internal "default list".
+#
+# Excluded items can be processed by explicitly listing the directories or
+# their entries' file path in the `include:` list.
+#
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+include:
+  - _static

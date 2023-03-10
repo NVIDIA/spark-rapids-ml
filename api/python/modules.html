@@ -1,0 +1,474 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>spark_rapids_ml &#8212; spark-rapids-ml 0.0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d" />
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'modules';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    <p class="title logo__title">spark-rapids-ml 0.0.1 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumbs">
+  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">spark_rapids_ml</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="spark-rapids-ml">
+<h1>spark_rapids_ml<a class="headerlink" href="#spark-rapids-ml" title="Permalink to this heading">#</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.html">spark_rapids_ml package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.common.html">spark_rapids_ml.common package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.common.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.common.html#module-spark_rapids_ml.common.cuml_context">spark_rapids_ml.common.cuml_context module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.common.html#module-spark_rapids_ml.common">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.classification">spark_rapids_ml.classification module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.hasSummary"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.hasSummary</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.numClasses</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassifier"><code class="docutils literal notranslate"><span class="pre">RandomForestClassifier</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassifier.setNumTrees"><code class="docutils literal notranslate"><span class="pre">RandomForestClassifier.setNumTrees()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.clustering">spark_rapids_ml.clustering module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans"><code class="docutils literal notranslate"><span class="pre">KMeans</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setK"><code class="docutils literal notranslate"><span class="pre">KMeans.setK()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setMaxIter"><code class="docutils literal notranslate"><span class="pre">KMeans.setMaxIter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setSeed"><code class="docutils literal notranslate"><span class="pre">KMeans.setSeed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setTol"><code class="docutils literal notranslate"><span class="pre">KMeans.setTol()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeans.setWeightCol"><code class="docutils literal notranslate"><span class="pre">KMeans.setWeightCol()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansClass"><code class="docutils literal notranslate"><span class="pre">KMeansClass</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel"><code class="docutils literal notranslate"><span class="pre">KMeansModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.clusterCenters"><code class="docutils literal notranslate"><span class="pre">KMeansModel.clusterCenters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.hasSummary"><code class="docutils literal notranslate"><span class="pre">KMeansModel.hasSummary</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.predict"><code class="docutils literal notranslate"><span class="pre">KMeansModel.predict()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.core">spark_rapids_ml.core module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.core.Alias"><code class="docutils literal notranslate"><span class="pre">Alias</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.data"><code class="docutils literal notranslate"><span class="pre">Alias.data</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.label"><code class="docutils literal notranslate"><span class="pre">Alias.label</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.row_number"><code class="docutils literal notranslate"><span class="pre">Alias.row_number</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.feature">spark_rapids_ml.feature module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCA"><code class="docutils literal notranslate"><span class="pre">PCA</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCA.setK"><code class="docutils literal notranslate"><span class="pre">PCA.setK()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAClass"><code class="docutils literal notranslate"><span class="pre">PCAClass</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel"><code class="docutils literal notranslate"><span class="pre">PCAModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.explainedVariance"><code class="docutils literal notranslate"><span class="pre">PCAModel.explainedVariance</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.mean"><code class="docutils literal notranslate"><span class="pre">PCAModel.mean</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.pc"><code class="docutils literal notranslate"><span class="pre">PCAModel.pc</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.params">spark_rapids_ml.params module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.params.HasFeaturesCols"><code class="docutils literal notranslate"><span class="pre">HasFeaturesCols</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.params.HasFeaturesCols.featuresCols"><code class="docutils literal notranslate"><span class="pre">HasFeaturesCols.featuresCols</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.params.HasFeaturesCols.getFeaturesCols"><code class="docutils literal notranslate"><span class="pre">HasFeaturesCols.getFeaturesCols()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.regression">spark_rapids_ml.regression module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression"><code class="docutils literal notranslate"><span class="pre">LinearRegression</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setElasticNetParam"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setElasticNetParam()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setLoss"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setLoss()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setMaxIter"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setMaxIter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setRegParam"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setRegParam()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setStandardization"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setStandardization()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegression.setTol"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setTol()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionClass"><code class="docutils literal notranslate"><span class="pre">LinearRegressionClass</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.coefficients"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.coefficients</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.evaluate"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.evaluate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.hasSummary"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.hasSummary</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.intercept"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.intercept</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.scale"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.scale</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressionModel"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressionModel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressor"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.tree">spark_rapids_ml.tree module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml.utils">spark_rapids_ml.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.utils.PartitionDescriptor"><code class="docutils literal notranslate"><span class="pre">PartitionDescriptor</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.utils.PartitionDescriptor.build"><code class="docutils literal notranslate"><span class="pre">PartitionDescriptor.build()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.utils.cudf_to_cuml_array"><code class="docutils literal notranslate"><span class="pre">cudf_to_cuml_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.utils.dtype_to_pyspark_type"><code class="docutils literal notranslate"><span class="pre">dtype_to_pyspark_type()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="spark_rapids_ml.html#spark_rapids_ml.utils.get_logger"><code class="docutils literal notranslate"><span class="pre">get_logger()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spark_rapids_ml.html#module-spark_rapids_ml">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  <!-- Previous / next buttons -->
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="tocsection sourcelink">
+    <a href="_sources/modules.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            <div class="bd-footer-content__inner"></div>
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright 2023, NVIDIA.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://sphinx-doc.org/">Sphinx</a> 5.3.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
