@@ -46,8 +46,8 @@ from spark_rapids_ml.core import (
     INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
-    _CumlEstimatorSupervised,
     _CumlCaller,
+    _CumlEstimatorSupervised,
     _CumlModel,
     alias,
 )
@@ -210,7 +210,7 @@ class NearestNeighbors(
     def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
         return NearestNeighborsModel.from_row(result)
 
-    def fit(self, dataset: DataFrame, params: Optional[Dict[Param[Any], Any]] = None) -> "NearestNeighborsModel": 
+    def _fit(self, dataset: DataFrame) -> "NearestNeighborsModel":
         self.item_df = dataset
         if not self.isDefined("id_col"):
             self.item_df = self._df_zip_with_index(self.item_df, self.getIdCol())
@@ -219,21 +219,34 @@ class NearestNeighbors(
             alias.label, lit(self.label_isdata)
         )
 
-        model = self._create_pyspark_model(Row(item_df = self.item_df, processed_item_df = self.processed_item_df, label_isdata = self.label_isdata, label_isquery = self.label_isquery))
+        model = self._create_pyspark_model(
+            Row(
+                item_df=self.item_df,
+                processed_item_df=self.processed_item_df,
+                label_isdata=self.label_isdata,
+                label_isquery=self.label_isquery,
+            )
+        )
         model._num_workers = self._num_workers
         self._copyValues(model)
         self._copy_cuml_params(model)  # type: ignore
         return model
 
-    def _out_schema(self) -> Union[StructType, str]:
+    def _out_schema(self) -> Union[StructType, str]:  # type: ignore
+        """
+        This class overrides _fit and will not call _out_schema.
+        """
         pass
 
-    def _get_cuml_fit_func(
+    def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        """
+        This class overrides _fit and will not call _get_cuml_fit_func.
+        """
         pass
 
- 
+
 class NearestNeighborsModel(
     _CumlCaller, _CumlModel, NearestNeighborsClass, _NearestNeighborsCumlParams
 ):
@@ -250,7 +263,7 @@ class NearestNeighborsModel(
         self.label_isdata = label_isdata
         self.label_isquery = label_isquery
 
-    def _out_schema(self) -> Union[StructType, str]:  
+    def _out_schema(self) -> Union[StructType, str]:  # type: ignore
         return StructType(
             [
                 StructField("query_id", ArrayType(IntegerType(), False), False),
@@ -265,9 +278,9 @@ class NearestNeighborsModel(
 
     def _require_ucx(self) -> bool:
         """If enable or disable ucx over NCCL"""
-        return True 
+        return True
 
-    def _pre_process_data(
+    def _pre_process_data(  # type: ignore
         self, dataset: DataFrame
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
@@ -353,7 +366,7 @@ class NearestNeighborsModel(
                     for i in range(len(x_array))
                 ]
                 query_filter = [
-                    True if label_array[i] == label_isquery else False # type: ignore
+                    True if label_array[i] == label_isquery else False  # type: ignore
                     for i in range(len(x_array))
                 ]
 

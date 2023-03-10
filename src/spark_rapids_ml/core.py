@@ -461,6 +461,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
     4. train and return CUML model
     5. create the pyspark model
     """
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -482,7 +483,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         pass
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
-        pipelined_rdd = self._call_cuml_fit_func(dataset = dataset, return_model = True)
+        pipelined_rdd = self._call_cuml_fit_func(dataset=dataset, return_model=True)
         ret = pipelined_rdd.collect()[0]
 
         model = self._create_pyspark_model(ret)
