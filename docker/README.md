@@ -7,52 +7,54 @@ We provide the following Dockerfiles:
 
 ## Scala API
 
-- Build the container.
-  ```bash
-  # cd spark-rapids-ml/docker
-  docker build -t rapids-ml:latest -f Dockerfile .
-  ```
-  **Note**: see the Dockerfile for configurable build arguments.
+First, build the development image.  **Note**: see the Dockerfile for configurable build arguments.
+```bash
+docker build -t rapids-ml:latest -f Dockerfile .
+```
 
-- Build the Scala API inside the container.
-  ```bash
-  # nvidia-docker run -it --rm rapids-ml:latest
-  mvn clean package
-  ```
+Run the container.
+```bash
+nvidia-docker run -it --rm rapids-ml:latest
+```
+
+Then, inside the container, build the Scala API [as usual](../README_scala.md#build-target-jar).
+```bash
+mvn clean package
+```
 
 ## Python API
-- Build the conda-based container.
-  ```bash
-  # cd spark-rapids-ml/docker
-  docker build -t rapids-ml:python -f Dockerfile.python ..
-  ```
-- **OPTIONAL**: Build the pip-based container.
-  ```bash
-  # cd spark-rapids-ml
-  docker build -t rapids-ml:pip -f Dockerfile.pip ..
-  ```
-- Run the unit tests inside the container.
-  ```bash
-  # nvidia-docker run -it --rm rapids-ml:python
-  # nvidia-docker run -it --rm rapids-ml:pip
-  ./run_test.sh --runslow
-  ```
 
-- Run the benchmarks inside the container.
-  ```bash
-  ./run_benchmark.sh
-  ```
+First, build the development image.
+```bash
+docker build -t rapids-ml:python -f Dockerfile.python ..
+# OPTIONAL: docker build -t rapids-ml:pip -f Dockerfile.pip ..
+```
 
-- Build the pip package.
-  ```bash
-  python -m build
-  ```
+Launch the container.
+```bash
+nvidia-docker run -it --rm rapids-ml:python
+# OPTIONAL: nvidia-docker run -it --rm rapids-ml:pip
+```
+Run the unit tests inside the container.
+```bash
+./run_test.sh --runslow
+```
 
-- Build the documentation.
-  ```
-  cd docs
-  make html
-  cp -r build/html site/api
-  # cp -r site/* to 'gh-pages' branch
-  ```
+Run the benchmarks inside the container.
+```bash
+./run_benchmark.sh
+```
+
+Build the pip package.
+```bash
+python -m build
+```
+
+Build the documentation.
+```
+cd docs
+make html
+cp -r build/html site/api
+# copy site/* to 'gh-pages' branch to publish
+```
 
