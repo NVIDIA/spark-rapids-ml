@@ -244,7 +244,7 @@ else:
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize("n_classes", [2, 4])
 @pytest.mark.parametrize("num_workers", num_workers)
-# @pytest.mark.slow
+@pytest.mark.slow
 def test_random_forest_classifier(
     feature_type: str,
     data_shape: Tuple[int, int],
