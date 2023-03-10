@@ -47,6 +47,7 @@ from spark_rapids_ml.core import (
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
+    _CumlCaller,
     _CumlModel,
     alias,
 )
@@ -79,6 +80,19 @@ class NearestNeighborsClass(_CumlClass):
             "metric_params",
             "output_type",
         ]
+
+    @staticmethod
+    def _df_zip_with_index(df: DataFrame, id_col_name: str) -> DataFrame:
+        """
+        Add an row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
+        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
+        """
+        out_schema = StructType(
+            [StructField(id_col_name, IntegerType(), False)] + df.schema.fields
+        )
+        zipped_rdd = df.rdd.zipWithIndex()
+        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
+        return new_rdd.toDF(schema=out_schema)
 
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
@@ -137,45 +151,8 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         return col_name
 
 
-class _CumlEstimatorNearestNeighbors(
-    _CumlEstimatorSupervised, _NearestNeighborsCumlParams
-):
-    """
-    Base class for Cuml Nearest Neighbor.
-    """
-
-    def _pre_process_data(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
-    ]:
-        (
-            select_cols,
-            multi_col_names,
-            dimension,
-            feature_type,
-        ) = super()._pre_process_data(dataset)
-
-        # if input format is vectorUDT, convert data type from float64 to float32
-        input_col, _ = self._get_input_columns()
-        if input_col is not None and isinstance(
-            dataset.schema[input_col].dataType, VectorUDT
-        ):
-            select_cols[0] = vector_to_array(col(input_col), dtype="float32").alias(
-                alias.data
-            )
-
-        if self.hasParam("id_col") and self.isDefined("id_col"):
-            id_col_name = self.getOrDefault("id_col")
-            select_cols.append(col(id_col_name).alias(alias.row_number))
-        else:
-            select_cols.append(col(alias.row_number))
-
-        return select_cols, multi_col_names, dimension, feature_type
-
-
 class NearestNeighbors(
-    NearestNeighborsClass, _CumlEstimatorNearestNeighbors, _NearestNeighborsCumlParams
+    NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
 ):
     """
     Examples
@@ -190,9 +167,8 @@ class NearestNeighbors(
     >>> query_df = spark.createDataFrame(query, schema="id int, features array<float>")
     >>> topk = 2
     >>> gpu_knn = NearestNeighbors().setInputCol("features").setIdCol("id").setK(topk)
-    >>> gpu_knn.fit(data_df)
-    NearestNeighbors_084799c72508
-    >>> (query_df, data_df, knn_df) = gpu_knn.kneighbors(query_df)
+    >>> gpu_model = gpu_knn.fit(data_df)
+    >>> (query_df, data_df, knn_df) = gpu_model.kneighbors(query_df)
     >>> knn_df.show()
     +--------+-------+----------------+
     |query_id|indices|       distances|
@@ -222,7 +198,6 @@ class NearestNeighbors(
         self.set_params(**kwargs)
         self.label_isdata = 0
         self.label_isquery = 1
-        self.row_number_col = alias.row_number
         self.set_params(labelCol=alias.label)
 
     def setK(self, value: int) -> "NearestNeighbors":
@@ -235,54 +210,47 @@ class NearestNeighbors(
     def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
         return NearestNeighborsModel.from_row(result)
 
-    def fit(self, dataset: DataFrame, params: Optional[Dict[Param[Any], Any]] = None) -> "NearestNeighbors":  # type: ignore
+    def fit(self, dataset: DataFrame, params: Optional[Dict[Param[Any], Any]] = None) -> "NearestNeighborsModel": 
         self.item_df = dataset
         if not self.isDefined("id_col"):
-            self.item_df = self._df_zip_with_index(self.item_df)
+            self.item_df = self._df_zip_with_index(self.item_df, self.getIdCol())
 
         self.processed_item_df = self.item_df.withColumn(
             alias.label, lit(self.label_isdata)
         )
-        return self
 
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
-        query_default_num_partitions = query_df.rdd.getNumPartitions()
-        if not self.isDefined("id_col"):
-            query_df = self._df_zip_with_index(query_df)
-        processed_query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
-
-        union_df = self.processed_item_df.union(processed_query_df)
-
-        pipelinedrdd = self._fit(union_df)
-        pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
-        knn_rdd = pipelinedrdd.flatMap(
-            lambda row: list(zip(row["query_id"], row["indices"], row["distances"]))
-        )
-        knn_df = knn_rdd.toDF(
-            schema=f"query_{self.getIdCol()} int, indices array<int>, distances array<float>"
-        ).sort(f"query_{self.getIdCol()}")
-
-        return (query_df, self.item_df, knn_df)
-
-    def _df_zip_with_index(self, df: DataFrame) -> DataFrame:
-        """
-        Add an row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
-        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
-        """
-        out_schema = StructType(
-            [StructField(self.row_number_col, IntegerType(), False)] + df.schema.fields
-        )
-        zipped_rdd = df.rdd.zipWithIndex()
-        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
-        return new_rdd.toDF(schema=out_schema)
-
-    def _require_ucx(self) -> bool:
-        return True
-
-    def _return_model(self) -> bool:
-        return False
+        model = self._create_pyspark_model(Row(item_df = self.item_df, processed_item_df = self.processed_item_df, label_isdata = self.label_isdata, label_isquery = self.label_isquery))
+        model._num_workers = self._num_workers
+        self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
+        return model
 
     def _out_schema(self) -> Union[StructType, str]:
+        pass
+
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        pass
+
+ 
+class NearestNeighborsModel(
+    _CumlCaller, _CumlModel, NearestNeighborsClass, _NearestNeighborsCumlParams
+):
+    def __init__(
+        self,
+        item_df: DataFrame,
+        processed_item_df: DataFrame,
+        label_isdata: int,
+        label_isquery: int,
+    ):
+        super().__init__()
+        self.item_df = item_df
+        self.processed_item_df = processed_item_df
+        self.label_isdata = label_isdata
+        self.label_isquery = label_isquery
+
+    def _out_schema(self) -> Union[StructType, str]:  
         return StructType(
             [
                 StructField("query_id", ArrayType(IntegerType(), False), False),
@@ -295,10 +263,66 @@ class NearestNeighbors(
             ]
         )
 
-    def _get_cuml_fit_func(
+    def _require_ucx(self) -> bool:
+        """If enable or disable ucx over NCCL"""
+        return True 
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super()._pre_process_data(dataset)
+
+        # if input format is vectorUDT, convert data type from float64 to float32
+        input_col, _ = self._get_input_columns()
+        if input_col is not None and isinstance(
+            dataset.schema[input_col].dataType, VectorUDT
+        ):
+            select_cols[0] = vector_to_array(col(input_col), dtype="float32").alias(
+                alias.data
+            )
+
+        select_cols.append(col(alias.label))
+
+        if self.hasParam("id_col") and self.isDefined("id_col"):
+            id_col_name = self.getOrDefault("id_col")
+            select_cols.append(col(id_col_name).alias(alias.row_number))
+        else:
+            select_cols.append(col(alias.row_number))
+
+        return select_cols, multi_col_names, dimension, feature_type
+
+    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+        query_default_num_partitions = query_df.rdd.getNumPartitions()
+        if not self.isDefined("id_col"):
+            query_df = self._df_zip_with_index(query_df, self.getIdCol())
+        processed_query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
+
+        union_df = self.processed_item_df.union(processed_query_df)
+
+        pipelinedrdd = self._call_cuml_fit_func(union_df, return_model=False)
+        pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
+        knn_rdd = pipelinedrdd.flatMap(
+            lambda row: list(zip(row["query_id"], row["indices"], row["distances"]))
+        )
+        knn_df = knn_rdd.toDF(
+            schema=f"query_{self.getIdCol()} int, indices array<int>, distances array<float>"
+        ).sort(f"query_{self.getIdCol()}")
+
+        return (query_df, self.item_df, knn_df)
+
+    def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+
         label_isdata = self.label_isdata
+        label_isquery = self.label_isquery
 
         def _cuml_fit(
             dfs: CumlInputType,
@@ -329,7 +353,7 @@ class NearestNeighbors(
                     for i in range(len(x_array))
                 ]
                 query_filter = [
-                    False if label_array[i] == label_isdata else True  # type: ignore
+                    True if label_array[i] == label_isquery else False # type: ignore
                     for i in range(len(x_array))
                 ]
 
@@ -420,32 +444,12 @@ class NearestNeighbors(
 
         return _cuml_fit
 
-
-class NearestNeighborsModel(
-    NearestNeighborsClass, _CumlModel, _NearestNeighborsCumlParams
-):
-    def __init__(
-        self,
-        query_index: List[int],
-        distances: List[List[float]],
-        indices: List[List[int]],
-    ):
-        super().__init__(
-            query_index=query_index,
-            distances=distances,
-            indices=indices,
-        )
-
-        cumlParams = NearestNeighbors._get_cuml_params_default()
-        self.set_params(**cumlParams)
-
-    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:  # type: ignore
-        pass
-
-    def _get_cuml_transform_func(  # type: ignore
+    def _get_cuml_transform_func(
         self, dataset: DataFrame
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
-        pass
+        raise NotImplementedError(
+            "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
+        )

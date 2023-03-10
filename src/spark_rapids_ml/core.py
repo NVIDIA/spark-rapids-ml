@@ -238,16 +238,7 @@ class _CumlCommon(MLWritable, MLReadable):
             cuml_logger.set_level(log_level)
 
 
-class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
-    """
-    The common estimator to handle the fit callback (_fit). It should:
-    1. set the default parameters
-    2. validate the parameters
-    3. prepare the dataset
-    4. train and return CUML model
-    5. create the pyspark model
-    """
-
+class _CumlCaller(_CumlParams, _CumlCommon):
     def __init__(self) -> None:
         super().__init__()
         self.initialize_cuml_params()
@@ -260,46 +251,11 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """
         raise NotImplementedError()
 
-    @abstractmethod
-    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
-        """
-        Create the model according to the collected Row
-        """
-        raise NotImplementedError()
-
     def _repartition_dataset(self, dataset: DataFrame) -> DataFrame:
         """
         Repartition the dataset to the desired number of workers.
         """
         return dataset.repartition(self.num_workers)
-
-    @abstractmethod
-    def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        """
-        Subclass must implement this function to return a cuml fit function that will be
-        sent to executor to run.
-
-        Eg,
-
-        def _get_cuml_fit_func(self, dataset: DataFrame):
-            ...
-            def _cuml_fit(df: CumlInputType, params: Dict[str, Any]) -> Dict[str, Any]:
-                "" "
-                df:  a sequence of (X, Y)
-                params: a series of parameters stored in dictionary,
-                    especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
-                "" "
-                ...
-            ...
-
-            return _cuml_fit
-
-        _get_cuml_fit_func itself runs on the driver side, while the returned _cuml_fit will
-        run on the executor side.
-        """
-        raise NotImplementedError()
 
     def _pre_process_data(
         self, dataset: DataFrame
@@ -364,11 +320,35 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """If enable or disable ucx over NCCL"""
         return False
 
-    def _return_model(self) -> bool:
-        """If _fit returns a model or a RDD"""
-        return True
+    @abstractmethod
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        """
+        Subclass must implement this function to return a cuml fit function that will be
+        sent to executor to run.
 
-    def _fit(self, dataset: DataFrame) -> Union["_CumlModel", RDD]:
+        Eg,
+
+        def _get_cuml_fit_func(self, dataset: DataFrame):
+            ...
+            def _cuml_fit(df: CumlInputType, params: Dict[str, Any]) -> Dict[str, Any]:
+                "" "
+                df:  a sequence of (X, Y)
+                params: a series of parameters stored in dictionary,
+                    especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
+                "" "
+                ...
+            ...
+
+            return _cuml_fit
+
+        _get_cuml_fit_func itself runs on the driver side, while the returned _cuml_fit will
+        run on the executor side.
+        """
+        raise NotImplementedError()
+
+    def _call_cuml_fit_func(self, dataset: DataFrame, return_model: bool = True) -> RDD:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -406,7 +386,6 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         enable_nccl = self._enable_nccl()
         require_ucx = self._require_ucx()
-        return_model = self._return_model()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -470,9 +449,40 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             .mapPartitions(lambda x: x)
         )
 
-        if return_model == False:
-            return pipelined_rdd
+        return pipelined_rdd
 
+
+class _CumlEstimator(Estimator, _CumlCaller):
+    """
+    The common estimator to handle the fit callback (_fit). It should:
+    1. set the default parameters
+    2. validate the parameters
+    3. prepare the dataset
+    4. train and return CUML model
+    5. create the pyspark model
+    """
+    def __init__(self) -> None:
+        super().__init__()
+
+    @abstractmethod
+    def _out_schema(self) -> Union[StructType, str]:
+        pass
+
+    @abstractmethod
+    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
+        """
+        Create the model according to the collected Row
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        pass
+
+    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+        pipelined_rdd = self._call_cuml_fit_func(dataset = dataset, return_model = True)
         ret = pipelined_rdd.collect()[0]
 
         model = self._create_pyspark_model(ret)
@@ -531,7 +541,7 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
         return select_cols, multi_col_names, dimension, feature_type
 
 
-class _CumlModel(Model, _CumlCommon, _CumlParams):
+class _CumlModel(Model, _CumlParams, _CumlCommon):
     """
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """
