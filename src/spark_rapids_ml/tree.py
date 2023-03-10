@@ -224,8 +224,8 @@ class _RandomForestEstimator(
                 y = pd.concat(y_list)
             else:
                 # should be list of np.ndarrays here
-                X = np.concatenate(X_list)
-                y = np.concatenate(y_list)  # type: ignore
+                X = np.array(np.concatenate(X_list), order='F')
+                y = np.array(np.concatenate(y_list), order='F')  # type: ignore
 
             # Fit a random forest model on the dataset (X, y)
             rf.fit(X, y, convert_dtype=False)

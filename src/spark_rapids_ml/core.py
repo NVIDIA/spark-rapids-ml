@@ -429,7 +429,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     if multi_col_names:
                         features = pdf[multi_col_names]
                     else:
-                        features = np.array(list(pdf[alias.data]))
+                        features = np.array(list(pdf[alias.data]), order='F')
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
                         pdf[alias.row_number]
@@ -695,7 +695,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     yield cuml_transform_func(cuml_object, pdf[select_cols])
             else:
                 for pdf in pdf_iter:
-                    nparray = np.array(list(pdf[select_cols[0]]))
+                    nparray = np.array(list(pdf[select_cols[0]]), order='F')
                     yield cuml_transform_func(cuml_object, nparray)
 
         return dataset.mapInPandas(

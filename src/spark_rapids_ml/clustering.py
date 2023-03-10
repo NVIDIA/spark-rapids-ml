@@ -270,7 +270,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 concated = pd.concat(df_list)
             else:
                 # should be list of np.ndarrays here
-                concated = np.concatenate(df_list)
+                concated = np.array(np.concatenate(df_list), order='F')
 
             kmeans_object.fit(
                 concated,
@@ -283,13 +283,15 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 f"iterations: {kmeans_object.n_iter_}, inertia: {kmeans_object.inertia_}"
             )
 
-            return {
+            res = {
                 "cluster_centers_": [
                     kmeans_object.cluster_centers_.to_numpy().tolist()
                 ],
                 "n_cols": params["n"],
-                "dtype": kmeans_object.dtype.name,
+                "dtype": str(kmeans_object.dtype.name),
             }
+            del kmeans_object
+            return res
 
         return _cuml_fit
 
