@@ -1,0 +1,3 @@
+include:
+  - docs/_templates
+  - docs/_static

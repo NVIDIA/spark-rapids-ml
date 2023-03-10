@@ -1,5 +1,6 @@
 -r requirements.txt
 black
+build
 mypy
 numpydoc
 pydata-sphinx-theme
