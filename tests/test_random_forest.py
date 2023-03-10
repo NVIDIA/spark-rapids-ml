@@ -126,14 +126,14 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
 rf_est_model_classes = [
     # (estimator, model, n_classes)
     (RandomForestClassifier, RandomForestClassificationModel, 2),
-    # (RandomForestClassifier, RandomForestClassificationModel, 4),
-    # (RandomForestRegressor, RandomForestRegressionModel, -1),
+    (RandomForestClassifier, RandomForestClassificationModel, 4),
+    (RandomForestRegressor, RandomForestRegressionModel, -1),
 ]
 
 
 @pytest.mark.parametrize("est_model_classes", rf_est_model_classes, ids=idfn)
-@pytest.mark.parametrize("feature_type", ["vector"])
-@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
+@pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 def test_random_forest_basic(
     tmp_path: str,
@@ -196,15 +196,13 @@ def test_random_forest_basic(
         # train a model
         model = est.fit(df)
 
-        model.transform(df).show()
+        # model persistence
+        path = tmp_path + "/random_forest_tests"
+        model_path = f"{path}/random_forest_tests"
+        model.write().overwrite().save(model_path)
 
-        # # model persistence
-        # path = tmp_path + "/random_forest_tests"
-        # model_path = f"{path}/random_forest_tests"
-        # model.write().overwrite().save(model_path)
-        #
-        # model_loaded = RFEstimatorModel.load(model_path)
-        # assert_model(model, model_loaded)
+        model_loaded = RFEstimatorModel.load(model_path)
+        assert_model(model, model_loaded)
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
@@ -246,7 +244,7 @@ else:
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize("n_classes", [2, 4])
 @pytest.mark.parametrize("num_workers", num_workers)
-@pytest.mark.slow
+# @pytest.mark.slow
 def test_random_forest_classifier(
     feature_type: str,
     data_shape: Tuple[int, int],
@@ -279,6 +277,7 @@ def test_random_forest_classifier(
     cu_rf = cuRf(n_streams=1, **rf_params)
     cu_rf.fit(X_train, y_train)
     cu_preds = cu_rf.predict(X_test)
+    cu_preds_proba = cu_rf.predict_proba(X_test)
 
     cu_acc = accuracy_score(y_test, cu_preds)
 
@@ -300,6 +299,7 @@ def test_random_forest_classifier(
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = spark_rf_model.transform(test_df).collect()
+
         pred_result = [row.prediction for row in result]
         spark_acc = accuracy_score(y_test, np.array(pred_result))
 
@@ -309,6 +309,9 @@ def test_random_forest_classifier(
             data_type == np.float32 and feature_type == feature_types.vector
         ):
             assert cu_acc == spark_acc
+
+            pred_proba_result = [row.probability for row in result]
+            np.testing.assert_allclose(pred_proba_result, cu_preds_proba, rtol=1e-3)
         else:
             assert cu_acc - spark_acc < 0.07
 
@@ -465,17 +468,16 @@ def test_random_forest_classifier_spark_compat(
         if result:
             if isinstance(model, SparkRFClassificationModel):
                 assert result.prediction == 0.0
+                assert np.argmax(result.probability) == 0
             else:
                 # TODO: investigate difference
                 assert result.prediction == 1.0
+                assert np.argmax(result.probability) == 1
 
         if isinstance(model, SparkRFClassificationModel):
-            assert np.argmax(result.probability) == 0
             assert np.argmax(result.newRawPrediction) == 0
             assert result.leafId == Vectors.dense([0.0, 0.0, 0.0])
         else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert np.argmax(result.probability) == 0
             with pytest.raises((NotImplementedError, AttributeError)):
                 assert np.argmax(result.newRawPrediction) == 0
             with pytest.raises((NotImplementedError, AttributeError)):

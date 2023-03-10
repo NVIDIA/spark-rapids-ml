@@ -46,6 +46,14 @@ class _RFClassifierParams(_RandomForestClassifierParams, HasProbabilityCol):
     def __init__(self, *args: Any):
         super().__init__(*args)
 
+    def setProbabilityCol(
+        self: "_RFClassifierParams", value: str
+    ) -> "_RFClassifierParams":
+        """
+        Sets the value of :py:attr:`probabilityCol`.
+        """
+        return self._set(probabilityCol=value)
+
 
 class RandomForestClassifier(
     _RandomForestClass,
@@ -187,7 +195,6 @@ class RandomForestClassificationModel(
             rf.update_labels = False
             data[pred.prediction] = rf.predict(pdf)
             data[pred.probability] = pd.Series(list(rf.predict_proba(pdf)))
-            print(data)
             return pd.DataFrame(data)
 
         return _construct_rf, _predict
