@@ -1,20 +1,60 @@
 # Build in Docker
 
-We provide a Dockerfile to build the project in a container.
+We provide the following Dockerfiles:
+- [Dockerfile](./Dockerfile) - for building the Scala API.
+- [Dockerfile.python](./Dockerfile.python) - for building the Python API (using conda for RAPIDS dependencies).
+- [Dockerfile.pip](./Dockerfile.pip) - for building the Python API (using pip for RAPIDS dependencies).
 
-## Build the container
+## Scala API
 
+First, build the development image.  **Note**: see the Dockerfile for configurable build arguments.
 ```bash
 docker build -t rapids-ml:latest -f Dockerfile .
 ```
-Please check the [Dockerfile](./Dockerfile) for more configurable build arguments.
 
-## Build the project in the container
-
-Enter the container and build the project:
+Run the container.
 ```bash
-nvidia-docker run -it --rm rapids-ml:latest bash
+nvidia-docker run -it --rm rapids-ml:latest
 ```
 
-The build process is the same as the [build process](../README.md#build-target-jar).
+Then, inside the container, build the Scala API [as usual](../README_scala.md#build-target-jar).
+```bash
+mvn clean package
+```
+
+## Python API
+
+First, build the development image.
+```bash
+docker build -t rapids-ml:python -f Dockerfile.python ..
+# OPTIONAL: docker build -t rapids-ml:pip -f Dockerfile.pip ..
+```
+
+Launch the container.
+```bash
+nvidia-docker run -it --rm rapids-ml:python
+# OPTIONAL: nvidia-docker run -it --rm rapids-ml:pip
+```
+Run the unit tests inside the container.
+```bash
+./run_test.sh --runslow
+```
+
+Run the benchmarks inside the container.
+```bash
+./run_benchmark.sh
+```
+
+Build the pip package.
+```bash
+python -m build
+```
+
+Build the documentation.
+```
+cd docs
+make html
+cp -r build/html site/api
+# copy site/* to 'gh-pages' branch to publish
+```
 
