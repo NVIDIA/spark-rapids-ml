@@ -54,7 +54,6 @@ Build the documentation.
 ```
 cd docs
 make html
-cp -r build/html site/api
+cp -r build/html site/api/python
 # copy site/* to 'gh-pages' branch to publish
 ```
-
