@@ -270,7 +270,14 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 concated = pd.concat(df_list)
             else:
                 # should be list of np.ndarrays here
-                concated = np.array(np.concatenate(df_list), order='F')
+                rows = sum([arr.shape[0] for arr in df_list])
+                cols = df_list[0].shape[1]
+                d_type = df_list[0].dtype
+                concated_out = np.empty(shape=(rows, cols), order='F', dtype=d_type)
+                concated = np.concatenate(df_list, out=concated_out)
+                for df in df_list:
+                    del df
+                
 
             kmeans_object.fit(
                 concated,
@@ -377,6 +384,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
             res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
+            del df
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal

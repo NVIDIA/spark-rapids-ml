@@ -436,6 +436,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         if alias.row_number in pdf.columns
                         else None
                     )
+                    if not multi_col_names:
+                        del pdf
                     inputs.append((features, label, row_number))
 
                 params["handle"] = cc.handle

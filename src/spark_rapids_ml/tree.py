@@ -224,8 +224,17 @@ class _RandomForestEstimator(
                 y = pd.concat(y_list)
             else:
                 # should be list of np.ndarrays here
-                X = np.array(np.concatenate(X_list), order='F')
+                rows = sum([arr.shape[0] for arr in X_list])
+                cols = X_list[0].shape[1]
+                d_type = X_list[0].dtype
+                concated_out = np.empty(shape=(rows, cols), order='F', dtype=d_type)
+                X = np.concatenate(X_list, out=concated_out)
+                # y one is small, so we can be less efficient
                 y = np.array(np.concatenate(y_list), order='F')  # type: ignore
+                for X_ in X_list:
+                    del X_
+                for y_ in y_list:
+                    del y_
 
             # Fit a random forest model on the dataset (X, y)
             rf.fit(X, y, convert_dtype=False)
@@ -372,6 +381,7 @@ class _RandomForestModel(
         def _predict(rf: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
             rf.update_labels = False
             ret = rf.predict(pdf)
+            del pdf
             return pd.Series(ret)
 
         return _construct_rf, _predict
