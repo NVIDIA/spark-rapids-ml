@@ -28,7 +28,8 @@ class BenchmarkLinearRegression(BenchmarkBase):
         from pyspark.ml.regression import LinearRegression
 
         params = inspect_default_params_from_func(
-            LinearRegression, ["featuresCol", "labelCol", "predictionCol", "weightCol"]
+            LinearRegression.__init__,
+            ["featuresCol", "labelCol", "predictionCol", "weightCol"],
         )
         return params
 

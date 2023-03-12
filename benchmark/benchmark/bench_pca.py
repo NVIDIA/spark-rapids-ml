@@ -33,7 +33,7 @@ class BenchmarkPCA(BenchmarkBase):
         from pyspark.ml.feature import PCA
 
         params = inspect_default_params_from_func(
-            PCA,
+            PCA.__init__,
             [
                 "featuresCol",
                 "labelCol",

@@ -33,7 +33,7 @@ class BenchmarkKMeans(BenchmarkBase):
         from pyspark.ml.clustering import KMeans
 
         params = inspect_default_params_from_func(
-            KMeans,
+            KMeans.__init__,
             [
                 "distanceMeasure",
                 "featuresCol",
