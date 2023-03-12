@@ -84,7 +84,7 @@ class NearestNeighborsClass(_CumlClass):
     @staticmethod
     def _df_zip_with_index(df: DataFrame, id_col_name: str) -> DataFrame:
         """
-        Add an row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
+        Add a row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
         TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
         """
         out_schema = StructType(
@@ -219,6 +219,7 @@ class NearestNeighbors(
             alias.label, lit(self.label_isdata)
         )
 
+        # TODO: should test this at scale to see if/when we hit limits
         model = self._create_pyspark_model(
             Row(
                 item_df=self.item_df,
@@ -312,6 +313,29 @@ class NearestNeighborsModel(
         return select_cols, multi_col_names, dimension, feature_type
 
     def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+        """Return the exact nearest neighbors for each query in query_df. The data vectors (or equivalently item vectors) should be provided
+        through the fit function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The distance measure here is euclidean distance
+        and the number of target exact nearest neighbors can be set through setK(). The function currently only supports float32 type and will
+        convert other data types into float32.
+
+        Parameters
+        ----------
+        query_df: pyspark.sql.DataFrame
+            query vectors that each row corresponds to one query. The query_df can be in the format of a single array column,
+            a single vector column, or multiple float columns.
+
+        Returns
+        -------
+        query_df: pyspark.sql.DataFrame
+            the query_df itself if it has an id column set through setIdCol(). If not, a monotonically increasing id column will be added.
+
+        item_df: pyspark.sql.DataFrame
+            the item_df (or equivalently data_df) itself if it has an id column set through setIdCol(). If not, a monotonically increasing id column will be added.
+
+        knn_df: pyspark.sql.DataFrame
+            the result k nearest neighbors (knn) dataframe that has three columns (id, indices, distances). Each row of knn_df corresponds to the knn result of
+            a query vector, identified by the id column. The indices/distances column stores the ids/distances of knn.
+        """
         query_default_num_partitions = query_df.rdd.getNumPartitions()
         if not self.isDefined("id_col"):
             query_df = self._df_zip_with_index(query_df, self.getIdCol())
@@ -456,6 +480,11 @@ class NearestNeighborsModel(
             }
 
         return _cuml_fit
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        raise NotImplementedError(
+            "'NearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
+        )
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame

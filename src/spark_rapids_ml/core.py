@@ -239,6 +239,15 @@ class _CumlCommon(MLWritable, MLReadable):
 
 
 class _CumlCaller(_CumlParams, _CumlCommon):
+    """
+    This class is responsible for calling cuml function (e.g. fit or kneighbor) on pyspark dataframe,
+    to run a multi-node multi-gpu algorithm on the dataframe. A function usually comes from a multi-gpu cuml class,
+    such as cuml.decomposition.pca_mg.PCAMG or cuml.neighbors.nearest_neighbors_mg.NearestNeighborsMG.
+    This class converts dataframe into cuml input type, and leverages NCCL or UCX for communicator. To use this class,
+    developers can override the key methods including _out_schema(...) and _get_cuml_fit_func(...). Examples can be found in
+    spark_rapids_ml.clustering.KMeans and spark_rapids_ml.regression.LinearRegression.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.initialize_cuml_params()
@@ -466,21 +475,11 @@ class _CumlEstimator(Estimator, _CumlCaller):
         super().__init__()
 
     @abstractmethod
-    def _out_schema(self) -> Union[StructType, str]:
-        pass
-
-    @abstractmethod
     def _create_pyspark_model(self, result: Row) -> "_CumlModel":
         """
         Create the model according to the collected Row
         """
         raise NotImplementedError()
-
-    @abstractmethod
-    def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        pass
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
         pipelined_rdd = self._call_cuml_fit_func(dataset=dataset, return_model=True)
