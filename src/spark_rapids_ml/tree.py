@@ -227,10 +227,10 @@ class _RandomForestEstimator(
                 rows = sum([arr.shape[0] for arr in X_list])
                 cols = X_list[0].shape[1]
                 d_type = X_list[0].dtype
-                concated_out = np.empty(shape=(rows, cols), order='F', dtype=d_type)
+                concated_out = np.empty(shape=(rows, cols), order="F", dtype=d_type)
                 X = np.concatenate(X_list, out=concated_out)
                 # y one is small, so we can be less efficient
-                y = np.array(np.concatenate(y_list), order='F')  # type: ignore
+                y = np.array(np.concatenate(y_list), order="F")  # type: ignore
                 for X_ in X_list:
                     del X_
                 for y_ in y_list:
