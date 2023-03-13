@@ -716,7 +716,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         elif isinstance(schema, StructType):
             return False if len(schema.names) > 1 else True
 
-    def _handle_multi_predication(
+    def _handle_multi_prediction(
         self, dataset: DataFrame, pred_struct_col_name: str
     ) -> DataFrame:
         """For the multiple predictions, the subclass needs to handle it accordingly"""
@@ -758,13 +758,13 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
             dataset = dataset.withColumn(pred_struct_col_name, pred_col)
 
-            # 1. Add predicationCol in the base class
+            # 1. Add predictionCol in the base class
             dataset = dataset.withColumn(
                 pred_name, getattr(col(pred_struct_col_name), pred.prediction)
             )
 
             # 2. Handle other prediction columns in the subclass
-            dataset = self._handle_multi_predication(dataset, pred_struct_col_name)
+            dataset = self._handle_multi_prediction(dataset, pred_struct_col_name)
 
             # 3. Drop the unused column
             dataset = dataset.drop(pred_struct_col_name)

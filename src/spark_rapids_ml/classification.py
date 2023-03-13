@@ -199,7 +199,7 @@ class RandomForestClassificationModel(
 
         return _construct_rf, _predict
 
-    def _handle_multi_predication(
+    def _handle_multi_prediction(
         self, dataset: DataFrame, pred_struct_col_name: str
     ) -> DataFrame:
         probability_col = self.getProbabilityCol()
