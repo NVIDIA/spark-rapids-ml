@@ -106,6 +106,26 @@ class DataGenBase(DataGen):
             help="do not stop spark session when finished",
         )
 
+        def _restrict_train_size(x: float) -> float:
+            # refer to https://stackoverflow.com/a/12117065/1928940
+            try:
+                x = float(x)
+            except ValueError:
+                raise argparse.ArgumentTypeError(f"{x} is not a floating-point literal")
+
+            if x < 0.0 or x > 1.0:
+                raise argparse.ArgumentTypeError(f"{x} is not in range [0.0, 1.0]")
+
+            return x
+
+        self._parser.add_argument(
+            "--train_size",
+            type=_restrict_train_size,  # type: ignore
+            help="the value should be between 0.0 and 1.0 and represent "
+            "the proportion of the dataset to include in the train split",
+            default=0.8,
+        )
+
         self._add_extra_parameters()
 
         self.args_: Optional[argparse.Namespace] = None
@@ -456,15 +476,23 @@ if __name__ == "__main__":
                 .drop(*feature_cols)
             )
 
+        train_df, eval_df = df.randomSplit(
+            [args.train_size, 1 - args.train_size], seed=1
+        )
+
         if args.output_num_files is not None:
-            df = df.repartition(args.output_num_files)
+            train_df = train_df.repartition(args.output_num_files)
+            eval_df = eval_df.repartition(args.output_num_files)
 
-        df.printSchema()
+        train_df.printSchema()
 
-        writer = df.write
+        train_writer = train_df.write
+        eval_writer = eval_df.write
         if args.overwrite:
-            writer = df.write.mode("overwrite")
+            train_writer = train_df.write.mode("overwrite")
+            eval_writer = eval_df.write.mode("overwrite")
 
-        writer.parquet(args.output_dir)
+        train_writer.parquet(f"{args.output_dir}/train")
+        eval_writer.parquet(f"{args.output_dir}/eval")
 
         print("gen_data finished")
