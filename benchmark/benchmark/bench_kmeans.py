@@ -33,7 +33,7 @@ class BenchmarkKMeans(BenchmarkBase):
         from pyspark.ml.clustering import KMeans
 
         params = inspect_default_params_from_func(
-            KMeans,
+            KMeans.__init__,
             [
                 "distanceMeasure",
                 "featuresCol",
@@ -236,8 +236,9 @@ class BenchmarkKMeans(BenchmarkBase):
             def cpu_transform(df: DataFrame) -> None:
                 transformed_df = cpu_model.transform(df)
                 transformed_df.agg(sum(output_col)).collect()
+                return transformed_df
 
-            _, transform_time = with_benchmark(
+            transformed_df, transform_time = with_benchmark(
                 "cpu transform", lambda: cpu_transform(vector_df)
             )
 

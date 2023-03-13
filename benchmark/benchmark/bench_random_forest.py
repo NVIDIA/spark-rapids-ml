@@ -32,7 +32,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
 
         # pyspark paramters
         params = inspect_default_params_from_func(
-            RandomForestClassifier,
+            RandomForestClassifier.__init__,
             [
                 "featuresCol",
                 "labelCol",

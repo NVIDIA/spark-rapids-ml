@@ -253,7 +253,6 @@ def test_random_forest_classifier(
     n_classes: int,
     num_workers: int,
 ) -> None:
-
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -329,7 +328,6 @@ def test_random_forest_regressor(
     max_record_batch: int,
     num_workers: int,
 ) -> None:
-
     X_train, X_test, y_train, y_test = make_regression_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -540,6 +538,10 @@ def test_random_forest_regressor_spark_compat(
         assert rf.getNumTrees() == 2
         assert rf.getSeed() == 42
 
+        if isinstance(rf, RandomForestRegressor):
+            # force single GPU worker while testing compat
+            rf.num_workers = 1
+
         model = rf.fit(df)
         model.setLeafCol("leafId")
 
@@ -570,11 +572,7 @@ def test_random_forest_regressor_spark_compat(
 
         result = model.transform(test0).head()
 
-        if isinstance(model, SparkRFRegressionModel):
-            assert result.prediction == 0.0
-        else:
-            # TODO: investigate difference
-            assert result.prediction == 0.5
+        assert result.prediction == 0.0
 
         if isinstance(model, SparkRFRegressionModel):
             assert result.leafId == Vectors.dense([0.0, 0.0])
@@ -591,11 +589,7 @@ def test_random_forest_regressor_spark_compat(
         test1 = spark.createDataFrame([(Vectors.sparse(2, [0], [1.0]),)], ["features"])
         result = model.transform(test1).head()
         if result:
-            if isinstance(model, SparkRFRegressionModel):
-                assert result.prediction == 0.0
-            else:
-                # TODO: investigate difference
-                assert result.prediction == 0.5
+            assert result.prediction == 0.0
 
         rfr_path = tmp_path + "/rfr"
         rf.save(rfr_path)

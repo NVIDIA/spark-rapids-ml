@@ -33,7 +33,7 @@ class BenchmarkPCA(BenchmarkBase):
         from pyspark.ml.feature import PCA
 
         params = inspect_default_params_from_func(
-            PCA,
+            PCA.__init__,
             [
                 "featuresCol",
                 "labelCol",
@@ -259,8 +259,9 @@ class BenchmarkPCA(BenchmarkBase):
                 transformed_df.select(
                     (vector_to_array(col(output_col))[0]).alias("zero")
                 ).agg(sum("zero")).collect()
+                return transformed_df
 
-            _, transform_time = with_benchmark(
+            transformed_df, transform_time = with_benchmark(
                 "cpu transform", lambda: cpu_transform(vector_df)
             )
 
