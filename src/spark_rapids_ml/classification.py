@@ -20,17 +20,10 @@ import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.ml.classification import _RandomForestClassifierParams
-from pyspark.ml.functions import array_to_vector
 from pyspark.ml.param.shared import HasProbabilityCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
-from pyspark.sql.types import (
-    DoubleType,
-    FloatType,
-    IntegerType,
-    IntegralType,
-    StructType,
-)
+from pyspark.sql.types import DoubleType, FloatType, IntegerType, IntegralType
 
 from spark_rapids_ml.core import CumlT, alias, pred
 from spark_rapids_ml.tree import (
@@ -39,7 +32,6 @@ from spark_rapids_ml.tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from spark_rapids_ml.utils import dtype_to_pyspark_type
 
 
 class _RFClassifierParams(_RandomForestClassifierParams, HasProbabilityCol):
@@ -198,22 +190,6 @@ class RandomForestClassificationModel(
             return pd.DataFrame(data)
 
         return _construct_rf, _predict
-
-    def _handle_multi_prediction(
-        self, dataset: DataFrame, pred_struct_col_name: str
-    ) -> DataFrame:
-        probability_col = self.getProbabilityCol()
-        dataset = dataset.withColumn(
-            probability_col,
-            array_to_vector(getattr(col(pred_struct_col_name), pred.probability)),
-        )
-        return dataset
-
-    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        assert self.dtype is not None
-        pyspark_type = dtype_to_pyspark_type(self.dtype)
-        schema = f"{pred.prediction} {pyspark_type}, {pred.probability} array<{pyspark_type}>"
-        return schema
 
     def _is_classification(self) -> bool:
         return True

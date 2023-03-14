@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
-from pyspark.ml.functions import vector_to_array
+from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol
 from pyspark.ml.util import (
@@ -48,7 +48,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
-from pyspark.sql import Column, DataFrame, SparkSession
+from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
 from pyspark.sql.types import (
@@ -716,11 +716,15 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         elif isinstance(schema, StructType):
             return False if len(schema.names) > 1 else True
 
-    def _handle_multi_prediction(
-        self, dataset: DataFrame, pred_struct_col_name: str
-    ) -> DataFrame:
-        """For the multiple predictions, the subclass needs to handle it accordingly"""
-        return dataset
+    def _has_probability_col(self) -> bool:
+        """This API is needed and can be overwritten by subclass which
+        hasn't implemented predict probability yet"""
+
+        return (
+            True
+            if self.hasParam("probabilityCol") and self.isDefined("probabilityCol")
+            else False
+        )
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
@@ -763,8 +767,15 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
                 pred_name, getattr(col(pred_struct_col_name), pred.prediction)
             )
 
-            # 2. Handle other prediction columns in the subclass
-            dataset = self._handle_multi_prediction(dataset, pred_struct_col_name)
+            # 2. Handle probability columns
+            if self._has_probability_col():
+                probability_col = self.getOrDefault("probabilityCol")
+                dataset = dataset.withColumn(
+                    probability_col,
+                    array_to_vector(
+                        getattr(col(pred_struct_col_name), pred.probability)
+                    ),
+                )
 
             # 3. Drop the unused column
             dataset = dataset.drop(pred_struct_col_name)
@@ -773,7 +784,13 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
-        return dtype_to_pyspark_type(self.dtype)
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+
+        schema = f"{pred.prediction} {pyspark_type}"
+        if self._has_probability_col():
+            schema = f"{schema}, {pred.probability} array<{pyspark_type}>"
+
+        return schema
 
 
 def _set_pyspark_cuml_cls_param_attrs(
