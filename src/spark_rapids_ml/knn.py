@@ -196,8 +196,8 @@ class NearestNeighbors(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
-        self.label_isdata = 0
-        self.label_isquery = 1
+        self._label_isdata = 0
+        self._label_isquery = 1
         self.set_params(labelCol=alias.label)
 
     def setK(self, value: int) -> "NearestNeighbors":
@@ -211,21 +211,21 @@ class NearestNeighbors(
         return NearestNeighborsModel.from_row(result)
 
     def _fit(self, dataset: DataFrame) -> "NearestNeighborsModel":
-        self.item_df = dataset
+        self._item_df = dataset
         if not self.isDefined("id_col"):
-            self.item_df = self._df_zip_with_index(self.item_df, self.getIdCol())
+            self._item_df = self._df_zip_with_index(self._item_df, self.getIdCol())
 
-        self.processed_item_df = self.item_df.withColumn(
-            alias.label, lit(self.label_isdata)
+        self._processed_item_df = self._item_df.withColumn(
+            alias.label, lit(self._label_isdata)
         )
 
         # TODO: should test this at scale to see if/when we hit limits
         model = self._create_pyspark_model(
             Row(
-                item_df=self.item_df,
-                processed_item_df=self.processed_item_df,
-                label_isdata=self.label_isdata,
-                label_isquery=self.label_isquery,
+                item_df=self._item_df,
+                processed_item_df=self._processed_item_df,
+                label_isdata=self._label_isdata,
+                label_isquery=self._label_isquery,
             )
         )
         model._num_workers = self._num_workers
@@ -259,10 +259,10 @@ class NearestNeighborsModel(
         label_isquery: int,
     ):
         super().__init__()
-        self.item_df = item_df
-        self.processed_item_df = processed_item_df
-        self.label_isdata = label_isdata
-        self.label_isquery = label_isquery
+        self._item_df = item_df
+        self._processed_item_df = processed_item_df
+        self._label_isdata = label_isdata
+        self._label_isquery = label_isquery
 
     def _out_schema(self) -> Union[StructType, str]:  # type: ignore
         return StructType(
@@ -277,9 +277,9 @@ class NearestNeighborsModel(
             ]
         )
 
-    def _require_ucx(self) -> bool:
-        """If enable or disable ucx over NCCL"""
-        return True
+    def _require_nccl_ucx(self) -> Tuple[bool, bool]:
+        """Enable ucx over NCCL"""
+        return (True, True)
 
     def _pre_process_data(  # type: ignore
         self, dataset: DataFrame
@@ -313,37 +313,44 @@ class NearestNeighborsModel(
         return select_cols, multi_col_names, dimension, feature_type
 
     def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
-        """Return the exact nearest neighbors for each query in query_df. The data vectors (or equivalently item vectors) should be provided
-        through the fit function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The distance measure here is euclidean distance
-        and the number of target exact nearest neighbors can be set through setK(). The function currently only supports float32 type and will
-        convert other data types into float32.
+        """Return the exact nearest neighbors for each query in query_df. The data
+        vectors (or equivalently item vectors) should be provided through the fit
+        function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The
+        distance measure here is euclidean distance and the number of target exact
+        nearest neighbors can be set through setK(). The function currently only
+        supports float32 type and will convert other data types into float32.
 
         Parameters
         ----------
         query_df: pyspark.sql.DataFrame
-            query vectors that each row corresponds to one query. The query_df can be in the format of a single array column,
-            a single vector column, or multiple float columns.
+            query vectors that each row corresponds to one query. The query_df can be in the
+            format of a single array column, a single vector column, or multiple float columns.
 
         Returns
         -------
         query_df: pyspark.sql.DataFrame
-            the query_df itself if it has an id column set through setIdCol(). If not, a monotonically increasing id column will be added.
+            the query_df itself if it has an id column set through setIdCol(). If not,
+            a monotonically increasing id column will be added.
 
         item_df: pyspark.sql.DataFrame
-            the item_df (or equivalently data_df) itself if it has an id column set through setIdCol(). If not, a monotonically increasing id column will be added.
+            the item_df (or equivalently data_df) itself if it has an id column set
+            through setIdCol(). If not, a monotonically increasing id column will be added.
 
         knn_df: pyspark.sql.DataFrame
-            the result k nearest neighbors (knn) dataframe that has three columns (id, indices, distances). Each row of knn_df corresponds to the knn result of
-            a query vector, identified by the id column. The indices/distances column stores the ids/distances of knn.
+            the result k nearest neighbors (knn) dataframe that has three
+            columns (id, indices, distances). Each row of knn_df corresponds to the knn
+            result of a query vector, identified by the id column. The indices/distances
+            column stores the ids/distances of knn.
         """
+
         query_default_num_partitions = query_df.rdd.getNumPartitions()
         if not self.isDefined("id_col"):
             query_df = self._df_zip_with_index(query_df, self.getIdCol())
-        processed_query_df = query_df.withColumn(alias.label, lit(self.label_isquery))
+        processed_query_df = query_df.withColumn(alias.label, lit(self._label_isquery))
 
-        union_df = self.processed_item_df.union(processed_query_df)
+        union_df = self._processed_item_df.union(processed_query_df)
 
-        pipelinedrdd = self._call_cuml_fit_func(union_df, return_model=False)
+        pipelinedrdd = self._call_cuml_fit_func(union_df, partially_collect=False)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
         knn_rdd = pipelinedrdd.flatMap(
             lambda row: list(zip(row["query_id"], row["indices"], row["distances"]))
@@ -352,14 +359,14 @@ class NearestNeighborsModel(
             schema=f"query_{self.getIdCol()} int, indices array<int>, distances array<float>"
         ).sort(f"query_{self.getIdCol()}")
 
-        return (query_df, self.item_df, knn_df)
+        return (query_df, self._item_df, knn_df)
 
     def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
 
-        label_isdata = self.label_isdata
-        label_isquery = self.label_isquery
+        label_isdata = self._label_isdata
+        label_isquery = self._label_isquery
 
         def _cuml_fit(
             dfs: CumlInputType,
@@ -385,14 +392,8 @@ class NearestNeighborsModel(
             query_row_number = []
 
             for x_array, label_array, row_number_array in dfs:
-                item_filter = [
-                    True if label_array[i] == label_isdata else False  # type: ignore
-                    for i in range(len(x_array))
-                ]
-                query_filter = [
-                    True if label_array[i] == label_isquery else False  # type: ignore
-                    for i in range(len(x_array))
-                ]
+                item_filter = label_array == label_isdata
+                query_filter = label_array == label_isquery
 
                 item_list.append(x_array[item_filter])
                 query_list.append(x_array[query_filter])
@@ -483,7 +484,7 @@ class NearestNeighborsModel(
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         raise NotImplementedError(
-            "'NearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
+            "NearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
         )
 
     def _get_cuml_transform_func(

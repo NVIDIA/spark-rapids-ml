@@ -321,13 +321,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         return select_cols, input_cols, dimension, feature_type
 
-    def _enable_nccl(self) -> bool:
-        """If enable or disable NCCL communication"""
-        return True
-
-    def _require_ucx(self) -> bool:
-        """If enable or disable ucx over NCCL"""
-        return False
+    def _require_nccl_ucx(self) -> Tuple[bool, bool]:
+        """
+        If enable or disable communication layer (NCCL or UCX).
+        Return (False, False) if no communicaiton layer is required.
+        Return (True, False) if only NCCL is required.
+        Return (True, True) if UCX is required. Cuml UCX backend currently also requires NCCL.
+        """
+        return (True, False)
 
     @abstractmethod
     def _get_cuml_fit_func(
@@ -357,7 +358,9 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         raise NotImplementedError()
 
-    def _call_cuml_fit_func(self, dataset: DataFrame, return_model: bool = True) -> RDD:
+    def _call_cuml_fit_func(
+        self, dataset: DataFrame, partially_collect: bool = True
+    ) -> RDD:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -393,8 +396,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         cuml_verbose = self.cuml_params.get("verbose", False)
 
-        enable_nccl = self._enable_nccl()
-        require_ucx = self._require_ucx()
+        (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -443,7 +445,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 
-            if return_model == True:
+            if partially_collect == True:
                 if enable_nccl:
                     context.barrier()
 
@@ -482,7 +484,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
         raise NotImplementedError()
 
     def _fit(self, dataset: DataFrame) -> "_CumlModel":
-        pipelined_rdd = self._call_cuml_fit_func(dataset=dataset, return_model=True)
+        pipelined_rdd = self._call_cuml_fit_func(
+            dataset=dataset, partially_collect=True
+        )
         ret = pipelined_rdd.collect()[0]
 
         model = self._create_pyspark_model(ret)

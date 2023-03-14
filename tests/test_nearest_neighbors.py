@@ -81,8 +81,9 @@ def test_example(gpu_number: int) -> None:
         assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
         assert indices[4] == [7, 6]
 
-        #throw an error if transform function is called
-
+        # throw an error if transform function is called
+        with pytest.raises(NotImplementedError):
+            gpu_model.transform(query_df)
 
 
 def test_example_with_id(gpu_number: int) -> None:
