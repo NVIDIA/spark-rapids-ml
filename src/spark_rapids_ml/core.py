@@ -436,8 +436,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         if alias.row_number in pdf.columns
                         else None
                     )
-                    if not multi_col_names:
-                        del pdf
+                    #if not multi_col_names:
+                    #    del pdf
                     inputs.append((features, label, row_number))
 
                 params["handle"] = cc.handle
@@ -448,6 +448,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 logger.info("Invoking cuml fit")
 
                 # call the cuml fit function
+                # *note*: cuml_fit_func may delete components of inputs to free
+                # memory.  do not rely on inputs after this call.
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 

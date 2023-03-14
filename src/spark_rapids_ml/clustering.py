@@ -275,8 +275,8 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 d_type = df_list[0].dtype
                 concated_out = np.empty(shape=(rows, cols), order="F", dtype=d_type)
                 concated = np.concatenate(df_list, out=concated_out)
-                for df in df_list:
-                    del df
+                #for df in df_list:
+                #    del df
 
             kmeans_object.fit(
                 concated,
@@ -296,7 +296,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 "n_cols": params["n"],
                 "dtype": str(kmeans_object.dtype.name),
             }
-            del kmeans_object
+            #del kmeans_object
             return res
 
         return _cuml_fit
@@ -383,7 +383,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
             res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
-            del df
+            #del df
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal

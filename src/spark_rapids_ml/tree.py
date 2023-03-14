@@ -229,7 +229,7 @@ class _RandomForestEstimator(
                 d_type = X_list[0].dtype
                 concated_out = np.empty(shape=(rows, cols), order="F", dtype=d_type)
                 X = np.concatenate(X_list, out=concated_out)
-                # y one is small, so we can be less efficient
+                # y array uses less memory, so we can be less efficient
                 y = np.array(np.concatenate(y_list), order="F")  # type: ignore
                 for X_ in X_list:
                     del X_
@@ -381,7 +381,7 @@ class _RandomForestModel(
         def _predict(rf: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
             rf.update_labels = False
             ret = rf.predict(pdf)
-            del pdf
+            #del pdf
             return pd.Series(ret)
 
         return _construct_rf, _predict
