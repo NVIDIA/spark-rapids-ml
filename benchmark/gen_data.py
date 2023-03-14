@@ -119,7 +119,7 @@ class DataGenBase(DataGen):
             return x
 
         self._parser.add_argument(
-            "--train_size",
+            "--train_fraction",
             type=_restrict_train_size,  # type: ignore
             help="the value should be between 0.0 and 1.0 and represent "
             "the proportion of the dataset to include in the train split",
@@ -477,7 +477,7 @@ if __name__ == "__main__":
             )
 
         train_df, eval_df = df.randomSplit(
-            [args.train_size, 1 - args.train_size], seed=1
+            [args.train_fraction, 1 - args.train_fraction], seed=1
         )
 
         if args.output_num_files is not None:
