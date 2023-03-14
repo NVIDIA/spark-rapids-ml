@@ -63,7 +63,7 @@ if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --num_gpus 1 \
         --num_cpus 0 \
         --train_path "/tmp/regression/5k_3k_float64.parquet" \
-        --transform_path "./tmp/regression/transform" \
+        --transform_path "/tmp/regression/5k_3k_float64.parquet" \
         --report_path "report_linear_regression.csv" \
         --spark_confs "spark.master=local[12]" \
         --spark_confs "spark.driver.memory=128g" \
@@ -134,7 +134,7 @@ if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
         --num_gpus 1 \
         --num_cpus 0 \
         --train_path "/tmp/classification/5k_3k_float64.parquet" \
-        --transform_path "./tmp/classification/transform" \
+        --transform_path "/tmp/classification/5k_3k_float64.parquet" \
         --report_path "report_rf_classifier.csv" \
         --spark_confs "spark.master=local[12]" \
         --spark_confs "spark.driver.memory=128g" \
@@ -159,7 +159,7 @@ if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
         --num_gpus 1 \
         --num_cpus 0 \
         --train_path "/tmp/regression/5k_3k_float64.parquet" \
-        --transform_path "./tmp/regression/transform" \
+        --transform_path "/tmp/regression/5k_3k_float64.parquet" \
         --report_path "report_rf_regressor.csv" \
         --spark_confs "spark.master=local[12]" \
         --spark_confs "spark.driver.memory=128g" \
