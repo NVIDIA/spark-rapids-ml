@@ -96,7 +96,7 @@ ARG RAFT_VER=22.12
 RUN git clone -b branch-$RAFT_VER https://github.com/rapidsai/raft.git
 ENV RAFT_PATH=/raft
 
-ARG RAPIDS_ML_VER=23.02
+ARG RAPIDS_ML_VER=23.04
 RUN git clone -b branch-$RAPIDS_ML_VER https://github.com/NVIDIA/spark-rapids-ml.git
 WORKDIR /spark-rapids-ml
 

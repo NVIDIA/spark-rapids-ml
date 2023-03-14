@@ -69,7 +69,7 @@ Note: For those using other types of GPUs which do not have CUDA forward compati
 Spark-rapids-ml uses [spark-rapids](https://github.com/NVIDIA/spark-rapids) plugin as a dependency.
 To build the _SNAPSHOT_ jar, user needs to build and install the denpendency jar _rapids-4-spark_ first
 because there's no snapshot jar for spark-rapids plugin in public maven repositories.
-See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-23.02/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
+See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-23.04/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
 
 User can also modify the pom file to use the _release_ version spark-rapids plugin as the dependency. In this case user doesn't need to manually build and install spark-rapids plugin jar by themselves.
 
@@ -78,12 +78,12 @@ the _project root path_ with:
 ```
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-23.02.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-23.04.0-SNAPSHOT.jar` will be generated under `target` folder.
 
 Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
 released in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
 for release versions. In this case, users don't need to manually build and install spark-rapids
-plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.02/pom.xml#L94-L96)
+plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.04/pom.xml#L94-L96)
 in pom file.
 
 _Note_: This module contains both native and Java/Scala code. The native library build instructions
@@ -97,8 +97,8 @@ repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-23.02.0-SNAPSHOT.jar"
-PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/23.02.0-SNAPSHOT/rapids-4-spark_2.12-23.02.0-SNAPSHOT.jar"
+ML_JAR="target/rapids-4-spark-ml_2.12-23.04.0-SNAPSHOT.jar"
+PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/23.04.0-SNAPSHOT/rapids-4-spark_2.12-23.04.0-SNAPSHOT.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
@@ -115,9 +115,9 @@ $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
 ### PCA examples
 
 Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.02/examples/ML+DL-Examples/Spark-cuML/pca/) for
+[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/) for
 more details about example code. We provide both
-[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.02/examples/ML+DL-Examples/Spark-cuML/pca/notebooks/Spark_PCA_End_to_End.ipynb)
-and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.02/examples/ML+DL-Examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
+[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/notebooks/Spark_PCA_End_to_End.ipynb)
+and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
  versions there. Instructions to run these examples are described in the
-[README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.02/examples/ML+DL-Examples/Spark-cuML/pca/README.md).
+[README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/README.md).
