@@ -51,7 +51,7 @@ class CumlDummy(object):
         self.x = x  # extra, keep w/ default
 
 
-class SparkCumlDummyClass(_CumlClass):
+class SparkRapidsMLDummyClass(_CumlClass):
     @classmethod
     def _cuml_cls(cls) -> List[type]:
         return [CumlDummy]
@@ -70,7 +70,7 @@ class SparkCumlDummyClass(_CumlClass):
         return ["b"]  # dropped from cuML side
 
 
-class _SparkDummyParams(_CumlParams):
+class _SparkRapidsMLDummyParams(_CumlParams):
     """
     Params for Spark Dummy class
     """
@@ -104,7 +104,7 @@ class _SparkDummyParams(_CumlParams):
     )
 
     def __init__(self, *args: Any):
-        super(_SparkDummyParams, self).__init__(*args)
+        super(_SparkRapidsMLDummyParams, self).__init__(*args)
         self._setDefault(
             alpha=1.0,
             # beta=2,         # leave undefined to test mapping to None
@@ -113,8 +113,12 @@ class _SparkDummyParams(_CumlParams):
         )
 
 
-class SparkCumlDummy(
-    SparkCumlDummyClass, _CumlEstimator, _SparkDummyParams, HasInputCols, HasOutputCols
+class SparkRapidsMLDummy(
+    SparkRapidsMLDummyClass,
+    _CumlEstimator,
+    _SparkRapidsMLDummyParams,
+    HasInputCols,
+    HasOutputCols,
 ):
     """
     PySpark estimator of CumlDummy
@@ -131,22 +135,22 @@ class SparkCumlDummy(
         self.n = n
         self.partition_num = partition_num
 
-    def setInputCols(self, value: List[str]) -> "SparkCumlDummy":
+    def setInputCols(self, value: List[str]) -> "SparkRapidsMLDummy":
         return self._set(inputCols=value)
 
-    def setOutputCols(self, value: List[str]) -> "SparkCumlDummy":
+    def setOutputCols(self, value: List[str]) -> "SparkRapidsMLDummy":
         return self._set(outputCols=value)
 
-    def setAlpha(self, value: int) -> "SparkCumlDummy":
+    def setAlpha(self, value: int) -> "SparkRapidsMLDummy":
         return self.set_params({"alpha": value})
 
-    def setBeta(self, value: int) -> "SparkCumlDummy":
+    def setBeta(self, value: int) -> "SparkRapidsMLDummy":
         raise ValueError("Not supported")
 
-    def setGamma(self, value: float) -> "SparkCumlDummy":
+    def setGamma(self, value: float) -> "SparkRapidsMLDummy":
         return self.set_params({"gamma": value})
 
-    def setK(self, value: str) -> "SparkCumlDummy":
+    def setK(self, value: str) -> "SparkRapidsMLDummy":
         return self.set_params({"k": value})
 
     def _get_cuml_fit_func(
@@ -206,16 +210,20 @@ class SparkCumlDummy(
             "dtype string, n_cols int, model_attribute_a int, model_attribute_b string"
         )
 
-    def _create_pyspark_model(self, result: Row) -> "SparkCumlDummyModel":
+    def _create_pyspark_model(self, result: Row) -> "SparkRapidsMLDummyModel":
         assert result.dtype == np.dtype(np.float32).name
         assert result.n_cols == self.n
         assert result.model_attribute_a == 1024
         assert result.model_attribute_b == "hello dummy"
-        return SparkCumlDummyModel.from_row(result)
+        return SparkRapidsMLDummyModel.from_row(result)
 
 
-class SparkCumlDummyModel(
-    SparkCumlDummyClass, _CumlModel, _SparkDummyParams, HasInputCols, HasOutputCols
+class SparkRapidsMLDummyModel(
+    SparkRapidsMLDummyClass,
+    _CumlModel,
+    _SparkRapidsMLDummyParams,
+    HasInputCols,
+    HasOutputCols,
 ):
     """
     PySpark model of CumlDummy
@@ -240,10 +248,10 @@ class SparkCumlDummyModel(
         self.model_attribute_b = model_attribute_b
         self.set_params(**kwargs)
 
-    def setInputCols(self, value: List[str]) -> "SparkCumlDummy":
+    def setInputCols(self, value: List[str]) -> "SparkRapidsMLDummy":
         return self._set(inputCols=value)
 
-    def setOutputCols(self, value: List[str]) -> "SparkCumlDummy":
+    def setOutputCols(self, value: List[str]) -> "SparkRapidsMLDummy":
         return self._set(outputCols=value)
 
     def _get_cuml_transform_func(
@@ -296,12 +304,12 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
         "k": 4,  # default value for Spark 'k'
         "x": 40.0,  # default value for cuML
     }
-    default_dummy = SparkCumlDummy()
+    default_dummy = SparkRapidsMLDummy()
     assert_params(default_dummy, default_spark_params, default_cuml_params)
 
     # Spark constructor (with ignored param "gamma")
     spark_params = {"alpha": 2.0, "gamma": "test", "k": 1}
-    spark_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **spark_params)
+    spark_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **spark_params)
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(spark_params)
     expected_cuml_params = default_cuml_params.copy()
@@ -310,7 +318,7 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
 
     # cuML constructor
     cuml_params = {"a": 1.1, "k": 2, "x": 3.3}
-    cuml_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **cuml_params)
+    cuml_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **cuml_params)
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(
         {
@@ -326,18 +334,18 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
     path = tmp_path + "/dummy_tests"
     estimator_path = f"{path}/dummy_estimator"
     cuml_dummy.write().overwrite().save(estimator_path)
-    loaded_dummy = SparkCumlDummy.load(estimator_path)
+    loaded_dummy = SparkRapidsMLDummy.load(estimator_path)
     assert_params(loaded_dummy, expected_spark_params, expected_cuml_params)
 
     # Spark constructor (with error param "beta")
     spark_params = {"alpha": 2.0, "beta": 0, "k": 1}
     with pytest.raises(ValueError, match="Spark Param 'beta' is not supported by cuML"):
-        spark_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **spark_params)
+        spark_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **spark_params)
 
     # cuML constructor (with unsupported param "b")
     cuml_params = {"a": 1.1, "b": 0, "k": 2, "x": 3.3}
     with pytest.raises(ValueError, match="Unsupported param 'b'"):
-        cuml_dummy = SparkCumlDummy(m=0, n=0, partition_num=0, **cuml_params)
+        cuml_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **cuml_params)
 
 
 def test_dummy(gpu_number: int, tmp_path: str) -> None:
@@ -354,7 +362,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
 
     max_records_per_batch = 1
 
-    def assert_estimator(dummy: SparkCumlDummy) -> None:
+    def assert_estimator(dummy: SparkRapidsMLDummy) -> None:
         assert dummy.getInputCols() == input_cols
         assert dummy.cuml_params == {"a": 100, "k": 4, "x": 40.0}
         assert dummy.num_workers == gpu_number
@@ -363,7 +371,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         return -(n // -d)
 
     # Generate estimator
-    dummy = SparkCumlDummy(
+    dummy = SparkRapidsMLDummy(
         inputCols=input_cols,
         a=100,
         num_workers=gpu_number,
@@ -378,10 +386,10 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
     path = tmp_path + "/dummy_tests"
     estimator_path = f"{path}/dummy_estimator"
     dummy.write().overwrite().save(estimator_path)
-    dummy_loaded = SparkCumlDummy.load(estimator_path)
+    dummy_loaded = SparkRapidsMLDummy.load(estimator_path)
     assert_estimator(dummy_loaded)
 
-    def assert_model(model: SparkCumlDummyModel) -> None:
+    def assert_model(model: SparkRapidsMLDummyModel) -> None:
         assert model.model_attribute_a == 1024
         assert model.model_attribute_b == "hello dummy"
         assert model.cuml_params == {"a": 100, "k": 4, "x": 40.0}
@@ -393,12 +401,12 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
     # Estimator fit and get a model
     with CleanSparkSession(conf) as spark:
         df = spark.sparkContext.parallelize(data).toDF(input_cols)
-        model: SparkCumlDummyModel = dummy.fit(df)
+        model: SparkRapidsMLDummyModel = dummy.fit(df)
         assert_model(model)
         # Model persistence
         model_path = f"{path}/dummy_model"
         model.write().overwrite().save(model_path)
-        model_loaded = SparkCumlDummyModel.load(model_path)
+        model_loaded = SparkRapidsMLDummyModel.load(model_path)
         assert_model(model_loaded)
 
         # Transform the training dataset with a clean spark

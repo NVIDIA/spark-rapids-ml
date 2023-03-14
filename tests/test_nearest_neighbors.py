@@ -180,14 +180,14 @@ def test_nearest_neighbors(
             spark, feature_type, data_type, X, None
         )
 
-        sparkcuml_knn = NearestNeighbors(
+        knn_est = NearestNeighbors(
             n_neighbors=n_neighbors, batch_size=batch_size
         ).setInputCol(features_col)
 
         # obtain spark results
-        sparkcuml_model = sparkcuml_knn.fit(data_df)
+        knn_model = knn_est.fit(data_df)
         query_df = data_df
-        (query_df_withid, item_df_withid, knn_df) = sparkcuml_model.kneighbors(query_df)
+        (query_df_withid, item_df_withid, knn_df) = knn_model.kneighbors(query_df)
 
         distances_df = knn_df.select("distances")
         indices_df = knn_df.select("indices")

@@ -547,7 +547,7 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
 
 class _CumlModel(Model, _CumlParams, _CumlCommon):
     """
-    Abstract class for spark cuml models that are fitted by spark cuml estimators.
+    Abstract class for spark-rapids-ml models that are fitted by spark-rapids-ml estimators.
     """
 
     def __init__(
@@ -632,8 +632,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         if input_col is not None:
             if isinstance(dataset.schema[input_col].dataType, VectorUDT):
                 # Vector type
-                # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
-                tmp_name = f"{alias.data}_c3BhcmtjdW1sCg=="
+                # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
+                tmp_name = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
                 dataset = (
                     dataset.withColumnRenamed(input_col, tmp_name)
                     .withColumn(input_col, vector_to_array(col(tmp_name)))
@@ -751,53 +751,3 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
         return dtype_to_pyspark_type(self.dtype)
-
-
-def _set_pyspark_cuml_cls_param_attrs(
-    pyspark_estimator_class: Type[_CumlEstimator],
-    pyspark_model_class: Type[_CumlModel],
-    param_map: Mapping[str, str] = {},
-) -> None:
-    """
-    To set pyspark parameter attributes according to cuml parameters.
-    This function must be called after you finished the subclass design of _CumlEstimator_CumlModel
-
-    Eg,
-
-    class SparkDummy(_CumlEstimator):
-        pass
-    class SparkDummyModel(_CumlModel):
-        pass
-    _set_pyspark_cuml_cls_param_attrs(SparkDummy, SparkDummyModel)
-    """
-    cuml_estimator_class_name = []
-    for cls_type in pyspark_estimator_class._cuml_cls():
-        cuml_estimator_class_name.append(_get_class_name(cls_type))
-
-    params_dict = pyspark_estimator_class._get_cuml_params_default()
-
-    # def param_value_converter(v: Any) -> Any:
-    #     if isinstance(v, np.generic):
-    #         # convert numpy scalar values to corresponding python scalar values
-    #         return np.array(v).item()
-    #     if isinstance(v, dict):
-    #         return {k: param_value_converter(nv) for k, nv in v.items()}
-    #     if isinstance(v, list):
-    #         return [param_value_converter(nv) for nv in v]
-    #     return v
-
-    # def set_param_attrs(attr_name: str, param_obj_: Param) -> None:
-    #     param_obj_.typeConverter = param_value_converter  # type: ignore
-    #     setattr(pyspark_estimator_class, attr_name, param_obj_)
-    #     setattr(pyspark_model_class, attr_name, param_obj_)
-
-    # reverse_map = {v: k for k, v in param_map.items()}
-    # for name in params_dict.keys():
-    #     alias = f"alias of '{reverse_map[name]}', " if name in reverse_map else ""
-    #     doc = f"(cuML) {alias}refer to documentation for {', '.join(cuml_estimator_class_name)}."
-
-    #     param_obj = Param(Params._dummy(), name=name, doc=doc)  # type: ignore
-    #     set_param_attrs(name, param_obj)
-    for attr_name, default_value in params_dict.items():
-        setattr(pyspark_estimator_class, attr_name, default_value)
-        setattr(pyspark_model_class, attr_name, default_value)
