@@ -767,8 +767,9 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
                     data = np.array(list(pdf[select_cols[0]]))
                 else:
                     data = pdf[select_cols]
-
-                yield cuml_transform_func(cuml_object, data)
+                res = cuml_transform_func(cuml_object, data)
+                del data
+                yield res
 
         pred_name = self.getOrDefault(self.predictionCol)
         pred_col = predict_udf(struct(*select_cols))

@@ -275,8 +275,8 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 d_type = df_list[0].dtype
                 concated_out = np.empty(shape=(rows, cols), order="F", dtype=d_type)
                 concated = np.concatenate(df_list, out=concated_out)
-                #for df in df_list:
-                #    del df
+                for df in df_list:
+                    del df
 
             kmeans_object.fit(
                 concated,
