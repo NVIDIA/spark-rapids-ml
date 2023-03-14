@@ -298,14 +298,12 @@ class NearestNeighbors(
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-
         label_isdata = self.label_isdata
 
         def _cuml_fit(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
