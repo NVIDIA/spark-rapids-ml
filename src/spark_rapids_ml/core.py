@@ -789,6 +789,8 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         schema = f"{pred.prediction} {pyspark_type}"
         if self._has_probability_col():
             schema = f"{schema}, {pred.probability} array<{pyspark_type}>"
+        else:
+            schema = f"{pyspark_type}"
 
         return schema
 
