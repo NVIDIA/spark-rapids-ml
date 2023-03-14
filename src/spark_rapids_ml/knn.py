@@ -323,7 +323,7 @@ class NearestNeighborsModel(
         Parameters
         ----------
         query_df: pyspark.sql.DataFrame
-            query vectors that each row corresponds to one query. The query_df can be in the
+            query vectors where each row corresponds to one query. The query_df can be in the
             format of a single array column, a single vector column, or multiple float columns.
 
         Returns
@@ -340,7 +340,7 @@ class NearestNeighborsModel(
             the result k nearest neighbors (knn) dataframe that has three
             columns (id, indices, distances). Each row of knn_df corresponds to the knn
             result of a query vector, identified by the id column. The indices/distances
-            column stores the ids/distances of knn.
+            column stores the ids/distances of knn item_df vectors.
         """
 
         query_default_num_partitions = query_df.rdd.getNumPartitions()

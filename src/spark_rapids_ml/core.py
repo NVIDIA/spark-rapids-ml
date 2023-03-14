@@ -324,7 +324,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         """
         If enable or disable communication layer (NCCL or UCX).
-        Return (False, False) if no communicaiton layer is required.
+        Return (False, False) if no communication layer is required.
         Return (True, False) if only NCCL is required.
         Return (True, True) if UCX is required. Cuml UCX backend currently also requires NCCL.
         """
