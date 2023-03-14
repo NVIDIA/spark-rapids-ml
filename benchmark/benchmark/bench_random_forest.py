@@ -191,35 +191,37 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
             f"{benchmark_string} training:", lambda: rf.fit(train_df)
         )
 
-        eval_df = train_df if transform_df is None else transform_df
-
-        df_with_preds = model.transform(eval_df)
-
-        # model does not yet have col getters setters and uses default value for prediction col
-        prediction_col = model.getOrDefault(model.predictionCol)
-
-        # run a simple dummy computation to trigger transform. count is short
-        # circuited due to pandas_udf used internally
-        _, transform_time = with_benchmark(
-            f"{benchmark_string} transform:",
-            lambda: df_with_preds.agg(sum(prediction_col)).collect(),
-        )
-
-        # compute prediction mse on training data
-        from pyspark.ml.evaluation import RegressionEvaluator
-
-        evaluator = (
-            RegressionEvaluator()
-            .setPredictionCol(prediction_col)
-            .setLabelCol(label_col)
-        )
-        rmse = evaluator.evaluate(df_with_preds)
-
-        print(f"{benchmark_string} RMSE: {rmse}")
-
         results = {
             "training_time": training_time,
-            "transform_time": transform_time,
-            "rmse": rmse,
         }
+
+        if transform_df is not None:
+
+            df_with_preds = model.transform(transform_df)
+
+            # model does not yet have col getters setters and uses default value for prediction col
+            prediction_col = model.getOrDefault(model.predictionCol)
+
+            # run a simple dummy computation to trigger transform. count is short
+            # circuited due to pandas_udf used internally
+            _, transform_time = with_benchmark(
+                f"{benchmark_string} transform:",
+                lambda: df_with_preds.agg(sum(prediction_col)).collect(),
+            )
+
+            # compute prediction mse on training data
+            from pyspark.ml.evaluation import RegressionEvaluator
+
+            evaluator = (
+                RegressionEvaluator()
+                .setPredictionCol(prediction_col)
+                .setLabelCol(label_col)
+            )
+            rmse = evaluator.evaluate(df_with_preds)
+
+            print(f"{benchmark_string} RMSE: {rmse}")
+
+            results["transform_time"] = transform_time
+            results["rmse"] = rmse
+
         return results
