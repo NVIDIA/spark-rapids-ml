@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
-from pyspark.ml.functions import vector_to_array
+from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol
 from pyspark.ml.util import (
@@ -48,7 +48,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
-from pyspark.sql import Column, DataFrame, SparkSession
+from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
 from pyspark.sql.types import (
@@ -92,6 +92,10 @@ CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatc
 # Global constant for defining column alias
 Alias = namedtuple("Alias", ("data", "label", "row_number"))
 alias = Alias("cuml_values", "cuml_label", "id")
+
+# Global prediction names
+Pred = namedtuple("Pred", ("prediction", "probability"))
+pred = Pred("prediction", "probability")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -718,11 +722,27 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         num_features = self.n_cols if self.n_cols else -1
         return num_features
 
+    def _is_single_pred(self, input_schema: StructType) -> bool:
+        """Indicate if the transform is only predicting 1 column"""
+        schema = self._out_schema(input_schema)
+        if isinstance(schema, str):
+            return False if "," in schema else True
+        elif isinstance(schema, StructType):
+            return False if len(schema.names) > 1 else True
+
+    def _has_probability_col(self) -> bool:
+        """This API is needed and can be overwritten by subclass which
+        hasn't implemented predict probability yet"""
+
+        return (
+            True
+            if self.hasParam("probabilityCol") and self.isDefined("probabilityCol")
+            else False
+        )
+
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
         dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
-
-        pred_name = self.getOrDefault(self.predictionCol)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -746,11 +766,47 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
 
                 yield cuml_transform_func(cuml_object, data)
 
-        return dataset.withColumn(pred_name, predict_udf(struct(*select_cols)))
+        pred_name = self.getOrDefault(self.predictionCol)
+        pred_col = predict_udf(struct(*select_cols))
+
+        if self._is_single_pred(dataset.schema):
+            return dataset.withColumn(pred_name, pred_col)
+        else:
+            # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
+            pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
+            dataset = dataset.withColumn(pred_struct_col_name, pred_col)
+
+            # 1. Add predictionCol in the base class
+            dataset = dataset.withColumn(
+                pred_name, getattr(col(pred_struct_col_name), pred.prediction)
+            )
+
+            # 2. Handle probability columns
+            if self._has_probability_col():
+                probability_col = self.getOrDefault("probabilityCol")
+                dataset = dataset.withColumn(
+                    probability_col,
+                    array_to_vector(
+                        getattr(col(pred_struct_col_name), pred.probability)
+                    ),
+                )
+
+            # 3. Drop the unused column
+            dataset = dataset.drop(pred_struct_col_name)
+
+            return dataset
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
-        return dtype_to_pyspark_type(self.dtype)
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+
+        schema = f"{pred.prediction} {pyspark_type}"
+        if self._has_probability_col():
+            schema = f"{schema}, {pred.probability} array<{pyspark_type}>"
+        else:
+            schema = f"{pyspark_type}"
+
+        return schema
 
 
 def _set_pyspark_cuml_cls_param_attrs(
