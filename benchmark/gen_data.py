@@ -106,6 +106,25 @@ class DataGenBase(DataGen):
             help="do not stop spark session when finished",
         )
 
+        def _restrict_train_size(x: float) -> float:
+            # refer to https://stackoverflow.com/a/12117065/1928940
+            try:
+                x = float(x)
+            except ValueError:
+                raise argparse.ArgumentTypeError(f"{x} is not a floating-point literal")
+
+            if x < 0.0 or x > 1.0:
+                raise argparse.ArgumentTypeError(f"{x} is not in range [0.0, 1.0]")
+
+            return x
+
+        self._parser.add_argument(
+            "--train_fraction",
+            type=_restrict_train_size,  # type: ignore
+            help="the value should be between 0.0 and 1.0 and represent "
+            "the proportion of the dataset to include in the train split",
+        )
+
         self._add_extra_parameters()
 
         self.args_: Optional[argparse.Namespace] = None
@@ -458,15 +477,25 @@ if __name__ == "__main__":
                 .drop(*feature_cols)
             )
 
-        if args.output_num_files is not None:
-            df = df.repartition(args.output_num_files)
+        def write_files(dataframe: DataFrame, path: str) -> None:
+            if args.output_num_files is not None:
+                dataframe = dataframe.repartition(args.output_num_files)
+
+            writer = dataframe.write
+            if args.overwrite:
+                writer = writer.mode("overwrite")
+            writer.parquet(path)
+
+        if args.train_fraction is not None:
+            train_df, eval_df = df.randomSplit(
+                [args.train_fraction, 1 - args.train_fraction], seed=1
+            )
+            write_files(train_df, f"{args.output_dir}/train")
+            write_files(eval_df, f"{args.output_dir}/eval")
+
+        else:
+            write_files(df, args.output_dir)
 
         df.printSchema()
-
-        writer = df.write
-        if args.overwrite:
-            writer = df.write.mode("overwrite")
-
-        writer.parquet(args.output_dir)
 
         print("gen_data finished")
