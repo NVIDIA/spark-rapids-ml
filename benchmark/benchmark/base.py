@@ -67,15 +67,17 @@ class BenchmarkBase:
             "--report_path", type=str, default="", help="path to save benchmark results"
         )
         self._parser.add_argument(
-            "--data_path",
+            "--train_path",
             action="append",
             default=[],
             required=True,
-            help="path to parquet dataset including train and eval directory for training and evaluation, "
-            "better using gen_data.py to generate the datasets",
+            help="path to parquet data for training",
         )
         self._parser.add_argument(
-            "--transform", action="store_true", help="if evaluating the eval datasets"
+            "--transform_path",
+            action="append",
+            default=[],
+            help="path to parquet data for transform",
         )
         self._parser.add_argument("--spark_confs", action="append", default=[])
         self._parser.add_argument(
@@ -203,18 +205,16 @@ class BenchmarkBase:
         with WithSparkSession(
             self._args.spark_confs, shutdown=(not self._args.no_shutdown)
         ) as spark:
-
-            train_path = [f"{path}/train" for path in self._args.data_path]
-            eval_path = [f"{path}/eval" for path in self._args.data_path]
-
             for _ in range(self._args.num_runs):
                 train_df, features_col, label_col = self.input_dataframe(
-                    spark, *train_path
+                    spark, *self._args.train_path
                 )
 
                 transform_df: Optional[DataFrame] = None
-                if self._args.transform:
-                    transform_df, _, _ = self.input_dataframe(spark, *eval_path)
+                if len(self._args.transform_path) > 0:
+                    transform_df, _, _ = self.input_dataframe(
+                        spark, *self._args.transform_path
+                    )
 
                 results, benchmark_time = with_benchmark(
                     "benchmark time: ",
