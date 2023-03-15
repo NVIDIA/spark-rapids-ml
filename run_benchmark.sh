@@ -30,7 +30,7 @@ if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
             --dtype "float64" \
             --feature_type "array" \
             --output_dir "/tmp/blobs/5k_3k_float64.parquet" \
-            --spark_conf "spark.master=local[*]" \
+            --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
 
@@ -40,7 +40,7 @@ if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
         --num_cpus 0 \
         --train_path "/tmp/blobs/5k_3k_float64.parquet" \
         --report_path "report_kmeans.csv" \
-        --spark_confs "spark.master=local[12]" \
+        --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
         --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
         ${EXTRA_ARGS}
@@ -55,7 +55,7 @@ if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
             --dtype "float64" \
             --feature_type "array" \
             --output_dir "/tmp/regression/5k_3k_float64.parquet" \
-            --spark_conf "spark.master=local[*]" \
+            --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
 
@@ -65,7 +65,7 @@ if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "/tmp/regression/5k_3k_float64.parquet" \
         --transform_path "/tmp/regression/5k_3k_float64.parquet" \
         --report_path "report_linear_regression.csv" \
-        --spark_confs "spark.master=local[12]" \
+        --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
         --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
         ${EXTRA_ARGS}
@@ -80,7 +80,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
             --dtype "float64" \
             --feature_type "array" \
             --output_dir "/tmp/blobs/5k_3k_float64.parquet" \
-            --spark_conf "spark.master=local[*]" \
+            --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
 
@@ -90,7 +90,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
         --num_cpus 0 \
         --train_path "/tmp/blobs/5k_3k_float64.parquet" \
         --report_path "report_pca.csv" \
-        --spark_confs "spark.master=local[12]" \
+        --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
         --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=200000" \
         ${EXTRA_ARGS}
@@ -126,7 +126,7 @@ if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
             --dtype "float64" \
             --feature_type "array" \
             --output_dir "/tmp/classification/5k_3k_float64.parquet" \
-            --spark_conf "spark.master=local[*]" \
+            --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
 
@@ -136,7 +136,7 @@ if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
         --train_path "/tmp/classification/5k_3k_float64.parquet" \
         --transform_path "/tmp/classification/5k_3k_float64.parquet" \
         --report_path "report_rf_classifier.csv" \
-        --spark_confs "spark.master=local[12]" \
+        --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
         --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
         ${EXTRA_ARGS}
@@ -151,7 +151,7 @@ if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
             --dtype "float64" \
             --feature_type "array" \
             --output_dir "/tmp/regression/5k_3k_float64.parquet" \
-            --spark_conf "spark.master=local[*]" \
+            --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
 
@@ -161,7 +161,7 @@ if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
         --train_path "/tmp/regression/5k_3k_float64.parquet" \
         --transform_path "/tmp/regression/5k_3k_float64.parquet" \
         --report_path "report_rf_regressor.csv" \
-        --spark_confs "spark.master=local[12]" \
+        --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
         --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
         ${EXTRA_ARGS}
