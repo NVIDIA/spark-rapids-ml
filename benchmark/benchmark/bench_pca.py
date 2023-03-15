@@ -216,7 +216,7 @@ class BenchmarkPCA(BenchmarkBase):
             pc_for_scoring = gpu_model.pc.toArray()
 
         if num_cpus > 0:
-            from pyspark.ml.feature import PCA
+            from pyspark.ml.feature import PCA as SparkPCA
 
             assert num_gpus <= 0
             if is_array_col:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cudf
 import numpy as np
@@ -38,7 +38,7 @@ from spark_rapids_ml.core import (
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
+from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from spark_rapids_ml.tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
@@ -105,9 +105,7 @@ class _LinearRegressionCumlParams(
         else:
             raise RuntimeError("featuresCol is not set")
 
-    def setFeaturesCol(
-        self, value: Union[str, List[str]]
-    ) -> "_LinearRegressionCumlParams":
+    def setFeaturesCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
@@ -117,19 +115,19 @@ class _LinearRegressionCumlParams(
             self.set_params(featuresCols=value)
         return self
 
-    def setFeaturesCols(self, value: List[str]) -> "_LinearRegressionCumlParams":
+    def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`.
         """
         return self.set_params(featuresCols=value)
 
-    def setLabelCol(self, value: str) -> "_LinearRegressionCumlParams":
+    def setLabelCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`labelCol`.
         """
         return self.set_params(labelCol=value)
 
-    def setPredictionCol(self, value: str) -> "_LinearRegressionCumlParams":
+    def setPredictionCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`predictionCol`.
         """
@@ -251,7 +249,7 @@ class LinearRegression(
         """
         return self.set_params(loss=value)
 
-    def setStandardization(self, value: str) -> "LinearRegression":
+    def setStandardization(self, value: bool) -> "LinearRegression":
         """
         Sets the value of :py:attr:`standardization`.
         """

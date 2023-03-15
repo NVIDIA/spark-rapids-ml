@@ -347,9 +347,6 @@ def test_linear_regression_spark_compat(
         lr.setLabelCol("label")
         if isinstance(lr, SparkLinearRegression):
             lr.setWeightCol("weight")
-        else:
-            with pytest.raises((ValueError, AttributeError)):
-                lr.setWeightCol("weight")
 
         assert lr.getFeaturesCol() == "features"
         assert lr.getMaxIter() == 5

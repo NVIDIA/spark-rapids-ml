@@ -15,7 +15,7 @@
 #
 
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cudf
 import numpy as np
@@ -51,7 +51,7 @@ from spark_rapids_ml.core import (
     _CumlModel,
     alias,
 )
-from spark_rapids_ml.params import _CumlClass, _CumlParams
+from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 
 
 class NearestNeighborsClass(_CumlClass):
@@ -114,9 +114,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         typeConverter=TypeConverters.toString,
     )
 
-    def setInputCol(
-        self, value: Union[str, List[str]]
-    ) -> "_NearestNeighborsCumlParams":
+    def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
@@ -126,13 +124,13 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
             self.set_params(inputCols=value)
         return self
 
-    def setInputCols(self, value: List[str]) -> "_NearestNeighborsCumlParams":
+    def setInputCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`inputCols`. Used when input vectors are stored as multiple feature columns.
         """
         return self.set_params(inputCols=value)
 
-    def setIdCol(self, value: str) -> "_NearestNeighborsCumlParams":
+    def setIdCol(self: P, value: str) -> P:
         """
         Sets the value of `id_col`. If not set, an id column will be added with column name `id`. The id column is used to specify nearest neighbor vectors by associated id value.
         """
@@ -364,7 +362,6 @@ class NearestNeighborsModel(
     def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-
         label_isdata = self._label_isdata
         label_isquery = self._label_isquery
 

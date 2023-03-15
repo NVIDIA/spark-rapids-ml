@@ -52,9 +52,9 @@ class BenchmarkLinearRegression(BenchmarkBase):
             lr = LinearRegression(num_workers=self.args.num_gpus, verbose=7, **params)
             benchmark_string = "Spark Rapids ML LinearRegression training"
         else:
-            from pyspark.ml.regression import LinearRegression
+            from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 
-            lr = LinearRegression(**params)
+            lr = SparkLinearRegression(**params)  # type: ignore[assignment]
             benchmark_string = "Spark ML LinearRegression training"
 
         lr.setFeaturesCol(features_col)

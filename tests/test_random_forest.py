@@ -49,9 +49,13 @@ from tests.utils import (
     pyspark_supported_feature_types,
 )
 
-RandomForest = TypeVar("RandomForest", RandomForestClassifier, RandomForestRegressor)
+RandomForest = TypeVar(
+    "RandomForest", Type[RandomForestClassifier], Type[RandomForestRegressor]
+)
 RandomForestModel = TypeVar(
-    "RandomForestModel", RandomForestClassificationModel, RandomForestRegressionModel
+    "RandomForestModel",
+    Type[RandomForestClassificationModel],
+    Type[RandomForestRegressionModel],
 )
 
 RandomForestType = TypeVar(
@@ -176,7 +180,7 @@ def test_random_forest_basic(
         est.setLabelCol(label_col)
         assert est.getLabelCol() == label_col
 
-        def assert_model(lhs: _CumlParams, rhs: _CumlParams) -> None:
+        def assert_model(lhs: RandomForestModel, rhs: RandomForestModel) -> None:
             assert lhs.cuml_params == rhs.cuml_params
 
             # Vector type will be cast to array(double)
@@ -189,7 +193,7 @@ def test_random_forest_basic(
             assert lhs.n_cols == rhs.n_cols
             assert lhs.n_cols == data_shape[1]
 
-            if RFEstimator == RandomForestClassifier:
+            if isinstance(lhs, RandomForestClassificationModel):
                 assert lhs.numClasses == rhs.numClasses
                 assert lhs.numClasses == n_classes
 

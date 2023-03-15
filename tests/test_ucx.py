@@ -63,14 +63,14 @@ def test_ucx_over_nccl(
                     )
                     return result
 
-                cc._loop.run_until_complete(asyncio.ensure_future(do_allGather()))
-
-                assert cc._ucx != None
-                assert cc._ucx_port != None
-                assert cc._ucx_eps != None
-                assert cc._loop != None
+                assert cc._ucx is not None
+                assert cc._ucx_port is not None
+                assert cc._ucx_eps is not None
+                assert cc._loop is not None
                 assert len(cc._ucx_eps) == gpu_number
                 assert len(cc._ucx._server_endpoints) == gpu_number
+
+                cc._loop.run_until_complete(asyncio.ensure_future(do_allGather()))
                 for pdf in pdf_iter:
                     yield pdf
 
