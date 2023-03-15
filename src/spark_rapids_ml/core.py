@@ -764,7 +764,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             cuml_object = construct_cuml_object_func()
             for pdf in iterator:
                 if not input_is_multi_cols:
-                    data = np.array(list(pdf[select_cols[0]]))
+                    data = np.array(list(pdf[select_cols[0]]), order='F')
                 else:
                     data = pdf[select_cols]
                 res = cuml_transform_func(cuml_object, data)
