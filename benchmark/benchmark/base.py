@@ -15,7 +15,9 @@
 #
 import argparse
 import pprint
+import subprocess
 from abc import abstractmethod
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
@@ -49,13 +51,13 @@ class BenchmarkBase:
             "--num_gpus",
             type=int,
             default=1,
-            help="number of GPUs to use. If num_gpus > 0, spark-rapids-ml will run with the number of dataset partitions equal to num_gpus.",
+            help="number of GPUs to use. If num_gpus > 0, will run with the number of dataset partitions equal to num_gpus.",
         )
         self._parser.add_argument(
             "--num_cpus",
             type=int,
             default=6,
-            help="number of CPUs to use. If num_cpus > 0, spark will run and with the number of dataset partitions to num_cpus.",
+            help="number of CPUs to use. If num_cpus > 0, will run with the number of dataset partitions equal to num_cpus.",
         )
         self._parser.add_argument(
             "--num_runs",
@@ -154,6 +156,18 @@ class BenchmarkBase:
     def class_params(self) -> Dict[str, Any]:
         return self._class_params
 
+    def git_revision(self) -> str:
+        rev = "unknown"
+        try:
+            rev = (
+                subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+                .decode("ascii")
+                .strip()
+            )
+        except Exception:
+            pass
+        return rev
+
     def input_dataframe(
         self, spark: SparkSession, *paths: str
     ) -> Tuple[DataFrame, Union[str, List[str]], str]:
@@ -202,6 +216,7 @@ class BenchmarkBase:
         assert self._args is not None
 
         run_results = []
+        git_revision = self.git_revision()
         with WithSparkSession(
             self._args.spark_confs, shutdown=(not self._args.no_shutdown)
         ) as spark:
@@ -216,13 +231,18 @@ class BenchmarkBase:
                         spark, *self._args.transform_path
                     )
 
-                results, benchmark_time = with_benchmark(
+                benchmark_results, benchmark_time = with_benchmark(
                     "benchmark time: ",
                     lambda: self.run_once(
                         spark, train_df, features_col, transform_df, label_col
                     ),
                 )
-                results["benchmark_time"] = benchmark_time
+                results = {
+                    "datetime": datetime.now().isoformat(),
+                    "git_hash": git_revision,
+                    "benchmark_time": benchmark_time,
+                }
+                results.update(benchmark_results)
                 run_results.append(results)
 
         # dictionary results
