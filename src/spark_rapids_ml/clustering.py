@@ -67,7 +67,7 @@ class KMeansClass(_CumlClass):
     @classmethod
     def _param_excludes(cls) -> List[str]:
         """
-        For some reason, spark cuml may not support all the parameters.
+        For some reason, spark-rapids-ml may not support all the parameters.
         In that case, we need to explicitly exclude them.
         """
         return [

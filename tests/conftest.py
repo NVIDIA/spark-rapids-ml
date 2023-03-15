@@ -53,7 +53,7 @@ def gpu_number() -> int:
 
 @pytest.fixture
 def tmp_path() -> Generator[str, None, None]:
-    path = tempfile.mkdtemp(prefix="spark_cuml_tests_")
+    path = tempfile.mkdtemp(prefix="spark_rapids_ml_tests_")
     yield path
     shutil.rmtree(path)
 
@@ -69,7 +69,7 @@ _default_conf = {
 
 
 def _get_spark() -> SparkSession:
-    builder = SparkSession.builder.appName(name="spark cuml python tests")
+    builder = SparkSession.builder.appName(name="spark-rapids-ml python tests")
     for k, v in _default_conf.items():
         builder.config(k, v)
     spark = builder.getOrCreate()

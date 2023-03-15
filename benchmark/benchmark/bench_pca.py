@@ -52,7 +52,7 @@ class BenchmarkPCA(BenchmarkBase):
             "--no_cache",
             action="store_true",
             default=False,
-            help="whether to enable dataframe repartition, cache and cout outside sparkcuml fit",
+            help="whether to enable dataframe repartition, cache and cout outside fit function",
         )
 
     def score(

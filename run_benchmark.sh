@@ -97,7 +97,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
 
 #    # standalone mode
 #    SPARK_MASTER=spark://hostname:port
-#    tar -czvf sparkcuml.tar.gz -C ./src .
+#    tar -czvf spark-rapids-ml.tar.gz -C ./src .
 #
 #    python ./benchmark/bench_pca.py \
 #        --n_components 3 \
@@ -112,7 +112,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
 #        --spark_confs "spark.executor.memory=128g" \
 #        --spark_confs "spark.rpc.message.maxSize=2000" \
 #        --spark_confs "spark.pyspark.python=${PYTHON_ENV_PATH}" \
-#        --spark_confs "spark.submit.pyFiles=./sparkcuml.tar.gz" \
+#        --spark_confs "spark.submit.pyFiles=./spark-rapids-ml.tar.gz" \
 #        --spark_confs "spark.task.resource.gpu.amount=1" \
 #        --spark_confs "spark.executor.resource.gpu.amount=1"
 fi

@@ -155,8 +155,7 @@ class _RandomForestEstimator(
         super().__init__()
         self.set_params(**kwargs)
         if "n_streams" not in kwargs:
-            # cuML will throw exception when running spark cuML on the node with multi-gpus
-            # when n_streams > 0
+            # cuML will throw exception when running on a node with multi-gpus when n_streams > 0
             self._set_cuml_value("n_streams", 1)
 
     @abstractmethod

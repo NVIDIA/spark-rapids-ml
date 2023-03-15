@@ -37,7 +37,7 @@ class BenchmarkRunner:
 
         algorithms = "\n    ".join(registered_algorithms.keys())
         parser = argparse.ArgumentParser(
-            description="Benchmark Spark CUML",
+            description="Benchmark Spark Rapids ML algorithms",
             usage=f"""benchmark_runner.py <algorithm> [<args>]
 
         Supported algorithms are:

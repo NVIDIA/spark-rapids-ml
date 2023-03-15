@@ -37,6 +37,6 @@ pylibraft-cu11==${RAPIDS_VERSION} \
 rmm-cu11==${RAPIDS_VERSION} \
 --extra-index-url=https://pypi.nvidia.com
 
-# install spark-cuml
+# install spark-rapids-ml
 unzip ${SPARK_RAPIDS_ML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 

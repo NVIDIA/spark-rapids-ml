@@ -51,13 +51,6 @@ def assert_centers_equal(
 
 
 def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
-    """
-    Sparkcuml keeps the algorithmic parameters and their default values
-    exactly the same as cuml multi-node multi-GPU KMeans,
-    which follows scikit-learn convention.
-    Please refer to https://docs.rapids.ai/api/cuml/stable/api.html#cuml.dask.cluster.KMeans
-    """
-
     # Default constructor
     default_spark_params = {
         "initMode": "k-means||",
@@ -129,9 +122,7 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             .map(lambda row: (row,))
             .toDF(["features"])
         )
-        sparkcuml_kmeans = KMeans(num_workers=gpu_number, n_clusters=2).setFeaturesCol(
-            "features"
-        )
+        kmeans = KMeans(num_workers=gpu_number, n_clusters=2).setFeaturesCol("features")
 
         def assert_kmeans_model(model: KMeansModel) -> None:
             assert len(model.cluster_centers_) == 2
@@ -141,7 +132,7 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             assert model.dtype == "float64"
             assert model.n_cols == 2
 
-        kmeans_model = sparkcuml_kmeans.fit(df)
+        kmeans_model = kmeans.fit(df)
         assert_kmeans_model(model=kmeans_model)
 
         # Model persistence
@@ -228,15 +219,15 @@ def test_kmeans(
             spark, feature_type, data_type, X, None
         )
 
-        sparkcuml_kmeans = KMeans(
+        kmeans = KMeans(
             num_workers=gpu_number, n_clusters=n_clusters, verbose=7
         ).setFeaturesCol(features_col)
 
-        sparkcuml_model = sparkcuml_kmeans.fit(df)
+        kmeans_model = kmeans.fit(df)
 
         cuml_cluster_centers = cuml_kmeans.cluster_centers_.tolist()
         assert_centers_equal(
-            sparkcuml_model.cluster_centers_,
+            kmeans_model.cluster_centers_,
             cuml_cluster_centers,
             tolerance,
         )
@@ -244,17 +235,17 @@ def test_kmeans(
         # test transform function
 
         sid_ordered = sorted(
-            range(n_clusters), key=lambda idx: sparkcuml_model.cluster_centers_[idx]
+            range(n_clusters), key=lambda idx: kmeans_model.cluster_centers_[idx]
         )
         cid_ordered = sorted(
             range(n_clusters), key=lambda idx: cuml_cluster_centers[idx]
         )
         s2c = dict(
             zip(sid_ordered, cid_ordered)
-        )  # map sparkcuml center id to cuml center id
+        )  # map spark-rapids-ml center id to cuml center id
 
-        labelDf = sparkcuml_model.transform(df)
-        o_col = sparkcuml_model.getPredictionCol()
+        labelDf = kmeans_model.transform(df)
+        o_col = kmeans_model.getPredictionCol()
         slabels = [row[o_col] for row in labelDf.collect()]
 
         clabels = cuml_kmeans.predict(gdf).tolist()

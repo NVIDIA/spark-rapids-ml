@@ -142,7 +142,7 @@ class _CumlClass(object):
 
 class _CumlParams(_CumlClass, Params):
     """
-    Mix-in to handle common parameters for all Spark CUML algorithms, along with utilties
+    Mix-in to handle common parameters for all Spark Rapids ML algorithms, along with utilties
     for synchronizing between Spark ML Params and cuML class parameters.
     """
 
@@ -159,7 +159,7 @@ class _CumlParams(_CumlClass, Params):
     @property
     def num_workers(self) -> int:
         """
-        Number of Spark cuML workers, where each cuML worker corresponds to one Spark task
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
         running on one GPU.
         """
         return (
