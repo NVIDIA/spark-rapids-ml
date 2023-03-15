@@ -289,15 +289,13 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 f"iterations: {kmeans_object.n_iter_}, inertia: {kmeans_object.inertia_}"
             )
 
-            res = {
+            return {
                 "cluster_centers_": [
                     kmeans_object.cluster_centers_.to_numpy().tolist()
                 ],
                 "n_cols": params["n"],
                 "dtype": str(kmeans_object.dtype.name),
             }
-            #del kmeans_object
-            return res
 
         return _cuml_fit
 
@@ -383,7 +381,6 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
             res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
-            #del df
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal

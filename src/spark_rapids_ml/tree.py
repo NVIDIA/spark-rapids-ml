@@ -381,7 +381,6 @@ class _RandomForestModel(
         def _predict(rf: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
             rf.update_labels = False
             ret = rf.predict(pdf)
-            #del pdf
             return pd.Series(ret)
 
         return _construct_rf, _predict
