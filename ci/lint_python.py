@@ -5,7 +5,6 @@ import os
 import subprocess
 import sys
 from multiprocessing import Pool, cpu_count
-
 from pylint import epylint
 
 # This script is copied from dmlc/xgboost
@@ -37,8 +36,7 @@ def run_formatter(rel_paths: List[str]) -> bool:
 
 
 def run_mypy(rel_paths: List[str]) -> bool:
-    paths = [os.path.join(PROJECT_ROOT, path) for path in rel_paths]
-    ret = subprocess.run(["mypy"] + paths)
+    ret = subprocess.run(["mypy"] + rel_paths)
     return ret.returncode == 0
 
 

@@ -40,10 +40,8 @@ from spark_rapids_ml.core import (
     _CumlModel,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
+from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import get_logger
-
-P = TypeVar("P", bound=_CumlParams)
 
 
 class KMeansClass(_CumlClass):

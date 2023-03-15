@@ -35,7 +35,7 @@ from spark_rapids_ml.core import (
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
+from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 
 
 class _RandomForestClass(_CumlClass):
@@ -118,7 +118,7 @@ class _RandomForestCumlParams(
         else:
             raise RuntimeError("featuresCol is not set")
 
-    def setFeaturesCol(self, value: Union[str, List[str]]) -> "_RandomForestCumlParams":
+    def setFeaturesCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
@@ -128,20 +128,20 @@ class _RandomForestCumlParams(
             self.set_params(featuresCols=value)
         return self
 
-    def setFeaturesCols(self, value: List[str]) -> "_RandomForestCumlParams":
+    def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`.
         """
         return self.set_params(featuresCols=value)
 
-    def setLabelCol(self, value: str) -> "_RandomForestCumlParams":
+    def setLabelCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`labelCol`.
         """
         self._set(labelCol=value)  # type: ignore
         return self
 
-    def setSeed(self, value: int) -> "_RandomForestCumlParams":
+    def setSeed(self: P, value: int) -> P:
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
         return self.set_params(seed=value)

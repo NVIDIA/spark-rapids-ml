@@ -38,7 +38,7 @@ from spark_rapids_ml.core import (
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
 )
-from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
+from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from spark_rapids_ml.tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
@@ -46,8 +46,6 @@ from spark_rapids_ml.tree import (
     _RandomForestModel,
 )
 from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array
-
-P = TypeVar("P", bound=_CumlParams)
 
 
 class LinearRegressionClass(_CumlClass):

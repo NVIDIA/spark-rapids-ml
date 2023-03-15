@@ -51,9 +51,7 @@ from spark_rapids_ml.core import (
     _CumlModel,
     alias,
 )
-from spark_rapids_ml.params import _CumlClass, _CumlParams
-
-P = TypeVar("P", bound=_CumlParams)
+from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 
 
 class NearestNeighborsClass(_CumlClass):

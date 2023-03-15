@@ -41,10 +41,8 @@ from spark_rapids_ml.core import (
     _CumlEstimator,
     _CumlModel,
 )
-from spark_rapids_ml.params import _CumlClass, _CumlParams
+from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
-
-P = TypeVar("P", bound=_CumlParams)
 
 
 class PCAClass(_CumlClass):
