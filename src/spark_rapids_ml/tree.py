@@ -191,7 +191,6 @@ class _RandomForestEstimator(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()

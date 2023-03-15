@@ -209,7 +209,8 @@ class DefaultDataGen(DataGenBase):
 
 class BlobsDataGen(DataGenBase):
     """Generate random dataset using sklearn.datasets.make_blobs,
-    which creates blobs for benchmarking unsupervised clustering algorithms (e.g. KMeans)"""
+    which creates blobs for benchmarking unsupervised clustering algorithms (e.g. KMeans)
+    """
 
     def __init__(self, argv: List[Any]) -> None:
         super().__init__()
@@ -254,7 +255,8 @@ class BlobsDataGen(DataGenBase):
 
 class LowRankMatrixDataGen(DataGenBase):
     """Generate random dataset using sklearn.datasets.make_low_rank_matrix,
-    which creates large low rank matrices for benchmarking dimensionality reduction algos like pca"""
+    which creates large low rank matrices for benchmarking dimensionality reduction algos like pca
+    """
 
     def __init__(self, argv: List[Any]) -> None:
         super().__init__()

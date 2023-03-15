@@ -235,7 +235,6 @@ def test_pca(
     data_type: np.dtype,
     max_record_batch: int,
 ) -> None:
-
     X, _ = make_blobs(n_samples=data_shape[0], n_features=data_shape[1], random_state=0)
 
     from cuml import PCA as cuPCA

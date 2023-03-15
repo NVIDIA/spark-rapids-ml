@@ -45,6 +45,7 @@ LinearRegressionModelType = TypeVar(
     Type[SparkLinearRegressionModel],
 )
 
+
 # @lru_cache(4) TODO fixme: TypeError: Unhashable Type” Numpy.Ndarray
 def train_with_cuml_linear_regression(
     X: np.ndarray,

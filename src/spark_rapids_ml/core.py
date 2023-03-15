@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
-from pyspark.ml.functions import vector_to_array
+from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol
 from pyspark.ml.util import (
@@ -48,7 +48,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
-from pyspark.sql import Column, DataFrame, SparkSession
+from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
 from pyspark.sql.types import (
@@ -92,6 +92,10 @@ CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatc
 # Global constant for defining column alias
 Alias = namedtuple("Alias", ("data", "label", "row_number"))
 alias = Alias("cuml_values", "cuml_label", "id")
+
+# Global prediction names
+Pred = namedtuple("Pred", ("prediction", "probability"))
+pred = Pred("prediction", "probability")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -238,14 +242,14 @@ class _CumlCommon(MLWritable, MLReadable):
             cuml_logger.set_level(log_level)
 
 
-class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
+class _CumlCaller(_CumlParams, _CumlCommon):
     """
-    The common estimator to handle the fit callback (_fit). It should:
-    1. set the default parameters
-    2. validate the parameters
-    3. prepare the dataset
-    4. train and return CUML model
-    5. create the pyspark model
+    This class is responsible for calling cuml function (e.g. fit or kneighbor) on pyspark dataframe,
+    to run a multi-node multi-gpu algorithm on the dataframe. A function usually comes from a multi-gpu cuml class,
+    such as cuml.decomposition.pca_mg.PCAMG or cuml.neighbors.nearest_neighbors_mg.NearestNeighborsMG.
+    This class converts dataframe into cuml input type, and leverages NCCL or UCX for communicator. To use this class,
+    developers can override the key methods including _out_schema(...) and _get_cuml_fit_func(...). Examples can be found in
+    spark_rapids_ml.clustering.KMeans and spark_rapids_ml.regression.LinearRegression.
     """
 
     def __init__(self) -> None:
@@ -260,46 +264,11 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
         """
         raise NotImplementedError()
 
-    @abstractmethod
-    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
-        """
-        Create the model according to the collected Row
-        """
-        raise NotImplementedError()
-
     def _repartition_dataset(self, dataset: DataFrame) -> DataFrame:
         """
         Repartition the dataset to the desired number of workers.
         """
         return dataset.repartition(self.num_workers)
-
-    @abstractmethod
-    def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        """
-        Subclass must implement this function to return a cuml fit function that will be
-        sent to executor to run.
-
-        Eg,
-
-        def _get_cuml_fit_func(self, dataset: DataFrame):
-            ...
-            def _cuml_fit(df: CumlInputType, params: Dict[str, Any]) -> Dict[str, Any]:
-                "" "
-                df:  a sequence of (X, Y)
-                params: a series of parameters stored in dictionary,
-                    especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
-                "" "
-                ...
-            ...
-
-            return _cuml_fit
-
-        _get_cuml_fit_func itself runs on the driver side, while the returned _cuml_fit will
-        run on the executor side.
-        """
-        raise NotImplementedError()
 
     def _pre_process_data(
         self, dataset: DataFrame
@@ -356,19 +325,46 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         return select_cols, input_cols, dimension, feature_type
 
-    def _enable_nccl(self) -> bool:
-        """If enable or disable NCCL communication"""
-        return True
+    def _require_nccl_ucx(self) -> Tuple[bool, bool]:
+        """
+        If enable or disable communication layer (NCCL or UCX).
+        Return (False, False) if no communication layer is required.
+        Return (True, False) if only NCCL is required.
+        Return (True, True) if UCX is required. Cuml UCX backend currently also requires NCCL.
+        """
+        return (True, False)
 
-    def _require_ucx(self) -> bool:
-        """If enable or disable ucx over NCCL"""
-        return False
+    @abstractmethod
+    def _get_cuml_fit_func(
+        self, dataset: DataFrame
+    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        """
+        Subclass must implement this function to return a cuml fit function that will be
+        sent to executor to run.
 
-    def _return_model(self) -> bool:
-        """If _fit returns a model or a RDD"""
-        return True
+        Eg,
 
-    def _fit(self, dataset: DataFrame) -> Union["_CumlModel", RDD]:
+        def _get_cuml_fit_func(self, dataset: DataFrame):
+            ...
+            def _cuml_fit(df: CumlInputType, params: Dict[str, Any]) -> Dict[str, Any]:
+                "" "
+                df:  a sequence of (X, Y)
+                params: a series of parameters stored in dictionary,
+                    especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
+                "" "
+                ...
+            ...
+
+            return _cuml_fit
+
+        _get_cuml_fit_func itself runs on the driver side, while the returned _cuml_fit will
+        run on the executor side.
+        """
+        raise NotImplementedError()
+
+    def _call_cuml_fit_func(
+        self, dataset: DataFrame, partially_collect: bool = True
+    ) -> RDD:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
 
@@ -404,9 +400,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
 
         cuml_verbose = self.cuml_params.get("verbose", False)
 
-        enable_nccl = self._enable_nccl()
-        require_ucx = self._require_ucx()
-        return_model = self._return_model()
+        (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
@@ -455,7 +449,7 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 
-            if return_model == True:
+            if partially_collect == True:
                 if enable_nccl:
                     context.barrier()
 
@@ -470,9 +464,33 @@ class _CumlEstimator(Estimator, _CumlCommon, _CumlParams):
             .mapPartitions(lambda x: x)
         )
 
-        if return_model == False:
-            return pipelined_rdd
+        return pipelined_rdd
 
+
+class _CumlEstimator(Estimator, _CumlCaller):
+    """
+    The common estimator to handle the fit callback (_fit). It should:
+    1. set the default parameters
+    2. validate the parameters
+    3. prepare the dataset
+    4. train and return CUML model
+    5. create the pyspark model
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    @abstractmethod
+    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
+        """
+        Create the model according to the collected Row
+        """
+        raise NotImplementedError()
+
+    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+        pipelined_rdd = self._call_cuml_fit_func(
+            dataset=dataset, partially_collect=True
+        )
         ret = pipelined_rdd.collect()[0]
 
         model = self._create_pyspark_model(ret)
@@ -531,7 +549,7 @@ class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
         return select_cols, multi_col_names, dimension, feature_type
 
 
-class _CumlModel(Model, _CumlCommon, _CumlParams):
+class _CumlModel(Model, _CumlParams, _CumlCommon):
     """
     Abstract class for spark cuml models that are fitted by spark cuml estimators.
     """
@@ -704,11 +722,27 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         num_features = self.n_cols if self.n_cols else -1
         return num_features
 
+    def _is_single_pred(self, input_schema: StructType) -> bool:
+        """Indicate if the transform is only predicting 1 column"""
+        schema = self._out_schema(input_schema)
+        if isinstance(schema, str):
+            return False if "," in schema else True
+        elif isinstance(schema, StructType):
+            return False if len(schema.names) > 1 else True
+
+    def _has_probability_col(self) -> bool:
+        """This API is needed and can be overwritten by subclass which
+        hasn't implemented predict probability yet"""
+
+        return (
+            True
+            if self.hasParam("probabilityCol") and self.isDefined("probabilityCol")
+            else False
+        )
+
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
         dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
-
-        pred_name = self.getOrDefault(self.predictionCol)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -732,11 +766,47 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
 
                 yield cuml_transform_func(cuml_object, data)
 
-        return dataset.withColumn(pred_name, predict_udf(struct(*select_cols)))
+        pred_name = self.getOrDefault(self.predictionCol)
+        pred_col = predict_udf(struct(*select_cols))
+
+        if self._is_single_pred(dataset.schema):
+            return dataset.withColumn(pred_name, pred_col)
+        else:
+            # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
+            pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
+            dataset = dataset.withColumn(pred_struct_col_name, pred_col)
+
+            # 1. Add predictionCol in the base class
+            dataset = dataset.withColumn(
+                pred_name, getattr(col(pred_struct_col_name), pred.prediction)
+            )
+
+            # 2. Handle probability columns
+            if self._has_probability_col():
+                probability_col = self.getOrDefault("probabilityCol")
+                dataset = dataset.withColumn(
+                    probability_col,
+                    array_to_vector(
+                        getattr(col(pred_struct_col_name), pred.probability)
+                    ),
+                )
+
+            # 3. Drop the unused column
+            dataset = dataset.drop(pred_struct_col_name)
+
+            return dataset
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
-        return dtype_to_pyspark_type(self.dtype)
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+
+        schema = f"{pred.prediction} {pyspark_type}"
+        if self._has_probability_col():
+            schema = f"{schema}, {pred.probability} array<{pyspark_type}>"
+        else:
+            schema = f"{pyspark_type}"
+
+        return schema
 
 
 def _set_pyspark_cuml_cls_param_attrs(

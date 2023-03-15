@@ -276,6 +276,7 @@ def test_random_forest_classifier(
     cu_rf = cuRf(n_streams=1, **rf_params)
     cu_rf.fit(X_train, y_train)
     cu_preds = cu_rf.predict(X_test)
+    cu_preds_proba = cu_rf.predict_proba(X_test)
 
     cu_acc = accuracy_score(y_test, cu_preds)
 
@@ -297,6 +298,7 @@ def test_random_forest_classifier(
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = spark_rf_model.transform(test_df).collect()
+
         pred_result = [row.prediction for row in result]
         spark_acc = accuracy_score(y_test, np.array(pred_result))
 
@@ -306,6 +308,9 @@ def test_random_forest_classifier(
             data_type == np.float32 and feature_type == feature_types.vector
         ):
             assert cu_acc == spark_acc
+
+            pred_proba_result = [row.probability for row in result]
+            np.testing.assert_allclose(pred_proba_result, cu_preds_proba, rtol=1e-3)
         else:
             assert cu_acc - spark_acc < 0.07
 
@@ -461,17 +466,16 @@ def test_random_forest_classifier_spark_compat(
         if result:
             if isinstance(model, SparkRFClassificationModel):
                 assert result.prediction == 0.0
+                assert np.argmax(result.probability) == 0
             else:
                 # TODO: investigate difference
                 assert result.prediction == 1.0
+                assert np.argmax(result.probability) == 1
 
         if isinstance(model, SparkRFClassificationModel):
-            assert np.argmax(result.probability) == 0
             assert np.argmax(result.newRawPrediction) == 0
             assert result.leafId == Vectors.dense([0.0, 0.0, 0.0])
         else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert np.argmax(result.probability) == 0
             with pytest.raises((NotImplementedError, AttributeError)):
                 assert np.argmax(result.newRawPrediction) == 0
             with pytest.raises((NotImplementedError, AttributeError)):

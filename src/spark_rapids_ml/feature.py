@@ -359,7 +359,6 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
-
         cuml_alg_params = self.cuml_params.copy()
 
         transformed_mean = np.matmul(

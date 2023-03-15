@@ -47,8 +47,8 @@ def test_example(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setK(topk)
 
-        gpu_knn = gpu_knn.fit(data_df)
-        query_df_withid, item_df_withid, knn_df = gpu_knn.kneighbors(query_df)
+        gpu_model = gpu_knn.fit(data_df)
+        query_df_withid, item_df_withid, knn_df = gpu_model.kneighbors(query_df)
         query_df_withid.show()
         item_df_withid.show()
         knn_df.show()
@@ -80,6 +80,10 @@ def test_example(gpu_number: int) -> None:
 
         assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
         assert indices[4] == [7, 6]
+
+        # throw an error if transform function is called
+        with pytest.raises(NotImplementedError):
+            gpu_model.transform(query_df)
 
 
 def test_example_with_id(gpu_number: int) -> None:
@@ -114,8 +118,8 @@ def test_example_with_id(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setIdCol("id")
         gpu_knn = gpu_knn.setK(topk)
 
-        gpu_knn = gpu_knn.fit(data_df)
-        query_df, item_df, knn_df = gpu_knn.kneighbors(query_df)
+        gpu_model = gpu_knn.fit(data_df)
+        query_df, item_df, knn_df = gpu_model.kneighbors(query_df)
         query_df.show()
         item_df.show()
         knn_df.show()
@@ -181,9 +185,9 @@ def test_nearest_neighbors(
         ).setInputCol(features_col)
 
         # obtain spark results
-        sparkcuml_knn = sparkcuml_knn.fit(data_df)
+        sparkcuml_model = sparkcuml_knn.fit(data_df)
         query_df = data_df
-        (query_df_withid, item_df_withid, knn_df) = sparkcuml_knn.kneighbors(query_df)
+        (query_df_withid, item_df_withid, knn_df) = sparkcuml_model.kneighbors(query_df)
 
         distances_df = knn_df.select("distances")
         indices_df = knn_df.select("indices")

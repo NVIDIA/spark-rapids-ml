@@ -126,12 +126,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.format:
         print("Formatting...")
-        if not all(run_formatter(path) for path in SRC_PATHS):
+        format_results = [run_formatter(path) for path in SRC_PATHS]
+        if not all(format_results):
             sys.exit(-1)
 
     if args.type_check:
         print("Type checking...")
-        if not all(run_mypy(path) for path in SRC_PATHS):
+        type_results = [run_mypy(path) for path in SRC_PATHS]
+        if not all(type_results):
             sys.exit(-1)
 
     if args.pylint:

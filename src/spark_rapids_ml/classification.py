@@ -13,15 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Type, Union
+from typing import Any, Callable, Tuple, Type, Union
 
+import cudf
+import numpy as np
+import pandas as pd
 from pyspark import Row
 from pyspark.ml.classification import _RandomForestClassifierParams
+from pyspark.ml.param.shared import HasProbabilityCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
 from pyspark.sql.types import DoubleType, FloatType, IntegerType, IntegralType
 
-from spark_rapids_ml.core import alias
+from spark_rapids_ml.core import CumlT, alias, pred
 from spark_rapids_ml.tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
@@ -30,11 +34,24 @@ from spark_rapids_ml.tree import (
 )
 
 
+class _RFClassifierParams(_RandomForestClassifierParams, HasProbabilityCol):
+    def __init__(self, *args: Any):
+        super().__init__(*args)
+
+    def setProbabilityCol(
+        self: "_RFClassifierParams", value: str
+    ) -> "_RFClassifierParams":
+        """
+        Sets the value of :py:attr:`probabilityCol`.
+        """
+        return self._set(probabilityCol=value)
+
+
 class RandomForestClassifier(
     _RandomForestClass,
     _RandomForestEstimator,
     _RandomForestCumlParams,
-    _RandomForestClassifierParams,
+    _RFClassifierParams,
 ):
     """RandomForestClassifier implements a Random Forest classifier model which
     fits multiple decision tree classifiers in an ensemble. It supports both
@@ -136,7 +153,7 @@ class RandomForestClassificationModel(
     _RandomForestClass,
     _RandomForestModel,
     _RandomForestCumlParams,
-    _RandomForestClassifierParams,
+    _RFClassifierParams,
 ):
     """
     Model fitted by :class:`RandomForestClassifier`.
@@ -156,6 +173,23 @@ class RandomForestClassificationModel(
             num_classes=num_classes,
         )
         self._num_classes = num_classes
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        Callable[..., CumlT],
+        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+    ]:
+        _construct_rf, _ = super()._get_cuml_transform_func(dataset)
+
+        def _predict(rf: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
+            data = {}
+            rf.update_labels = False
+            data[pred.prediction] = rf.predict(pdf)
+            data[pred.probability] = pd.Series(list(rf.predict_proba(pdf)))
+            return pd.DataFrame(data)
+
+        return _construct_rf, _predict
 
     def _is_classification(self) -> bool:
         return True
