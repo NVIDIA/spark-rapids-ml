@@ -123,7 +123,6 @@ class DataGenBase(DataGen):
             type=_restrict_train_size,  # type: ignore
             help="the value should be between 0.0 and 1.0 and represent "
             "the proportion of the dataset to include in the train split",
-            default=0.8,
         )
 
         self._add_extra_parameters()
@@ -478,23 +477,25 @@ if __name__ == "__main__":
                 .drop(*feature_cols)
             )
 
-        train_df, eval_df = df.randomSplit(
-            [args.train_fraction, 1 - args.train_fraction], seed=1
-        )
+        def write_files(dataframe: DataFrame, path: str) -> None:
+            if args.output_num_files is not None:
+                dataframe = dataframe.repartition(args.output_num_files)
 
-        if args.output_num_files is not None:
-            train_df = train_df.repartition(args.output_num_files)
-            eval_df = eval_df.repartition(args.output_num_files)
+            writer = dataframe.write
+            if args.overwrite:
+                writer = writer.mode("overwrite")
+            writer.parquet(path)
 
-        train_df.printSchema()
+        if args.train_fraction is not None:
+            train_df, eval_df = df.randomSplit(
+                [args.train_fraction, 1 - args.train_fraction], seed=1
+            )
+            write_files(train_df, f"{args.output_dir}/train")
+            write_files(eval_df, f"{args.output_dir}/eval")
 
-        train_writer = train_df.write
-        eval_writer = eval_df.write
-        if args.overwrite:
-            train_writer = train_df.write.mode("overwrite")
-            eval_writer = eval_df.write.mode("overwrite")
+        else:
+            write_files(df, args.output_dir)
 
-        train_writer.parquet(f"{args.output_dir}/train")
-        eval_writer.parquet(f"{args.output_dir}/eval")
+        df.printSchema()
 
         print("gen_data finished")
