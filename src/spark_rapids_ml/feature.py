@@ -15,7 +15,7 @@
 #
 
 import itertools
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import cudf
 import numpy as np
@@ -43,6 +43,8 @@ from spark_rapids_ml.core import (
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
+
+P = TypeVar("P", bound=_CumlParams)
 
 
 class PCAClass(_CumlClass):
@@ -73,7 +75,7 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
     Shared Spark Params for PCA and PCAModel.
     """
 
-    def setInputCol(self, value: Union[str, List[str]]) -> "_PCACumlParams":
+    def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
@@ -83,13 +85,13 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
             self.set_params(inputCols=value)
         return self
 
-    def setInputCols(self, value: List[str]) -> "_PCACumlParams":
+    def setInputCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`inputCols`. Used when input vectors are stored as multiple feature columns.
         """
         return self.set_params(inputCols=value)
 
-    def setOutputCol(self, value: Union[str, List[str]]) -> "_PCACumlParams":
+    def setOutputCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
         """
@@ -99,7 +101,7 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
             self.set_params(outputCols=value)
         return self
 
-    def setOutputCols(self, value: List[str]) -> "_PCACumlParams":
+    def setOutputCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`outputCols`.
         """

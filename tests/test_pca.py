@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Tuple, Type, TypeVar, Union
+from typing import List, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
@@ -253,8 +253,7 @@ def test_pca(
         train_df, features_col, _ = create_pyspark_dataframe(
             spark, feature_type, data_type, X, None
         )
-
-        output_col = (
+        output_col: Union[str, List[str]] = (
             "pca_features"
             if isinstance(features_col, str)
             else ["pca_feature_" + str(i) for i in range(n_components)]

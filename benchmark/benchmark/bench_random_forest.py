@@ -77,9 +77,11 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
             rfc = RandomForestClassifier(num_workers=self.args.num_gpus, **params)
             benchmark_string = "Spark Rapids ML RandomForestClassifier"
         else:
-            from pyspark.ml.classification import RandomForestClassifier
+            from pyspark.ml.classification import (
+                RandomForestClassifier as SparkRandomForestClassifier,
+            )
 
-            rfc = RandomForestClassifier(**params)
+            rfc = SparkRandomForestClassifier(**params)  # type: ignore[assignment]
             benchmark_string = "Spark ML RandomForestClassifier"
 
         rfc.setFeaturesCol(features_col)
@@ -179,9 +181,11 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
             )
             benchmark_string = "Spark Rapids ML RandomForestRegressor"
         else:
-            from pyspark.ml.regression import RandomForestRegressor
+            from pyspark.ml.regression import (
+                RandomForestRegressor as SparkRandomForestRegressor,
+            )
 
-            rf = RandomForestRegressor(**params)
+            rf = SparkRandomForestRegressor(**params)  # type: ignore[assignment]
             benchmark_string = "Spark ML RandomForestRegressor"
 
         rf.setFeaturesCol(features_col)

@@ -191,7 +191,7 @@ class BenchmarkKMeans(BenchmarkBase):
             cluster_centers = gpu_model.cluster_centers_
 
         if num_cpus > 0:
-            from pyspark.ml.clustering import KMeans
+            from pyspark.ml.clustering import KMeans as SparkKMeans
 
             assert num_gpus <= 0
             if is_array_col:
@@ -222,7 +222,9 @@ class BenchmarkKMeans(BenchmarkBase):
             print(f"Passing {params} to KMeans")
 
             cpu_estimator = (
-                KMeans(**params).setFeaturesCol(first_col).setPredictionCol(output_col)
+                SparkKMeans(**params)
+                .setFeaturesCol(first_col)
+                .setPredictionCol(output_col)
             )
 
             cpu_model, fit_time = with_benchmark(

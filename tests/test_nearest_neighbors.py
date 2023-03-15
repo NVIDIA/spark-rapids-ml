@@ -59,10 +59,10 @@ def test_example(gpu_number: int) -> None:
         distances_df = knn_df.select("distances")
         indices_df = knn_df.select("indices")
 
-        distances = distances_df.collect()
-        distances = [r[0] for r in distances]
-        indices = indices_df.collect()
-        indices = [r[0] for r in indices]
+        distance_rows = distances_df.collect()
+        distances = [r.distances for r in distance_rows]
+        index_rows = indices_df.collect()
+        indices = [r.indices for r in index_rows]
 
         assert array_equal(distances[0], [math.sqrt(2.0), math.sqrt(8.0)])
         assert indices[0] == [0, 1]

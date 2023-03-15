@@ -1,9 +1,10 @@
+from typing import Dict, List, Tuple
+
 import argparse
 import os
 import subprocess
 import sys
 from multiprocessing import Pool, cpu_count
-from typing import Dict, Tuple, Union
 
 from pylint import epylint
 
@@ -12,43 +13,33 @@ from pylint import epylint
 CURDIR = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 PROJECT_ROOT = os.path.normpath(os.path.join(CURDIR, os.path.pardir))
 SRC_PATHS = [
-  "src/spark_rapids_ml",
-  "tests",
-  "benchmark",
+    "src/spark_rapids_ml",
+    "tests",
+    "benchmark",
 ]
 
 
-class DirectoryExcursion:
-    def __init__(self, path: Union[os.PathLike, str]):
-        self.path = path
-        self.curdir = os.path.normpath(os.path.abspath(os.path.curdir))
-
-    def __enter__(self):
-        os.chdir(self.path)
-
-    def __exit__(self, *args):
-        os.chdir(self.curdir)
-
-
-def run_formatter(rel_path: str) -> bool:
-    path = os.path.join(PROJECT_ROOT, rel_path)
-    isort_ret = subprocess.run(["isort", "--check", "--profile=black", path]).returncode
-    black_ret = subprocess.run(["black", "--check", rel_path]).returncode
+def run_formatter(rel_paths: List[str]) -> bool:
+    isort_cmd = ["isort", "--check", "--profile=black"] + rel_paths
+    black_cmd = ["black", "--check"] + rel_paths
+    isort_ret = subprocess.run(isort_cmd).returncode
+    black_ret = subprocess.run(black_cmd).returncode
     if isort_ret != 0 or black_ret != 0:
+        isort_cmd.remove("--check")
+        black_cmd.remove("--check")
         msg = (
             "Please run the following command on your machine to address the format"
-            f" errors:\n isort --profile=black {rel_path}\n black {rel_path}\n"
+            " errors:\n {}\n {}".format(" ".join(isort_cmd), " ".join(black_cmd))
         )
         print(msg, file=sys.stdout)
         return False
     return True
 
 
-def run_mypy(rel_path: str) -> bool:
-    with DirectoryExcursion(PROJECT_ROOT):
-        path = os.path.join(PROJECT_ROOT, rel_path)
-        ret = subprocess.run(["mypy", path])
-        return ret.returncode == 0
+def run_mypy(rel_paths: List[str]) -> bool:
+    paths = [os.path.join(PROJECT_ROOT, path) for path in rel_paths]
+    ret = subprocess.run(["mypy"] + paths)
+    return ret.returncode == 0
 
 
 class PyLint:
@@ -120,20 +111,18 @@ class PyLint:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--format", action='store_true', default=False)
-    parser.add_argument("--type-check", action='store_true', default=False)
-    parser.add_argument("--pylint", action='store_true', default=False)
+    parser.add_argument("--format", action="store_true", default=False)
+    parser.add_argument("--type-check", action="store_true", default=False)
+    parser.add_argument("--pylint", action="store_true", default=False)
     args = parser.parse_args()
     if args.format:
         print("Formatting...")
-        format_results = [run_formatter(path) for path in SRC_PATHS]
-        if not all(format_results):
+        if not run_formatter(SRC_PATHS):
             sys.exit(-1)
 
     if args.type_check:
         print("Type checking...")
-        type_results = [run_mypy(path) for path in SRC_PATHS]
-        if not all(type_results):
+        if not run_mypy(SRC_PATHS):
             sys.exit(-1)
 
     if args.pylint:

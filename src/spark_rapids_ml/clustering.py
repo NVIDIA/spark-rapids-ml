@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import cudf
 import numpy as np
@@ -42,6 +42,8 @@ from spark_rapids_ml.core import (
 )
 from spark_rapids_ml.params import HasFeaturesCols, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import get_logger
+
+P = TypeVar("P", bound=_CumlParams)
 
 
 class KMeansClass(_CumlClass):
@@ -97,7 +99,7 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
         else:
             raise RuntimeError("featuresCol is not set")
 
-    def setFeaturesCol(self, value: str) -> "_KMeansCumlParams":
+    def setFeaturesCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`. Used when input vectors are stored in a single column.
         """
@@ -107,13 +109,13 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
             self.set_params(featuresCols=value)
         return self
 
-    def setFeaturesCols(self, value: List[str]) -> "_KMeansCumlParams":
+    def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns.
         """
         return self.set_params(featuresCols=value)
 
-    def setPredictionCol(self, value: str) -> "_KMeansCumlParams":
+    def setPredictionCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`predictionCol`.
         """

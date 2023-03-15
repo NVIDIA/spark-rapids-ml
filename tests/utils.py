@@ -16,7 +16,7 @@
 
 from collections import namedtuple
 from functools import lru_cache
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import pyspark
@@ -36,15 +36,7 @@ feature_types = FeatureTypes("vector", "array", "multi_cols")
 pyspark_supported_feature_types = feature_types._fields
 cuml_supported_data_types = [np.float32, np.float64]
 
-
-class CumlParams(_CumlParams, Params):
-    """For type-checking in tests only.
-
-    Defines a class that inherits from both Spark ML Params and _CumlParams, e.g. _CumlEstimator
-    and _CumlModel.
-    """
-
-    pass
+CumlParams = TypeVar("CumlParams", bound=_CumlParams)
 
 
 def idfn(val: Any) -> str:
