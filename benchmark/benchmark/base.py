@@ -57,7 +57,7 @@ class BenchmarkBase:
             "--num_cpus",
             type=int,
             default=6,
-            help="number of CPUs to use. If num_cpus > 0, will run with the number of dataset partitions equal to num_cpus.",
+            help="number of CPUs to use",
         )
         self._parser.add_argument(
             "--num_runs",
