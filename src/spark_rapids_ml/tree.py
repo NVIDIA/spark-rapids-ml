@@ -272,8 +272,8 @@ class _RandomForestEstimator(
             fields.append(StructField("num_classes", IntegerType(), False))
         return StructType(fields)
 
-    def _enable_nccl(self) -> bool:
-        return False
+    def _require_nccl_ucx(self) -> Tuple[bool, bool]:
+        return False, False
 
 
 class _RandomForestModel(
