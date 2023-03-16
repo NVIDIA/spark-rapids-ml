@@ -429,7 +429,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     if multi_col_names:
                         features = pdf[multi_col_names]
                     else:
-                        features = np.array(list(pdf[alias.data]))
+                        features = np.array(list(pdf[alias.data]), order="F")
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
                         pdf[alias.row_number]
@@ -446,6 +446,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 logger.info("Invoking cuml fit")
 
                 # call the cuml fit function
+                # *note*: cuml_fit_func may delete components of inputs to free
+                # memory.  do not rely on inputs after this call.
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 
@@ -695,7 +697,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     yield cuml_transform_func(cuml_object, pdf[select_cols])
             else:
                 for pdf in pdf_iter:
-                    nparray = np.array(list(pdf[select_cols[0]]))
+                    nparray = np.array(list(pdf[select_cols[0]]), order="F")
                     yield cuml_transform_func(cuml_object, nparray)
 
         return dataset.mapInPandas(
@@ -760,11 +762,12 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             cuml_object = construct_cuml_object_func()
             for pdf in iterator:
                 if not input_is_multi_cols:
-                    data = np.array(list(pdf[select_cols[0]]))
+                    data = np.array(list(pdf[select_cols[0]]), order="F")
                 else:
                     data = pdf[select_cols]
-
-                yield cuml_transform_func(cuml_object, data)
+                res = cuml_transform_func(cuml_object, data)
+                del data
+                yield res
 
         pred_name = self.getOrDefault(self.predictionCol)
         pred_col = predict_udf(struct(*select_cols))
