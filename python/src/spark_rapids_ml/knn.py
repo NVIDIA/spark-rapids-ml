@@ -114,7 +114,16 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         typeConverter=TypeConverters.toString,
     )
 
-    def setInputCol(self: P, value: Union[str, List[str]]) -> P:
+    def setK(self, value: int) -> "NearestNeighbors":
+        """
+        Sets the value of `k`.
+        """
+        self.set_params(k=value)
+        return self
+
+    def setInputCol(
+        self, value: Union[str, List[str]]
+    ) -> "_NearestNeighborsCumlParams":
         """
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
@@ -197,13 +206,6 @@ class NearestNeighbors(
         self._label_isdata = 0
         self._label_isquery = 1
         self.set_params(labelCol=alias.label)
-
-    def setK(self, value: int) -> "NearestNeighbors":
-        """
-        Sets the value of `k`.
-        """
-        self.set_params(k=value)
-        return self
 
     def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
         return NearestNeighborsModel.from_row(result)
@@ -342,8 +344,8 @@ class NearestNeighborsModel(
         """
 
         query_default_num_partitions = query_df.rdd.getNumPartitions()
-        if not self.isDefined("id_col"):
-            query_df = self._df_zip_with_index(query_df, self.getIdCol())
+        query_df = self.transform(query_df)
+
         processed_query_df = query_df.withColumn(alias.label, lit(self._label_isquery))
 
         union_df = self._processed_item_df.union(processed_query_df)
@@ -480,9 +482,11 @@ class NearestNeighborsModel(
         return _cuml_fit
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
-        raise NotImplementedError(
-            "NearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
-        )
+        res_df = dataset
+        if not self.isDefined("id_col"):
+            res_df = self._df_zip_with_index(self._item_df, self.getIdCol())
+
+        return res_df
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
@@ -493,3 +497,52 @@ class NearestNeighborsModel(
         raise NotImplementedError(
             "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
         )
+
+    def exactNearestNeighborsJoin(
+        self, 
+        datasetA: DataFrame, 
+        datasetB: DataFrame, 
+        numNearestNeighbors: int, 
+        distCol: str = "distCol"):
+        """
+        TODO: add docstring
+        datasetA: DataFrame
+            the item_df 
+        datasetB: DataFrame
+            the query_df
+        """
+        estimator_item_df = self._processed_item_df 
+        estimator_k = self.getOrDefault("k")
+
+        id_col_name = self.getIdCol()
+
+        self.setK(numNearestNeighbors)
+        self._processed_item_df = self.transform(datasetA)
+        self._processed_item_df = self._processed_item_df.withColumn(
+            alias.label, lit(self._label_isdata)
+        )
+
+        (query_df, item_df, knn_df) = self.kneighbors(datasetB)
+
+        from pyspark.sql.functions import posexplode
+        from pyspark.sql.functions import arrays_zip, explode, col, struct
+
+        # flat_knn_df has schema ("query_id, item_id, distCol")
+        knn_pair_df = knn_df \
+            .select(f"query_{id_col_name}", explode(arrays_zip("indices", "distances")).alias("zipped")) \
+            .select(f"query_{id_col_name}", col("zipped.indices").alias(f"item_{id_col_name}"), col("zipped.distances").alias(distCol)) 
+
+        datasetA_res = item_df.select(struct("*").alias("datasetA"))
+        datasetB_res = query_df.select(struct("*").alias("datasetB"))
+        res_df = datasetA_res.join(knn_pair_df, datasetA_res[f"datasetA.{id_col_name}"] == knn_pair_df[f"item_{id_col_name}"]) 
+        res_df = res_df.join(datasetB_res, res_df[f"query_{id_col_name}"] == datasetB_res[f"datasetB.{id_col_name}"])
+
+        if self.isDefined(self.id_col):
+            res_df = res_df.select("datasetA", "datasetB", distCol)
+        else:
+            res_df = res_df.select(res_df["datasetA"].dropFields(id_col_name), res_df["datasetA"].dropFields(id_col_name), distCol)
+        
+        self._processed_item_df = estimator_item_df 
+        self.setK(estimator_k)
+
+        return res_df 

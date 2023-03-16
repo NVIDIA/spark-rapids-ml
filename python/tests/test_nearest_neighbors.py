@@ -64,6 +64,18 @@ def test_example(gpu_number: int) -> None:
         index_rows = indices_df.collect()
         indices = [r.indices for r in index_rows]
 
+        def assert_distances_equal(distances):
+            assert len(distances) == len(query)
+            assert array_equal(distances[0], [math.sqrt(2.0), math.sqrt(8.0)])
+            assert array_equal(distances[1], [0.0, math.sqrt(2.0)])
+            assert array_equal(
+                distances[2], [math.sqrt(0.01 + 0.01), math.sqrt(0.81 + 0.81)]
+            )
+            assert array_equal(distances[3], [0.0, math.sqrt(2.0)])
+            assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
+
+        def assert_indices_equal(indices):
+
         assert array_equal(distances[0], [math.sqrt(2.0), math.sqrt(8.0)])
         assert indices[0] == [0, 1]
 
@@ -84,6 +96,10 @@ def test_example(gpu_number: int) -> None:
         # throw an error if transform function is called
         with pytest.raises(NotImplementedError):
             gpu_model.transform(query_df)
+
+            
+        # test exactNearestNeighborsJoin
+        res = gpu_model.exactNearestNeighborsJoin(data_df, query_df, topk)
 
 
 def test_example_with_id(gpu_number: int) -> None:
@@ -214,3 +230,47 @@ def test_nearest_neighbors(
         cuml_nonself_distances = [knn[1:] for knn in cuml_distances]
         for i in range(len(distances)):
             assert array_equal(nonself_distances[i], cuml_nonself_distances[i])
+
+
+def test_lsh_spark_compat(gpu_number: int) -> None:
+    from pyspark.ml.feature import BucketedRandomProjectionLSH
+    from pyspark.ml.linalg import Vectors
+    from pyspark.sql.functions import col
+
+    topk = 2
+
+    with CleanSparkSession() as spark:
+        dataA = [(0, Vectors.dense([1.0, 1.0]), "d0"),
+                 (1, Vectors.dense([1.0, -1.0]), "d1"),
+                 (2, Vectors.dense([-1.0, -1.0]), "d2"),
+                 (3, Vectors.dense([-1.0, 1.0]), "d3")]
+        dfA = spark.createDataFrame(dataA, ["id", "features", "meta"])
+
+        dataB = [(4, Vectors.dense([1.0, 0.0]), "q4"),
+                 (5, Vectors.dense([-1.0, 0.0]), "q5"),
+                 (6, Vectors.dense([0.0, 1.0]), "q6"),
+                 (7, Vectors.dense([0.0, -1.0]), "q7")]
+        dfB = spark.createDataFrame(dataB, ["id", "features", "meta"])
+
+        brp = BucketedRandomProjectionLSH(inputCol="features", outputCol="hashes", bucketLength=5.0,
+                                  numHashTables=3)
+
+        model = brp.fit(dfA)
+        res = model.approxSimilarityJoin(dfA, dfB, 1.5, distCol="EuclideanDistance")
+        dfA.show()
+        dfB.show()
+        res.show(truncate=False)
+        print(res.schema)
+        print("\n")
+        print(res.dtypes)
+
+        
+        # implement approxNearestNeighborsJoin(dfA, dfB, k, distCol="EuclideanDistance")
+
+        gpu_knn = NearestNeighbors(num_workers=gpu_number)
+        gpu_knn = gpu_knn.setInputCol("features")
+        gpu_knn = gpu_knn.setIdCol("id")
+        gpu_knn = gpu_knn.setK(topk)
+        gpu_model = gpu_knn.fit(dfA)
+        res = gpu_model.approxNearestNeighborsJoin(dfA, dfB, topk)
+        res.show()
