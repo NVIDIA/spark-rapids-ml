@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 import cudf
 import numpy as np
@@ -41,7 +41,7 @@ from spark_rapids_ml.core import (
     _CumlModelSupervised,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import get_logger
+from spark_rapids_ml.utils import _concat_and_free, get_logger
 
 
 class KMeansClass(_CumlClass):
@@ -270,13 +270,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 concated = pd.concat(df_list)
             else:
                 # should be list of np.ndarrays here
-                rows = sum([arr.shape[0] for arr in df_list])
-                cols = df_list[0].shape[1]
-                d_type = df_list[0].dtype
-                concated_out = np.empty(shape=(rows, cols), order="F", dtype=d_type)
-                concated = np.concatenate(df_list, out=concated_out)
-                for df in df_list:
-                    del df
+                concated = _concat_and_free(cast(List[np.ndarray], df_list))
 
             kmeans_object.fit(
                 concated,

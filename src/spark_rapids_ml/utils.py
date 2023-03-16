@@ -122,6 +122,26 @@ class PartitionDescriptor:
         return cls(total_rows, total_cols, rank, parts_rank_size)
 
 
+def _concat_and_free(np_array_list: List[np.ndarray]) -> np.ndarray:
+    """
+    concatenates a list of compatible numpy arrays into a F ordered output array,
+    in a memory efficient way.
+    Note: frees list elements so do not reuse after calling.
+    """
+    rows = sum(arr.shape[0] for arr in np_array_list)
+    if len(np_array_list[0].shape) > 1:
+        cols = np_array_list[0].shape[1]
+        concat_shape: Tuple[int, ...] = (rows, cols)
+    else:
+        concat_shape = (rows,)
+    d_type = np_array_list[0].dtype
+    concated = np.empty(shape=concat_shape, order="F", dtype=d_type)
+    np.concatenate(np_array_list, out=concated)
+    for x_ in np_array_list:
+        del x_
+    return concated
+
+
 def cudf_to_cuml_array(
     gdf: Union[cudf.DataFrame, cudf.Series], order: str = "F"
 ) -> CumlArray:
