@@ -504,8 +504,8 @@ class RandomForestRegressor(
 
     RandomForestRegressor automatically supports most of the parameters from both
     :py:class:`~pyspark.ml.regression.RandomForestRegressor` and in the constructors of
-    :py:class:`cuml.RandomForestRegressor`. And it can automatically map pyspark parameters
-    to cuML parameters.
+    :py:class:`cuml.ensemble.RandomForestRegressor`. And it can automatically map
+    pyspark parameters to cuML parameters.
 
     Examples
     --------
