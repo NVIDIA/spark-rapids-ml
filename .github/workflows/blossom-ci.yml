@@ -77,7 +77,7 @@ jobs:
       # add blackduck properties https://synopsys.atlassian.net/wiki/spaces/INTDOCS/pages/631308372/Methods+for+Configuring+Analysis#Using-a-configuration-file
       - name: Setup blackduck properties
         run: |
-          echo detect.maven.build.command="-pl=com.nvidia:rapids-4-spark-ml_2.12 -am" >> application.properties
+          echo detect.maven.build.command="clean install" >> application.properties
           echo detect.maven.included.scopes=compile >> application.properties
 
       - name: Run blossom action
