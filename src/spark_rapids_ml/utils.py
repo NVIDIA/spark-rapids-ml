@@ -137,8 +137,7 @@ def _concat_and_free(np_array_list: List[np.ndarray]) -> np.ndarray:
     d_type = np_array_list[0].dtype
     concated = np.empty(shape=concat_shape, order="F", dtype=d_type)
     np.concatenate(np_array_list, out=concated)
-    for x_ in np_array_list:
-        del x_
+    del np_array_list[:]
     return concated
 
 
