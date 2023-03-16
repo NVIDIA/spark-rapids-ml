@@ -249,7 +249,8 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
 
     Note: Input vectors must be zero-centered to ensure PCA work properly.
     Spark PCA does not automatically remove the mean of the input data, so use the
-    :py:class::`StandardScaler` to center the input data before invoking transform.
+    :py:class::`~pyspark.ml.feature.StandardScaler` to center the input data before
+    invoking transform.
 
     Examples
     --------

@@ -69,9 +69,9 @@ class RandomForestClassifier(
     well, but it generally requires the data to be well-shuffled in advance.
 
     RandomForestClassifier automatically supports most of the parameters from both
-    :py:class:`~pyspark.ml.regression.RandomForestClassifier` and in the constructors of
-    :py:class:`cuml.RandomForestClassifier`. And it can automatically map pyspark parameters
-    to cuML parameters.
+    :py:class:`~pyspark.ml.classification.RandomForestClassifier` and in the constructors of
+    :py:class:`cuml.ensemble.RandomForestClassifier`. And it can automatically map pyspark
+    parameters to cuML parameters.
 
     Examples
     --------
