@@ -4,6 +4,7 @@
 # where <mode> can be:
 #     all
 #     kmeans
+#     knn
 #     linear_regression
 #     pca
 #     random_forest_classifier

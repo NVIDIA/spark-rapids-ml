@@ -46,7 +46,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
         label_name: Optional[str],
     ) -> Dict[str, Any]:
         """
-        This function evaluates the runtimes of SparkCuml NearestNeighbors and Spark LSH, but
+        This function evaluates the runtimes of Spark Rapids ML NearestNeighbors and Spark LSH, but
         should not be used to compare the two. The purpose is to help understand GPU behavior
         and performance.
         """
@@ -64,7 +64,6 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
         is_single_col = is_array_col or is_vector_col
         if not is_single_col:
             input_cols = [c for c in train_df.schema.names]
-        output_col = "cluster_idx"
 
         if num_gpus > 0:
             from spark_rapids_ml.knn import NearestNeighbors, NearestNeighborsModel
@@ -106,7 +105,6 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
 
         if num_cpus > 0:
             assert num_gpus <= 0
-            start_time = time.time()
             if is_array_col:
                 vector_df = train_df.select(
                     array_to_vector(train_df[first_col]).alias(first_col)
