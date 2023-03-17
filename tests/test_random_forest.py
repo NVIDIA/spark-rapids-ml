@@ -76,6 +76,7 @@ RandomForestModelType = TypeVar(
 
 @pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
 def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
+    # test ci pass
     # Default params
     default_spark_params = {
         "maxBins": 32,
