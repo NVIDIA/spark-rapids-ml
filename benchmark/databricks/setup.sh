@@ -44,14 +44,3 @@ do
     sed -e "s#/path/to/spark-rapids-ml\.zip#${SPARK_RAPIDS_ML_ZIP}#g" -e "s#/path/to/benchmark\.zip#${BENCHMARK_ZIP}#g" $init_script > ${init_script}.updated && \
     databricks fs cp ${init_script}.updated dbfs:${BENCHMARK_HOME}/init_script/${init_script} --profile ${DB_PROFILE} ${DB_OVERWRITE}
 done
-
-
-
-
-
-
-
-
-
-
-
