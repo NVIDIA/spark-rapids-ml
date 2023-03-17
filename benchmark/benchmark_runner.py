@@ -18,6 +18,7 @@ import sys
 
 from benchmark.bench_kmeans import BenchmarkKMeans
 from benchmark.bench_linear_regression import BenchmarkLinearRegression
+from benchmark.bench_nearest_neighbors import BenchmarkNearestNeighbors
 from benchmark.bench_pca import BenchmarkPCA
 from benchmark.bench_random_forest import (
     BenchmarkRandomForestClassifier,
@@ -29,13 +30,13 @@ class BenchmarkRunner:
     def __init__(self) -> None:
         registered_algorithms = {
             "kmeans": BenchmarkKMeans,
+            "knn": BenchmarkNearestNeighbors,
             "linear_regression": BenchmarkLinearRegression,
             "pca": BenchmarkPCA,
             "random_forest_classifier": BenchmarkRandomForestClassifier,
             "random_forest_regressor": BenchmarkRandomForestRegressor,
         }
-
-        algorithms = "\n    ".join(registered_algorithms.keys())
+        algorithms= "\n    ".join(registered_algorithms.keys())
         parser = argparse.ArgumentParser(
             description="Benchmark Spark Rapids ML algorithms",
             usage=f"""benchmark_runner.py <algorithm> [<args>]

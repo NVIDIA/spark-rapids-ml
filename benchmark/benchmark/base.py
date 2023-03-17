@@ -261,7 +261,6 @@ class BenchmarkBase:
         # save results to disk
         if self._args.report_path != "":
             report_pdf.to_csv(self._args.report_path, mode="a")
-            report_pdf.to_csv(self._args.report_path, mode="a")
 
     @abstractmethod
     def run_once(
