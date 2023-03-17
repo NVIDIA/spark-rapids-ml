@@ -17,7 +17,7 @@ import base64
 import math
 import pickle
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
 
 import cudf
 import numpy as np
@@ -36,6 +36,7 @@ from spark_rapids_ml.core import (
     _CumlModelSupervised,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from spark_rapids_ml.utils import _concat_and_free
 
 
 class _RandomForestClass(_CumlClass):
@@ -224,8 +225,8 @@ class _RandomForestEstimator(
                 y = pd.concat(y_list)
             else:
                 # should be list of np.ndarrays here
-                X = np.concatenate(X_list)
-                y = np.concatenate(y_list)  # type: ignore
+                X = _concat_and_free(cast(List[np.ndarray], X_list))
+                y = _concat_and_free(cast(List[np.ndarray], y_list))
 
             # Fit a random forest model on the dataset (X, y)
             rf.fit(X, y, convert_dtype=False)
@@ -272,8 +273,8 @@ class _RandomForestEstimator(
             fields.append(StructField("num_classes", IntegerType(), False))
         return StructType(fields)
 
-    def _enable_nccl(self) -> bool:
-        return False
+    def _require_nccl_ucx(self) -> Tuple[bool, bool]:
+        return False, False
 
 
 class _RandomForestModel(
