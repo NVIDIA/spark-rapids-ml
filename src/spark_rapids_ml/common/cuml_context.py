@@ -81,9 +81,14 @@ class CumlContext:
             # the code occasionally run fail without setting the variables
             # TODO: will have to figure how to make this more flexible to take advantage of higher speed interconnects on multi-gpu nodes
             my_ip = self._ips[self._rank]
-            my_ifname = CumlContext.get_ifname_from_ip(my_ip)
-            os.environ["UCX_TLS"] = "tcp,cuda_copy,cuda_ipc"
-            os.environ["UCXPY_IFNAME"] = my_ifname
+            if "UCX_TLS" not in os.environ:
+                os.environ["UCX_TLS"] = "tcp,cuda_copy,cuda_ipc"
+            if "UCXPY_IFNAME" not in os.environ:
+                try:
+                    my_ifname = CumlContext.get_ifname_from_ip(my_ip)
+                    os.environ["UCXPY_IFNAME"] = my_ifname
+                except ValueError:
+                    pass
 
             self._ucx = UCX.get()
             self._ucx_port = self._ucx.listener_port()

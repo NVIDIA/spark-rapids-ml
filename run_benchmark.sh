@@ -4,6 +4,7 @@
 # where <mode> can be:
 #     all
 #     kmeans
+#     knn
 #     linear_regression
 #     pca
 #     random_forest_classifier
@@ -40,6 +41,31 @@ if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
         --num_cpus 0 \
         --train_path "/tmp/blobs/5k_3k_float64.parquet" \
         --report_path "report_kmeans.csv" \
+        --spark_confs "spark.master=local[4]" \
+        --spark_confs "spark.driver.memory=128g" \
+        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        ${EXTRA_ARGS}
+fi
+
+# KNearestNeighbors
+if [[ "${MODE}" == "knn" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d "/tmp/blobs/5k_3k_float32.parquet" ]]; then
+        python ./benchmark/gen_data.py blobs \
+            --num_rows 5000 \
+            --num_cols 3000 \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "/tmp/blobs/5k_3k_float32.parquet" \
+            --spark_conf "spark.master=local[4]" \
+            --spark_confs "spark.driver.memory=128g"
+    fi
+
+    python ./benchmark/benchmark_runner.py knn \
+        --n_neighbors 3 \
+        --num_gpus 1 \
+        --num_cpus 0 \
+        --train_path "/tmp/blobs/5k_3k_float32.parquet" \
+        --report_path "report_knn.csv" \
         --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
         --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
