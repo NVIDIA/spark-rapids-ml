@@ -6,7 +6,7 @@ These APIs seek to minimize any code changes to end user Spark code.  After your
 
 **Python**
 ```python
-# from pyspark.ml.feature import PCA
+## from pyspark.ml.feature import PCA
 from spark_rapids_ml.feature import PCA
 
 pca = (
