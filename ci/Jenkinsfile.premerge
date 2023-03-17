@@ -30,7 +30,7 @@ import ipp.blossom.*
 
 def githubHelper // blossom github helper
 def TEMP_IMAGE_BUILD = true
-def IMAGE_PREMERGE = "${common.ARTIFACTORY_NAME}/sw-spark-docker/rapids-cuml:ubuntu20.04-cuda11.5.2-blossom"
+def IMAGE_PREMERGE = "${common.ARTIFACTORY_NAME}/sw-spark-docker/spark-rapids-ml:ubuntu20.04-cuda11.5.2-blossom"
 def cpuImage = pod.getCPUYAML("${common.ARTIFACTORY_NAME}/sw-spark-docker/spark:rapids-databricks") // tooling image
 def PREMERGE_DOCKERFILE = 'ci/Dockerfile'
 def PREMERGE_TAG
@@ -144,7 +144,7 @@ pipeline {
 
                         if (TEMP_IMAGE_BUILD) {
                             PREMERGE_TAG = "${BUILD_TAG}"
-                            IMAGE_PREMERGE = "${ARTIFACTORY_NAME}/sw-spark-docker-local/rapids-cuml:${PREMERGE_TAG}"
+                            IMAGE_PREMERGE = "${ARTIFACTORY_NAME}/sw-spark-docker-local/spark-rapids-ml:${PREMERGE_TAG}"
                             docker.build(IMAGE_PREMERGE, "-f ${PREMERGE_DOCKERFILE} -t $IMAGE_PREMERGE .")
                             uploadDocker(IMAGE_PREMERGE)
                         }
@@ -235,7 +235,7 @@ void deleteDockerTempTag(String tag) {
         return
     }
     sh "curl -u $ART_CREDS_USR:$ART_CREDS_PSW -XDELETE " +
-        "https://${ARTIFACTORY_NAME}/artifactory/sw-spark-docker-local/rapids-cuml/${tag} || true"
+        "https://${ARTIFACTORY_NAME}/artifactory/sw-spark-docker-local/spark-rapids-ml/${tag} || true"
 }
 
 void abortDupBuilds() {
