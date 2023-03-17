@@ -36,7 +36,7 @@ class BenchmarkRunner:
             "random_forest_classifier": BenchmarkRandomForestClassifier,
             "random_forest_regressor": BenchmarkRandomForestRegressor,
         }
-        algorithms= "\n    ".join(registered_algorithms.keys())
+        algorithms = "\n    ".join(registered_algorithms.keys())
         parser = argparse.ArgumentParser(
             description="Benchmark Spark Rapids ML algorithms",
             usage=f"""benchmark_runner.py <algorithm> [<args>]
