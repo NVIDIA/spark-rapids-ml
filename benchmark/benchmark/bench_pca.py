@@ -248,7 +248,7 @@ class BenchmarkPCA(BenchmarkBase):
             params = self.class_params
             print(f"Passing {params} to SparkPCA")
 
-            cpu_pca = PCA(**params).setInputCol(first_col).setOutputCol(output_col)
+            cpu_pca = SparkPCA(**params).setInputCol(first_col).setOutputCol(output_col)
 
             cpu_model, fit_time = with_benchmark(
                 "cpu fit", lambda: cpu_pca.fit(vector_df)
