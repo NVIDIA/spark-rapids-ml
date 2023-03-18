@@ -1,6 +1,6 @@
 #!/bin/bash
 # set portion of path below after /dbfs/ to dbfs zip file location
-SPARKCUML_ZIP=/dbfs/path/to/spark-rapids-ml.zip
+SPARK_RAPIDS_ML_ZIP=/dbfs/path/to/spark-rapids-ml.zip
 BENCHMARK_ZIP=/dbfs/path/to/benchmark.zip
 RAPIDS_VERSION=22.12.0
 #RAPIDS_VERSION=23.2.0
@@ -41,6 +41,6 @@ rmm-cu11==${RAPIDS_VERSION} \
 --extra-index-url=https://pypi.nvidia.com
 
 # install spark-cuml
-unzip ${SPARKCUML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
+unzip ${SPARK_RAPIDS_ML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 unzip ${BENCHMARK_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 

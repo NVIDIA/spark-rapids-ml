@@ -1,9 +1,9 @@
 #!/bin/bash
 # set portion of path below after /dbfs/ to dbfs zip file location
-SPARKCUML_ZIP=/dbfs/path/to/spark-rapids-ml.zip
+SPARK_RAPIDS_ML_ZIP=/dbfs/path/to/spark-rapids-ml.zip
 BENCHMARK_ZIP=/dbfs/path/to/benchmark.zip
 
 # install spark-cuml
-unzip ${SPARKCUML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
+unzip ${SPARK_RAPIDS_ML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 unzip ${BENCHMARK_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 
