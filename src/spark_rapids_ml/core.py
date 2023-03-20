@@ -63,15 +63,12 @@ from pyspark.sql.types import (
 from spark_rapids_ml.common.cuml_context import CumlContext
 from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.utils import (
-    _get_class_name,
     _get_gpu_id,
     _get_spark_session,
     _is_local,
     dtype_to_pyspark_type,
     get_logger,
 )
-
-INIT_PARAMETERS_NAME = "init"
 
 if TYPE_CHECKING:
     from cuml.cluster.kmeans_mg import KMeansMG
@@ -96,6 +93,12 @@ alias = Alias("cuml_values", "cuml_label", "id")
 # Global prediction names
 Pred = namedtuple("Pred", ("prediction", "probability"))
 pred = Pred("prediction", "probability")
+
+# Global parameter alias used by core and subclasses.
+ParamAlias = namedtuple(
+    "ParamAlias", ("init", "handle", "num_cols", "part_sizes", "loop")
+)
+param_alias = ParamAlias("cuml_init", "handle", "n", "part_sizes", "loop")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -350,7 +353,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 "" "
                 df:  a sequence of (X, Y)
                 params: a series of parameters stored in dictionary,
-                    especially, the parameters of __init__ is stored in params[INIT_PARAMETERS_NAME]
+                    especially, the parameters of __init__ is stored in params[param_alias.init]
                 "" "
                 ...
             ...
@@ -393,7 +396,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         params: Dict[str, Any] = {
-            INIT_PARAMETERS_NAME: self.cuml_params,
+            param_alias.init: self.cuml_params,
         }
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
@@ -438,10 +441,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     )
                     inputs.append((features, label, row_number))
 
-                params["handle"] = cc.handle
-                params["part_sizes"] = sizes
-                params["n"] = dimension
-                params["loop"] = cc._loop
+                params[param_alias.handle] = cc.handle
+                params[param_alias.part_sizes] = sizes
+                params[param_alias.num_cols] = dimension
+                params[param_alias.loop] = cc._loop
 
                 logger.info("Invoking cuml fit")
 

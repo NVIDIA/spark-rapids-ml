@@ -43,13 +43,13 @@ from pyspark.sql.types import (
 )
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlCaller,
     _CumlEstimatorSupervised,
     _CumlModel,
     alias,
+    param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 
@@ -377,10 +377,10 @@ class NearestNeighborsModel(
             from cuml.neighbors.nearest_neighbors_mg import NearestNeighborsMG as cumlNN
 
             nn_object = cumlNN(
-                handle=params["handle"],
-                n_neighbors=params[INIT_PARAMETERS_NAME]["n_neighbors"],
+                handle=params[param_alias.handle],
+                n_neighbors=params[param_alias.init]["n_neighbors"],
                 output_type="numpy",
-                verbose=params[INIT_PARAMETERS_NAME]["verbose"],
+                verbose=params[param_alias.init]["verbose"],
             )
 
             item_list = []
@@ -422,7 +422,7 @@ class NearestNeighborsModel(
                 )
                 return result
 
-            messages = params["loop"].run_until_complete(
+            messages = params[param_alias.loop].run_until_complete(
                 asyncio.ensure_future(do_allGather())
             )
 
@@ -443,9 +443,9 @@ class NearestNeighborsModel(
                 query=query,
                 query_parts_to_ranks=query_parts_to_ranks,
                 query_nrows=query_nrows,
-                ncols=params["n"],
+                ncols=params[param_alias.num_cols],
                 rank=rank,
-                n_neighbors=params[INIT_PARAMETERS_NAME]["n_neighbors"],
+                n_neighbors=params[param_alias.init]["n_neighbors"],
                 convert_dtype=False,  # only np.float32 is supported in cuml. Should set to True for all other types
             )
 

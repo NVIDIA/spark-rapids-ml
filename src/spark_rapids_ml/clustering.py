@@ -33,12 +33,11 @@ from pyspark.sql.types import (
 )
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlEstimator,
-    _CumlModel,
     _CumlModelSupervised,
+    param_alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import _concat_and_free, get_logger
@@ -261,9 +260,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans_object = CumlKMeansMG(
-                handle=params["handle"],
+                handle=params[param_alias.handle],
                 output_type="cudf",
-                **params[INIT_PARAMETERS_NAME],
+                **params[param_alias.init],
             )
             df_list = [x for (x, _, _) in dfs]
             if isinstance(df_list[0], pd.DataFrame):
@@ -287,7 +286,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 "cluster_centers_": [
                     kmeans_object.cluster_centers_.to_numpy().tolist()
                 ],
-                "n_cols": params["n"],
+                "n_cols": params[param_alias.num_cols],
                 "dtype": str(kmeans_object.dtype.name),
             }
 

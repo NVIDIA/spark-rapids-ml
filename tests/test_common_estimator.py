@@ -27,11 +27,11 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModel,
+    param_alias,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
@@ -171,19 +171,21 @@ class SparkRapidsMLDummy(
         ) -> Dict[str, Any]:
             context = TaskContext.get()
             assert context is not None
-            assert "handle" in params
-            assert "part_sizes" in params
-            assert "n" in params
+            assert param_alias.handle in params
+            assert param_alias.part_sizes in params
+            assert param_alias.num_cols in params
 
-            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
+            pd = PartitionDescriptor.build(
+                params[param_alias.part_sizes], params[param_alias.num_cols]
+            )
 
             assert pd.rank == context.partitionId()
             assert len(pd.parts_rank_size) == partition_num
             assert pd.m == m
             assert pd.n == n
 
-            assert INIT_PARAMETERS_NAME in params
-            init_params = params[INIT_PARAMETERS_NAME]
+            assert param_alias.init in params
+            init_params = params[param_alias.init]
             assert init_params == {"a": 100, "k": 4, "x": 40.0}
             dummy = CumlDummy(**init_params)
             assert dummy.a == 100

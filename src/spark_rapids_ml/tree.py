@@ -29,11 +29,11 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
+    param_alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import _concat_and_free
@@ -196,7 +196,7 @@ class _RandomForestEstimator(
             context = BarrierTaskContext.get()
             part_id = context.partitionId()
 
-            rf_params = params[INIT_PARAMETERS_NAME]
+            rf_params = params[param_alias.init]
             rf_params.pop("n_estimators")
 
             if rf_params["max_features"] == "auto":
