@@ -1,2 +1,2 @@
 pyspark>=3.2.1
-scikit-learn
+scikit-learn>=1.2.1

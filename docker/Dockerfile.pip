@@ -40,19 +40,23 @@ RUN pip install --no-cache-dir \
     rmm-cu11==${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
-# install pyspark
-RUN pip install --no-cache-dir pyspark==${PYSPARK_VERSION}
+# install python dependencies
+RUN pip install --no-cache-dir pyspark==${PYSPARK_VERSION} "scikit-learn>=1.2.1" \
+    && pip install --no-cache-dir "black>=23.1.0" "build>=0.10.0" "isort>=5.12.0" "mypy>=1.0.0" \
+    numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0"
 
 # Config JAVA_HOME
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
+
+### END OF CACHE ###
 
 #ARG RAPIDS_ML_VER=spark-cuml
 #RUN git clone -b branch-$RAPIDS_ML_VER https://github.com/NVIDIA/spark-rapids-ml.git
 COPY . /spark-rapids-ml
 WORKDIR /spark-rapids-ml
 
-# install spark-rapids-ml
-RUN pip install --no-cache -r requirements_dev.txt \
-    && pip install --no-cache -e .
+# install spark-rapids-ml with requirements_dev.txt (in case it has diverged from cache)
+RUN pip install --no-cache-dir -r requirements_dev.txt \
+    && pip install --no-cache-dir -e .
 
 SHELL ["/bin/bash", "-c"]
