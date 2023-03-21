@@ -33,7 +33,7 @@ bench_args=""
 # environment
 nvidia-smi
 which python
-pip install --no-cache -r requirements_dev.txt && pip install --no-cache -e .
+pip install -r requirements_dev.txt && pip install -e .
 
 # unit tests
 ./run_test.sh $ut_args
