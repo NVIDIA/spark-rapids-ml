@@ -81,19 +81,6 @@ class NearestNeighborsClass(_CumlClass):
             "output_type",
         ]
 
-    @staticmethod
-    def _df_zip_with_index(df: DataFrame, id_col_name: str) -> DataFrame:
-        """
-        Add a row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
-        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
-        """
-        out_schema = StructType(
-            [StructField(id_col_name, IntegerType(), False)] + df.schema.fields
-        )
-        zipped_rdd = df.rdd.zipWithIndex()
-        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
-        return new_rdd.toDF(schema=out_schema)
-
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
     """
@@ -114,16 +101,14 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         typeConverter=TypeConverters.toString,
     )
 
-    def setK(self, value: int) -> "NearestNeighbors":
+    def setK(self: P, value: int) -> P:
         """
         Sets the value of `k`.
         """
         self.set_params(k=value)
         return self
 
-    def setInputCol(
-        self, value: Union[str, List[str]]
-    ) -> "_NearestNeighborsCumlParams":
+    def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
@@ -157,6 +142,36 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         )
         return col_name
 
+    def ensureIdCol(self, df: DataFrame) -> DataFrame:
+        """
+        Ensure an id column exists in the input dataframe. Add the column if not exists.
+        """
+        if not self.isDefined("id_col") and self.getIdCol() in df.columns:
+            raise ValueError(
+                f"Cannot create an {self.getIdCol()} column because one has existed."
+                + f"Try setIdCol({self.getIdCol()})."
+            )
+
+        df_withid = (
+            df
+            if self.isDefined("id_col")
+            else self._df_zip_with_index(df, self.getIdCol())
+        )
+        return df_withid
+
+    @staticmethod
+    def _df_zip_with_index(df: DataFrame, id_col_name: str) -> DataFrame:
+        """
+        Add a row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
+        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
+        """
+        out_schema = StructType(
+            [StructField(id_col_name, IntegerType(), False)] + df.schema.fields
+        )
+        zipped_rdd = df.rdd.zipWithIndex()
+        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
+        return new_rdd.toDF(schema=out_schema)
+
 
 class NearestNeighbors(
     NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
@@ -175,7 +190,7 @@ class NearestNeighbors(
     >>> topk = 2
     >>> gpu_knn = NearestNeighbors().setInputCol("features").setIdCol("id").setK(topk)
     >>> gpu_model = gpu_knn.fit(data_df)
-    >>> (query_df, data_df, knn_df) = gpu_model.kneighbors(query_df)
+    >>> (data_df, query_df, knn_df) = gpu_model.kneighbors(query_df)
     >>> knn_df.show()
     +--------+-------+----------------+
     |query_id|indices|       distances|
@@ -183,13 +198,6 @@ class NearestNeighbors(
     |       3| [0, 1]|[0.0, 1.4142135]|
     |       4| [2, 1]|[0.0, 1.4142135]|
     +--------+-------+----------------+
-    >>> query_df.show()
-    +---+----------+
-    | id|  features|
-    +---+----------+
-    |  3|[1.0, 1.0]|
-    |  4|[3.0, 3.0]|
-    +---+----------+
     >>> data_df.show()
     +---+----------+
     | id|  features|
@@ -198,6 +206,23 @@ class NearestNeighbors(
     |  1|[2.0, 2.0]|
     |  2|[3.0, 3.0]|
     +---+----------+
+    >>> query_df.show()
+    +---+----------+
+    | id|  features|
+    +---+----------+
+    |  3|[1.0, 1.0]|
+    |  4|[3.0, 3.0]|
+    +---+----------+
+    >>> knnjoin_df = gpu_model.exactNearestNeighborsJoin(data_df, query_df, topk, distCol="EuclideanDistance")
+    >>> knnjoin_df.show()
+    +---------------+---------------+-----------------+
+    |       datasetA|       datasetB|EuclideanDistance|
+    +---------------+---------------+-----------------+
+    |{0, [1.0, 1.0]}|{3, [1.0, 1.0]}|              0.0|
+    |{1, [2.0, 2.0]}|{3, [1.0, 1.0]}|        1.4142135|
+    |{2, [3.0, 3.0]}|{4, [3.0, 3.0]}|              0.0|
+    |{1, [2.0, 2.0]}|{4, [3.0, 3.0]}|        1.4142135|
+    +---------------+---------------+-----------------+
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -211,18 +236,16 @@ class NearestNeighbors(
         return NearestNeighborsModel.from_row(result)
 
     def _fit(self, dataset: DataFrame) -> "NearestNeighborsModel":
-        self._item_df = dataset
-        if not self.isDefined("id_col"):
-            self._item_df = self._df_zip_with_index(self._item_df, self.getIdCol())
+        self._item_df_withid = self.ensureIdCol(dataset)
 
-        self._processed_item_df = self._item_df.withColumn(
+        self._processed_item_df = self._item_df_withid.withColumn(
             alias.label, lit(self._label_isdata)
         )
 
         # TODO: should test this at scale to see if/when we hit limits
         model = self._create_pyspark_model(
             Row(
-                item_df=self._item_df,
+                item_df_withid=self._item_df_withid,
                 processed_item_df=self._processed_item_df,
                 label_isdata=self._label_isdata,
                 label_isquery=self._label_isquery,
@@ -253,13 +276,13 @@ class NearestNeighborsModel(
 ):
     def __init__(
         self,
-        item_df: DataFrame,
+        item_df_withid: DataFrame,
         processed_item_df: DataFrame,
         label_isdata: int,
         label_isquery: int,
     ):
         super().__init__()
-        self._item_df = item_df
+        self._item_df_withid = item_df_withid
         self._processed_item_df = processed_item_df
         self._label_isdata = label_isdata
         self._label_isquery = label_isquery
@@ -344,9 +367,12 @@ class NearestNeighborsModel(
         """
 
         query_default_num_partitions = query_df.rdd.getNumPartitions()
-        query_df = self.transform(query_df)
 
-        processed_query_df = query_df.withColumn(alias.label, lit(self._label_isquery))
+        query_df_withid = self.ensureIdCol(query_df)
+
+        processed_query_df = query_df_withid.withColumn(
+            alias.label, lit(self._label_isquery)
+        )
 
         union_df = self._processed_item_df.union(processed_query_df)
 
@@ -359,7 +385,7 @@ class NearestNeighborsModel(
             schema=f"query_{self.getIdCol()} int, indices array<int>, distances array<float>"
         ).sort(f"query_{self.getIdCol()}")
 
-        return (query_df, self._item_df, knn_df)
+        return (self._item_df_withid, query_df_withid, knn_df)
 
     def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
@@ -482,11 +508,9 @@ class NearestNeighborsModel(
         return _cuml_fit
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
-        res_df = dataset
-        if not self.isDefined("id_col"):
-            res_df = self._df_zip_with_index(self._item_df, self.getIdCol())
-
-        return res_df
+        raise NotImplementedError(
+            "NearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
+        )
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
@@ -499,50 +523,98 @@ class NearestNeighborsModel(
         )
 
     def exactNearestNeighborsJoin(
-        self, 
-        datasetA: DataFrame, 
-        datasetB: DataFrame, 
-        numNearestNeighbors: int, 
-        distCol: str = "distCol"):
+        self,
+        datasetA: DataFrame,
+        datasetB: DataFrame,
+        numNearestNeighbors: int,
+        distCol: str = "distCol",
+    ) -> DataFrame:
         """
-        TODO: add docstring
-        datasetA: DataFrame
-            the item_df 
-        datasetB: DataFrame
-            the query_df
-        """
-        estimator_item_df = self._processed_item_df 
-        estimator_k = self.getOrDefault("k")
+        This function returns the k exact nearest neighbors (knn) in datasetA regarding each query vector in datasetB.
+        The purpose is to match pyspark LSH approxSimilarityJoin(datasetA, datasetB, threshold, distCol). Note this function
+        is directional that treats datasetA as the item dataframe and datasetB as the query dataframe. This is because
+        knn-based search requires the role of query vectors, which is different from threshold-based search where datasetA and
+        datasetB are interchangeable.
 
+        Parameters
+        ----------
+        datasetA: pyspark.sql.DataFrame
+            the item_df dataframe from which the k nearest neighbors will be retrieved. Each row represents an item vector.
+
+        datasetB: pyspark.sql.DataFrame
+            the query_df dataframe. Each row represents a query vector.
+
+        numNearestNeighbors: int
+            the number of exact nearest neighbors to be returned for each query.
+
+        distCol: str
+            the name of the distance column
+
+        Returns
+        -------
+        knnjoin_df: pyspark.sql.DataFrame
+            the result dataframe that has three columns (datasetA, datasetB, distCol).
+            datasetA column is of struct type that concatenates all the columns of input dataframe datasetA.
+            Similarly, datasetB column is of struct type that concatenates all the columns of input dataframe datasetB.
+            distCol is the distance column. A row in knnjoin_df is in the format (v1, v2, dist(v1, v2)),
+            where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
+        """
+
+        # save relevant self variables
+        estimator_item_df_withid = self._item_df_withid
+        estimator_processed_item_df = self._processed_item_df
+        estimator_n_neighbors = self.cuml_params["n_neighbors"]
+
+        # modify relevant self variables
         id_col_name = self.getIdCol()
 
-        self.setK(numNearestNeighbors)
-        self._processed_item_df = self.transform(datasetA)
-        self._processed_item_df = self._processed_item_df.withColumn(
+        self._item_df_withid = self.ensureIdCol(datasetA)
+
+        self._processed_item_df = self._item_df_withid.withColumn(
             alias.label, lit(self._label_isdata)
         )
+        self.cuml_params["n_neighbors"] = numNearestNeighbors
 
-        (query_df, item_df, knn_df) = self.kneighbors(datasetB)
+        # call kneighbors then prepare return results
+        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(datasetB)
 
-        from pyspark.sql.functions import posexplode
-        from pyspark.sql.functions import arrays_zip, explode, col, struct
+        from pyspark.sql.functions import arrays_zip, col, explode, struct
 
-        # flat_knn_df has schema ("query_id, item_id, distCol")
-        knn_pair_df = knn_df \
-            .select(f"query_{id_col_name}", explode(arrays_zip("indices", "distances")).alias("zipped")) \
-            .select(f"query_{id_col_name}", col("zipped.indices").alias(f"item_{id_col_name}"), col("zipped.distances").alias(distCol)) 
+        knn_pair_df = knn_df.select(
+            f"query_{id_col_name}",
+            explode(arrays_zip("indices", "distances")).alias("zipped"),
+        ).select(
+            f"query_{id_col_name}",
+            col("zipped.indices").alias(f"item_{id_col_name}"),
+            col("zipped.distances").alias(distCol),
+        )
 
-        datasetA_res = item_df.select(struct("*").alias("datasetA"))
-        datasetB_res = query_df.select(struct("*").alias("datasetB"))
-        res_df = datasetA_res.join(knn_pair_df, datasetA_res[f"datasetA.{id_col_name}"] == knn_pair_df[f"item_{id_col_name}"]) 
-        res_df = res_df.join(datasetB_res, res_df[f"query_{id_col_name}"] == datasetB_res[f"datasetB.{id_col_name}"])
+        datasetA_res = item_df_withid.select(struct("*").alias("datasetA"))
+        datasetB_res = query_df_withid.select(struct("*").alias("datasetB"))
+
+        knnjoin_df = datasetA_res.join(
+            knn_pair_df,
+            datasetA_res[f"datasetA.{id_col_name}"]
+            == knn_pair_df[f"item_{id_col_name}"],
+        )
+        knnjoin_df = knnjoin_df.join(
+            datasetB_res,
+            knnjoin_df[f"query_{id_col_name}"]
+            == datasetB_res[f"datasetB.{id_col_name}"],
+        )
 
         if self.isDefined(self.id_col):
-            res_df = res_df.select("datasetA", "datasetB", distCol)
+            knnjoin_df = knnjoin_df.select("datasetA", "datasetB", distCol)
         else:
-            res_df = res_df.select(res_df["datasetA"].dropFields(id_col_name), res_df["datasetA"].dropFields(id_col_name), distCol)
-        
-        self._processed_item_df = estimator_item_df 
-        self.setK(estimator_k)
+            knnjoin_df = knnjoin_df.select(
+                knnjoin_df["datasetA"].dropFields(id_col_name).alias("datasetA"),
+                knnjoin_df["datasetB"].dropFields(id_col_name).alias("datasetB"),
+                distCol,
+            )
 
-        return res_df 
+        # restore relevant self variables
+        self._item_df_withid = estimator_item_df_withid
+        self._processed_item_df = estimator_processed_item_df
+        self.cuml_params["n_neighbors"] = estimator_n_neighbors
+
+        return knnjoin_df
