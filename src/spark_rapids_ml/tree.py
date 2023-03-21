@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark import RDD, Row
 from pyspark.ml.linalg import Vector
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
 from pyspark.ml.tree import _DecisionTreeModel
@@ -191,9 +192,9 @@ class _RandomForestEstimator(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            from pyspark import BarrierTaskContext
 
-            context = BarrierTaskContext.get()
+            from pyspark import TaskContext
+            context = TaskContext.get()
             part_id = context.partitionId()
 
             rf_params = params[param_alias.cuml_init]
@@ -235,31 +236,42 @@ class _RandomForestEstimator(
             serialized_model = rf._get_serialized_model()
             pickled_model = pickle.dumps(serialized_model)
             msg = base64.b64encode(pickled_model).decode("utf-8")
-            messages = context.allGather(msg)
 
-            # concatenate the random forest in the worker0
-            if part_id == 0:
-                mod_bytes = [pickle.loads(base64.b64decode(i)) for i in messages]
-                all_tl_mod_handles = [rf._tl_handle_from_bytes(i) for i in mod_bytes]
-                rf._concatenate_treelite_handle(all_tl_mod_handles)
+            result = {
+                "treelite_model": [msg],
+                "dtype": rf.dtype.name,
+                "n_cols": rf.n_cols,
+            }
+            if is_classification:
+                result["num_classes"] = rf.num_classes
 
-                from cuml.fil.fil import TreeliteModel
+            return result
 
-                for tl_handle in all_tl_mod_handles:
-                    TreeliteModel.free_treelite_model(tl_handle)
+            # messages = context.allGather(msg)
 
-                final_model_bytes = pickle.dumps(rf._get_serialized_model())
-                final_model = base64.b64encode(final_model_bytes).decode("utf-8")
-                result = {
-                    "treelite_model": [final_model],
-                    "dtype": rf.dtype.name,
-                    "n_cols": rf.n_cols,
-                }
-                if is_classification:
-                    result["num_classes"] = rf.num_classes
-                return result
-            else:
-                return {}
+            # # concatenate the random forest in the worker0
+            # if part_id == 0:
+            #     mod_bytes = [pickle.loads(base64.b64decode(i)) for i in messages]
+            #     all_tl_mod_handles = [rf._tl_handle_from_bytes(i) for i in mod_bytes]
+            #     rf._concatenate_treelite_handle(all_tl_mod_handles)
+            #
+            #     from cuml.fil.fil import TreeliteModel
+            #
+            #     for tl_handle in all_tl_mod_handles:
+            #         TreeliteModel.free_treelite_model(tl_handle)
+            #
+            #     final_model_bytes = pickle.dumps(rf._get_serialized_model())
+            #     final_model = base64.b64encode(final_model_bytes).decode("utf-8")
+            #     result = {
+            #         "treelite_model": [final_model],
+            #         "dtype": rf.dtype.name,
+            #         "n_cols": rf.n_cols,
+            #     }
+            #     if is_classification:
+            #         result["num_classes"] = rf.num_classes
+            #     return result
+            # else:
+            #     return {}
 
         return _rf_fit
 
@@ -275,6 +287,18 @@ class _RandomForestEstimator(
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return False, False
+
+    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+        pipelined_rdd = self._call_cuml_fit_func(
+            dataset=dataset, partially_collect=False
+        )
+        ret = pipelined_rdd.collect()
+
+        model = self._create_pyspark_model(ret)
+        model._num_workers = self._num_workers
+        self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
+        return model
 
 
 class _RandomForestModel(

@@ -142,8 +142,12 @@ class RandomForestClassifier(
 
         return label_col
 
-    def _create_pyspark_model(self, result: Row) -> "RandomForestClassificationModel":
-        return RandomForestClassificationModel.from_row(result)
+    def _create_pyspark_model(cls, result: Row) -> "RandomForestClassificationModel":
+
+        trees = [r.treelite_model for r in result]
+        attrs = result[0].asDict()
+        attrs["treelite_model"] = trees
+        return RandomForestClassificationModel(**attrs)
 
     def _is_classification(self) -> bool:
         return True

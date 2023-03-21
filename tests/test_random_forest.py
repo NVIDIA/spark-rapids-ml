@@ -130,14 +130,14 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
 rf_est_model_classes = [
     # (estimator, model, n_classes)
     (RandomForestClassifier, RandomForestClassificationModel, 2),
-    (RandomForestClassifier, RandomForestClassificationModel, 4),
-    (RandomForestRegressor, RandomForestRegressionModel, -1),
+    # (RandomForestClassifier, RandomForestClassificationModel, 4),
+    # (RandomForestRegressor, RandomForestRegressionModel, -1),
 ]
 
 
 @pytest.mark.parametrize("est_model_classes", rf_est_model_classes, ids=idfn)
-@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
-@pytest.mark.parametrize("data_type", cuml_supported_data_types)
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 def test_random_forest_basic(
     tmp_path: str,

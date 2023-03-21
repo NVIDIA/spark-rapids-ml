@@ -406,14 +406,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
-            from pyspark import BarrierTaskContext
 
             logger = get_logger(cls)
             logger.info("Initializing cuml context")
 
             _CumlCommon.initialize_cuml_logging(cuml_verbose)
 
-            context = BarrierTaskContext.get()
+
+            context = TaskContext.get()
             partition_id = context.partitionId()
 
             # set gpu device
@@ -455,6 +455,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 logger.info("Cuml fit complete")
 
             if partially_collect == True:
+                from pyspark import BarrierTaskContext
+                context = BarrierTaskContext.get()
                 if enable_nccl:
                     context.barrier()
 
@@ -465,8 +467,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         pipelined_rdd = (
             dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
-            .rdd.barrier()
-            .mapPartitions(lambda x: x)
+            # .rdd.barrier()
+            # .mapPartitions(lambda x: x)
         )
 
         return pipelined_rdd
