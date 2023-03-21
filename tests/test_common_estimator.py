@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -27,11 +27,11 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModel,
+    param_alias,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
@@ -171,19 +171,21 @@ class SparkRapidsMLDummy(
         ) -> Dict[str, Any]:
             context = TaskContext.get()
             assert context is not None
-            assert "handle" in params
-            assert "part_sizes" in params
-            assert "n" in params
+            assert param_alias.handle in params
+            assert param_alias.part_sizes in params
+            assert param_alias.num_cols in params
 
-            pd = PartitionDescriptor.build(params["part_sizes"], params["n"])
+            pd = PartitionDescriptor.build(
+                params[param_alias.part_sizes], params[param_alias.num_cols]
+            )
 
             assert pd.rank == context.partitionId()
             assert len(pd.parts_rank_size) == partition_num
             assert pd.m == m
             assert pd.n == n
 
-            assert INIT_PARAMETERS_NAME in params
-            init_params = params[INIT_PARAMETERS_NAME]
+            assert param_alias.cuml_init in params
+            init_params = params[param_alias.cuml_init]
             assert init_params == {"a": 100, "k": 4, "x": 40.0}
             dummy = CumlDummy(**init_params)
             assert dummy.a == 100

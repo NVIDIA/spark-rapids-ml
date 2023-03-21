@@ -1,4 +1,4 @@
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,11 +32,11 @@ from pyspark.sql.types import (
 )
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
+    param_alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from spark_rapids_ml.tree import (
@@ -290,9 +290,11 @@ class LinearRegression(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            init_parameters = params[INIT_PARAMETERS_NAME]
+            init_parameters = params[param_alias.cuml_init]
 
-            pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
+            pdesc = PartitionDescriptor.build(
+                params[param_alias.part_sizes], params[param_alias.num_cols]
+            )
 
             if init_parameters["alpha"] == 0:
                 # LR
@@ -358,7 +360,7 @@ class LinearRegression(
             }
 
             linear_regression = CumlLinearRegression(
-                handle=params["handle"],
+                handle=params[param_alias.handle],
                 output_type="cudf",
                 **init_parameters,
             )

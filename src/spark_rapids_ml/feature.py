@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,11 +35,11 @@ from pyspark.sql.types import (
 )
 
 from spark_rapids_ml.core import (
-    INIT_PARAMETERS_NAME,
     CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModel,
+    param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
@@ -191,12 +191,14 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
             pca_object = CumlPCAMG(
-                handle=params["handle"],
+                handle=params[param_alias.handle],
                 output_type="cudf",
-                **params[INIT_PARAMETERS_NAME],
+                **params[param_alias.cuml_init],
             )
 
-            pdesc = PartitionDescriptor.build(params["part_sizes"], params["n"])
+            pdesc = PartitionDescriptor.build(
+                params[param_alias.part_sizes], params[param_alias.num_cols]
+            )
             pca_object.fit(
                 [x for x, _, _ in dfs],
                 pdesc.m,
@@ -218,7 +220,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
                 "components_": [cpu_pc],
                 "explained_variance_ratio_": [cpu_explained_variance],
                 "singular_values_": [cpu_singular_values],
-                "n_cols": params["n"],
+                "n_cols": params[param_alias.num_cols],
                 "dtype": pca_object.dtype.name,
             }
 
