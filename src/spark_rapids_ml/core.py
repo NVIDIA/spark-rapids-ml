@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -96,9 +96,9 @@ pred = Pred("prediction", "probability")
 
 # Global parameter alias used by core and subclasses.
 ParamAlias = namedtuple(
-    "ParamAlias", ("init", "handle", "num_cols", "part_sizes", "loop")
+    "ParamAlias", ("cuml_init", "handle", "num_cols", "part_sizes", "loop")
 )
-param_alias = ParamAlias("cuml_init", "handle", "n", "part_sizes", "loop")
+param_alias = ParamAlias("cuml_init", "handle", "num_cols", "part_sizes", "loop")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -396,7 +396,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         params: Dict[str, Any] = {
-            param_alias.init: self.cuml_params,
+            param_alias.cuml_init: self.cuml_params,
         }
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)

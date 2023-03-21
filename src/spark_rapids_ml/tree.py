@@ -17,7 +17,7 @@ import base64
 import math
 import pickle
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import cudf
 import numpy as np
@@ -196,7 +196,7 @@ class _RandomForestEstimator(
             context = BarrierTaskContext.get()
             part_id = context.partitionId()
 
-            rf_params = params[param_alias.init]
+            rf_params = params[param_alias.cuml_init]
             rf_params.pop("n_estimators")
 
             if rf_params["max_features"] == "auto":

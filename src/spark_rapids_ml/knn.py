@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -378,9 +378,9 @@ class NearestNeighborsModel(
 
             nn_object = cumlNN(
                 handle=params[param_alias.handle],
-                n_neighbors=params[param_alias.init]["n_neighbors"],
+                n_neighbors=params[param_alias.cuml_init]["n_neighbors"],
                 output_type="numpy",
-                verbose=params[param_alias.init]["verbose"],
+                verbose=params[param_alias.cuml_init]["verbose"],
             )
 
             item_list = []
@@ -445,7 +445,7 @@ class NearestNeighborsModel(
                 query_nrows=query_nrows,
                 ncols=params[param_alias.num_cols],
                 rank=rank,
-                n_neighbors=params[param_alias.init]["n_neighbors"],
+                n_neighbors=params[param_alias.cuml_init]["n_neighbors"],
                 convert_dtype=False,  # only np.float32 is supported in cuml. Should set to True for all other types
             )
 

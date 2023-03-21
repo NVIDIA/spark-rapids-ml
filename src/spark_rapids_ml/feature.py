@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -193,7 +193,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
             pca_object = CumlPCAMG(
                 handle=params[param_alias.handle],
                 output_type="cudf",
-                **params[param_alias.init],
+                **params[param_alias.cuml_init],
             )
 
             pdesc = PartitionDescriptor.build(

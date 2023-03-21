@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -262,7 +262,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             kmeans_object = CumlKMeansMG(
                 handle=params[param_alias.handle],
                 output_type="cudf",
-                **params[param_alias.init],
+                **params[param_alias.cuml_init],
             )
             df_list = [x for (x, _, _) in dfs]
             if isinstance(df_list[0], pd.DataFrame):

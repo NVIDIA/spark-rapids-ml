@@ -1,4 +1,4 @@
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -290,7 +290,7 @@ class LinearRegression(
             dfs: CumlInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            init_parameters = params[param_alias.init]
+            init_parameters = params[param_alias.cuml_init]
 
             pdesc = PartitionDescriptor.build(
                 params[param_alias.part_sizes], params[param_alias.num_cols]

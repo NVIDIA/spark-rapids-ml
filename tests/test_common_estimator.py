@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -184,8 +184,8 @@ class SparkRapidsMLDummy(
             assert pd.m == m
             assert pd.n == n
 
-            assert param_alias.init in params
-            init_params = params[param_alias.init]
+            assert param_alias.cuml_init in params
+            init_params = params[param_alias.cuml_init]
             assert init_params == {"a": 100, "k": 4, "x": 40.0}
             dummy = CumlDummy(**init_params)
             assert dummy.a == 100
