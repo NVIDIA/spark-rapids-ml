@@ -28,6 +28,7 @@ For any bugs or new feature requests, file a [git issue](https://github.com/NVID
 Before submitting a PR, make sure to run the following to check for any errors or regressions.
 ```bash
 # install development dependencies
+cd python
 pip install -r requirements_dev.txt
 
 # make sure package is installed
@@ -43,7 +44,7 @@ pip install -e .
 
 ### Build pip package
 ```bash
-pip install build
+cd python
 python -m build
 ```
 
@@ -76,7 +77,6 @@ This project follows the official
 This project follows the
 [Oracle Java code conventions](http://www.oracle.com/technetwork/java/codeconvtoc-136057.html)
 and the Scala conventions detailed above, preferring the latter.
-
 
 ### Sign your work
 

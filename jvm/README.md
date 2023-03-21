@@ -31,7 +31,7 @@ version. But in GPU version, user doesn't need to do the extra preprocess step t
 
 ### Build in Docker:
 
-We provide a Dockerfile to build the project in a container. See [docker](./docker/README.md) for more instructions.
+We provide a Dockerfile to build the project in a container. See [docker](../docker/README.md) for more instructions.
 
 ### Prerequisites:
 
@@ -71,6 +71,7 @@ User can also modify the pom file to use the _release_ version spark-rapids plug
 Make sure the _rapids-4-spark_ is installed in your local maven then user can build it directly in
 the _project root path_ with:
 ```
+cd jvm
 mvn clean package
 ```
 Then `rapids-4-spark-ml_2.12-23.02.0-SNAPSHOT.jar` will be generated under `target` folder.

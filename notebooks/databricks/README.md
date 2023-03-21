@@ -9,7 +9,7 @@ If you already have a Databricks account, you can run the example notebooks on a
   ```
 - Create a zip file for the `spark-rapids-ml` package.
   ```
-  cd spark-rapids-ml/src
+  cd spark-rapids-ml/python/src
   zip -r spark_rapids_ml.zip spark_rapids_ml
   ```
 - Copy the zip file to DBFS, setting `SAVE_DIR` to the directory of your choice.

@@ -33,6 +33,9 @@ bench_args=""
 # environment
 nvidia-smi
 which python
+
+# spark-rapids-ml and dependencies
+cd python
 pip install -r requirements_dev.txt && pip install -e .
 
 # unit tests
