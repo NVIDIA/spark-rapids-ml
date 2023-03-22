@@ -186,7 +186,14 @@ class RandomForestClassificationModel(
             data = {}
             rf.update_labels = False
             data[pred.prediction] = rf.predict(pdf)
-            data[pred.probability] = pd.Series(list(rf.predict_proba(pdf)))
+            probs = rf.predict_proba(pdf)
+            if isinstance(probs, pd.DataFrame):
+                # For 2302, when input is multi-cols, the output will be DataFrame
+                data[pred.probability] = pd.Series(probs.values.tolist())
+            else:
+                # should be np.ndarray
+                data[pred.probability] = pd.Series(list(probs))
+
             return pd.DataFrame(data)
 
         return _construct_rf, _predict

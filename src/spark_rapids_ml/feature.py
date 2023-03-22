@@ -380,7 +380,10 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
             pca = CumlPCAMG(output_type="cudf", **cuml_alg_params)
+
+            # Compatible with older cuml versions (before 23.02)
             pca._n_components = pca.n_components
+            pca.n_components_ = pca.n_components
 
             from spark_rapids_ml.utils import cudf_to_cuml_array
 

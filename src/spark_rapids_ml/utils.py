@@ -20,8 +20,15 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 import cudf
 import numpy as np
-from cuml.common.array import CumlArray
-from cuml.common.input_utils import input_to_cuml_array
+
+try:
+    # Compatible with older cuml version (before 23.02)
+    from cuml.common.array import CumlArray
+    from cuml.common.input_utils import input_to_cuml_array
+except ImportError:
+    from cuml.common import input_to_cuml_array
+    from cuml.internals.array import CumlArray
+
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.sql import SparkSession
 
