@@ -40,6 +40,9 @@ pylibraft-cu11==${RAPIDS_VERSION} \
 rmm-cu11==${RAPIDS_VERSION} \
 --extra-index-url=https://pypi.nvidia.com
 
+# rapids pip package patch: link ucx libraries in ucx-py to default location searched by raft_dask
+ln -s /databricks/python/lib/python3.8/site-packages/ucx_py_cu11.libs/ucx /usr/lib/ucx
+
 # install spark-cuml
 unzip ${SPARK_RAPIDS_ML_ZIP} -d /databricks/python3/lib/python3.8/site-packages
 unzip ${BENCHMARK_ZIP} -d /databricks/python3/lib/python3.8/site-packages
