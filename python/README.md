@@ -22,7 +22,7 @@ Once you have the conda environment, activate it and install the required packag
 conda activate rapids-22.12
 
 git clone --branch spark-cuml https://github.com/NVIDIA/spark-rapids-ml.git
-cd spark-rapids-ml
+cd spark-rapids-ml/python
 pip install -r requirements.txt
 pip install -e .
 ```
@@ -129,9 +129,9 @@ model.pc
 ```
 
 ### Jupyter Notebooks
-To run the example notebooks locally, see [these instructions](notebooks/README.md).
+To run the example notebooks locally, see [these instructions](../notebooks/README.md).
 
-To run the example notebooks in Databricks (assuming you already have a Databricks account), follow [these instructions](notebooks/databricks/README.md).
+To run the example notebooks in Databricks (assuming you already have a Databricks account), follow [these instructions](../notebooks/databricks/README.md).
 
 ## API Compatibility
 

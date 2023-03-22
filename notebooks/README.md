@@ -1,7 +1,7 @@
 # Running notebooks locally
 
 To run notebooks using Spark local mode on a server with one or more NVIDIA GPUs:
-1. Follow the [installation instructions](../README_python.md#installation) to setup your environment.
+1. Follow the [installation instructions](../python/README.md#installation) to setup your environment.
 2. Install `jupyter` into the conda environment.
     ```bash
     pip install jupyter

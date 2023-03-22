@@ -9,15 +9,15 @@ We provide the following Dockerfiles:
 
 First, build the development image.  **Note**: see the Dockerfile for configurable build arguments.
 ```bash
-docker build -t rapids-ml:latest -f Dockerfile .
+docker build -t spark-rapids-ml:jvm -f Dockerfile ..
 ```
 
 Run the container.
 ```bash
-nvidia-docker run -it --rm rapids-ml:latest
+nvidia-docker run -it --rm spark-rapids-ml:jvm
 ```
 
-Then, inside the container, build the Scala API [as usual](../README_scala.md#build-target-jar).
+Then, inside the container, build the Scala API [as usual](../jvm/README.md#build-target-jar).
 ```bash
 mvn clean package
 ```
@@ -26,14 +26,14 @@ mvn clean package
 
 First, build the development image.
 ```bash
-docker build -t rapids-ml:python -f Dockerfile.python ..
-# OPTIONAL: docker build -t rapids-ml:pip -f Dockerfile.pip ..
+docker build -t spark-rapids-ml:python -f Dockerfile.python ..
+# OPTIONAL: docker build -t spark-rapids-ml:pip -f Dockerfile.pip ..
 ```
 
-Launch the container.
+Launch the container
 ```bash
-nvidia-docker run -it --rm rapids-ml:python
-# OPTIONAL: nvidia-docker run -it --rm rapids-ml:pip
+nvidia-docker run -it --rm spark-rapids-ml:python
+# OPTIONAL: nvidia-docker run -it --rm spark-rapids-ml:pip
 ```
 Run the unit tests inside the container.
 ```bash
@@ -52,7 +52,7 @@ python -m build
 
 Build the documentation.
 ```
-cd docs
+cd ../docs
 make html
 cp -r build/html site/api/python
 # copy site/* to 'gh-pages' branch to publish
