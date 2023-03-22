@@ -45,12 +45,12 @@ Note: Spark does not provide a k-NN implementation, but it does have an [LSH-bas
 
 ## Getting started
 
-- For Pyspark (Python) users, see [this guide](README_python.md).
-- For Spark (Scala) users, see [this guide](README_scala.md).
+- For Pyspark (Python) users, see [this guide](python/README.md).
+- For Spark (Scala) users, see [this guide](jvm/README.md).
 
 ## Performance
 
-GPU acceleration can provide significant performance and cost benefits.  Benchmarking instructions and results can be found [here](benchmark/README.md).
+GPU acceleration can provide significant performance and cost benefits.  Benchmarking instructions and results can be found [here](python/benchmark/README.md).
 
 ## Contributing
 
