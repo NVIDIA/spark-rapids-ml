@@ -1,6 +1,6 @@
 [project]
 name = "spark-rapids-ml"
-version = "0.0.1"
+version = "23.2.0"
 authors = [
   { name="Jinfeng Li", email="jinfeng@nvidia.com" },
   { name="Bobby Wang", email="bobwang@nvidia.com" },
