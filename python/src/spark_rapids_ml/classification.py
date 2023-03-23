@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Tuple, Type, Union
+from typing import Any, Callable, Literal, Tuple, Type, Union
 
 import cudf
 import numpy as np
@@ -179,7 +179,7 @@ class RandomForestClassificationModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        str
+        Literal["C", "F"],
     ]:
         _construct_rf, _, array_order = super()._get_cuml_transform_func(dataset)
 

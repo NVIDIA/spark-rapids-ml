@@ -49,7 +49,9 @@ class BenchmarkLinearRegression(BenchmarkBase):
         if self.args.num_gpus > 0:
             from spark_rapids_ml.regression import LinearRegression
 
-            lr = LinearRegression(num_workers=self.args.num_gpus, verbose=self.args.verbose, **params)
+            lr = LinearRegression(
+                num_workers=self.args.num_gpus, verbose=self.args.verbose, **params
+            )
             benchmark_string = "Spark Rapids ML LinearRegression training"
         else:
             from pyspark.ml.regression import LinearRegression as SparkLinearRegression

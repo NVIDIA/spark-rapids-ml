@@ -15,7 +15,7 @@
 #
 
 import itertools
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, TypeVar, Union
 
 import cudf
 import numpy as np
@@ -361,7 +361,7 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        str
+        Literal["C", "F"],
     ]:
         cuml_alg_params = self.cuml_params.copy()
 
@@ -394,7 +394,9 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
             pca.components_ = cudf_to_cuml_array(
                 np.array(self.components_, order="F").astype(pca.dtype)
             )
-            pca.mean_ = cudf_to_cuml_array(np.array(self.mean_, order="F").astype(pca.dtype))
+            pca.mean_ = cudf_to_cuml_array(
+                np.array(self.mean_, order="F").astype(pca.dtype)
+            )
             pca.singular_values_ = cudf_to_cuml_array(
                 np.array(self.singular_values_, order="F").astype(pca.dtype)
             )

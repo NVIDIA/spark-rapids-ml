@@ -14,7 +14,18 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import cudf
 import numpy as np
@@ -349,7 +360,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        str
+        Literal["C", "F"],
     ]:
         cuml_alg_params = self.cuml_params.copy()
 

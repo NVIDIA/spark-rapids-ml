@@ -74,7 +74,9 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         if self.args.num_gpus > 0:
             from spark_rapids_ml.classification import RandomForestClassifier
 
-            rfc = RandomForestClassifier(num_workers=self.args.num_gpus, verbose=self.args.verbose, **params)
+            rfc = RandomForestClassifier(
+                num_workers=self.args.num_gpus, verbose=self.args.verbose, **params
+            )
             benchmark_string = "Spark Rapids ML RandomForestClassifier"
         else:
             from pyspark.ml.classification import (

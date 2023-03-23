@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -261,6 +261,7 @@ class SparkRapidsMLDummyModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        Literal["C", "F"],
     ]:
         model_attribute_a = self.model_attribute_a
 
@@ -286,7 +287,7 @@ class SparkRapidsMLDummyModel(
                 # TODO: implement when adding single column test
                 raise NotImplementedError()
 
-        return _construct_dummy, _dummy_transform
+        return _construct_dummy, _dummy_transform, "F"
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return input_schema

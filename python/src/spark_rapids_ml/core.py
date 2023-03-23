@@ -24,6 +24,7 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Mapping,
     Optional,
     Tuple,
@@ -598,7 +599,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        str
+        Literal["C", "F"],
     ]:
         """
         Subclass must implement this function to return two functions,
@@ -684,9 +685,11 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
-        construct_cuml_object_func, cuml_transform_func, array_order = self._get_cuml_transform_func(
-            dataset
-        )
+        (
+            construct_cuml_object_func,
+            cuml_transform_func,
+            array_order,
+        ) = self._get_cuml_transform_func(dataset)
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
@@ -756,9 +759,11 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
-        construct_cuml_object_func, cuml_transform_func, array_order = self._get_cuml_transform_func(
-            dataset
-        )
+        (
+            construct_cuml_object_func,
+            cuml_transform_func,
+            array_order,
+        ) = self._get_cuml_transform_func(dataset)
 
         @pandas_udf(self._out_schema(dataset.schema))  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:

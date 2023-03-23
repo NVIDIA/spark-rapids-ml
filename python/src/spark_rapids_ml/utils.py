@@ -16,7 +16,7 @@
 import inspect
 import logging
 import sys
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Tuple, Union
 
 import cudf
 import numpy as np
@@ -129,7 +129,9 @@ class PartitionDescriptor:
         return cls(total_rows, total_cols, rank, parts_rank_size)
 
 
-def _concat_and_free(np_array_list: List[np.ndarray], order="F") -> np.ndarray:
+def _concat_and_free(
+    np_array_list: List[np.ndarray], order: Literal["C", "F"] = "F"
+) -> np.ndarray:
     """
     concatenates a list of compatible numpy arrays into a 'order' ordered output array,
     in a memory efficient way.
