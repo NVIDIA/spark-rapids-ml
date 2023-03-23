@@ -452,6 +452,7 @@ class LinearRegressionModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
         coef_ = self.coef_
         intercept_ = self.intercept_
@@ -462,7 +463,7 @@ class LinearRegressionModel(
             from cuml.linear_model.linear_regression_mg import LinearRegressionMG
 
             lr = LinearRegressionMG(output_type="numpy")
-            lr.coef_ = cudf_to_cuml_array(np.array(coef_).astype(dtype))
+            lr.coef_ = cudf_to_cuml_array(np.array(coef_, order="F").astype(dtype))
             lr.intercept_ = intercept_
             lr.n_cols = n_cols
             lr.dtype = np.dtype(dtype)
@@ -473,7 +474,7 @@ class LinearRegressionModel(
             ret = lr.predict(pdf)
             return pd.Series(ret)
 
-        return _construct_lr, _predict
+        return _construct_lr, _predict, "F"
 
 
 class _RandomForestRegressorClass(_RandomForestClass):

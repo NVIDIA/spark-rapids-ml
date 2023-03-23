@@ -361,6 +361,7 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
         cuml_alg_params = self.cuml_params.copy()
 
@@ -389,12 +390,13 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
 
             pca.n_cols = self.n_cols
             pca.dtype = np.dtype(self.dtype)
+            # TBD: figure out why PCA warns regardless of array order here and for singular values
             pca.components_ = cudf_to_cuml_array(
-                np.array(self.components_).astype(pca.dtype)
+                np.array(self.components_, order="F").astype(pca.dtype)
             )
-            pca.mean_ = cudf_to_cuml_array(np.array(self.mean_).astype(pca.dtype))
+            pca.mean_ = cudf_to_cuml_array(np.array(self.mean_, order="F").astype(pca.dtype))
             pca.singular_values_ = cudf_to_cuml_array(
-                np.array(self.singular_values_).astype(pca.dtype)
+                np.array(self.singular_values_, order="F").astype(pca.dtype)
             )
             return pca
 
@@ -418,4 +420,5 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
                 res = list(res)
                 return pd.DataFrame({self.getOutputCol(): res})
 
-        return _construct_pca, _transform_internal
+        # pca doesn't seem to have a preferred array type
+        return _construct_pca, _transform_internal, "F"

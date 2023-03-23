@@ -598,11 +598,13 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
         """
         Subclass must implement this function to return two functions,
         1. a function to construct cuml counterpart instance
         2. a function to transform the dataset
+        and a preferred array order for converting single column array type to numpy arrays: One of "K", "F", "C", or "A"
 
         Eg,
 
@@ -614,7 +616,9 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 ...
             ...
 
-            return _construct_cuml_object, _cuml_transform
+            array_order = "F"
+
+            return _construct_cuml_object, _cuml_transform, array_order
 
         _get_cuml_transform_func itself runs on the driver side, while the returned
         _construct_cuml_object and _cuml_transform will run on the executor side.
@@ -680,7 +684,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
-        construct_cuml_object_func, cuml_transform_func = self._get_cuml_transform_func(
+        construct_cuml_object_func, cuml_transform_func, array_order = self._get_cuml_transform_func(
             dataset
         )
 
@@ -700,7 +704,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     yield cuml_transform_func(cuml_object, pdf[select_cols])
             else:
                 for pdf in pdf_iter:
-                    nparray = np.array(list(pdf[select_cols[0]]), order="F")
+                    nparray = np.array(list(pdf[select_cols[0]]), order=array_order)
                     yield cuml_transform_func(cuml_object, nparray)
 
         return dataset.mapInPandas(
@@ -752,7 +756,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
-        construct_cuml_object_func, cuml_transform_func = self._get_cuml_transform_func(
+        construct_cuml_object_func, cuml_transform_func, array_order = self._get_cuml_transform_func(
             dataset
         )
 
@@ -765,7 +769,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             cuml_object = construct_cuml_object_func()
             for pdf in iterator:
                 if not input_is_multi_cols:
-                    data = np.array(list(pdf[select_cols[0]]), order="F")
+                    data = np.array(list(pdf[select_cols[0]]), order=array_order)
                 else:
                     data = pdf[select_cols]
                 res = cuml_transform_func(cuml_object, data)

@@ -87,6 +87,12 @@ class BenchmarkBase:
             action="store_true",
             help="do not stop spark session when finished",
         )
+        self._parser.add_argument(
+            "--verbose",
+            type=int,
+            default=0,
+            help="verbose param for cuml classes",
+        )
 
         self._add_class_arguments()
         self._add_extra_arguments()

@@ -179,8 +179,9 @@ class RandomForestClassificationModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
-        _construct_rf, _ = super()._get_cuml_transform_func(dataset)
+        _construct_rf, _, array_order = super()._get_cuml_transform_func(dataset)
 
         def _predict(rf: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
             data = {}
@@ -196,7 +197,7 @@ class RandomForestClassificationModel(
 
             return pd.DataFrame(data)
 
-        return _construct_rf, _predict
+        return _construct_rf, _predict, array_order
 
     def _is_classification(self) -> bool:
         return True

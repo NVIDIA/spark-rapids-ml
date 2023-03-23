@@ -151,7 +151,7 @@ class BenchmarkPCA(BenchmarkBase):
             params = self.class_params
             print(f"Passing {params} to PCA")
 
-            gpu_pca = PCA(num_workers=num_gpus, **params)
+            gpu_pca = PCA(num_workers=num_gpus, verbose=self.args.verbose, **params)
 
             if is_single_col:
                 output_col = "pca_features"

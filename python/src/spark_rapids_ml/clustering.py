@@ -269,7 +269,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 concated = pd.concat(df_list)
             else:
                 # should be list of np.ndarrays here
-                concated = _concat_and_free(cast(List[np.ndarray], df_list))
+                concated = _concat_and_free(cast(List[np.ndarray], df_list), order="C")
 
             kmeans_object.fit(
                 concated,
@@ -349,6 +349,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
         cuml_alg_params = self.cuml_params.copy()
 
@@ -376,4 +377,4 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
             res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
             return pd.Series(res)
 
-        return _construct_kmeans, _transform_internal
+        return _construct_kmeans, _transform_internal, "C"

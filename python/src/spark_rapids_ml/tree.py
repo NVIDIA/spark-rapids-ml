@@ -352,6 +352,7 @@ class _RandomForestModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
         treelite_model = self.treelite_model
 
@@ -374,5 +375,5 @@ class _RandomForestModel(
             rf.update_labels = False
             ret = rf.predict(pdf)
             return pd.Series(ret)
-
-        return _construct_rf, _predict
+        # TBD: figure out why RF algo's warns regardless of what np array order is set
+        return _construct_rf, _predict, "F"

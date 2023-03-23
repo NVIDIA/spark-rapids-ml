@@ -41,7 +41,6 @@ from pyspark.sql.types import (
     StructField,
     StructType,
 )
-
 from spark_rapids_ml.core import (
     CumlInputType,
     CumlT,
@@ -52,6 +51,7 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
+from spark_rapids_ml.utils import _concat_and_free
 
 
 class NearestNeighborsClass(_CumlClass):
@@ -402,8 +402,9 @@ class NearestNeighborsModel(
                 item = [pd.concat(item_list)]
                 query = [pd.concat(query_list)]
             else:
-                item = [np.concatenate(item_list)]
-                query = [np.concatenate(query_list)]
+                # do not use item_list or query_list after this, as elements are freed
+                item = [_concat_and_free(item_list)]
+                query = [_concat_and_free(query_list)]
 
             item_row_number = [item_row_number]
             query_row_number = [query_row_number]
@@ -489,6 +490,7 @@ class NearestNeighborsModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        str
     ]:
         raise NotImplementedError(
             "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
