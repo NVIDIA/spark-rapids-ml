@@ -605,7 +605,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         Subclass must implement this function to return two functions,
         1. a function to construct cuml counterpart instance
         2. a function to transform the dataset
-        and a preferred array order for converting single column array type to numpy arrays: One of "K", "F", "C", or "A"
+        and a preferred array order for converting single column array type to numpy arrays: "C" or "F"
 
         Eg,
 
