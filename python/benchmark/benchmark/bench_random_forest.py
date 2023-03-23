@@ -107,8 +107,9 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         )
 
         df_with_preds = df_with_preds.select(
-            col(prediction_col).cast("double").alias(prediction_col), label_col,
-            col(probability_col)
+            col(prediction_col).cast("double").alias(prediction_col),
+            label_col,
+            col(probability_col),
         )
 
         if model.numClasses == 2:
