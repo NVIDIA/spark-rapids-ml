@@ -8,3 +8,4 @@ pydata-sphinx-theme
 pylint
 pytest
 sphinx<6.0
+twine>=4.0.0
