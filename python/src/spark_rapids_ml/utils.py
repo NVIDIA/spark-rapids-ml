@@ -32,6 +32,8 @@ except ImportError:
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.sql import SparkSession
 
+_ArrayOrder = Literal["C", "F"]
+
 
 def _get_spark_session() -> SparkSession:
     """Get or create spark session.
@@ -130,7 +132,7 @@ class PartitionDescriptor:
 
 
 def _concat_and_free(
-    np_array_list: List[np.ndarray], order: Literal["C", "F"] = "F"
+    np_array_list: List[np.ndarray], order: _ArrayOrder = "F"
 ) -> np.ndarray:
     """
     concatenates a list of compatible numpy arrays into a 'order' ordered output array,

@@ -12,18 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cudf
 import numpy as np
@@ -463,7 +452,6 @@ class LinearRegressionModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        Literal["C", "F"],
     ]:
         coef_ = self.coef_
         intercept_ = self.intercept_
@@ -485,7 +473,7 @@ class LinearRegressionModel(
             ret = lr.predict(pdf)
             return pd.Series(ret)
 
-        return _construct_lr, _predict, "F"
+        return _construct_lr, _predict
 
 
 class _RandomForestRegressorClass(_RandomForestClass):

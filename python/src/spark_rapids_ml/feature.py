@@ -361,7 +361,6 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        Literal["C", "F"],
     ]:
         cuml_alg_params = self.cuml_params.copy()
 
@@ -422,5 +421,4 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
                 res = list(res)
                 return pd.DataFrame({self.getOutputCol(): res})
 
-        # pca doesn't seem to have a preferred array type
-        return _construct_pca, _transform_internal, "F"
+        return _construct_pca, _transform_internal

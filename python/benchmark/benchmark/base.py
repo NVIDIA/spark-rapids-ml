@@ -29,6 +29,10 @@ from pyspark.sql.functions import col
 from .utils import WithSparkSession, to_bool, with_benchmark
 
 
+def _set_max_cuml_verbose() -> int:
+    return 7
+
+
 class BenchmarkBase:
     """Based class for benchmarking.
 
@@ -89,9 +93,10 @@ class BenchmarkBase:
         )
         self._parser.add_argument(
             "--verbose",
-            type=int,
+            action="store_const",
+            const=7,
             default=0,
-            help="verbose param for cuml classes",
+            help="set cuml logging to max verbose level",
         )
 
         self._add_class_arguments()

@@ -64,6 +64,7 @@ from pyspark.sql.types import (
 from spark_rapids_ml.common.cuml_context import CumlContext
 from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.utils import (
+    _ArrayOrder,
     _get_gpu_id,
     _get_spark_session,
     _is_local,
@@ -401,6 +402,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         }
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
+        array_order = self._fit_array_order()
 
         cuml_verbose = self.cuml_params.get("verbose", False)
 
@@ -433,7 +435,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     if multi_col_names:
                         features = pdf[multi_col_names]
                     else:
-                        features = np.array(list(pdf[alias.data]), order="F")
+                        features = np.array(list(pdf[alias.data]), order=array_order)
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
                         pdf[alias.row_number]
@@ -471,6 +473,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         )
 
         return pipelined_rdd
+
+    def _fit_array_order(self) -> _ArrayOrder:
+        """
+        preferred array order for converting single column array type to numpy arrays: "C" or "F"
+        """
+        return "F"
 
 
 class _CumlEstimator(Estimator, _CumlCaller):
@@ -599,13 +607,11 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        Literal["C", "F"],
     ]:
         """
         Subclass must implement this function to return two functions,
         1. a function to construct cuml counterpart instance
         2. a function to transform the dataset
-        and a preferred array order for converting single column array type to numpy arrays: "C" or "F"
 
         Eg,
 
@@ -617,14 +623,18 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 ...
             ...
 
-            array_order = "F"
-
-            return _construct_cuml_object, _cuml_transform, array_order
+            return _construct_cuml_object, _cuml_transform
 
         _get_cuml_transform_func itself runs on the driver side, while the returned
         _construct_cuml_object and _cuml_transform will run on the executor side.
         """
         raise NotImplementedError()
+
+    def _transform_array_order(self) -> _ArrayOrder:
+        """
+        preferred array order for converting single column array type to numpy arrays: "C" or "F"
+        """
+        return "F"
 
     @abstractmethod
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
@@ -688,8 +698,9 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         (
             construct_cuml_object_func,
             cuml_transform_func,
-            array_order,
         ) = self._get_cuml_transform_func(dataset)
+
+        array_order = self._transform_array_order()
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
@@ -762,8 +773,9 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         (
             construct_cuml_object_func,
             cuml_transform_func,
-            array_order,
         ) = self._get_cuml_transform_func(dataset)
+
+        array_order = self._transform_array_order()
 
         @pandas_udf(self._out_schema(dataset.schema))  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:

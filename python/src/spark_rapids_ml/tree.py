@@ -36,7 +36,7 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import _concat_and_free
+from spark_rapids_ml.utils import _ArrayOrder, _concat_and_free
 
 
 class _RandomForestClass(_CumlClass):
@@ -352,7 +352,6 @@ class _RandomForestModel(
     ) -> Tuple[
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-        Literal["C", "F"],
     ]:
         treelite_model = self.treelite_model
 
@@ -377,4 +376,4 @@ class _RandomForestModel(
             return pd.Series(ret)
 
         # TBD: figure out why RF algo's warns regardless of what np array order is set
-        return _construct_rf, _predict, "F"
+        return _construct_rf, _predict
