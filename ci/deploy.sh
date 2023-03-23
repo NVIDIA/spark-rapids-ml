@@ -14,7 +14,7 @@ set -e
 pushd python
 pip install -r requirements_dev.txt && pip install -e .
 python -m build
-# TODO: python -m twine uploade --repository pypi dist/*
+# TODO: python -m twine upload --repository pypi dist/*
 popd
 
 # build and publish docs
