@@ -154,7 +154,7 @@ class BenchmarkKMeans(BenchmarkBase):
             params = self.class_params
             print(f"Passing {params} to KMeans")
 
-            gpu_estimator = KMeans(num_workers=num_gpus, **params).setPredictionCol(
+            gpu_estimator = KMeans(num_workers=num_gpus, verbose=7, **params).setPredictionCol(
                 output_col
             )
 

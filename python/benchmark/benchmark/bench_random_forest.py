@@ -97,6 +97,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
 
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getOrDefault(model.predictionCol)
+        probability_col = model.getOrDefault(model.probabilityCol)
 
         # run a simple dummy computation to trigger transform. count is short
         # circuited due to pandas_udf used internally
@@ -106,7 +107,8 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         )
 
         df_with_preds = df_with_preds.select(
-            col(prediction_col).cast("double").alias(prediction_col), label_col
+            col(prediction_col).cast("double").alias(prediction_col), label_col,
+            col(probability_col)
         )
 
         if model.numClasses == 2:
@@ -115,7 +117,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
                 BinaryClassificationEvaluator, MulticlassClassificationEvaluator
             ] = (
                 BinaryClassificationEvaluator()
-                .setRawPredictionCol(prediction_col)
+                .setRawPredictionCol(probability_col)
                 .setLabelCol(label_col)
             )
         else:
