@@ -534,6 +534,7 @@ class NearestNeighborsModel(
     ) -> DataFrame:
         """
         This function returns the k exact nearest neighbors (knn) in item_df of each query vector in query_df.
+        item_df is the dataframe passed to the fit function of the NearestNeighbors estimator.
         Note that the knn relationship is asymmetric with respect to the input datasets (e.g., if x is a knn of y
         , y is not necessarily a knn of x).
 
