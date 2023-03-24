@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import List, Tuple, Type, TypeVar, Union
+from typing import Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
@@ -253,11 +253,7 @@ def test_pca(
         train_df, features_col, _ = create_pyspark_dataframe(
             spark, feature_type, data_type, X, None
         )
-        output_col: Union[str, List[str]] = (
-            "pca_features"
-            if isinstance(features_col, str)
-            else ["pca_feature_" + str(i) for i in range(n_components)]
-        )
+        output_col = "pca_features"
 
         spark_pca = (
             PCA(n_components=3).setInputCol(features_col).setOutputCol(output_col)
@@ -272,13 +268,10 @@ def test_pca(
         assert array_equal(cu_pca.singular_values_, model.singular_values_, 1e-3)
         transform_df = model.transform(train_df)
 
-        if isinstance(output_col, str):
-            spark_result = transform_df.collect()
-            spark_result = [v[0] for v in spark_result]
-        else:
-            spark_result = transform_df.toPandas().to_numpy()
+        spark_result = transform_df.collect()
+        pred_result = [v.pca_features for v in spark_result]
 
-        assert array_equal(cu_result, spark_result, 1e-2, with_sign=False)
+        assert array_equal(cu_result, pred_result, 1e-2, with_sign=False)
 
 
 @pytest.mark.compat
