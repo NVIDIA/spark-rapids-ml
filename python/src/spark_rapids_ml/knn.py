@@ -15,7 +15,7 @@
 #
 
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np

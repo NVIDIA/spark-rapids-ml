@@ -29,10 +29,6 @@ from pyspark.sql.functions import col
 from .utils import WithSparkSession, to_bool, with_benchmark
 
 
-def _set_max_cuml_verbose() -> int:
-    return 7
-
-
 class BenchmarkBase:
     """Based class for benchmarking.
 

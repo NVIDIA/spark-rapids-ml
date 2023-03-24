@@ -32,7 +32,6 @@ from spark_rapids_ml.tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from spark_rapids_ml.utils import _ArrayOrder
 
 
 class _RFClassifierParams(_RandomForestClassifierParams, HasProbabilityCol):
