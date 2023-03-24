@@ -88,7 +88,7 @@ CumlInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatc
 
 # Global constant for defining column alias
 Alias = namedtuple("Alias", ("data", "label", "row_number"))
-alias = Alias("cuml_values", "cuml_label", "id")
+alias = Alias("cuml_values", "cuml_label", "unique_id")
 
 # Global prediction names
 Pred = namedtuple("Pred", ("prediction", "probability"))

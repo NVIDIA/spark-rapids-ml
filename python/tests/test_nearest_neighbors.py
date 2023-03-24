@@ -92,18 +92,16 @@ def test_example(gpu_number: int) -> None:
             gpu_model.transform(query_df)
 
         # test exactNearestNeighborsJoin
-        knnjoin_df = gpu_model.exactNearestNeighborsJoin(
-            data_df, query_df, topk, distCol="distCol"
-        )
+        knnjoin_df = gpu_model.exactNearestNeighborsJoin(query_df, distCol="distCol")
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
         assert knnjoin_df.dtypes[0] == (
-            "datasetA",
+            "item_df",
             "struct<features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[1] == (
-            "datasetB",
+            "query_df",
             "struct<features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[2] == ("distCol", "float")
@@ -133,8 +131,8 @@ def test_example(gpu_number: int) -> None:
 
         knnjoin_items = (
             knnjoin_df.select(
-                knnjoin_df["datasetA.features"].alias("features"),
-                knnjoin_df["datasetA.metadata"].alias("metadata"),
+                knnjoin_df["item_df.features"].alias("features"),
+                knnjoin_df["item_df.metadata"].alias("metadata"),
             )
             .distinct()
             .sort("metadata")
@@ -157,8 +155,8 @@ def test_example(gpu_number: int) -> None:
 
         knnjoin_queries = (
             knnjoin_df.select(
-                knnjoin_df["datasetB.features"].alias("features"),
-                knnjoin_df["datasetB.metadata"].alias("metadata"),
+                knnjoin_df["query_df.features"].alias("features"),
+                knnjoin_df["query_df.metadata"].alias("metadata"),
             )
             .distinct()
             .sort("metadata")
@@ -226,18 +224,16 @@ def test_example_with_id(gpu_number: int) -> None:
             assert indices[4] == [108, 107]
 
         # test exactNearestNeighborsJoin
-        knnjoin_df = gpu_model.exactNearestNeighborsJoin(
-            data_df, query_df, topk, distCol="distCol"
-        )
+        knnjoin_df = gpu_model.exactNearestNeighborsJoin(query_df, distCol="distCol")
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
         assert knnjoin_df.dtypes[0] == (
-            "datasetA",
+            "item_df",
             f"struct<id:int,features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[1] == (
-            "datasetB",
+            "query_df",
             "struct<id:int,features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[2] == ("distCol", "float")
@@ -333,14 +329,13 @@ def test_nearest_neighbors(
 
         # test exactNearestNeighborsJoin
         with pytest.raises(ValueError):
-            knn_model.exactNearestNeighborsJoin(
-                item_df_withid, query_df_withid, n_neighbors
-            )
+            knn_model.exactNearestNeighborsJoin(query_df_withid)
+
         knn_model.setIdCol(item_df_withid.dtypes[0][0])
-        knnjoin_df = knn_model.exactNearestNeighborsJoin(
-            item_df_withid, query_df_withid, n_neighbors
+        knnjoin_df = knn_model.exactNearestNeighborsJoin(query_df_withid)
+        reconstructed_knn_df = reconstruct_knn_df(
+            knnjoin_df, row_identifier_col=knn_model.getIdCol()
         )
-        reconstructed_knn_df = reconstruct_knn_df(knnjoin_df)
         assert reconstructed_knn_df.collect() == knn_df.collect()
 
 
@@ -405,19 +400,19 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
         spark_res.show(truncate=False)
 
         # get GPU results with exactNearestNeighborsJoin(dfA, dfB, k, distCol="EuclideanDistance")
-        gpu_knn = NearestNeighbors(inputCol="features", id_col="id")
+        gpu_knn = NearestNeighbors(inputCol="features").setK(topk)
         gpu_model = gpu_knn.fit(dfA)
         gpu_res = gpu_model.exactNearestNeighborsJoin(
-            dfA, dfB, topk, distCol="EuclideanDistance"
+            query_df=dfB, distCol="EuclideanDistance"
         )
-        gpu_res.show()
+        gpu_res.show(truncate=False)
 
         # check results
         def check_dtypes(res_df: DataFrame, from_spark: bool) -> None:
             assert len(res_df.dtypes) == 3
-            assert res_df.dtypes[0][0] == "datasetA"
-            assert res_df.dtypes[1][0] == "datasetB"
-            assert res_df.dtypes[2][0] == "EuclideanDistance"
+            assert res_df.dtypes[0][0] == ("datasetA" if from_spark else "item_df")
+            assert res_df.dtypes[1][0] == ("datasetB" if from_spark else "query_df")
+            assert res_df.dtypes[2][0] == ("EuclideanDistance")
 
             if from_spark:
                 assert res_df.dtypes[0][1].startswith(
@@ -436,7 +431,7 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
         check_dtypes(res_df=gpu_res, from_spark=False)
 
         items = gpu_res.select(
-            gpu_res["datasetA.id"], gpu_res["datasetA.features"]
+            gpu_res["item_df.id"], gpu_res["item_df.features"]
         ).collect()
         assert len(items) == topk * len(dataB)
         for item in items:
@@ -445,7 +440,7 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
             assert features == dataA[id][1]
 
         queries = gpu_res.select(
-            gpu_res["datasetB.id"], gpu_res["datasetB.features"]
+            gpu_res["query_df.id"], gpu_res["query_df.features"]
         ).collect()
         for query in queries:
             id = query.id
@@ -485,15 +480,15 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
 
 
 def reconstruct_knn_df(
-    knnjoin_df: DataFrame, row_identifier_col: str = "id", distCol: str = "distCol"
+    knnjoin_df: DataFrame, row_identifier_col: str, distCol: str = "distCol"
 ) -> DataFrame:
     """
     This function accepts the returned dataframe (denoted as knnjoin_df) of exactNearestNeighborsjoin,
     then reconstructs the returned dataframe (i.e. knn_df) of kneighbors.
     """
     knn_df: DataFrame = knnjoin_df.select(
-        knnjoin_df[f"datasetB.{row_identifier_col}"].alias(f"query_id"),
-        knnjoin_df[f"datasetA.{row_identifier_col}"].alias("index"),
+        knnjoin_df[f"query_df.{row_identifier_col}"].alias(f"query_id"),
+        knnjoin_df[f"item_df.{row_identifier_col}"].alias("index"),
         knnjoin_df[distCol].alias("distance"),
     )
 
