@@ -2,11 +2,10 @@
 # set portion of path below after /dbfs/ to dbfs zip file location
 SPARK_RAPIDS_ML_ZIP=/dbfs/path/to/spark-rapids-ml.zip
 BENCHMARK_ZIP=/dbfs/path/to/benchmark.zip
-RAPIDS_VERSION=22.12.0
-#RAPIDS_VERSION=23.2.0
-SPARK_RAPIDS_VERSION=22.12.0
+RAPIDS_VERSION=23.2.0
+SPARK_RAPIDS_VERSION=23.02.0
 
-curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar 
+curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
 
 # install cudatoolkit 11.8 via runfile approach
 wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run

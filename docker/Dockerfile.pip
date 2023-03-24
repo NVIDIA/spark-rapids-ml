@@ -18,7 +18,7 @@ ARG CUDA_VERSION=11.8.0
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
 ARG PYSPARK_VERSION=3.3.1
-ARG RAPIDS_VERSION=22.12
+ARG RAPIDS_VERSION=23.02
 
 # Install packages to build spark-rapids-ml
 RUN apt-get update -y \
@@ -43,7 +43,7 @@ RUN pip install --no-cache-dir \
 # install python dependencies
 RUN pip install --no-cache-dir pyspark==${PYSPARK_VERSION} "scikit-learn>=1.2.1" \
     && pip install --no-cache-dir "black>=23.1.0" "build>=0.10.0" "isort>=5.12.0" "mypy>=1.0.0" \
-    numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0"
+    numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0" "twine>=4.0.0"
 
 # Config JAVA_HOME
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
