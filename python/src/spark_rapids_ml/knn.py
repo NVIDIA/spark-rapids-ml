@@ -15,7 +15,7 @@
 #
 
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np
@@ -52,6 +52,7 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
+from spark_rapids_ml.utils import _concat_and_free
 
 
 class NearestNeighborsClass(_CumlClass):
@@ -435,8 +436,9 @@ class NearestNeighborsModel(
                 item = [pd.concat(item_list)]
                 query = [pd.concat(query_list)]
             else:
-                item = [np.concatenate(item_list)]
-                query = [np.concatenate(query_list)]
+                # do not use item_list or query_list after this, as elements are freed
+                item = [_concat_and_free(item_list)]
+                query = [_concat_and_free(query_list)]
 
             item_row_number = [item_row_number]
             query_row_number = [query_row_number]

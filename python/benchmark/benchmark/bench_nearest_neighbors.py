@@ -81,7 +81,9 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
                 )
 
             params = self.class_params
-            gpu_estimator = NearestNeighbors(num_workers=num_gpus, **params)
+            gpu_estimator = NearestNeighbors(
+                num_workers=num_gpus, verbose=self.args.verbose, **params
+            )
 
             if is_single_col:
                 gpu_estimator = gpu_estimator.setInputCol(first_col)

@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-from spark_rapids_ml.utils import _get_default_params_from_func
+import numpy as np
+
+from spark_rapids_ml.utils import _concat_and_free, _get_default_params_from_func
 
 
 def test_get_default_params_from_func() -> None:
@@ -26,6 +28,22 @@ def test_get_default_params_from_func() -> None:
     assert len(params) == 3
     assert params["a"] == 1
     assert params["d"] == 4
+
+
+def test_concat_and_free() -> None:
+    a = np.array([[0.0, 1.0], [2.0, 3.0]], order="F")
+    arr_list = [a, a]
+    concat = _concat_and_free(arr_list, order="C")
+    assert len(arr_list) == 0
+    assert concat.flags["C_CONTIGUOUS"]
+    assert not concat.flags["F_CONTIGUOUS"]
+
+    a = np.array([[0.0, 1.0], [2.0, 3.0]], order="C")
+    arr_list = [a, a]
+    concat = _concat_and_free(arr_list)
+    assert len(arr_list) == 0
+    assert not concat.flags["C_CONTIGUOUS"]
+    assert concat.flags["F_CONTIGUOUS"]
 
 
 def test_clean_sparksession() -> None:

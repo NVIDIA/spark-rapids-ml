@@ -15,7 +15,7 @@
 #
 
 import itertools
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cudf
 import numpy as np
@@ -389,12 +389,15 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
 
             pca.n_cols = self.n_cols
             pca.dtype = np.dtype(self.dtype)
+            # TBD: figure out why PCA warns regardless of array order here and for singular values
             pca.components_ = cudf_to_cuml_array(
-                np.array(self.components_).astype(pca.dtype)
+                np.array(self.components_, order="F").astype(pca.dtype)
             )
-            pca.mean_ = cudf_to_cuml_array(np.array(self.mean_).astype(pca.dtype))
+            pca.mean_ = cudf_to_cuml_array(
+                np.array(self.mean_, order="F").astype(pca.dtype)
+            )
             pca.singular_values_ = cudf_to_cuml_array(
-                np.array(self.singular_values_).astype(pca.dtype)
+                np.array(self.singular_values_, order="F").astype(pca.dtype)
             )
             return pca
 

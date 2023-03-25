@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Tuple, Type, Union
+from typing import Any, Callable, Literal, Tuple, Type, Union
 
 import cudf
 import numpy as np

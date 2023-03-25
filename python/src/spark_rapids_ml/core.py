@@ -24,7 +24,6 @@ from typing import (
     Dict,
     Iterator,
     List,
-    Mapping,
     Optional,
     Tuple,
     Type,
@@ -63,6 +62,7 @@ from pyspark.sql.types import (
 from spark_rapids_ml.common.cuml_context import CumlContext
 from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.utils import (
+    _ArrayOrder,
     _get_gpu_id,
     _get_spark_session,
     _is_local,
@@ -400,6 +400,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         }
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
+        array_order = self._fit_array_order()
 
         cuml_verbose = self.cuml_params.get("verbose", False)
 
@@ -432,7 +433,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     if multi_col_names:
                         features = pdf[multi_col_names]
                     else:
-                        features = np.array(list(pdf[alias.data]), order="F")
+                        features = np.array(list(pdf[alias.data]), order=array_order)
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
                         pdf[alias.row_number]
@@ -470,6 +471,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         )
 
         return pipelined_rdd
+
+    def _fit_array_order(self) -> _ArrayOrder:
+        """
+        preferred array order for converting single column array type to numpy arrays: "C" or "F"
+        """
+        return "F"
 
 
 class _CumlEstimator(Estimator, _CumlCaller):
@@ -621,6 +628,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         """
         raise NotImplementedError()
 
+    def _transform_array_order(self) -> _ArrayOrder:
+        """
+        preferred array order for converting single column array type to numpy arrays: "C" or "F"
+        """
+        return "F"
+
     @abstractmethod
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         """
@@ -680,9 +693,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
-        construct_cuml_object_func, cuml_transform_func = self._get_cuml_transform_func(
-            dataset
-        )
+        (
+            construct_cuml_object_func,
+            cuml_transform_func,
+        ) = self._get_cuml_transform_func(dataset)
+
+        array_order = self._transform_array_order()
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
@@ -700,7 +716,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     yield cuml_transform_func(cuml_object, pdf[select_cols])
             else:
                 for pdf in pdf_iter:
-                    nparray = np.array(list(pdf[select_cols[0]]), order="F")
+                    nparray = np.array(list(pdf[select_cols[0]]), order=array_order)
                     yield cuml_transform_func(cuml_object, nparray)
 
         return dataset.mapInPandas(
@@ -752,9 +768,12 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
-        construct_cuml_object_func, cuml_transform_func = self._get_cuml_transform_func(
-            dataset
-        )
+        (
+            construct_cuml_object_func,
+            cuml_transform_func,
+        ) = self._get_cuml_transform_func(dataset)
+
+        array_order = self._transform_array_order()
 
         @pandas_udf(self._out_schema(dataset.schema))  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
@@ -765,7 +784,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             cuml_object = construct_cuml_object_func()
             for pdf in iterator:
                 if not input_is_multi_cols:
-                    data = np.array(list(pdf[select_cols[0]]), order="F")
+                    data = np.array(list(pdf[select_cols[0]]), order=array_order)
                 else:
                     data = pdf[select_cols]
                 res = cuml_transform_func(cuml_object, data)

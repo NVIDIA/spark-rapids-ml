@@ -16,7 +16,7 @@
 import inspect
 import logging
 import sys
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Tuple, Union
 
 import cudf
 import numpy as np
@@ -31,6 +31,8 @@ except ImportError:
 
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.sql import SparkSession
+
+_ArrayOrder = Literal["C", "F"]
 
 
 def _get_spark_session() -> SparkSession:
@@ -129,9 +131,11 @@ class PartitionDescriptor:
         return cls(total_rows, total_cols, rank, parts_rank_size)
 
 
-def _concat_and_free(np_array_list: List[np.ndarray]) -> np.ndarray:
+def _concat_and_free(
+    np_array_list: List[np.ndarray], order: _ArrayOrder = "F"
+) -> np.ndarray:
     """
-    concatenates a list of compatible numpy arrays into a F ordered output array,
+    concatenates a list of compatible numpy arrays into a 'order' ordered output array,
     in a memory efficient way.
     Note: frees list elements so do not reuse after calling.
     """
@@ -142,7 +146,7 @@ def _concat_and_free(np_array_list: List[np.ndarray]) -> np.ndarray:
     else:
         concat_shape = (rows,)
     d_type = np_array_list[0].dtype
-    concated = np.empty(shape=concat_shape, order="F", dtype=d_type)
+    concated = np.empty(shape=concat_shape, order=order, dtype=d_type)
     np.concatenate(np_array_list, out=concated)
     del np_array_list[:]
     return concated
