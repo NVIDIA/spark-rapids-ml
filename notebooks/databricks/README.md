@@ -2,7 +2,7 @@
 
 If you already have a Databricks account, you can run the example notebooks on a Databricks cluster, as follows:
 - Install the [databricks-cli](https://docs.databricks.com/dev-tools/cli/index.html).
-- Configure it with your workspace URL and an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html).  For demonstration purposes, we will configure a new [connection profile](https://docs.databricks.com/dev-tools/cli/index.html#connection-profiles) named `spark-rapids-ml`.
+- Configure it with your workspace URL and an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html).  For demonstration purposes, we will configure a new [connection profile](https://docs.databricks.com/dev-tools/cli/index.html#connection-profiles) named `spark-rapids-ml`.  If you already have a connection profile, just set the `PROFILE` environment variable accordingly and skip the configure step.
   ```
   export PROFILE=spark-rapids-ml
   databricks configure --token --profile ${PROFILE}
@@ -32,7 +32,7 @@ If you already have a Databricks account, you can run the example notebooks on a
   ```
   databricks fs cp init-pip-cuda-11.8.sh dbfs:${SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
   ```
-- Create a cluster using **Databricks 10.4 LTS Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
+- Create a cluster using **Databricks 10.4 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
   - **Init Scripts**
     - add the DBFS path to the uploaded init script, e.g. `dbfs:/path/to/save/artifacts/init-pip-cuda-11.8.sh`.
   - **Spark**
@@ -41,7 +41,7 @@ If you already have a Databricks account, you can run the example notebooks on a
       spark.task.resource.gpu.amount 1
       spark.databricks.delta.preview.enabled true
       spark.python.worker.reuse true
-      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-22.12.0.jar:/databricks/spark/python
+      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-23.02.0.jar:/databricks/spark/python
       spark.sql.execution.arrow.maxRecordsPerBatch 100000
       spark.rapids.memory.gpu.minAllocFraction 0.0001
       spark.plugins com.nvidia.spark.SQLPlugin
