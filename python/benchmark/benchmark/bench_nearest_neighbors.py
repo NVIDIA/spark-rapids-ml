@@ -93,7 +93,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             )
 
             def transform(model: NearestNeighborsModel, df: DataFrame) -> DataFrame:
-                (query_df, item_df, knn_df) = model.kneighbors(df)
+                (item_df_withid, query_df_withid, knn_df) = model.kneighbors(df)
                 knn_df.count()
                 return knn_df
 
