@@ -81,7 +81,9 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
                 )
 
             params = self.class_params
-            gpu_estimator = NearestNeighbors(num_workers=num_gpus, **params)
+            gpu_estimator = NearestNeighbors(
+                num_workers=num_gpus, verbose=self.args.verbose, **params
+            )
 
             if is_single_col:
                 gpu_estimator = gpu_estimator.setInputCol(first_col)
@@ -93,7 +95,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             )
 
             def transform(model: NearestNeighborsModel, df: DataFrame) -> DataFrame:
-                (query_df, item_df, knn_df) = model.kneighbors(df)
+                (item_df_withid, query_df_withid, knn_df) = model.kneighbors(df)
                 knn_df.count()
                 return knn_df
 

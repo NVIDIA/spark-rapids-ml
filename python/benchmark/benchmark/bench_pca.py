@@ -153,7 +153,7 @@ class BenchmarkPCA(BenchmarkBase):
 
             output_col = "pca_features"
             gpu_pca = (
-                PCA(num_workers=num_gpus, **params)
+                PCA(num_workers=num_gpus, verbose=self.args.verbose, **params)
                 .setInputCol(features_col)
                 .setOutputCol(output_col)
             )

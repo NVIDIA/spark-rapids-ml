@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np
@@ -462,7 +462,7 @@ class LinearRegressionModel(
             from cuml.linear_model.linear_regression_mg import LinearRegressionMG
 
             lr = LinearRegressionMG(output_type="numpy")
-            lr.coef_ = cudf_to_cuml_array(np.array(coef_).astype(dtype))
+            lr.coef_ = cudf_to_cuml_array(np.array(coef_, order="F").astype(dtype))
             lr.intercept_ = intercept_
             lr.n_cols = n_cols
             lr.dtype = np.dtype(dtype)

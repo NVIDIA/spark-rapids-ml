@@ -87,6 +87,13 @@ class BenchmarkBase:
             action="store_true",
             help="do not stop spark session when finished",
         )
+        self._parser.add_argument(
+            "--verbose",
+            action="store_const",
+            const=7,
+            default=0,
+            help="set cuml logging to max verbose level",
+        )
 
         self._add_class_arguments()
         self._add_extra_arguments()

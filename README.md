@@ -45,7 +45,7 @@ Note: Spark does not provide a k-NN implementation, but it does have an [LSH-bas
 
 ## Getting started
 
-- For Pyspark (Python) users, see [this guide](python/README.md).
+- For PySpark (Python) users, see [this guide](python/README.md).
 - For Spark (Scala) users, see [this guide](jvm/README.md).
 
 ## Performance

@@ -353,10 +353,16 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
             pca.n_cols = n_cols
             pca.dtype = np.dtype(dype)
-            pca.components_ = cudf_to_cuml_array(np.array(components).astype(pca.dtype))
-            pca.mean_ = cudf_to_cuml_array(np.array(mean).astype(pca.dtype))
+
+            # TBD: figure out why PCA warns regardless of array order here and for singular values
+            pca.components_ = cudf_to_cuml_array(
+                np.array(components, order="F").astype(pca.dtype)
+            )
+            pca.mean_ = cudf_to_cuml_array(
+                np.array(mean, order="F").astype(pca.dtype)
+            )
             pca.singular_values_ = cudf_to_cuml_array(
-                np.array(singular_values).astype(pca.dtype)
+                np.array(singular_values, order="F").astype(pca.dtype)
             )
             return pca
 

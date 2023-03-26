@@ -40,7 +40,7 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import _concat_and_free, get_logger
+from spark_rapids_ml.utils import _ArrayOrder, _concat_and_free, get_logger
 
 
 class KMeansClass(_CumlClass):
@@ -248,10 +248,15 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         """
         raise ValueError("'weightCol' is not supported by cuML.")
 
+    def _fit_array_order(self) -> _ArrayOrder:
+        return "C"
+
     def _get_cuml_fit_func(
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         cls = self.__class__
+
+        array_order = self._fit_array_order()
 
         def _cuml_fit(
             dfs: CumlInputType,
@@ -269,7 +274,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 concated = pd.concat(df_list)
             else:
                 # should be list of np.ndarrays here
-                concated = _concat_and_free(cast(List[np.ndarray], df_list))
+                concated = _concat_and_free(
+                    cast(List[np.ndarray], df_list), order=array_order
+                )
 
             kmeans_object.fit(
                 concated,
@@ -344,6 +351,9 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         ret_schema = "int"
         return ret_schema
 
+    def _transform_array_order(self) -> _ArrayOrder:
+        return "C"
+
     def _get_cuml_transform_func(
         self, dataset: DataFrame
     ) -> Tuple[
@@ -356,6 +366,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         output_col = self.getPredictionCol()
         dtype = self.dtype
         n_cols = self.n_cols
+        array_order = self._transform_array_order()
 
         def _construct_kmeans() -> CumlT:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG

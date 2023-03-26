@@ -375,4 +375,5 @@ class _RandomForestModel(
             ret = rf.predict(pdf)
             return pd.Series(ret)
 
+        # TBD: figure out why RF algo's warns regardless of what np array order is set
         return _construct_rf, _predict

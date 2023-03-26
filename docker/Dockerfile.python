@@ -17,6 +17,8 @@
 ARG CUDA_VERSION=11.5.2
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
+ARG CUML_VERSION=23.02
+
 # Install packages to build spark-rapids-ml
 RUN apt update -y \
     && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
@@ -35,14 +37,14 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linu
     && conda init
 
 # install cuML
-ARG CUML_VER=22.12
-RUN conda install -y -c rapidsai -c nvidia -c conda-forge cuml=$CUML_VER python=3.8 cuda-toolkit=11.5 \
+
+RUN conda install -y -c rapidsai -c nvidia -c conda-forge python=3.8 cuda-toolkit=11.5 cuml=$CUML_VERSION \
     && conda clean --all -f -y
 
 # install python dependencies
 RUN pip install --no-cache-dir "pyspark>=3.2.1" "scikit-learn>=1.2.1" \
     && pip install --no-cache-dir "black>=23.1.0" "build>=0.10.0" "isort>=5.12.0" "mypy>=1.0.0" \
-    numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0"
+    numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0" "twine>=4.0.0"
 
 ### END OF CACHE ###
 
