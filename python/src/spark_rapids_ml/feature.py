@@ -358,9 +358,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
             pca.components_ = cudf_to_cuml_array(
                 np.array(components, order="F").astype(pca.dtype)
             )
-            pca.mean_ = cudf_to_cuml_array(
-                np.array(mean, order="F").astype(pca.dtype)
-            )
+            pca.mean_ = cudf_to_cuml_array(np.array(mean, order="F").astype(pca.dtype))
             pca.singular_values_ = cudf_to_cuml_array(
                 np.array(singular_values, order="F").astype(pca.dtype)
             )
