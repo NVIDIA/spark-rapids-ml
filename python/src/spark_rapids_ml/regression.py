@@ -17,9 +17,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import Row
-from pyspark.ml.linalg import Vector, Vectors
-from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
+from pyspark import Row, SparkContext
+from pyspark.ml.common import _py2java
+from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
+from pyspark.ml.regression import (
+    LinearRegressionModel,
+    _LinearRegressionParams,
+    _RandomForestRegressorParams,
+)
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -45,7 +50,7 @@ from spark_rapids_ml.tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array
+from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array, java_uid
 
 
 class LinearRegressionClass(_CumlClass):
@@ -392,11 +397,24 @@ class LinearRegression(
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "LinearRegressionModel":
-        return LinearRegressionModel.from_row(result)
+    def _create_pyspark_model(
+        self, sc: SparkContext, result: Row
+    ) -> "LinearRegressionModel":
+        coef = _convert_to_vector(result.coef_)
+        intercept = float(result.intercept_)
+
+        assert sc._jvm is not None
+        java_model = sc._jvm.org.apache.spark.ml.regression.LinearRegressionModel(
+            java_uid(sc, "linReg"), _py2java(sc, coef), intercept, 1.0
+        )  # we don't support huber, set scale to 1.0
+
+        return LinearRegressionModel(java_model)
+
+    def _need_cuml_params(self) -> bool:
+        return False
 
 
-class LinearRegressionModel(
+class DeprecatedLinearRegressionModel(
     LinearRegressionClass,
     _CumlModelSupervised,
     _LinearRegressionCumlParams,
@@ -556,7 +574,9 @@ class RandomForestRegressor(
     def _is_classification(self) -> bool:
         return False
 
-    def _create_pyspark_model(self, result: Row) -> "RandomForestRegressionModel":
+    def _create_pyspark_model(
+        self, sc: SparkContext, result: Row
+    ) -> "RandomForestRegressionModel":
         return RandomForestRegressionModel.from_row(result)
 
 

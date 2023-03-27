@@ -34,7 +34,7 @@ from typing import (
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import RDD, TaskContext
+from pyspark import RDD, SparkContext, TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.ml.linalg import VectorUDT
@@ -493,22 +493,28 @@ class _CumlEstimator(Estimator, _CumlCaller):
         super().__init__()
 
     @abstractmethod
-    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
+    def _create_pyspark_model(self, sc: SparkContext, result: Row) -> Model:
         """
         Create the model according to the collected Row
         """
         raise NotImplementedError()
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+    def _need_cuml_params(self) -> bool:
+        """If copying cuml params When creating model"""
+        return True
+
+    def _fit(self, dataset: DataFrame) -> Model:
         pipelined_rdd = self._call_cuml_fit_func(
             dataset=dataset, partially_collect=True
         )
         ret = pipelined_rdd.collect()[0]
 
-        model = self._create_pyspark_model(ret)
-        model._num_workers = self._num_workers
+        model = self._create_pyspark_model(dataset.sparkSession.sparkContext, ret)
         self._copyValues(model)
-        self._copy_cuml_params(model)  # type: ignore
+
+        if self._need_cuml_params():
+            model._num_workers = self._num_workers  # type: ignore
+            self._copy_cuml_params(model)  # type: ignore
         return model
 
     def write(self) -> MLWriter:

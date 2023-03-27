@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark import SparkContext
 from pyspark.ml.feature import _PCAParams
 from pyspark.ml.linalg import DenseMatrix, DenseVector
 from pyspark.ml.param.shared import HasInputCols
@@ -233,7 +234,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "PCAModel":
+    def _create_pyspark_model(self, sc: SparkContext, result: Row) -> "PCAModel":
         return PCAModel.from_row(result)
 
 

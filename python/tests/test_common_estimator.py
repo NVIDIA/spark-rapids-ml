@@ -20,7 +20,7 @@ import cudf
 import numpy as np
 import pandas as pd
 import pytest
-from pyspark import Row, TaskContext
+from pyspark import Row, SparkContext, TaskContext
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCols, HasOutputCols
 from pyspark.sql import DataFrame
@@ -212,7 +212,9 @@ class SparkRapidsMLDummy(
             "dtype string, n_cols int, model_attribute_a int, model_attribute_b string"
         )
 
-    def _create_pyspark_model(self, result: Row) -> "SparkRapidsMLDummyModel":
+    def _create_pyspark_model(
+        self, sc: SparkContext, result: Row
+    ) -> "SparkRapidsMLDummyModel":
         assert result.dtype == np.dtype(np.float32).name
         assert result.n_cols == self.n
         assert result.model_attribute_a == 1024

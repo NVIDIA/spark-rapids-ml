@@ -18,7 +18,7 @@ from typing import Any, Callable, Literal, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
-from pyspark import Row
+from pyspark import Row, SparkContext
 from pyspark.ml.classification import _RandomForestClassifierParams
 from pyspark.ml.param.shared import HasProbabilityCol
 from pyspark.sql import Column, DataFrame
@@ -142,7 +142,9 @@ class RandomForestClassifier(
 
         return label_col
 
-    def _create_pyspark_model(self, result: Row) -> "RandomForestClassificationModel":
+    def _create_pyspark_model(
+        self, sc: SparkContext, result: Row
+    ) -> "RandomForestClassificationModel":
         return RandomForestClassificationModel.from_row(result)
 
     def _is_classification(self) -> bool:

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import pytest
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
-from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
+from pyspark.ml.regression import LinearRegressionModel
 from pyspark.sql.functions import array
 
-from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
+from spark_rapids_ml.regression import LinearRegression
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -38,11 +38,6 @@ from .utils import (
 
 LinearRegressionType = TypeVar(
     "LinearRegressionType", Type[LinearRegression], Type[SparkLinearRegression]
-)
-LinearRegressionModelType = TypeVar(
-    "LinearRegressionModelType",
-    Type[LinearRegressionModel],
-    Type[SparkLinearRegressionModel],
 )
 
 
@@ -192,20 +187,10 @@ def test_linear_regression_basic(
         def assert_model(
             lhs: LinearRegressionModel, rhs: LinearRegressionModel
         ) -> None:
-            assert lhs.coef_ == rhs.coef_
             assert lhs.coefficients == rhs.coefficients
-            assert lhs.intercept_ == lhs.intercept_
-            assert lhs.intercept == lhs.intercept
-
-            # Vector type will be cast to array(double)
-            if feature_type == "vector":
-                assert lhs.dtype == np.dtype(np.float64).name
-            else:
-                assert lhs.dtype == np.dtype(data_type).name
-
-            assert lhs.dtype == rhs.dtype
-            assert lhs.n_cols == rhs.n_cols
-            assert lhs.n_cols == data_shape[1]
+            assert lhs.intercept == rhs.intercept
+            assert lhs.getRegParam() == rhs.getRegParam()
+            assert lhs.getRegParam() == reg
 
         # train a model
         lr_model = lr.fit(df)
@@ -250,7 +235,6 @@ def test_linear_regression(
     cu_lr = train_with_cuml_linear_regression(
         X_train, y_train, alpha, l1_ratio, other_params
     )
-    cu_expected = cu_lr.predict(X_test)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
     with CleanSparkSession(conf) as spark:
@@ -269,13 +253,8 @@ def test_linear_regression(
         slr.setLabelCol(label_col)
         slr_model = slr.fit(train_df)
 
-        assert array_equal(cu_lr.coef_, slr_model.coef_, 1e-3)
-
-        test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
-
-        result = slr_model.transform(test_df).collect()
-        pred_result = [row.prediction for row in result]
-        assert array_equal(cu_expected, pred_result, 1e-3)
+        assert array_equal(cu_lr.coef_, slr_model.coefficients.toArray(), 1e-3)
+        assert array_equal([cu_lr.intercept_], [slr_model.intercept])
 
 
 params_exception = [
@@ -290,12 +269,12 @@ params_exception = [
 @pytest.mark.parametrize(
     "lr_types",
     [
-        (SparkLinearRegression, SparkLinearRegressionModel),
+        (SparkLinearRegression, LinearRegressionModel),
         (LinearRegression, LinearRegressionModel),
     ],
 )
 def test_linear_regression_spark_compat(
-    lr_types: Tuple[LinearRegressionType, LinearRegressionModelType],
+    lr_types: Tuple[LinearRegressionType, LinearRegressionModel],
     tmp_path: str,
 ) -> None:
     _LinearRegression, _LinearRegressionModel = lr_types
@@ -363,11 +342,7 @@ def test_linear_regression_spark_compat(
 
         example = df.head()
         if example:
-            if isinstance(model, SparkLinearRegressionModel):
-                model.predict(example.features)
-            else:
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predict(example.features)
+            model.predict(example.features)
 
         model.setPredictionCol("prediction")
         output = model.transform(df).head()

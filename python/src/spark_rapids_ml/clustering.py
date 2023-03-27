@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark import SparkContext
 from pyspark.ml.clustering import _KMeansParams
 from pyspark.ml.linalg import Vector
 from pyspark.sql.dataframe import DataFrame
@@ -310,7 +311,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             ]
         )
 
-    def _create_pyspark_model(self, result: Row) -> "KMeansModel":
+    def _create_pyspark_model(self, sc: SparkContext, result: Row) -> "KMeansModel":
         return KMeansModel.from_row(result)
 
 

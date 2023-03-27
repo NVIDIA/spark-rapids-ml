@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark import SparkContext
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -230,7 +231,9 @@ class NearestNeighbors(
         self._label_isquery = 1
         self.set_params(labelCol=alias.label)
 
-    def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
+    def _create_pyspark_model(
+        self, sc: SparkContext, result: Row
+    ) -> "NearestNeighborsModel":
         return NearestNeighborsModel.from_row(result)
 
     def _fit(self, item_df: DataFrame) -> "NearestNeighborsModel":
@@ -242,12 +245,13 @@ class NearestNeighbors(
 
         # TODO: should test this at scale to see if/when we hit limits
         model = self._create_pyspark_model(
+            item_df.sparkSession.sparkContext,
             Row(
                 item_df_withid=self._item_df_withid,
                 processed_item_df=self._processed_item_df,
                 label_isdata=self._label_isdata,
                 label_isquery=self._label_isquery,
-            )
+            ),
         )
         model._num_workers = self._num_workers
         self._copyValues(model)
