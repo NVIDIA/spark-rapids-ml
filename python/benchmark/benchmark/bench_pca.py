@@ -21,7 +21,7 @@ import pandas as pd
 from pyspark.ml.feature import StandardScaler, VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import array, col, sum
+from pyspark.sql.functions import col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
 from .base import BenchmarkBase
@@ -151,14 +151,12 @@ class BenchmarkPCA(BenchmarkBase):
             params = self.class_params
             print(f"Passing {params} to PCA")
 
-            gpu_pca = PCA(num_workers=num_gpus, verbose=self.args.verbose, **params)
-
-            if is_single_col:
-                output_col = "pca_features"
-                gpu_pca = gpu_pca.setInputCol(first_col).setOutputCol(output_col)
-            else:
-                output_cols = ["o" + str(i) for i in range(n_components)]
-                gpu_pca = gpu_pca.setInputCols(input_cols).setOutputCols(output_cols)
+            output_col = "pca_features"
+            gpu_pca = (
+                PCA(num_workers=num_gpus, verbose=self.args.verbose, **params)
+                .setInputCol(features_col)
+                .setOutputCol(output_col)
+            )
 
             gpu_model, fit_time = with_benchmark(
                 "gpu fit", lambda: gpu_pca.fit(train_df)
@@ -166,12 +164,9 @@ class BenchmarkPCA(BenchmarkBase):
 
             def gpu_transform(df: DataFrame) -> DataFrame:
                 transformed_df = gpu_model.transform(df)
-                if is_single_col:
-                    transformed_df.select((col(output_col)[0]).alias("zero")).agg(
-                        sum("zero")
-                    ).collect()
-                else:
-                    transformed_df.agg(sum(output_cols[0])).collect()
+                transformed_df.select((col(output_col)[0]).alias("zero")).agg(
+                    sum("zero")
+                ).collect()
                 return transformed_df
 
             transformed_df, transform_time = with_benchmark(
@@ -204,14 +199,6 @@ class BenchmarkPCA(BenchmarkBase):
                     )
                 )
             )
-            if not is_single_col:
-                feature_col = "features_array"
-                df_for_scoring = transformed_df.select(
-                    array(*output_cols).alias(feature_col)
-                )
-            # restore and change when output is set to vector udt if input is vector udt
-            # elif is_vector_col:
-            #    df_for_scoring = transformed_df.select(vector_to_array(feature_col), output_col)
 
             pc_for_scoring = gpu_model.pc.toArray()
 

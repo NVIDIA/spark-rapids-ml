@@ -731,17 +731,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         return _CumlModelReader(cls)
 
 
-class _CumlModelSupervised(_CumlModel, HasPredictionCol):
-    """Cuml base model for supervised machine learning"""
-
-    @property  # type: ignore[misc]
-    def numFeatures(self) -> int:
-        """
-        Returns the number of features the model was trained on. If unknown, returns -1
-        """
-
-        num_features = self.n_cols if self.n_cols else -1
-        return num_features
+class _CumlModelWithColumns(_CumlModel):
+    """Cuml base model for generating extra predicted columns"""
 
     def _is_single_pred(self, input_schema: StructType) -> bool:
         """Indicate if the transform is only predicting 1 column"""
@@ -760,6 +751,12 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             if self.hasParam("probabilityCol") and self.isDefined("probabilityCol")
             else False
         )
+
+    @abstractmethod
+    def _get_prediction_name(self) -> str:
+        """Different algos have different prediction names,
+        eg, PCA: value of outputCol param, RF/LR/Kmeans: value of predictionCol name"""
+        raise NotImplementedError()
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
@@ -791,7 +788,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
                 del data
                 yield res
 
-        pred_name = self.getOrDefault(self.predictionCol)
+        pred_name = self._get_prediction_name()
         pred_col = predict_udf(struct(*select_cols))
 
         if self._is_single_pred(dataset.schema):
@@ -801,7 +798,7 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
             dataset = dataset.withColumn(pred_struct_col_name, pred_col)
 
-            # 1. Add predictionCol in the base class
+            # 1. Add prediction in the base class
             dataset = dataset.withColumn(
                 pred_name, getattr(col(pred_struct_col_name), pred.prediction)
             )
@@ -833,3 +830,19 @@ class _CumlModelSupervised(_CumlModel, HasPredictionCol):
             schema = f"{pyspark_type}"
 
         return schema
+
+
+class _CumlModelSupervised(_CumlModelWithColumns, HasPredictionCol):
+    """Cuml base model for supervised machine learning Eg, RF/LR"""
+
+    @property  # type: ignore[misc]
+    def numFeatures(self) -> int:
+        """
+        Returns the number of features the model was trained on. If unknown, returns -1
+        """
+
+        num_features = self.n_cols if self.n_cols else -1
+        return num_features
+
+    def _get_prediction_name(self) -> str:
+        return self.getPredictionCol()

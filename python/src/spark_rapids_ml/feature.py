@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 from pyspark.ml.feature import _PCAParams
 from pyspark.ml.linalg import DenseMatrix, DenseVector
-from pyspark.ml.param.shared import HasInputCols, HasOutputCols
+from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -38,11 +38,11 @@ from spark_rapids_ml.core import (
     CumlInputType,
     CumlT,
     _CumlEstimator,
-    _CumlModel,
+    _CumlModelWithColumns,
     param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import PartitionDescriptor
+from spark_rapids_ml.utils import PartitionDescriptor, dtype_to_pyspark_type
 
 
 class PCAClass(_CumlClass):
@@ -68,7 +68,7 @@ class PCAClass(_CumlClass):
         ]
 
 
-class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
+class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
     """
     Shared Spark Params for PCA and PCAModel.
     """
@@ -89,21 +89,11 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols, HasOutputCols):
         """
         return self.set_params(inputCols=value)
 
-    def setOutputCol(self: P, value: Union[str, List[str]]) -> P:
+    def setOutputCol(self: P, value: str) -> P:
         """
-        Sets the value of :py:attr:`outputCol` or py:attr:`outputCols`
+        Sets the value of :py:attr:`outputCol`
         """
-        if isinstance(value, str):
-            self.set_params(outputCol=value)
-        else:
-            self.set_params(outputCols=value)
-        return self
-
-    def setOutputCols(self: P, value: List[str]) -> P:
-        """
-        Sets the value of :py:attr:`outputCols`.
-        """
-        return self.set_params(outputCols=value)
+        return self.set_params(outputCol=value)
 
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
@@ -118,16 +108,17 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     k: int
         the number of components, or equivalently the dimension that all vectors will be projected to.
     inputCol: str
-        the name of the column that contains input vectors. inputCol should be set when input vectors are stored in a single column of a dataframe.
+        the name of the column that contains input vectors. inputCol should be set when input vectors
+        are stored in a single column of a dataframe.
 
     inputCols: List[str]
-        the names of feature columns that form input vectors. inputCols should be set when input vectors are stored as multiple feature columns of a dataframe.
+        the names of feature columns that form input vectors. inputCols should be set when input vectors
+        are stored as multiple feature columns of a dataframe.
 
     outputCol: str
-        the name of the column that stores output vectors. outputCol should be set when users expect to store output vectors in a single column.
+        the name of the column that stores output vectors. outputCol should be set when users expect to
+        store output vectors in a single column.
 
-    outputCols: List[str]
-        the name of the feature columns that form output vectors. outputCols should be set when users expect to store output vectors as multiple feature columns.
 
     Examples
     --------
@@ -246,7 +237,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         return PCAModel.from_row(result)
 
 
-class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
+class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
     """Applies dimensionality reduction on an input DataFrame.
 
     Note: Input vectors must be zero-centered to ensure PCA work properly.
@@ -256,22 +247,22 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
 
     Examples
     --------
-        >>> from spark_rapids_ml.feature import PCA
-        >>> data = [([-1.0, -1.0],),
-        ...         ([0.0, 0.0],),
-        ...         ([1.0, 1.0],),]
-        >>> df = spark.createDataFrame(data, ["features"])
-        >>> gpu_pca = PCA(k=1).setInputCol("features").setOutputCol("pca_features")
-        >>> gpu_model = gpu_pca.fit(df)
-        >>> reduced_df = gpu_model.transform(df)
-        >>> reduced_df.show()
-        +---------------------+
-        |         pca_features|
-        +---------------------+
-        | [-1.414213562373095]|
-        |                [0.0]|
-        |  [1.414213562373095]|
-        +---------------------+
+    >>> from spark_rapids_ml.feature import PCA
+    >>> data = [([-1.0, -1.0],),
+    ...         ([0.0, 0.0],),
+    ...         ([1.0, 1.0],),]
+    >>> df = spark.createDataFrame(data, ["features"])
+    >>> gpu_pca = PCA(k=1).setInputCol("features").setOutputCol("pca_features")
+    >>> gpu_model = gpu_pca.fit(df)
+    >>> reduced_df = gpu_model.transform(df)
+    >>> reduced_df.show()
+    +---------------------+
+    |         pca_features|
+    +---------------------+
+    | [-1.414213562373095]|
+    |                [0.0]|
+    |  [1.414213562373095]|
+    +---------------------+
     """
 
     def __init__(
@@ -312,11 +303,11 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
         Returns a principal components Matrix.
         Each column is one principal component.
         """
-        numRows = len(self.components_)
-        numCols = self.n_cols
+        num_rows = len(self.components_)
+        num_cols = self.n_cols
         values = list(itertools.chain.from_iterable(self.components_))
         # DenseMatrix is column major, so flip rows/cols
-        return DenseMatrix(numCols, numRows, values, False)  # type: ignore
+        return DenseMatrix(num_cols, num_rows, values, False)  # type: ignore
 
     @property
     def explainedVariance(self) -> DenseVector:
@@ -326,35 +317,8 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
         """
         return DenseVector(self.explained_variance_ratio_)
 
-    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        if self.isDefined(self.inputCol):
-            input_column_name = self.getInputCol()
-        else:
-            input_column_name = self.getInputCols()[0]
-
-        for field in input_schema:
-            if field.name == input_column_name:
-                # TODO: mypy throws error here since it doesn't know that dataType will be ArrayType which has elementType field
-                input_data_type = field.dataType.elementType if self.isDefined(self.inputCol) else field.dataType  # type: ignore
-                break
-
-        if self.isDefined(self.outputCols):
-            output_cols = self.getOutputCols()
-            ret_schema = StructType(
-                [
-                    StructField(col_name, input_data_type, False)
-                    for col_name in output_cols
-                ]
-            )
-        else:
-            ret_schema = StructType(
-                [
-                    StructField(
-                        self.getOutputCol(), ArrayType(input_data_type, False), False
-                    )
-                ]
-            )
-        return ret_schema
+    def _get_prediction_name(self) -> str:
+        return self.getOutputCol()
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
@@ -364,14 +328,14 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
     ]:
         cuml_alg_params = self.cuml_params.copy()
 
-        transformed_mean = np.matmul(
-            np.array(self.mean_, self.dtype),
-            np.array(self.components_, self.dtype).T,
-        )
+        n_cols = self.n_cols
+        dype = self.dtype
+        components = self.components_
+        mean = self.mean_
+        singular_values = self.singular_values_
 
         def _construct_pca() -> CumlT:
             """
-
             Returns the instance of PCAMG which will be passed to _transform_internal
             to do the transform.
             -------
@@ -379,7 +343,7 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
             """
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
-            pca = CumlPCAMG(output_type="cudf", **cuml_alg_params)
+            pca = CumlPCAMG(output_type="numpy", **cuml_alg_params)
 
             # Compatible with older cuml versions (before 23.02)
             pca._n_components = pca.n_components
@@ -387,38 +351,38 @@ class PCAModel(PCAClass, _CumlModel, _PCACumlParams):
 
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
-            pca.n_cols = self.n_cols
-            pca.dtype = np.dtype(self.dtype)
+            pca.n_cols = n_cols
+            pca.dtype = np.dtype(dype)
+
             # TBD: figure out why PCA warns regardless of array order here and for singular values
             pca.components_ = cudf_to_cuml_array(
-                np.array(self.components_, order="F").astype(pca.dtype)
+                np.array(components, order="F").astype(pca.dtype)
             )
-            pca.mean_ = cudf_to_cuml_array(
-                np.array(self.mean_, order="F").astype(pca.dtype)
-            )
+            pca.mean_ = cudf_to_cuml_array(np.array(mean, order="F").astype(pca.dtype))
             pca.singular_values_ = cudf_to_cuml_array(
-                np.array(self.singular_values_, order="F").astype(pca.dtype)
+                np.array(singular_values, order="F").astype(pca.dtype)
             )
             return pca
+
+        transformed_mean = np.matmul(
+            np.array(self.mean_, self.dtype),
+            np.array(self.components_, self.dtype).T,
+        )
 
         def _transform_internal(
             pca_object: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.DataFrame:
-            res = pca_object.transform(df).to_numpy()
-            # if num_components is 1, a 1-d numpy array is returned
-            # convert to 2d for correct downstream behavior
-
-            if len(res.shape) == 1:
-                res = np.expand_dims(res, 1)
-
+            res = pca_object.transform(df)
             # Spark does not remove the mean from the transformed data,
             # but cuML does, so need to add the mean back to match Spark results
             res += transformed_mean
 
-            if self.isDefined(self.outputCols):
-                return pd.DataFrame(res, columns=self.getOutputCols())
-            else:
-                res = list(res)
-                return pd.DataFrame({self.getOutputCol(): res})
+            return pd.Series(list(res))
 
         return _construct_pca, _transform_internal
+
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        assert self.dtype is not None
+
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+        return f"array<{pyspark_type}>"
