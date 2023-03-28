@@ -218,8 +218,8 @@ def test_linear_regression_basic(
         # train a model
         lr_model = lr.fit(df)
 
-        assert isinstance(lr_model.toHost(), SparkLinearRegressionModel)
-        assert_cuml_pyspark_model(lr_model, lr_model.toHost())
+        assert isinstance(lr_model.cpu(), SparkLinearRegressionModel)
+        assert_cuml_pyspark_model(lr_model, lr_model.cpu())
 
         # Convert input to vector dataframe to fit in the Spark LinearRegressionModel
         if feature_type == feature_types.array:
@@ -233,7 +233,7 @@ def test_linear_regression_basic(
             vector_df = df
 
         # transform without throwing exception
-        lr_model.toHost().transform(vector_df).collect()
+        lr_model.cpu().transform(vector_df).collect()
 
         # model persistence
         path = tmp_path + "/linear_regression_tests"
@@ -241,13 +241,13 @@ def test_linear_regression_basic(
         lr_model.write().overwrite().save(model_path)
 
         lr_model_loaded = LinearRegressionModel.load(model_path)
-        assert isinstance(lr_model_loaded.toHost(), SparkLinearRegressionModel)
-        assert_cuml_pyspark_model(lr_model_loaded, lr_model_loaded.toHost())
+        assert isinstance(lr_model_loaded.cpu(), SparkLinearRegressionModel)
+        assert_cuml_pyspark_model(lr_model_loaded, lr_model_loaded.cpu())
 
         assert_cuml_model(lr_model, lr_model_loaded)
 
         # transform without throwing exception
-        lr_model_loaded.toHost().transform(vector_df).collect()
+        lr_model_loaded.cpu().transform(vector_df).collect()
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)

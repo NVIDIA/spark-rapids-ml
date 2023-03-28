@@ -478,7 +478,7 @@ class LinearRegressionModel(
         return self.cpu().predict(value)
 
     def evaluate(self, dataset: DataFrame) -> LinearRegressionSummary:
-        """cuML doesn't support predicting 1 single sample.
+        """cuML doesn't support evaluating.
         Fall back to PySpark ML LinearRegressionModel"""
         return self.cpu().evaluate(dataset)
 
