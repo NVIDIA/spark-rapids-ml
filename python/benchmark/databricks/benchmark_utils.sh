@@ -13,7 +13,7 @@ fi
 create_cluster() {
     cluster_type=$1
 
-    cluster_name=spark-rapids-ml-$cluster_type
+    cluster_name=spark-rapids-ml-$cluster_type-$USER
 
     # delete cluster with selected name if already created
     cluster_record=$( databricks clusters list --profile $DB_PROFILE | grep $cluster_name )
