@@ -191,3 +191,9 @@ def get_logger(cls: type, level: str = "INFO") -> logging.Logger:
         logger.addHandler(handler)
 
     return logger
+
+
+def java_uid(sc: SparkContext, prefix: str) -> str:
+    """Returns a random UID that concatenates the given prefix, "_", and 12 random hex chars."""
+    assert sc._jvm is not None
+    return sc._jvm.org.apache.spark.ml.util.Identifiable.randomUID(prefix)
