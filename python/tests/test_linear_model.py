@@ -300,10 +300,10 @@ def test_linear_regression(
         slr.setLabelCol(label_col)
         slr_model: LinearRegressionModel = slr.fit(train_df)
 
-        assert slr_model.toHost().getElasticNetParam() == l1_ratio
-        assert slr_model.toHost().getRegParam() == alpha
-        assert not slr_model.toHost().getStandardization()
-        assert slr_model.toHost().getLabelCol() == label_col
+        assert slr_model.cpu().getElasticNetParam() == l1_ratio
+        assert slr_model.cpu().getRegParam() == alpha
+        assert not slr_model.cpu().getStandardization()
+        assert slr_model.cpu().getLabelCol() == label_col
 
         assert array_equal(cu_lr.coef_, slr_model.coefficients.toArray(), 1e-3)
 

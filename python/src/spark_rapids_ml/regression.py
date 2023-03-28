@@ -428,7 +428,7 @@ class LinearRegressionModel(
         self._intercept = intercept_
         self._lr_ml_model: Optional[SparkLinearRegressionModel] = None
 
-    def toHost(self) -> SparkLinearRegressionModel:
+    def cpu(self) -> SparkLinearRegressionModel:
         if self._lr_ml_model is None:
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None
@@ -475,12 +475,12 @@ class LinearRegressionModel(
     def predict(self, value: T) -> float:
         """cuML doesn't support predicting 1 single sample.
         Fall back to PySpark ML LinearRegressionModel"""
-        return self.toHost().predict(value)
+        return self.cpu().predict(value)
 
     def evaluate(self, dataset: DataFrame) -> LinearRegressionSummary:
         """cuML doesn't support predicting 1 single sample.
         Fall back to PySpark ML LinearRegressionModel"""
-        return self.toHost().evaluate(dataset)
+        return self.cpu().evaluate(dataset)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame

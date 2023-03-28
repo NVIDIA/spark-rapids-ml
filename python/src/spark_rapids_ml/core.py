@@ -586,9 +586,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         self.dtype = dtype
         self.n_cols = n_cols
 
-    def toHost(self) -> Model:
-        """Transform using pyspark ML model. For some reasons,
-        some algos can't be converted to pyspark ML Model"""
+    def cpu(self) -> Model:
+        """Return the equivalent PySpark CPU model"""
         raise NotImplementedError()
 
     def get_model_attributes(self) -> Optional[Dict[str, Any]]:
