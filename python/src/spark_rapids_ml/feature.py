@@ -20,6 +20,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark.ml import Model
+from pyspark.ml.common import _py2java
+from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.feature import _PCAParams
 from pyspark.ml.linalg import DenseMatrix, DenseVector
 from pyspark.ml.param.shared import HasInputCols
@@ -42,7 +45,12 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import PartitionDescriptor, dtype_to_pyspark_type
+from spark_rapids_ml.utils import (
+    PartitionDescriptor,
+    _get_spark_session,
+    dtype_to_pyspark_type,
+    java_uid,
+)
 
 
 class PCAClass(_CumlClass):
@@ -287,6 +295,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         self.components_ = components_
         self.explained_variance_ratio_ = explained_variance_ratio_
         self.singular_values_ = singular_values_
+        self._pca_ml_model: Optional[SparkPCAModel] = None
 
         self.set_params(n_components=len(components_))
 
@@ -316,6 +325,22 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         explained by each principal component.
         """
         return DenseVector(self.explained_variance_ratio_)
+
+    def cpu(self) -> SparkPCAModel:
+        """Return the PySpark ML PCAModel"""
+        if self._pca_ml_model is None:
+            sc = _get_spark_session().sparkContext
+            assert sc._jvm is not None
+
+            java_pc = _py2java(sc, self.pc)
+            java_explainedVariance = _py2java(sc, self.explainedVariance)
+            java_model = sc._jvm.org.apache.spark.ml.feature.PCAModel(
+                java_uid(sc, "pca"), java_pc, java_explainedVariance
+            )
+            self._pca_ml_model = SparkPCAModel(java_model)
+            self._copyValues(self._pca_ml_model)
+
+        return self._pca_ml_model
 
     def _get_prediction_name(self) -> str:
         return self.getOutputCol()
