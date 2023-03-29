@@ -424,8 +424,8 @@ class LinearRegressionModel(
         dtype: str,
     ) -> None:
         super().__init__(dtype=dtype, n_cols=n_cols, coef_=coef_, intercept_=intercept_)
-        self._coef = coef_
-        self._intercept = intercept_
+        self.coef_ = coef_
+        self.intercept_ = intercept_
         self._lr_ml_model: Optional[SparkLinearRegressionModel] = None
 
     def cpu(self) -> SparkLinearRegressionModel:
@@ -449,7 +449,7 @@ class LinearRegressionModel(
         Model coefficients.
         """
         # TBD: for large enough dimension, SparseVector is returned. Need to find out how to match
-        return Vectors.dense(self._coef)
+        return Vectors.dense(self.coef_)
 
     @property
     def hasSummary(self) -> bool:
@@ -463,7 +463,7 @@ class LinearRegressionModel(
         """
         Model intercept.
         """
-        return self._intercept
+        return self.intercept_
 
     @property
     def scale(self) -> float:
@@ -488,8 +488,8 @@ class LinearRegressionModel(
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
-        coef_ = self._coef
-        intercept_ = self._intercept
+        coef_ = self.coef_
+        intercept_ = self.intercept_
         n_cols = self.n_cols
         dtype = self.dtype
 

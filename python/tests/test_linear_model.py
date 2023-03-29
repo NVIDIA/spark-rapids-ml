@@ -202,6 +202,8 @@ def test_linear_regression_basic(
         def assert_cuml_model(
             lhs: LinearRegressionModel, rhs: LinearRegressionModel
         ) -> None:
+            assert lhs.coef_ == rhs.coef_
+            assert lhs.intercept_ == rhs.intercept_
             assert lhs.coefficients == rhs.coefficients
             assert lhs.intercept == rhs.intercept
 
@@ -305,6 +307,7 @@ def test_linear_regression(
         assert not slr_model.cpu().getStandardization()
         assert slr_model.cpu().getLabelCol() == label_col
 
+        assert array_equal(cu_lr.coef_, slr_model.coef_, 1e-3)
         assert array_equal(cu_lr.coef_, slr_model.coefficients.toArray(), 1e-3)
 
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
