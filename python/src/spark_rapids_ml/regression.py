@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
-from pyspark.ml.linalg import Vector, Vectors
-from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
+from pyspark.ml.common import _py2java
+from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
+from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
+from pyspark.ml.regression import (
+    LinearRegressionSummary,
+    _LinearRegressionParams,
+    _RandomForestRegressorParams,
+)
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -45,7 +51,14 @@ from spark_rapids_ml.tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from spark_rapids_ml.utils import PartitionDescriptor, cudf_to_cuml_array
+from spark_rapids_ml.utils import (
+    PartitionDescriptor,
+    _get_spark_session,
+    cudf_to_cuml_array,
+    java_uid,
+)
+
+T = TypeVar("T")
 
 
 class LinearRegressionClass(_CumlClass):
@@ -413,6 +426,22 @@ class LinearRegressionModel(
         super().__init__(dtype=dtype, n_cols=n_cols, coef_=coef_, intercept_=intercept_)
         self.coef_ = coef_
         self.intercept_ = intercept_
+        self._lr_ml_model: Optional[SparkLinearRegressionModel] = None
+
+    def cpu(self) -> SparkLinearRegressionModel:
+        if self._lr_ml_model is None:
+            sc = _get_spark_session().sparkContext
+            assert sc._jvm is not None
+
+            coef = _convert_to_vector(self.coefficients)
+
+            java_model = sc._jvm.org.apache.spark.ml.regression.LinearRegressionModel(
+                java_uid(sc, "linReg"), _py2java(sc, coef), self.intercept, self.scale
+            )
+            self._lr_ml_model = SparkLinearRegressionModel(java_model)
+            self._copyValues(self._lr_ml_model)
+
+        return self._lr_ml_model
 
     @property
     def coefficients(self) -> Vector:
@@ -443,9 +472,15 @@ class LinearRegressionModel(
         """
         return 1.0
 
-    def evaluate(self, dataset: DataFrame) -> None:
-        """(Not supported) Evaluates the model on a test dataset."""
-        raise NotImplementedError
+    def predict(self, value: T) -> float:
+        """cuML doesn't support predicting 1 single sample.
+        Fall back to PySpark ML LinearRegressionModel"""
+        return self.cpu().predict(value)
+
+    def evaluate(self, dataset: DataFrame) -> LinearRegressionSummary:
+        """cuML doesn't support evaluating.
+        Fall back to PySpark ML LinearRegressionModel"""
+        return self.cpu().evaluate(dataset)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame

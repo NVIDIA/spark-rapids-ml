@@ -586,6 +586,10 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         self.dtype = dtype
         self.n_cols = n_cols
 
+    def cpu(self) -> Model:
+        """Return the equivalent PySpark CPU model"""
+        raise NotImplementedError()
+
     def get_model_attributes(self) -> Optional[Dict[str, Any]]:
         """Return model attributes as a dictionary."""
         return self._model_attributes

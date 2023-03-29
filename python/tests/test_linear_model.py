@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@ from typing import Any, Dict, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
+from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
-from pyspark.sql.functions import array
+from pyspark.sql.functions import array, col
 
 from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 
@@ -31,6 +32,7 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
+    feature_types,
     idfn,
     make_regression_dataset,
     pyspark_supported_feature_types,
@@ -189,13 +191,21 @@ def test_linear_regression_basic(
         lr.setLabelCol(label_col)
         assert lr.getLabelCol() == label_col
 
-        def assert_model(
+        def assert_cuml_pyspark_model(
+            lhs: LinearRegressionModel, rhs: SparkLinearRegressionModel
+        ) -> None:
+            assert lhs.coefficients == rhs.coefficients
+            assert lhs.intercept == rhs.intercept
+            assert lhs.getRegParam() == rhs.getRegParam()
+            assert lhs.getRegParam() == reg
+
+        def assert_cuml_model(
             lhs: LinearRegressionModel, rhs: LinearRegressionModel
         ) -> None:
             assert lhs.coef_ == rhs.coef_
+            assert lhs.intercept_ == rhs.intercept_
             assert lhs.coefficients == rhs.coefficients
-            assert lhs.intercept_ == lhs.intercept_
-            assert lhs.intercept == lhs.intercept
+            assert lhs.intercept == rhs.intercept
 
             # Vector type will be cast to array(double)
             if feature_type == "vector":
@@ -210,13 +220,36 @@ def test_linear_regression_basic(
         # train a model
         lr_model = lr.fit(df)
 
+        assert isinstance(lr_model.cpu(), SparkLinearRegressionModel)
+        assert_cuml_pyspark_model(lr_model, lr_model.cpu())
+
+        # Convert input to vector dataframe to fit in the Spark LinearRegressionModel
+        if feature_type == feature_types.array:
+            vector_df = df.select(array_to_vector(col(features_col)).alias("features"))  # type: ignore
+        elif feature_type == feature_types.multi_cols:
+            assembler = (
+                VectorAssembler().setInputCols(features_col).setOutputCol("features")  # type: ignore
+            )
+            vector_df = assembler.transform(df).drop(*features_col)
+        else:
+            vector_df = df
+
+        # transform without throwing exception
+        lr_model.cpu().transform(vector_df).collect()
+
         # model persistence
         path = tmp_path + "/linear_regression_tests"
         model_path = f"{path}/linear_regression_model"
         lr_model.write().overwrite().save(model_path)
 
         lr_model_loaded = LinearRegressionModel.load(model_path)
-        assert_model(lr_model, lr_model_loaded)
+        assert isinstance(lr_model_loaded.cpu(), SparkLinearRegressionModel)
+        assert_cuml_pyspark_model(lr_model_loaded, lr_model_loaded.cpu())
+
+        assert_cuml_model(lr_model, lr_model_loaded)
+
+        # transform without throwing exception
+        lr_model_loaded.cpu().transform(vector_df).collect()
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
@@ -267,9 +300,15 @@ def test_linear_regression(
         slr.setElasticNetParam(l1_ratio)
         slr.setFeaturesCol(features_col)
         slr.setLabelCol(label_col)
-        slr_model = slr.fit(train_df)
+        slr_model: LinearRegressionModel = slr.fit(train_df)
+
+        assert slr_model.cpu().getElasticNetParam() == l1_ratio
+        assert slr_model.cpu().getRegParam() == alpha
+        assert not slr_model.cpu().getStandardization()
+        assert slr_model.cpu().getLabelCol() == label_col
 
         assert array_equal(cu_lr.coef_, slr_model.coef_, 1e-3)
+        assert array_equal(cu_lr.coef_, slr_model.coefficients.toArray(), 1e-3)
 
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
@@ -363,11 +402,7 @@ def test_linear_regression_spark_compat(
 
         example = df.head()
         if example:
-            if isinstance(model, SparkLinearRegressionModel):
-                model.predict(example.features)
-            else:
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predict(example.features)
+            model.predict(example.features)
 
         model.setPredictionCol("prediction")
         output = model.transform(df).head()
