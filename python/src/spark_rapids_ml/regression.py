@@ -429,6 +429,7 @@ class LinearRegressionModel(
         self._lr_ml_model: Optional[SparkLinearRegressionModel] = None
 
     def cpu(self) -> SparkLinearRegressionModel:
+        """Return the PySpark ML LinearRegressionModel"""
         if self._lr_ml_model is None:
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None

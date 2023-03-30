@@ -20,7 +20,9 @@ import numpy as np
 import pytest
 from pyspark.ml.feature import PCA as SparkPCA
 from pyspark.ml.feature import PCAModel as SparkPCAModel
+from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import DenseMatrix, Vectors
+from pyspark.sql.functions import col
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.feature import PCA, PCAModel
@@ -177,12 +179,14 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
 
         gpu_pca = PCA(num_workers=gpu_number).setInputCol("coordinates").setK(topk)
         pca_model: PCAModel = gpu_pca.fit(df)
+        assert isinstance(pca_model.cpu(), SparkPCAModel)
 
         model_path = f"{path}/pca_model"
         pca_model.write().overwrite().save(model_path)
         pca_model_loaded = PCAModel.load(model_path)
+        assert isinstance(pca_model_loaded.cpu(), SparkPCAModel)
 
-        def assert_pca_model(model: PCAModel, loaded_model: PCAModel) -> None:
+        def assert_cuml_model(model: PCAModel, loaded_model: PCAModel) -> None:
             """
             Expect the model attributes are same
             """
@@ -202,7 +206,28 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
             assert model.n_cols == 3
             assert model.dtype == "float64"
 
-        assert_pca_model(pca_model, pca_model_loaded)
+        assert_cuml_model(pca_model, pca_model_loaded)
+
+        def assert_cuml_spark_model(
+            model: PCAModel, spark_model: SparkPCAModel
+        ) -> None:
+            """
+            Expect the model attributes are same
+            """
+            assert model.pc == spark_model.pc
+            assert model.explainedVariance == spark_model.explainedVariance
+            assert model.getK() == spark_model.getK()
+            assert model.getInputCol() == spark_model.getInputCol()
+            assert model.getInputCol() == "coordinates"
+            assert model.getOutputCol() == spark_model.getOutputCol()
+
+        assert_cuml_spark_model(pca_model, pca_model.cpu())
+        assert_cuml_spark_model(pca_model, pca_model_loaded.cpu())
+
+        # cpu model transform without raising any exception
+        pca_model.cpu().transform(
+            df.select(array_to_vector(col("coordinates")).alias("coordinates"))
+        ).collect()
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
@@ -260,6 +285,11 @@ def test_pca(
         )
 
         model = spark_pca.fit(train_df)
+        assert model.getK() == model.cpu().getK()
+        assert model.getK() == 3
+        assert model.getOutputCol() == model.cpu().getOutputCol()
+        assert model.getOutputCol() == "pca_features"
+
         assert array_equal(cu_pca.components_, model.components_, 1e-3, with_sign=False)
         assert array_equal(
             cu_pca.explained_variance_ratio_, model.explained_variance_ratio_, 1e-3
