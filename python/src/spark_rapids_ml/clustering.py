@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.clustering import _KMeansParams
 from pyspark.ml.linalg import Vector
 from pyspark.sql.dataframe import DataFrame
@@ -40,7 +41,13 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import _ArrayOrder, _concat_and_free, get_logger
+from spark_rapids_ml.utils import (
+    _ArrayOrder,
+    _concat_and_free,
+    _get_spark_session,
+    get_logger,
+    java_uid,
+)
 
 
 class KMeansClass(_CumlClass):
@@ -331,6 +338,29 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         )
 
         self.cluster_centers_ = cluster_centers_
+        self._kmeans_spark_model: Optional[SparkKMeansModel] = None
+
+    def cpu(self) -> SparkKMeansModel:
+        """Return the PySpark ML KMeansModel"""
+        if self._kmeans_spark_model is None:
+            sc = _get_spark_session().sparkContext
+            assert sc._jvm is not None
+
+            from pyspark.mllib.common import _py2java
+            from pyspark.mllib.linalg import _convert_to_vector
+
+            java_centers = _py2java(
+                sc, [_convert_to_vector(c) for c in self.cluster_centers_]
+            )
+            java_mllib_model = sc._jvm.org.apache.spark.mllib.clustering.KMeansModel(
+                java_centers
+            )
+            java_model = sc._jvm.org.apache.spark.ml.clustering.KMeansModel(
+                java_uid(sc, "kmeans"), java_mllib_model
+            )
+            self._kmeans_spark_model = SparkKMeansModel(java_model)
+
+        return self._kmeans_spark_model
 
     def clusterCenters(self) -> List[np.ndarray]:
         """Returns the list of cluster centers."""
@@ -342,10 +372,10 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         return False
 
     def predict(self, value: Vector) -> int:
-        """(Not supported) Predict label for the given features."""
-        raise NotImplementedError(
-            "'predict' method is not supported, use 'transform' instead."
-        )
+        """Predict label for the given features.
+        cuML doesn't support predicting 1 single sample.
+        Fall back to PySpark ML KMeansModel"""
+        return self.cpu().predict(value)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         ret_schema = "int"
@@ -363,7 +393,6 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         cuml_alg_params = self.cuml_params.copy()
 
         cluster_centers_ = self.cluster_centers_
-        output_col = self.getPredictionCol()
         dtype = self.dtype
         n_cols = self.n_cols
         array_order = self._transform_array_order()
@@ -377,7 +406,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
             kmeans.n_cols = n_cols
             kmeans.dtype = np.dtype(dtype)
             kmeans.cluster_centers_ = cudf_to_cuml_array(
-                np.array(cluster_centers_).astype(dtype), order="C"
+                np.array(cluster_centers_).astype(dtype), order=array_order
             )
             return kmeans
 
