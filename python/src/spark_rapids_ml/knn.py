@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-import asyncio
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import cudf
+import asyncio
 import numpy as np
 import pandas as pd
+from enum import IntEnum
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -37,23 +36,23 @@ from pyspark.sql.types import (
     DoubleType,
     FloatType,
     LongType,
-    Row,
     StructField,
     StructType,
 )
 
 from spark_rapids_ml.core import (
     CumlInputType,
-    CumlT,
     _CumlCaller,
-    _CumlEstimatorSupervised,
-    _CumlModel,
     alias,
     param_alias,
 )
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import _concat_and_free
 
+
+class Label(IntEnum):
+    DATA=0,
+    QUERY=1,
 
 class NearestNeighborsClass(_CumlClass):
     @classmethod
@@ -91,6 +90,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
     def __init__(self) -> None:
         super().__init__()
         self._setDefault(id_col=alias.row_number)
+        self._setDefault(labelCol=alias.label)
 
     k = Param(
         Params._dummy(),
@@ -172,7 +172,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
 
 class NearestNeighbors(
-    NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
+    NearestNeighborsClass, _CumlCaller, _NearestNeighborsCumlParams
 ):
     """
     Examples
@@ -226,64 +226,6 @@ class NearestNeighbors(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
-        self._label_isdata = 0
-        self._label_isquery = 1
-        self.set_params(labelCol=alias.label)
-
-    def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
-        return NearestNeighborsModel.from_row(result)
-
-    def _fit(self, item_df: DataFrame) -> "NearestNeighborsModel":
-        self._item_df_withid = self._ensureIdCol(item_df)
-
-        self._processed_item_df = self._item_df_withid.withColumn(
-            alias.label, lit(self._label_isdata)
-        )
-
-        # TODO: should test this at scale to see if/when we hit limits
-        model = self._create_pyspark_model(
-            Row(
-                item_df_withid=self._item_df_withid,
-                processed_item_df=self._processed_item_df,
-                label_isdata=self._label_isdata,
-                label_isquery=self._label_isquery,
-            )
-        )
-        model._num_workers = self._num_workers
-        self._copyValues(model)
-        self._copy_cuml_params(model)  # type: ignore
-        return model
-
-    def _out_schema(self) -> Union[StructType, str]:  # type: ignore
-        """
-        This class overrides _fit and will not call _out_schema.
-        """
-        pass
-
-    def _get_cuml_fit_func(  # type: ignore
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        """
-        This class overrides _fit and will not call _get_cuml_fit_func.
-        """
-        pass
-
-
-class NearestNeighborsModel(
-    _CumlCaller, _CumlModel, NearestNeighborsClass, _NearestNeighborsCumlParams
-):
-    def __init__(
-        self,
-        item_df_withid: DataFrame,
-        processed_item_df: DataFrame,
-        label_isdata: int,
-        label_isquery: int,
-    ):
-        super().__init__()
-        self._item_df_withid = item_df_withid
-        self._processed_item_df = processed_item_df
-        self._label_isdata = label_isdata
-        self._label_isquery = label_isquery
 
     def _out_schema(self) -> Union[StructType, str]:  # type: ignore
         return StructType(
@@ -335,8 +277,8 @@ class NearestNeighborsModel(
 
         return select_cols, multi_col_names, dimension, feature_type
 
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
-        """Return the exact nearest neighbors for each query in query_df. The data
+    def kneighbors(self, query_df: DataFrame, item_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+        """Return the exact nearest neighbors in item_df for each query in query_df. The data
         vectors (or equivalently item vectors) should be provided through the fit
         function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The
         distance measure here is euclidean distance and the number of target exact
@@ -369,12 +311,17 @@ class NearestNeighborsModel(
         query_default_num_partitions = query_df.rdd.getNumPartitions()
 
         query_df_withid = self._ensureIdCol(query_df)
+        item_df_withid = self._ensureIdCol(item_df)
 
         processed_query_df = query_df_withid.withColumn(
-            alias.label, lit(self._label_isquery)
+            alias.label, lit(Label.QUERY.value)
         )
 
-        union_df = self._processed_item_df.union(processed_query_df)
+        processed_item_df = item_df_withid.withColumn(
+            alias.label, lit(Label.DATA.value)
+        )
+
+        union_df = processed_item_df.union(processed_query_df)
 
         pipelinedrdd = self._call_cuml_fit_func(union_df, partially_collect=False)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
@@ -390,13 +337,11 @@ class NearestNeighborsModel(
             schema=f"{query_id_col_name} {id_col_type}, indices array<{id_col_type}>, distances array<float>"
         ).sort(query_id_col_name)
 
-        return (self._item_df_withid, query_df_withid, knn_df)
+        return (query_df_withid, item_df_withid, knn_df)
 
     def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        label_isdata = self._label_isdata
-        label_isquery = self._label_isquery
         id_col_name = self.getIdCol()
 
         def _cuml_fit(
@@ -423,8 +368,8 @@ class NearestNeighborsModel(
             query_row_number = []
 
             for x_array, label_array, row_number_array in dfs:
-                item_filter = label_array == label_isdata
-                query_filter = label_array == label_isquery
+                item_filter = label_array == Label.DATA.value
+                query_filter = label_array == Label.QUERY.value
 
                 item_list.append(x_array[item_filter])
                 query_list.append(x_array[query_filter])
@@ -514,24 +459,10 @@ class NearestNeighborsModel(
 
         return _cuml_fit
 
-    def _transform(self, dataset: DataFrame) -> DataFrame:
-        raise NotImplementedError(
-            "NearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
-        )
-
-    def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
-    ]:
-        raise NotImplementedError(
-            "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
-        )
-
     def exactNearestNeighborsJoin(
         self,
         query_df: DataFrame,
+        item_df: DataFrame,
         distCol: str = "distCol",
     ) -> DataFrame:
         """
@@ -544,6 +475,8 @@ class NearestNeighborsModel(
         ----------
         query_df: pyspark.sql.DataFrame
             the query_df dataframe. Each row represents a query vector.
+        item_df: pyspark.sql.DataFrame
+            the item_df dataframe. Each row represents an item vector.
 
         distCol: str
             the name of the output distance column
@@ -561,7 +494,7 @@ class NearestNeighborsModel(
         id_col_name = self.getIdCol()
 
         # call kneighbors then prepare return results
-        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df)
+        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df, item_df)
 
         from pyspark.sql.functions import arrays_zip, col, explode, struct
 
