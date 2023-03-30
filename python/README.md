@@ -1,6 +1,6 @@
 # Spark Rapids ML (Python)
 
-The PySpark API leverages the RAPIDS cuML python API to provide GPU-accelerated implementations of many common ML algorithms.  These implementations are adapted to use PySpark for distributed training and inference.
+This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-accelerated implementations of many common ML algorithms.  These implementations are adapted to use PySpark for distributed training and inference.
 
 ## Installation
 
