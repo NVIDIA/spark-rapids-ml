@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import asyncio
+from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import asyncio
 import numpy as np
 import pandas as pd
-from enum import IntEnum
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -40,19 +40,15 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
-    CumlInputType,
-    _CumlCaller,
-    alias,
-    param_alias,
-)
+from spark_rapids_ml.core import CumlInputType, _CumlCaller, alias, param_alias
 from spark_rapids_ml.params import P, _CumlClass, _CumlParams
 from spark_rapids_ml.utils import _concat_and_free
 
 
-class Label(IntEnum):
-    DATA=0,
-    QUERY=1,
+class Label(Enum):
+    DATA = 0
+    QUERY = 1
+
 
 class NearestNeighborsClass(_CumlClass):
     @classmethod
@@ -171,9 +167,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         return new_rdd.toDF(schema=out_schema)
 
 
-class NearestNeighbors(
-    NearestNeighborsClass, _CumlCaller, _NearestNeighborsCumlParams
-):
+class NearestNeighbors(NearestNeighborsClass, _CumlCaller, _NearestNeighborsCumlParams):
     """
     Examples
     --------
@@ -277,7 +271,9 @@ class NearestNeighbors(
 
         return select_cols, multi_col_names, dimension, feature_type
 
-    def kneighbors(self, query_df: DataFrame, item_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+    def kneighbors(
+        self, query_df: DataFrame, item_df: DataFrame
+    ) -> Tuple[DataFrame, DataFrame, DataFrame]:
         """Return the exact nearest neighbors in item_df for each query in query_df. The data
         vectors (or equivalently item vectors) should be provided through the fit
         function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The
