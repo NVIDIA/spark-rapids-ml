@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,9 @@ import numpy as np
 import pytest
 from pyspark.ml.clustering import KMeans as SparkKMeans
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
+from pyspark.ml.functions import array_to_vector
+from pyspark.ml.linalg import Vectors
+from pyspark.sql.functions import col
 
 from spark_rapids_ml.clustering import KMeans, KMeansModel
 
@@ -132,16 +135,31 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             assert model.dtype == "float64"
             assert model.n_cols == 2
 
+        def assert_cuml_spark_model(
+            model: KMeansModel, spark_model: SparkKMeansModel
+        ) -> None:
+            lhs = model.clusterCenters()
+            rhs = spark_model.clusterCenters()
+            assert len(lhs) == len(rhs)
+            for i in range(len(lhs)):
+                comp = lhs[i] == rhs[i]
+                assert comp.all()
+
         kmeans_model = kmeans.fit(df)
         assert_kmeans_model(model=kmeans_model)
+
+        assert isinstance(kmeans_model.cpu(), SparkKMeansModel)
+        assert_cuml_spark_model(kmeans_model, kmeans_model.cpu())
 
         # Model persistence
         path = tmp_path + "/kmeans_tests"
         model_path = f"{path}/kmeans_model"
         kmeans_model.write().overwrite().save(model_path)
         kmeans_model_loaded = KMeansModel.load(model_path)
-
         assert_kmeans_model(model=kmeans_model_loaded)
+
+        assert isinstance(kmeans_model_loaded.cpu(), SparkKMeansModel)
+        assert_cuml_spark_model(kmeans_model_loaded, kmeans_model_loaded.cpu())
 
         # test transform function
         label_df = kmeans_model.transform(df)
@@ -154,6 +172,14 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
         assert labels[0] == labels[1]
         assert labels[1] != labels[2]
         assert labels[2] == labels[3]
+
+        # without raising exception for cuml model predict
+        kmeans_model.predict(Vectors.dense(1.0, 1.0))
+
+        # without raising exception for cpu transform
+        kmeans_model.cpu().transform(
+            df.select(array_to_vector(col("features")).alias("features"))
+        ).collect()
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
@@ -302,11 +328,7 @@ def test_kmeans_spark_compat(
 
         example = df.head()
         if example:
-            if isinstance(model, SparkKMeansModel):
-                model.predict(example.features)
-            else:
-                with pytest.raises(NotImplementedError):
-                    model.predict(example.features)
+            model.predict(example.features)
 
         centers = model.clusterCenters()
         # [array([0.5, 0.5]), array([8.5, 8.5])]
