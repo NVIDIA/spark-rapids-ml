@@ -49,10 +49,11 @@ def test_example(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setK(topk)
 
-        gpu_model = gpu_knn.fit(data_df)
-        (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
-        item_df_withid.show()
+        (query_df_withid, item_df_withid, knn_df) = gpu_knn.kneighbors(
+            query_df, data_df
+        )
         query_df_withid.show()
+        item_df_withid.show()
         knn_df.show()
 
         # check knn results
@@ -87,21 +88,19 @@ def test_example(gpu_number: int) -> None:
         assert_distances_equal(distances=distances)
         assert_indices_equal(indices=indices)
 
-        # test transform: throw an error if transform function is called
-        with pytest.raises(NotImplementedError):
-            gpu_model.transform(query_df)
-
         # test exactNearestNeighborsJoin
-        knnjoin_df = gpu_model.exactNearestNeighborsJoin(query_df, distCol="distCol")
+        knnjoin_df = gpu_knn.exactNearestNeighborsJoin(
+            query_df, data_df, distCol="distCol"
+        )
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
         assert knnjoin_df.dtypes[0] == (
-            "item_df",
+            "query_df",
             "struct<features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[1] == (
-            "query_df",
+            "item_df",
             "struct<features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[2] == ("distCol", "float")
@@ -196,7 +195,7 @@ def test_example_with_id(gpu_number: int) -> None:
 
     with CleanSparkSession() as spark:
         schema = f"id int, features array<float>, metadata string"
-        data_df = spark.createDataFrame(data, schema)
+        item_df = spark.createDataFrame(data, schema)
         query_df = spark.createDataFrame(query, schema)
 
         gpu_knn = NearestNeighbors(num_workers=gpu_number)
@@ -204,8 +203,7 @@ def test_example_with_id(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setIdCol("id")
         gpu_knn = gpu_knn.setK(topk)
 
-        gpu_model = gpu_knn.fit(data_df)
-        item_df_withid, query_df_withid, knn_df = gpu_model.kneighbors(query_df)
+        query_df_withid, item_df_withid, knn_df = gpu_knn.kneighbors(query_df, item_df)
         item_df_withid.show()
         query_df_withid.show()
         knn_df.show()
@@ -224,17 +222,19 @@ def test_example_with_id(gpu_number: int) -> None:
             assert indices[4] == [108, 107]
 
         # test exactNearestNeighborsJoin
-        knnjoin_df = gpu_model.exactNearestNeighborsJoin(query_df, distCol="distCol")
+        knnjoin_df = gpu_knn.exactNearestNeighborsJoin(
+            query_df, item_df, distCol="distCol"
+        )
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
         assert knnjoin_df.dtypes[0] == (
-            "item_df",
-            f"struct<id:int,features:array<float>,metadata:string>",
-        )
-        assert knnjoin_df.dtypes[1] == (
             "query_df",
             "struct<id:int,features:array<float>,metadata:string>",
+        )
+        assert knnjoin_df.dtypes[1] == (
+            "item_df",
+            f"struct<id:int,features:array<float>,metadata:string>",
         )
         assert knnjoin_df.dtypes[2] == ("distCol", "float")
 
@@ -292,14 +292,13 @@ def test_nearest_neighbors(
             spark, feature_type, data_type, X, None
         )
 
-        knn_est = NearestNeighbors(
+        knn = NearestNeighbors(
             n_neighbors=n_neighbors, batch_size=batch_size
         ).setInputCol(features_col)
 
         # test kneighbors: obtain spark results
-        knn_model = knn_est.fit(data_df)
         query_df = data_df
-        (item_df_withid, query_df_withid, knn_df) = knn_model.kneighbors(query_df)
+        (query_df_withid, item_df_withid, knn_df) = knn.kneighbors(query_df, data_df)
 
         distances_df = knn_df.select("distances")
         indices_df = knn_df.select("indices")
@@ -329,12 +328,12 @@ def test_nearest_neighbors(
 
         # test exactNearestNeighborsJoin
         with pytest.raises(ValueError):
-            knn_model.exactNearestNeighborsJoin(query_df_withid)
+            knn.exactNearestNeighborsJoin(query_df_withid, item_df_withid)
 
-        knn_model.setIdCol(item_df_withid.dtypes[0][0])
-        knnjoin_df = knn_model.exactNearestNeighborsJoin(query_df_withid)
+        knn.setIdCol(item_df_withid.dtypes[0][0])
+        knnjoin_df = knn.exactNearestNeighborsJoin(query_df_withid, item_df_withid)
         reconstructed_knn_df = reconstruct_knn_df(
-            knnjoin_df, row_identifier_col=knn_model.getIdCol()
+            knnjoin_df, row_identifier_col=knn.getIdCol()
         )
         assert reconstructed_knn_df.collect() == knn_df.collect()
 
@@ -401,17 +400,16 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
 
         # get GPU results with exactNearestNeighborsJoin(dfA, dfB, k, distCol="EuclideanDistance")
         gpu_knn = NearestNeighbors(inputCol="features").setK(topk)
-        gpu_model = gpu_knn.fit(dfA)
-        gpu_res = gpu_model.exactNearestNeighborsJoin(
-            query_df=dfB, distCol="EuclideanDistance"
+        gpu_res = gpu_knn.exactNearestNeighborsJoin(
+            query_df=dfB, item_df=dfA, distCol="EuclideanDistance"
         )
         gpu_res.show(truncate=False)
 
         # check results
         def check_dtypes(res_df: DataFrame, from_spark: bool) -> None:
             assert len(res_df.dtypes) == 3
-            assert res_df.dtypes[0][0] == ("datasetA" if from_spark else "item_df")
-            assert res_df.dtypes[1][0] == ("datasetB" if from_spark else "query_df")
+            assert res_df.dtypes[0][0] == ("datasetA" if from_spark else "query_df")
+            assert res_df.dtypes[1][0] == ("datasetB" if from_spark else "item_df")
             assert res_df.dtypes[2][0] == ("EuclideanDistance")
 
             if from_spark:

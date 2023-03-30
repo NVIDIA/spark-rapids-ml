@@ -66,7 +66,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             input_cols = [c for c in train_df.schema.names]
 
         if num_gpus > 0:
-            from spark_rapids_ml.knn import NearestNeighbors, NearestNeighborsModel
+            from spark_rapids_ml.knn import NearestNeighbors
 
             assert num_cpus <= 0
             if not no_cache:
@@ -81,26 +81,25 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
                 )
 
             params = self.class_params
-            gpu_estimator = NearestNeighbors(
+            gpu_knn = NearestNeighbors(
                 num_workers=num_gpus, verbose=self.args.verbose, **params
             )
+            fit_time = 0
 
             if is_single_col:
-                gpu_estimator = gpu_estimator.setInputCol(first_col)
+                gpu_knn.setInputCol(first_col)
             else:
-                gpu_estimator = gpu_estimator.setInputCols(input_cols)
+                gpu_knn.setInputCols(input_cols)
 
-            gpu_model, fit_time = with_benchmark(
-                "gpu fit", lambda: gpu_estimator.fit(train_df)
-            )
-
-            def transform(model: NearestNeighborsModel, df: DataFrame) -> DataFrame:
-                (item_df_withid, query_df_withid, knn_df) = model.kneighbors(df)
+            def kneighbors(
+                knn: NearestNeighbors, query_df: DataFrame, item_df: DataFrame
+            ) -> DataFrame:
+                _, _, knn_df = knn.kneighbors(query_df, item_df)
                 knn_df.count()
                 return knn_df
 
             knn_df, transform_time = with_benchmark(
-                "gpu transform", lambda: transform(gpu_model, train_df)
+                "gpu transform", lambda: kneighbors(gpu_knn, train_df, train_df)
             )
             total_time = round(time.time() - func_start_time, 2)
             print(f"gpu total took: {total_time} sec")
