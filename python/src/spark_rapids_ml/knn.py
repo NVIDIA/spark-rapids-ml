@@ -474,27 +474,27 @@ class NearestNeighbors(
         Parameters
         ----------
         query_df: pyspark.sql.DataFrame
-            the query_df dataframe. Each row represents a query vector.
+            Dataframe of query vectors.
+
         item_df: pyspark.sql.DataFrame
-            the item_df dataframe. Each row represents an item vector.
+            Dataframe of item vectors, which will be matched to the query vectors.
 
         distCol: str
-            the name of the output distance column
+            Name of the output distance column
 
         Returns
         -------
         knnjoin_df: pyspark.sql.DataFrame
-            the result dataframe that has three columns (item_df, query_df, distCol).
-            item_df column is of struct type that includes as fields all the columns of input item dataframe.
-            Similarly, query_df column is of struct type that includes as fields all the columns of input query dataframe.
-            distCol is the distance column. A row in knnjoin_df is in the format (v1, v2, dist(v1, v2)),
-            where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
+            Dataframe with three columns (query_df, item_df, distCol).
+            - query_df - struct type column that includes as fields all the columns of input query dataframe.
+            - item_df - struct type column that includes as fields all the columns of input item dataframe.
+            - distCol - the distance between the query vector and the item vector.
         """
 
         id_col_name = self.getIdCol()
 
         # call kneighbors then prepare return results
-        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df, item_df)
+        (query_df_withid, item_df_withid, knn_df) = self.kneighbors(query_df, item_df)
 
         from pyspark.sql.functions import arrays_zip, col, explode, struct
 
@@ -522,11 +522,11 @@ class NearestNeighbors(
         )
 
         if self.isSet(self.id_col):
-            knnjoin_df = knnjoin_df.select("item_df", "query_df", distCol)
+            knnjoin_df = knnjoin_df.select("query_df", "item_df", distCol)
         else:
             knnjoin_df = knnjoin_df.select(
-                knnjoin_df["item_df"].dropFields(id_col_name).alias("item_df"),
                 knnjoin_df["query_df"].dropFields(id_col_name).alias("query_df"),
+                knnjoin_df["item_df"].dropFields(id_col_name).alias("item_df"),
                 distCol,
             )
 
