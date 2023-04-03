@@ -50,7 +50,7 @@ ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
 
 ### END OF CACHE ###
 
-#ARG RAPIDS_ML_VER=spark-cuml
+#ARG RAPIDS_ML_VER=main
 #RUN git clone -b branch-$RAPIDS_ML_VER https://github.com/NVIDIA/spark-rapids-ml.git
 COPY . /spark-rapids-ml
 WORKDIR /spark-rapids-ml/python

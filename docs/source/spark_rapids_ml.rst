@@ -44,6 +44,14 @@ spark\_rapids\_ml.feature module
    :undoc-members:
    :show-inheritance:
 
+spark\_rapids\_ml.knn module
+----------------------------
+
+.. automodule:: spark_rapids_ml.knn
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 spark\_rapids\_ml.params module
 -------------------------------
 

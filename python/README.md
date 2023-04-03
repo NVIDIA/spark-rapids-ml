@@ -21,10 +21,15 @@ Once you have the conda environment, activate it and install the required packag
 ```bash
 conda activate rapids-23.02
 
-git clone --branch spark-cuml https://github.com/NVIDIA/spark-rapids-ml.git
+# for development access to notebooks, tests, and benchmarks
+git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
 cd spark-rapids-ml/python
 pip install -r requirements.txt
 pip install -e .
+
+# OPTIONAL: for package installation only
+pip install -r https://raw.githubusercontent.com/NVIDIA/spark-rapids-ml/main/python/requirements.txt
+pip install spark-rapids-ml
 ```
 
 ## Examples
