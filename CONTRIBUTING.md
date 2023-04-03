@@ -51,7 +51,7 @@ python -m build
 ### Build and preview docs
 ```bash
 # if adding new files/modules, run this first:
-# sphinx-apidoc -f -o docs/source src/spark_rapids_ml
+# sphinx-apidoc -f -o docs/source python/src/spark_rapids_ml
 cd docs
 make html
 

@@ -48,7 +48,7 @@ RUN pip install --no-cache-dir "pyspark>=3.2.1" "scikit-learn>=1.2.1" \
 
 ### END OF CACHE ###
 
-#ARG RAPIDS_ML_VER=spark-cuml
+#ARG RAPIDS_ML_VER=main
 #RUN git clone -b branch-$RAPIDS_ML_VER https://github.com/NVIDIA/spark-rapids-ml.git
 COPY . /spark-rapids-ml
 WORKDIR /spark-rapids-ml/python
