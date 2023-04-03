@@ -17,7 +17,7 @@ from .utils import (
 )
 
 
-def test_example(gpu_number: int) -> None:
+def test_example(gpu_number: int, tmp_path: str) -> None:
     data = [
         ([1.0, 1.0], "a"),
         ([2.0, 2.0], "b"),
@@ -49,7 +49,14 @@ def test_example(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setK(topk)
 
+        with pytest.raises(NotImplementedError):
+            gpu_knn.save(tmp_path + "/knn_esimator")
+
         gpu_model = gpu_knn.fit(data_df)
+
+        with pytest.raises(NotImplementedError):
+            gpu_model.save(tmp_path + "/knn_model")
+
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
