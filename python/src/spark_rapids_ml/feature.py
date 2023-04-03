@@ -342,9 +342,6 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
         return self._pca_ml_model
 
-    def _get_prediction_name(self) -> str:
-        return self.getOutputCol()
-
     def _get_cuml_transform_func(
         self, dataset: DataFrame
     ) -> Tuple[

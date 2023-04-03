@@ -38,7 +38,12 @@ from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.ml.linalg import VectorUDT
-from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol
+from pyspark.ml.param.shared import (
+    HasLabelCol,
+    HasOutputCol,
+    HasPredictionCol,
+    HasProbabilityCol,
+)
 from pyspark.ml.util import (
     DefaultParamsReader,
     DefaultParamsWriter,
@@ -750,17 +755,17 @@ class _CumlModelWithColumns(_CumlModel):
         """This API is needed and can be overwritten by subclass which
         hasn't implemented predict probability yet"""
 
-        return (
-            True
-            if self.hasParam("probabilityCol") and self.isDefined("probabilityCol")
-            else False
-        )
+        return True if isinstance(self, HasProbabilityCol) else False
 
-    @abstractmethod
     def _get_prediction_name(self) -> str:
         """Different algos have different prediction names,
         eg, PCA: value of outputCol param, RF/LR/Kmeans: value of predictionCol name"""
-        raise NotImplementedError()
+        if isinstance(self, HasPredictionCol):
+            return self.getPredictionCol()
+        elif isinstance(self, HasOutputCol):
+            return self.getOutputCol()
+        else:
+            raise ValueError("Please set predictionCol or outputCol")
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
@@ -847,6 +852,3 @@ class _CumlModelSupervised(_CumlModelWithColumns, HasPredictionCol):
 
         num_features = self.n_cols if self.n_cols else -1
         return num_features
-
-    def _get_prediction_name(self) -> str:
-        return self.getPredictionCol()
