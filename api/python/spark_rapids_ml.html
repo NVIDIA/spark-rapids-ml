@@ -1732,6 +1732,364 @@ Each column is one principal component.</p>
 </dd></dl>
 
 </section>
+<section id="module-spark_rapids_ml.knn">
+<span id="spark-rapids-ml-knn-module"></span><h2>spark_rapids_ml.knn module<a class="headerlink" href="#module-spark_rapids_ml.knn" title="Permalink to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">NearestNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsClass" title="spark_rapids_ml.knn.NearestNeighborsClass"><code class="xref py py-class docutils literal notranslate"><span class="pre">NearestNeighborsClass</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlEstimatorSupervised</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NearestNeighborsCumlParams</span></code></p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.knn</span> <span class="kn">import</span> <span class="n">NearestNeighbors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),</span>
+<span class="gp">... </span>        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]),</span>
+<span class="gp">... </span>        <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="p">[</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;id int, features array&lt;float&gt;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),</span>
+<span class="gp">... </span>         <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="p">[</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;id int, features array&lt;float&gt;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">topk</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_knn</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">()</span><span class="o">.</span><span class="n">setInputCol</span><span class="p">(</span><span class="s2">&quot;features&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setIdCol</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setK</span><span class="p">(</span><span class="n">topk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_knn</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data_df</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">data_df</span><span class="p">,</span> <span class="n">query_df</span><span class="p">,</span> <span class="n">knn_df</span><span class="p">)</span> <span class="o">=</span> <span class="n">gpu_model</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="n">query_df</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">knn_df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">+--------+-------+----------------+</span>
+<span class="go">|query_id|indices|       distances|</span>
+<span class="go">+--------+-------+----------------+</span>
+<span class="go">|       3| [0, 1]|[0.0, 1.4142135]|</span>
+<span class="go">|       4| [2, 1]|[0.0, 1.4142135]|</span>
+<span class="go">+--------+-------+----------------+</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data_df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">+---+----------+</span>
+<span class="go">| id|  features|</span>
+<span class="go">+---+----------+</span>
+<span class="go">|  0|[1.0, 1.0]|</span>
+<span class="go">|  1|[2.0, 2.0]|</span>
+<span class="go">|  2|[3.0, 3.0]|</span>
+<span class="go">+---+----------+</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query_df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">+---+----------+</span>
+<span class="go">| id|  features|</span>
+<span class="go">+---+----------+</span>
+<span class="go">|  3|[1.0, 1.0]|</span>
+<span class="go">|  4|[3.0, 3.0]|</span>
+<span class="go">+---+----------+</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">knnjoin_df</span> <span class="o">=</span> <span class="n">gpu_model</span><span class="o">.</span><span class="n">exactNearestNeighborsJoin</span><span class="p">(</span><span class="n">query_df</span><span class="p">,</span> <span class="n">distCol</span><span class="o">=</span><span class="s2">&quot;EuclideanDistance&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">knnjoin_df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">+---------------+---------------+-----------------+</span>
+<span class="go">|        item_df|       query_df|EuclideanDistance|</span>
+<span class="go">+---------------+---------------+-----------------+</span>
+<span class="go">|{1, [2.0, 2.0]}|{3, [1.0, 1.0]}|        1.4142135|</span>
+<span class="go">|{0, [1.0, 1.0]}|{3, [1.0, 1.0]}|              0.0|</span>
+<span class="go">|{2, [3.0, 3.0]}|{4, [3.0, 3.0]}|              0.0|</span>
+<span class="go">|{1, [2.0, 2.0]}|{4, [3.0, 3.0]}|        1.4142135|</span>
+<span class="go">+---------------+---------------+-----------------+</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuml_params</span></code></dt><dd><p>Returns the dictionary of parameters intended for the underlying cuML class.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task running on one GPU.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></dt><dd><p>Returns all params ordered by name.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code>(param)</p></td>
+<td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>([extra])</p></td>
+<td><p>Creates a copy of this instance with the same uid and some extra params.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code>(param)</p></td>
+<td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code>()</p></td>
+<td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code>([extra])</p></td>
+<td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(dataset[, params])</p></td>
+<td><p>Fits a model to the input dataset with optional parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fitMultiple</span></code>(dataset, paramMaps)</p></td>
+<td><p>Fits a model to the input dataset for each param map in <cite>paramMaps</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getIdCol</span></code>()</p></td>
+<td><p>Gets the value of <cite>id_col</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCol</span></code>()</p></td>
+<td><p>Gets the value of inputCol or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCols</span></code>()</p></td>
+<td><p>Gets the value of inputCols or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code>()</p></td>
+<td><p>Gets the value of labelCol or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
+<td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
+<td><p>Gets a param by its name.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code>(param)</p></td>
+<td><p>Checks whether a param has a default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code>(paramName)</p></td>
+<td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code>(verbose)</p></td>
+<td><p>Initializes the logger for cuML.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code>()</p></td>
+<td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(path)</p></td>
+<td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
+<td><p>Returns an MLReader instance for this class.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(path)</p></td>
+<td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code>(param, value)</p></td>
+<td><p>Sets a parameter in the embedded param map.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setIdCol</span></code>(value)</p></td>
+<td><p>Sets the value of <cite>id_col</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCol</span></code>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code> or <code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCols</span></code>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setK</span></code>(value)</p></td>
+<td><p>Sets the value of <cite>k</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code>(context, is_local[, is_transform])</p></td>
+<td><p>Set gpu device according to the spark task resources.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**kwargs)</p></td>
+<td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code>()</p></td>
+<td><p>Returns an MLWriter instance for this ML instance.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsClass">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">NearestNeighborsClass</span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsClass" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlClass</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">NearestNeighborsModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item_df_withid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processed_item_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_isdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_isquery</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlCaller</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlModel</span></code>, <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsClass" title="spark_rapids_ml.knn.NearestNeighborsClass"><code class="xref py py-class docutils literal notranslate"><span class="pre">NearestNeighborsClass</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NearestNeighborsCumlParams</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuml_params</span></code></dt><dd><p>Returns the dictionary of parameters intended for the underlying cuML class.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task running on one GPU.</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></dt><dd><p>Returns all params ordered by name.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code>(param)</p></td>
+<td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>([extra])</p></td>
+<td><p>Creates a copy of this instance with the same uid and some extra params.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code>()</p></td>
+<td><p>Return the equivalent PySpark CPU model</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin" title="spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin"><code class="xref py py-obj docutils literal notranslate"><span class="pre">exactNearestNeighborsJoin</span></code></a>(query_df[, distCol])</p></td>
+<td><p>This function returns the k exact nearest neighbors (knn) in item_df of each query vector in query_df.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code>(param)</p></td>
+<td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code>()</p></td>
+<td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code>([extra])</p></td>
+<td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code>(model_attributes)</p></td>
+<td><p>Default to pass all the attributes of the model to the model constructor, So please make sure if the constructor can accept all of them.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getIdCol</span></code>()</p></td>
+<td><p>Gets the value of <cite>id_col</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCol</span></code>()</p></td>
+<td><p>Gets the value of inputCol or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCols</span></code>()</p></td>
+<td><p>Gets the value of inputCols or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code>()</p></td>
+<td><p>Gets the value of labelCol or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
+<td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
+<td><p>Gets a param by its name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code>()</p></td>
+<td><p>Return model attributes as a dictionary.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code>(param)</p></td>
+<td><p>Checks whether a param has a default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code>(paramName)</p></td>
+<td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code>(verbose)</p></td>
+<td><p>Initializes the logger for cuML.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code>()</p></td>
+<td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kneighbors</span></code></a>(query_df)</p></td>
+<td><p>Return the exact nearest neighbors for each query in query_df.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(path)</p></td>
+<td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
+<td><p>Returns an MLReader instance for this class.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(path)</p></td>
+<td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code>(param, value)</p></td>
+<td><p>Sets a parameter in the embedded param map.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setIdCol</span></code>(value)</p></td>
+<td><p>Sets the value of <cite>id_col</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCol</span></code>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code> or <code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCols</span></code>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setK</span></code>(value)</p></td>
+<td><p>Sets the value of <cite>k</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code>(context, is_local[, is_transform])</p></td>
+<td><p>Set gpu device according to the spark task resources.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**kwargs)</p></td>
+<td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code>(dataset[, params])</p></td>
+<td><p>Transforms the input dataset with optional parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code>()</p></td>
+<td><p>Returns an MLWriter instance for this ML instance.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin">
+<span class="sig-name descname"><span class="pre">exactNearestNeighborsJoin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'distCol'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin" title="Permalink to this definition">#</a></dt>
+<dd><p>This function returns the k exact nearest neighbors (knn) in item_df of each query vector in query_df.
+item_df is the dataframe passed to the fit function of the NearestNeighbors estimator.
+Note that the knn relationship is asymmetric with respect to the input datasets (e.g., if x is a knn of y
+, y is not necessarily a knn of x).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>query_df: pyspark.sql.DataFrame</strong></dt><dd><p>the query_df dataframe. Each row represents a query vector.</p>
+</dd>
+<dt><strong>distCol: str</strong></dt><dd><p>the name of the output distance column</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>knnjoin_df: pyspark.sql.DataFrame</dt><dd><p>the result dataframe that has three columns (item_df, query_df, distCol).
+item_df column is of struct type that includes as fields all the columns of input item dataframe.
+Similarly, query_df column is of struct type that includes as fields all the columns of input query dataframe.
+distCol is the distance column. A row in knnjoin_df is in the format (v1, v2, dist(v1, v2)),
+where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors">
+<span class="sig-name descname"><span class="pre">kneighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the exact nearest neighbors for each query in query_df. The data
+vectors (or equivalently item vectors) should be provided through the fit
+function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The
+distance measure here is euclidean distance and the number of target exact
+nearest neighbors can be set through setK(). The function currently only
+supports float32 type and will convert other data types into float32.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>query_df: pyspark.sql.DataFrame</strong></dt><dd><p>query vectors where each row corresponds to one query. The query_df can be in the
+format of a single array column, a single vector column, or multiple float columns.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>query_df: pyspark.sql.DataFrame</dt><dd><p>the query_df itself if it has an id column set through setIdCol(). If not,
+a monotonically increasing id column will be added.</p>
+</dd>
+<dt>item_df: pyspark.sql.DataFrame</dt><dd><p>the item_df (or equivalently data_df) itself if it has an id column set
+through setIdCol(). If not, a monotonically increasing id column will be added.</p>
+</dd>
+<dt>knn_df: pyspark.sql.DataFrame</dt><dd><p>the result k nearest neighbors (knn) dataframe that has three
+columns (id, indices, distances). Each row of knn_df corresponds to the knn
+result of a query vector, identified by the id column. The indices/distances
+column stores the ids/distances of knn item_df vectors.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="module-spark_rapids_ml.params">
 <span id="spark-rapids-ml-params-module"></span><h2>spark_rapids_ml.params module<a class="headerlink" href="#module-spark_rapids_ml.params" title="Permalink to this heading">#</a></h2>
 <dl class="py class">
@@ -2863,6 +3221,16 @@ rank: rank to be mapped</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.explainedVariance"><code class="docutils literal notranslate"><span class="pre">PCAModel.explainedVariance</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.mean"><code class="docutils literal notranslate"><span class="pre">PCAModel.mean</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.pc"><code class="docutils literal notranslate"><span class="pre">PCAModel.pc</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-spark_rapids_ml.knn">spark_rapids_ml.knn module</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsClass"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsClass</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.exactNearestNeighborsJoin()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.kneighbors()</span></code></a></li>
 </ul>
 </li>
 </ul>
