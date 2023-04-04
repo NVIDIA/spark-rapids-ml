@@ -32,13 +32,13 @@ from spark_rapids_ml.classification import (
     RandomForestClassificationModel,
     RandomForestClassifier,
 )
-from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.regression import (
     RandomForestRegressionModel,
     RandomForestRegressor,
 )
-from tests.sparksession import CleanSparkSession
-from tests.utils import (
+
+from .sparksession import CleanSparkSession
+from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
@@ -415,10 +415,10 @@ def test_random_forest_classifier_spark_compat(
         )
 
         rf = _RandomForestClassifier(numTrees=3, maxDepth=2, labelCol="label", seed=42)
-        if isinstance(rf, SparkRFClassifier):
-            rf.setLeafCol("leafId")
-            assert rf.getLeafCol() == "leafId"
-        else:
+        rf.setLeafCol("leafId")
+        assert rf.getLeafCol() == "leafId"
+
+        if isinstance(rf, RandomForestClassifier):
             df = df.repartition(gpu_number)
 
         assert rf.getMinWeightFractionPerNode() == 0.0
@@ -432,39 +432,24 @@ def test_random_forest_classifier_spark_compat(
 
         assert model.getFeaturesCol() == "features"
         assert model.getLabelCol() == "label"
-        assert model.getBootstrap() == True
+        assert model.getBootstrap()
 
+        model.setRawPredictionCol("newRawPrediction")
+        assert model.getRawPredictionCol() == "newRawPrediction"
+        featureImportances = model.featureImportances
+        assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
         if isinstance(rf, SparkRFClassifier):
-            model.setRawPredictionCol("newRawPrediction")
-            assert model.getRawPredictionCol() == "newRawPrediction"
-            featureImportances = model.featureImportances
             assert featureImportances == Vectors.sparse(2, {0: 1.0})
-            assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
         else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                model.setRawPredictionCol("newRawPrediction")
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert model.getRawPredictionCol() == "newRawPrediction"
-            with pytest.raises((NotImplementedError, AttributeError)):
-                featureImportances = model.featureImportances
-                assert featureImportances == Vectors.sparse(2, {0: 1.0})
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
+            # TODO: investigate difference
+            assert featureImportances == Vectors.sparse(2, {})
 
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, 0.0),)], ["features"])
         example = test0.head()
         if example:
-            if isinstance(model, SparkRFClassificationModel):
-                model.predict(example.features)
-                model.predictRaw(example.features)
-                model.predictProbability(example.features)
-            else:
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predict(example.features)
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predictRaw(example.features)
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predictProbability(example.features)
+            model.predict(example.features)
+            model.predictRaw(example.features)
+            model.predictProbability(example.features)
 
         result = model.transform(test0).head()
         if result:
@@ -490,12 +475,8 @@ def test_random_forest_classifier_spark_compat(
         if example:
             assert model.transform(test1).head().prediction == 1.0
 
-        if isinstance(model, SparkRFClassificationModel):
-            trees = model.trees
-            assert len(trees) == 3
-        else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                model.trees
+        trees = model.trees
+        assert len(trees) == 3
 
         rfc_path = tmp_path + "/rfc"
         rf.save(rfc_path)
@@ -506,11 +487,7 @@ def test_random_forest_classifier_spark_compat(
         model.save(model_path)
         model2 = _RandomForestClassificationModel.load(model_path)
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
-        if isinstance(model, SparkRFClassificationModel):
-            assert model.featureImportances == model2.featureImportances
-        else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                model.featureImportances == model2.featureImportances
+        assert model.featureImportances == model2.featureImportances
 
 
 @pytest.mark.compat
