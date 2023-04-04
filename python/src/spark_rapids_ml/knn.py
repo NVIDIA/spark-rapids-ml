@@ -30,6 +30,7 @@ from pyspark.ml.param.shared import (
     Params,
     TypeConverters,
 )
+from pyspark.ml.util import MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, lit
 from pyspark.sql.types import (
@@ -267,6 +268,17 @@ class NearestNeighbors(
         This class overrides _fit and will not call _get_cuml_fit_func.
         """
         pass
+
+    def write(self) -> MLWriter:
+        raise NotImplementedError(
+            "NearestNeighbors does not support saving/loading, just re-create the estimator."
+        )
+
+    @classmethod
+    def read(cls) -> MLReader:
+        raise NotImplementedError(
+            "NearestNeighbors does not support saving/loading, just re-create the estimator."
+        )
 
 
 class NearestNeighborsModel(
@@ -598,3 +610,14 @@ class NearestNeighborsModel(
             )
 
         return knnjoin_df
+
+    def write(self) -> MLWriter:
+        raise NotImplementedError(
+            "NearestNeighborsModel does not support saving/loading, just re-fit the estimator to re-create a model."
+        )
+
+    @classmethod
+    def read(cls) -> MLReader:
+        raise NotImplementedError(
+            "NearestNeighborsModel does not support loading/loading, just re-fit the estimator to re-create a model."
+        )
