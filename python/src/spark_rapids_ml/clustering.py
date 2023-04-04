@@ -196,6 +196,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     >>> gpu_kmeans.save("/tmp/kmeans")
     >>> gpu_model.save("/tmp/kmeans_model")
 
+    >>> # vector column input
     >>> from spark_rapids_ml.clustering import KMeans
     >>> from pyspark.ml.linalg import Vectors
     >>> data = [(Vectors.dense([0.0, 0.0]),),
@@ -208,6 +209,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     'features'
     >>> gpu_model = gpu_kmeans.fit(df)
 
+    >>> # multi-column input
     >>> data = [(0.0, 0.0),
     ...         (1.0, 1.0),
     ...         (9.0, 8.0),

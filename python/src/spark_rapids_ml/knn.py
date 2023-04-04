@@ -248,6 +248,7 @@ class NearestNeighbors(
     |{1, [2.0, 2.0]}|{4, [3.0, 3.0]}|        1.4142135|
     +---------------+---------------+-----------------+
 
+    >>> # vector column input
     >>> from spark_rapids_ml.knn import NearestNeighbors
     >>> from pyspark.ml.linalg import Vectors
     >>> data = [(0, Vectors.dense([1.0, 1.0]),),
@@ -261,6 +262,7 @@ class NearestNeighbors(
     >>> gpu_knn = NearestNeighbors().setInputCol("features").setIdCol("id").setK(topk)
     >>> gpu_model = gpu_knn.fit(data_df)
 
+    >>> # multi-column input
     >>> from spark_rapids_ml.knn import NearestNeighbors
     >>> data = [(0, 1.0, 1.0),
     ...         (1, 2.0, 2.0),

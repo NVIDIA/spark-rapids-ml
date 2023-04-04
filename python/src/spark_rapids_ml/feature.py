@@ -150,6 +150,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     [1.0]
     >>> gpu_pca.save("/tmp/pca")
 
+    >>> # vector column input
     >>> from pyspark.ml.linalg import Vectors
     >>> data = [(Vectors.dense([1.0, 1.0]),),
     ...         (Vectors.dense([2.0, 2.0]),),
@@ -160,6 +161,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     'features'
     >>> gpu_model = gpu_pca.fit(df)
 
+    >>> # multi-column input
     >>> data = [(1.0, 1.0),
     ...         (2.0, 2.0),
     ...         (3.0, 3.0),]
