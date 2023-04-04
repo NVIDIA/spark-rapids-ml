@@ -132,7 +132,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
     def setIdCol(self: P, value: str) -> P:
         """
-        Sets the value of `id_col`. If not set, an id column will be added with column name `id`. The id column is used to specify nearest neighbor vectors by associated id value.
+        Sets the value of `id_col`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
         """
         self.set_params(id_col=value)
         return self
@@ -176,6 +176,32 @@ class NearestNeighbors(
     NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
 ):
     """
+    NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each
+    query vector. The main methods accept distributed CPU dataframes as inputs,
+    leverage GPUs to accelerate computation, and take care of communication and
+    aggregation automatically. However, it should be noted that only the euclidean
+    distance (also known as L2 distance) is supported in the current implementations
+    and the feature data type must be of the float type. All other data types will
+    be converted into float during computation.
+
+    Parameters
+    ----------
+    k: int (default = 5)
+        the default number nearest neighbors to retrieve for each query.
+
+    inputCol: str
+        the name of the column that contains input vectors. inputCol should be set when feature vectors
+        are stored in a single column of a dataframe.
+
+    inputCols: List[str]
+        the names of feature columns that form input vectors. inputCols should be set when input vectors
+        are stored as multiple feature columns of a dataframe.
+
+    idCol: str
+        the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
+        if such a column exists in the dataframe. If idCol is not set, a column with the name `unique_id`
+        will be automatically added to the dataframe and used as unique identifier for each vector.
+
     Examples
     --------
     >>> from spark_rapids_ml.knn import NearestNeighbors
@@ -222,6 +248,33 @@ class NearestNeighbors(
     |{2, [3.0, 3.0]}|{4, [3.0, 3.0]}|              0.0|
     |{1, [2.0, 2.0]}|{4, [3.0, 3.0]}|        1.4142135|
     +---------------+---------------+-----------------+
+
+    >>> # vector column input
+    >>> from spark_rapids_ml.knn import NearestNeighbors
+    >>> from pyspark.ml.linalg import Vectors
+    >>> data = [(0, Vectors.dense([1.0, 1.0]),),
+    ...         (1, Vectors.dense([2.0, 2.0]),),
+    ...         (2, Vectors.dense([3.0, 3.0]),)]
+    >>> data_df = spark.createDataFrame(data, ["id", "features"])
+    >>> query = [(3, Vectors.dense([1.0, 1.0]),),
+    ...          (4, Vectors.dense([3.0, 3.0]),)]
+    >>> query_df = spark.createDataFrame(query, ["id", "features"])
+    >>> topk = 2
+    >>> gpu_knn = NearestNeighbors().setInputCol("features").setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
+
+    >>> # multi-column input
+    >>> from spark_rapids_ml.knn import NearestNeighbors
+    >>> data = [(0, 1.0, 1.0),
+    ...         (1, 2.0, 2.0),
+    ...         (2, 3.0, 3.0),]
+    >>> data_df = spark.createDataFrame(data, schema="id int, f1 float, f2 float")
+    >>> query = [(3, 1.0, 1.0),
+    ...          (4, 3.0, 3.0),]
+    >>> query_df = spark.createDataFrame(query, schema="id int, f1 float, f2 float")
+    >>> topk = 2
+    >>> gpu_knn = NearestNeighbors().setInputCols(["f1", "f2"]).setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
     """
 
     def __init__(self, **kwargs: Any) -> None:
