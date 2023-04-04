@@ -32,7 +32,7 @@ from pyspark.ml.param.shared import (
 )
 from pyspark.ml.util import MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
-from pyspark.sql.functions import col, lit
+from pyspark.sql.functions import col, lit, monotonically_increasing_id
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
@@ -153,23 +153,13 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
                 + "Please specify an id column"
             )
 
+        id_col_name = self.getIdCol()
         df_withid = (
-            df if self.isSet("id_col") else self._df_zip_with_index(df, self.getIdCol())
+            df
+            if self.isSet("id_col")
+            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
         )
         return df_withid
-
-    @staticmethod
-    def _df_zip_with_index(df: DataFrame, id_col_name: str) -> DataFrame:
-        """
-        Add a row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
-        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
-        """
-        out_schema = StructType(
-            [StructField(id_col_name, LongType(), False)] + df.schema.fields
-        )
-        zipped_rdd = df.rdd.zipWithIndex()
-        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
-        return new_rdd.toDF(schema=out_schema)
 
 
 class NearestNeighbors(

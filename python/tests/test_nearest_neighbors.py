@@ -87,9 +87,9 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
             assert len(indices) == len(query)
             assert indices[0] == [0, 1]
             assert indices[1] == [0, 1]
-            assert indices[2] == [3, 4]
-            assert indices[3] == [7, 6]
-            assert indices[4] == [7, 6]
+            assert indices[2] == [3, 8589934592]
+            assert indices[3] == [8589934595, 8589934594]
+            assert indices[4] == [8589934595, 8589934594]
 
         assert_distances_equal(distances=distances)
         assert_indices_equal(indices=indices)
@@ -146,7 +146,7 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
             .collect()
         )
 
-        assert len(knnjoin_items) == len([0, 1, 3, 4, 6, 7])
+        assert len(knnjoin_items) == len([0, 1, 3, 8589934592, 8589934594, 8589934595])
         assert knnjoin_items[0]["features"] == data[0][0]
         assert knnjoin_items[0]["metadata"] == data[0][1]
         assert knnjoin_items[1]["features"] == data[1][0]
@@ -318,9 +318,11 @@ def test_nearest_neighbors(
 
         # test kneighbors: compare top-1 nn indices(self) and distances(self)
         self_index = [knn[0] for knn in indices]
-        assert self_index == list(range(data_shape[0]))
-        cuml_self_index = [knn[0] for knn in cuml_indices]
-        assert self_index == cuml_self_index
+        from spark_rapids_ml.core import alias
+
+        assert self_index == list(
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+        )
 
         self_distance = [kdist[0] for kdist in distances]
         assert array_equal(self_distance, [0.0 for i in range(data_shape[0])])
