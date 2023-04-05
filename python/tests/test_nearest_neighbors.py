@@ -6,6 +6,7 @@ import pytest
 from pyspark.sql import DataFrame
 from sklearn.datasets import make_blobs
 
+from spark_rapids_ml.core import alias
 from spark_rapids_ml.knn import NearestNeighbors
 
 from .sparksession import CleanSparkSession
@@ -83,13 +84,17 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
             assert array_equal(distances[3], [0.0, math.sqrt(2.0)])
             assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
 
+        item_ids = list(
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+        )
+
         def assert_indices_equal(indices: List[List[int]]) -> None:
             assert len(indices) == len(query)
-            assert indices[0] == [0, 1]
-            assert indices[1] == [0, 1]
-            assert indices[2] == [3, 4]
-            assert indices[3] == [7, 6]
-            assert indices[4] == [7, 6]
+            assert indices[0] == [item_ids[0], item_ids[1]]
+            assert indices[1] == [item_ids[0], item_ids[1]]
+            assert indices[2] == [item_ids[3], item_ids[4]]
+            assert indices[3] == [item_ids[7], item_ids[6]]
+            assert indices[4] == [item_ids[7], item_ids[6]]
 
         assert_distances_equal(distances=distances)
         assert_indices_equal(indices=indices)
@@ -146,7 +151,7 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
             .collect()
         )
 
-        assert len(knnjoin_items) == len([0, 1, 3, 4, 6, 7])
+        assert len(knnjoin_items) == 6
         assert knnjoin_items[0]["features"] == data[0][0]
         assert knnjoin_items[0]["metadata"] == data[0][1]
         assert knnjoin_items[1]["features"] == data[1][0]
@@ -318,9 +323,10 @@ def test_nearest_neighbors(
 
         # test kneighbors: compare top-1 nn indices(self) and distances(self)
         self_index = [knn[0] for knn in indices]
-        assert self_index == list(range(data_shape[0]))
-        cuml_self_index = [knn[0] for knn in cuml_indices]
-        assert self_index == cuml_self_index
+
+        assert self_index == list(
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+        )
 
         self_distance = [kdist[0] for kdist in distances]
         assert array_equal(self_distance, [0.0 for i in range(data_shape[0])])
