@@ -36,7 +36,7 @@ intersphinx_mapping = {
 
 html_theme = 'pydata_sphinx_theme'
 
-html_static_path = ['_static']
+html_static_path = []
 
 def setup(app):
     app.add_css_file("https://docs.rapids.ai/assets/css/custom.css")
