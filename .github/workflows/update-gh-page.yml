@@ -26,5 +26,5 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install deps
+      - name: run doc script
         run: bash ci/docs.sh

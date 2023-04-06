@@ -32,7 +32,7 @@ popd
 # build and publish docs
 pushd docs
 make html
-git worktree add --track -b gh-pages _site gh-pages
+git worktree add --track -b gh-pages _site origin/gh-pages
 cp -r build/html/* _site/api/python
 cp -r site/* _site
 pushd _site
