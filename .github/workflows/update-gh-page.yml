@@ -25,12 +25,13 @@ jobs:
   update-gh-page:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: check branch
         run: |
-          git branch
           git remote -v
+          git fetch
+          git branch
 
       - name: run doc script
         run: bash ci/docs.sh
