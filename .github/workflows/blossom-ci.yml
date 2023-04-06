@@ -18,13 +18,6 @@ on:
   issue_comment:
     types: [created]
   workflow_dispatch:
-    inputs:
-      platform:
-        description: 'runs-on argument'
-        required: false
-      args:
-        description: 'argument'
-        required: false
 
 jobs:
   Authorization:

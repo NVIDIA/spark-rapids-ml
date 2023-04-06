@@ -16,22 +16,27 @@
 name: update gh-page
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_dispatch:
+      - 'v[0-9]+.[0-9]+.[0-9]+' 
 
 jobs:
   update-gh-page:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: set up git repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
-      - name: check branch
+      - name: set git config
+        env:
+          GIT_AUTHOR_NAME: 'spark-rapids automation'
+          GIT_AUTHOR_EMAIL: '70000568+nvauto@users.noreply.github.com'
         run: |
-          git remote -v
-          git fetch
-          git branch
-
-      - name: run doc script
+          git config user.name "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
+      
+      - name: run docs script
         run: bash ci/docs.sh
