@@ -26,7 +26,7 @@ set -ex
 
 # install dependences
 pushd python
-pip install -r requirements_dev.txt && pip install -e .
+pip install -r requirements_dev.txt
 popd
 
 # build and publish docs
