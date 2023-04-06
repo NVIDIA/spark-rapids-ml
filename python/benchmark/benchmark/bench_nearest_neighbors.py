@@ -167,7 +167,6 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             print(f"cpu total took: {total_time} sec")
 
         report_dict = {
-            "prepare": prepare_time,
             "fit": fit_time,
             "transform": transform_time,
             "total_time": total_time,
@@ -177,5 +176,8 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             "no_cache": no_cache,
             "train_path": self.args.train_path,
         }
+
+        if not no_cache:
+            report_dict["prepare"] = prepare_time
 
         return report_dict
