@@ -311,6 +311,7 @@ class _CumlParams(_CumlClass, Params):
                 sc = spark.sparkContext
                 if _is_local(sc):
                     # assume using all local GPUs for Spark local mode
+                    # TODO suggest using more CPUs (e.g. local[*]) if number of GPUs > number of CPUs
                     num_workers = cupy.cuda.runtime.getDeviceCount()
                 else:
                     num_executors = int(
