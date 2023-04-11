@@ -365,47 +365,27 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
 
     # reduce the number of GPUs for toy dataset to avoid empty partition.
     # cuml backend requires k <= the number of rows in the smallest index partition.
-    gpu_number = min(gpu_number, 1)
+    gpu_number = min(gpu_number, 2)
     topk = 2
 
     with CleanSparkSession() as spark:
         dataA = [
-            (
-                0,
-                Vectors.dense([1.0, 1.0]),
-            ),
-            (
-                1,
-                Vectors.dense([1.0, -1.0]),
-            ),
-            (
-                2,
-                Vectors.dense([-1.0, -1.0]),
-            ),
-            (
-                3,
-                Vectors.dense([-1.0, 1.0]),
-            ),
+            (0, Vectors.dense([1.0, 1.0])),
+            (1, Vectors.dense([1.0, -1.0])),
+            (2, Vectors.dense([-1.0, -1.0])),
+            (3, Vectors.dense([-1.0, 1.0])),
+            (4, Vectors.dense([100.0, 100.0])),
+            (5, Vectors.dense([100.0, -100.0])),
+            (6, Vectors.dense([-100.0, -100.0])),
+            (7, Vectors.dense([-100.0, 100.0])),
         ]
         dfA = spark.createDataFrame(dataA, ["id", "features"])
 
         dataB = [
-            (
-                4,
-                Vectors.dense([1.0, 0.0]),
-            ),
-            (
-                5,
-                Vectors.dense([-1.0, 0.0]),
-            ),
-            (
-                6,
-                Vectors.dense([0.0, 1.0]),
-            ),
-            (
-                7,
-                Vectors.dense([0.0, -1.0]),
-            ),
+            (4, Vectors.dense([1.0, 0.0])),
+            (5, Vectors.dense([-1.0, 0.0])),
+            (6, Vectors.dense([0.0, 1.0])),
+            (7, Vectors.dense([0.0, -1.0])),
         ]
         dfB = spark.createDataFrame(dataB, ["id", "features"])
         dfA.show()

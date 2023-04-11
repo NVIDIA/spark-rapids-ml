@@ -177,6 +177,9 @@ def test_linear_regression_basic(
     data_shape: Tuple[int, int],
     reg: float,
 ) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     # Train a toy model
     X, _, y, _ = make_regression_dataset(data_type, data_shape[0], data_shape[1])
     with CleanSparkSession() as spark:
@@ -433,12 +436,17 @@ def test_fail_run_on_1_col(
     gpu_number: int, params_exception: Tuple[Dict[str, Any], bool]
 ) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
-    gpu_number = min(gpu_number, 1)
+    gpu_number = min(gpu_number, 2)
 
     params, exception = params_exception
     with CleanSparkSession() as spark:
         df = spark.createDataFrame(
-            [(1.0, Vectors.dense(1.0)), (0.0, Vectors.sparse(1, [], []))],
+            [
+                (1.0, Vectors.dense(1.0)),
+                (0.0, Vectors.sparse(1, [], [])),
+                (1.0, Vectors.dense(1.0)),
+                (0.0, Vectors.sparse(1, [], [])),
+            ],
             ["label", "features"],
         )
         lr = LinearRegression(num_workers=gpu_number, **params)
