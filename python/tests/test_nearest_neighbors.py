@@ -19,6 +19,9 @@ from .utils import (
 
 
 def test_example(gpu_number: int, tmp_path: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         ([1.0, 1.0], "a"),
         ([2.0, 2.0], "b"),
@@ -185,6 +188,9 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
 
 
 def test_example_with_id(gpu_number: int) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         (101, [1.0, 1.0], "a"),
         (102, [2.0, 2.0], "b"),
@@ -357,46 +363,29 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
     from pyspark.ml.linalg import Vectors
     from pyspark.sql.functions import col
 
+    # reduce the number of GPUs for toy dataset to avoid empty partition.
+    # cuml backend requires k <= the number of rows in the smallest index partition.
+    gpu_number = min(gpu_number, 2)
     topk = 2
 
     with CleanSparkSession() as spark:
         dataA = [
-            (
-                0,
-                Vectors.dense([1.0, 1.0]),
-            ),
-            (
-                1,
-                Vectors.dense([1.0, -1.0]),
-            ),
-            (
-                2,
-                Vectors.dense([-1.0, -1.0]),
-            ),
-            (
-                3,
-                Vectors.dense([-1.0, 1.0]),
-            ),
+            (0, Vectors.dense([1.0, 1.0])),
+            (1, Vectors.dense([1.0, -1.0])),
+            (2, Vectors.dense([-1.0, -1.0])),
+            (3, Vectors.dense([-1.0, 1.0])),
+            (4, Vectors.dense([100.0, 100.0])),
+            (5, Vectors.dense([100.0, -100.0])),
+            (6, Vectors.dense([-100.0, -100.0])),
+            (7, Vectors.dense([-100.0, 100.0])),
         ]
         dfA = spark.createDataFrame(dataA, ["id", "features"])
 
         dataB = [
-            (
-                4,
-                Vectors.dense([1.0, 0.0]),
-            ),
-            (
-                5,
-                Vectors.dense([-1.0, 0.0]),
-            ),
-            (
-                6,
-                Vectors.dense([0.0, 1.0]),
-            ),
-            (
-                7,
-                Vectors.dense([0.0, -1.0]),
-            ),
+            (4, Vectors.dense([1.0, 0.0])),
+            (5, Vectors.dense([-1.0, 0.0])),
+            (6, Vectors.dense([0.0, 1.0])),
+            (7, Vectors.dense([0.0, -1.0])),
         ]
         dfB = spark.createDataFrame(dataB, ["id", "features"])
         dfA.show()
@@ -413,7 +402,9 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
         spark_res.show(truncate=False)
 
         # get GPU results with exactNearestNeighborsJoin(dfA, dfB, k, distCol="EuclideanDistance")
-        gpu_knn = NearestNeighbors(inputCol="features").setK(topk)
+        gpu_knn = NearestNeighbors(num_workers=gpu_number, inputCol="features").setK(
+            topk
+        )
         gpu_model = gpu_knn.fit(dfA)
         gpu_res = gpu_model.exactNearestNeighborsJoin(
             query_df=dfB, distCol="EuclideanDistance"
