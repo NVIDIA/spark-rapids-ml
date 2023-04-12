@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import base64
+import json
 import math
 import pickle
 from abc import abstractmethod
@@ -26,7 +27,13 @@ from pyspark.ml.linalg import Vector
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
 from pyspark.ml.tree import _DecisionTreeModel
 from pyspark.sql import DataFrame
-from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.sql.types import (
+    ArrayType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 from spark_rapids_ml.core import (
     CumlInputType,
@@ -235,11 +242,21 @@ class _RandomForestEstimator(
             serialized_model = rf._get_serialized_model()
             pickled_model = pickle.dumps(serialized_model)
             msg = base64.b64encode(pickled_model).decode("utf-8")
-            messages = context.allGather(msg)
+            trees = rf.get_json()
+            data = {"model_bytes": msg, "model_json": trees}
+            messages = context.allGather(json.dumps(data))
 
             # concatenate the random forest in the worker0
             if part_id == 0:
-                mod_bytes = [pickle.loads(base64.b64decode(i)) for i in messages]
+                mod_bytes = []
+                mod_jsons = []
+                for msg in messages:
+                    data = json.loads(msg)
+                    mod_bytes.append(
+                        pickle.loads(base64.b64decode(data["model_bytes"]))
+                    )
+                    mod_jsons.append(data["model_json"])
+
                 all_tl_mod_handles = [rf._tl_handle_from_bytes(i) for i in mod_bytes]
                 rf._concatenate_treelite_handle(all_tl_mod_handles)
 
@@ -257,6 +274,7 @@ class _RandomForestEstimator(
                 }
                 if is_classification:
                     result["num_classes"] = rf.num_classes
+                    result["model_json"] = [mod_jsons]
                 return result
             else:
                 return {}
@@ -271,6 +289,8 @@ class _RandomForestEstimator(
         ]
         if self._is_classification():
             fields.append(StructField("num_classes", IntegerType(), False))
+            fields.append(StructField("model_json", ArrayType(StringType()), False))
+
         return StructType(fields)
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
@@ -286,6 +306,7 @@ class _RandomForestModel(
         n_cols: int,
         dtype: str,
         treelite_model: str,
+        model_json: List[str] = [],
         num_classes: int = -1,  # only for classification
     ):
         if self._is_classification():
@@ -294,9 +315,14 @@ class _RandomForestModel(
                 n_cols=n_cols,
                 treelite_model=treelite_model,
                 num_classes=num_classes,
+                model_json=model_json,
             )
         else:
-            super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
+            super().__init__(
+                dtype=dtype,
+                n_cols=n_cols,
+                treelite_model=treelite_model,
+            )
 
         self.treelite_model = treelite_model
 

@@ -21,7 +21,6 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 import numpy as np
 import pyspark
 from pyspark.ml.feature import VectorAssembler
-from pyspark.ml.param import Params
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
 from sklearn.datasets import make_classification, make_regression
