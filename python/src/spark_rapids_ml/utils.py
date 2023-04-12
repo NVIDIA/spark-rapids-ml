@@ -206,7 +206,7 @@ def create_internal_node(sc: SparkContext, model: Dict[str, Any], left, right): 
     assert sc._gateway is not None
 
     java_split = sc._jvm.org.apache.spark.ml.tree.ContinuousSplit(
-        model["split_feature"], float(model["split_threshold"])
+        int(model["split_feature"]), float(model["split_threshold"])
     )
 
     object_class = sc._jvm.double
@@ -215,16 +215,16 @@ def create_internal_node(sc: SparkContext, model: Dict[str, Any], left, right): 
         object_class, len(fake_python_gini_calc)
     )
     for i in range(len(fake_python_gini_calc)):
-        fake_java_gini_calc[i] = fake_java_gini_calc[i]
+        fake_java_gini_calc[i] = float(fake_java_gini_calc[i])
 
     java_gini_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
-        fake_java_gini_calc, model["instance_count"]
+        fake_java_gini_calc, int(model["instance_count"])
     )
 
     java_internal_node = sc._jvm.org.apache.spark.ml.tree.InternalNode(
         0.0,  # prediction value is nonsense for internal node, just fake it
         0.0,  # impurity value is nonsense for internal node. just fake it
-        model["gain"],
+        float(model["gain"]),
         left,
         right,
         java_split,
@@ -251,7 +251,7 @@ def create_leaf_node(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
         java_probs[i] = float(probs[i])
 
     java_gini_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
-        java_probs, model["instance_count"]
+        java_probs, int(model["instance_count"])
     )
 
     java_leaf_node = sc._jvm.org.apache.spark.ml.tree.LeafNode(
