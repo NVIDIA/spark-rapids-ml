@@ -21,7 +21,11 @@ from asyncio import AbstractEventLoop
 from typing import Any, List, Optional, Tuple
 
 import psutil
-from pylibraft.common import Handle
+
+# need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
+from ucp import Endpoint
+
+from pylibraft.common import Handle  # isort: split
 from pyspark import BarrierTaskContext
 from raft_dask.common import UCX
 from raft_dask.common.comms_utils import (
@@ -29,7 +33,6 @@ from raft_dask.common.comms_utils import (
     inject_comms_on_handle_coll_only,
 )
 from raft_dask.common.nccl import nccl
-from ucp import Endpoint
 
 
 class CumlContext:

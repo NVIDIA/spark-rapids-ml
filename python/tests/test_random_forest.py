@@ -214,6 +214,9 @@ def test_random_forest_basic(
 def test_random_forest_numeric_type(
     gpu_number: int, RFEstimator: RandomForest, data_type: str
 ) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -410,6 +413,10 @@ def test_random_forest_classifier_spark_compat(
                 (1.0, Vectors.dense(0.8, 1.0)),
                 (0.0, Vectors.dense(0.2, 0.8)),
                 (0.0, Vectors.sparse(2, [1], [1.0])),
+                (1.0, Vectors.dense(1.0, 0.0)),
+                (1.0, Vectors.dense(0.8, 1.0)),
+                (0.0, Vectors.dense(0.2, 0.8)),
+                (0.0, Vectors.sparse(2, [1], [1.0])),
             ],
             ["label", "features"],
         )
@@ -419,6 +426,9 @@ def test_random_forest_classifier_spark_compat(
         assert rf.getLeafCol() == "leafId"
 
         if isinstance(rf, RandomForestClassifier):
+            # reduce the number of GPUs for toy dataset to avoid empty partition
+            gpu_number = min(gpu_number, 2)
+            rf.num_workers = gpu_number
             df = df.repartition(gpu_number)
 
         assert rf.getMinWeightFractionPerNode() == 0.0
