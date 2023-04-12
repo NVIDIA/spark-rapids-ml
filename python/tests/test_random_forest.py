@@ -39,6 +39,7 @@ from spark_rapids_ml.regression import (
 
 from .sparksession import CleanSparkSession
 from .utils import (
+    array_equal,
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
@@ -305,8 +306,14 @@ def test_random_forest_classifier(
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = spark_rf_model.transform(test_df).collect()
-
         pred_result = [row.prediction for row in result]
+
+        if feature_type == feature_types.vector:
+            # no need to compare all feature type.
+            spark_cpu_result = spark_rf_model.cpu().transform(test_df).collect()
+            spark_cpu_pred_result = [row.prediction for row in spark_cpu_result]
+            assert array_equal(spark_cpu_pred_result, pred_result)
+
         spark_acc = accuracy_score(y_test, np.array(pred_result))
 
         # Since vector type will force to convert to array<double>
@@ -397,10 +404,12 @@ def test_random_forest_regressor(
         (RandomForestClassifier, RandomForestClassificationModel),
     ],
 )
+@pytest.mark.parametrize("impurity", ["gini", "entropy"])
 def test_random_forest_classifier_spark_compat(
     rf_types: Tuple[RandomForestType, RandomForestModelType],
     gpu_number: int,
     tmp_path: str,
+    impurity: str,
 ) -> None:
     # based on https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.RandomForestClassifier.html
     # cuML does not support single feature, so using expanded dataset
@@ -421,7 +430,9 @@ def test_random_forest_classifier_spark_compat(
             ["label", "features"],
         )
 
-        rf = _RandomForestClassifier(numTrees=3, maxDepth=2, labelCol="label", seed=42)
+        rf = _RandomForestClassifier(
+            numTrees=3, maxDepth=2, labelCol="label", seed=42, impurity=impurity
+        )
         rf.setLeafCol("leafId")
         assert rf.getLeafCol() == "leafId"
 
