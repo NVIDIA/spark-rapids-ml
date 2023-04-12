@@ -612,7 +612,11 @@ class RandomForestRegressionModel(
         dtype: str,
         treelite_model: str,
     ):
-        super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
+        super().__init__(
+            dtype=dtype,
+            n_cols=n_cols,
+            treelite_model=treelite_model,
+        )
 
     def _is_classification(self) -> bool:
         return False

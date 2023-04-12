@@ -197,3 +197,126 @@ def java_uid(sc: SparkContext, prefix: str) -> str:
     """Returns a random UID that concatenates the given prefix, "_", and 12 random hex chars."""
     assert sc._jvm is not None
     return sc._jvm.org.apache.spark.ml.util.Identifiable.randomUID(prefix)
+
+
+def create_internal_node(sc: SparkContext, model: Dict[str, Any], left, right):  # type: ignore
+    """Return a InternalNode"""
+
+    assert sc._jvm is not None
+    assert sc._gateway is not None
+
+    java_split = sc._jvm.org.apache.spark.ml.tree.ContinuousSplit(
+        int(model["split_feature"]), float(model["split_threshold"])
+    )
+
+    object_class = sc._jvm.double
+    fake_python_gini_calc = [0]
+    fake_java_gini_calc = sc._gateway.new_array(
+        object_class, len(fake_python_gini_calc)
+    )
+    for i in range(len(fake_python_gini_calc)):
+        fake_java_gini_calc[i] = float(fake_java_gini_calc[i])
+
+    java_gini_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
+        fake_java_gini_calc, int(model["instance_count"])
+    )
+
+    java_internal_node = sc._jvm.org.apache.spark.ml.tree.InternalNode(
+        0.0,  # prediction value is nonsense for internal node, just fake it
+        0.0,  # impurity value is nonsense for internal node. just fake it
+        float(model["gain"]),
+        left,
+        right,
+        java_split,
+        java_gini_cal,
+    )
+
+    return java_internal_node
+
+
+def create_leaf_node(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
+    """Return a LeaftNode
+    Please note that, cuml trees uses probs as the leaf values while spark uses
+    the stats (how many counts this node has for each label), but they are behave
+    the same purpose when doing prediction
+    """
+    assert sc._jvm is not None
+    assert sc._gateway is not None
+
+    object_class = sc._jvm.double
+
+    probs = model["leaf_value"]
+    java_probs = sc._gateway.new_array(object_class, len(probs))
+    for i in range(len(probs)):
+        java_probs[i] = float(probs[i])
+
+    java_gini_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
+        java_probs, int(model["instance_count"])
+    )
+
+    java_leaf_node = sc._jvm.org.apache.spark.ml.tree.LeafNode(
+        float(np.argmax(np.asarray(probs))),
+        0.0,  # TODO calculate the impurity according to probs, prediction doesn't require it.
+        java_gini_cal,
+    )
+    return java_leaf_node
+
+
+def translate_trees(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
+    """Translate Cuml RandomForest trees to PySpark trees
+
+    Cuml trees
+    [
+      {
+        "nodeid": 0,
+        "split_feature": 3,
+        "split_threshold": 0.827687974732221,
+        "gain": 0.41999999999999998,
+        "instance_count": 10,
+        "yes": 1,
+        "no": 2,
+        "children": [
+          {
+            "nodeid": 1,
+            "leaf_value": [
+              1,
+              0
+            ],
+            "instance_count": 7
+          },
+          {
+            "nodeid": 2,
+            "leaf_value": [
+              0,
+              1
+            ],
+            "instance_count": 3
+          }
+        ]
+      }
+    ]
+
+    Spark trees,
+             InternalNode {split{featureIndex=3, threshold=0.827687974732221}, gain = 0.41999999999999998}
+             /         \
+           left        right
+           /             \
+    LeafNode           LeafNode
+    """
+    if "split_feature" in model:
+        left_child_id = model["yes"]
+        right_child_id = model["no"]
+
+        for child in model["children"]:
+            if child["nodeid"] == left_child_id:
+                left_child = child
+            elif child["nodeid"] == right_child_id:
+                right_child = child
+            else:
+                raise ValueError("Unexpected node id")
+
+        return create_internal_node(
+            sc, model, translate_trees(sc, left_child), translate_trees(sc, right_child)
+        )
+    elif "leaf_value" in model:
+        return create_leaf_node(sc, model)
