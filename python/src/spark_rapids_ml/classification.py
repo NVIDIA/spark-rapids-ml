@@ -202,13 +202,6 @@ class RandomForestClassificationModel(
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
 
     def cpu(self) -> SparkRandomForestClassificationModel:
-        if self.getImpurity() != "gini":
-            # TODO, support entropy impurity
-            raise ValueError(
-                "Can't convert to Spark RandomForestClassificationModel"
-                " when impurity is not gini"
-            )
-
         if self._rf_spark_model is None:
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None
@@ -218,7 +211,7 @@ class RandomForestClassificationModel(
 
             # Convert cuml trees to Spark trees
             trees = [
-                translate_trees(sc, trees)
+                translate_trees(sc, self.getImpurity(), trees)
                 for trees_json in self._model_json
                 for trees in json.loads(trees_json)
             ]

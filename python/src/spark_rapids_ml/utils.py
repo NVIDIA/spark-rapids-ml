@@ -199,7 +199,7 @@ def java_uid(sc: SparkContext, prefix: str) -> str:
     return sc._jvm.org.apache.spark.ml.util.Identifiable.randomUID(prefix)
 
 
-def create_internal_node(sc: SparkContext, model: Dict[str, Any], left, right):  # type: ignore
+def create_internal_node(sc: SparkContext, impurity: str, model: Dict[str, Any], left, right):  # type: ignore
     """Return a InternalNode"""
 
     assert sc._jvm is not None
@@ -210,16 +210,26 @@ def create_internal_node(sc: SparkContext, model: Dict[str, Any], left, right): 
     )
 
     object_class = sc._jvm.double
-    fake_python_gini_calc = [0]
-    fake_java_gini_calc = sc._gateway.new_array(
-        object_class, len(fake_python_gini_calc)
+    fake_python_impurity_calc = [0]
+    fake_java_impurity_calc = sc._gateway.new_array(
+        object_class, len(fake_python_impurity_calc)
     )
-    for i in range(len(fake_python_gini_calc)):
-        fake_java_gini_calc[i] = float(fake_java_gini_calc[i])
+    for i in range(len(fake_python_impurity_calc)):
+        fake_java_impurity_calc[i] = float(fake_java_impurity_calc[i])
 
-    java_gini_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
-        fake_java_gini_calc, int(model["instance_count"])
-    )
+    if impurity == "gini":
+        java_impurity_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
+            fake_java_impurity_calc, int(model["instance_count"])
+        )
+    elif impurity == "entropy":
+        java_impurity_cal = (
+            sc._jvm.org.apache.spark.mllib.tree.impurity.EntropyCalculator(
+                fake_java_impurity_calc, int(model["instance_count"])
+            )
+        )
+    else:
+        # never reach here
+        raise ValueError("Unsupported impurity! ", impurity)
 
     java_internal_node = sc._jvm.org.apache.spark.ml.tree.InternalNode(
         0.0,  # prediction value is nonsense for internal node, just fake it
@@ -228,13 +238,13 @@ def create_internal_node(sc: SparkContext, model: Dict[str, Any], left, right): 
         left,
         right,
         java_split,
-        java_gini_cal,
+        java_impurity_cal,
     )
 
     return java_internal_node
 
 
-def create_leaf_node(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
+def create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
     """Return a LeaftNode
     Please note that, cuml trees uses probs as the leaf values while spark uses
     the stats (how many counts this node has for each label), but they are behave
@@ -250,19 +260,29 @@ def create_leaf_node(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
     for i in range(len(probs)):
         java_probs[i] = float(probs[i])
 
-    java_gini_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
-        java_probs, int(model["instance_count"])
-    )
+    if impurity == "gini":
+        java_impurity_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
+            java_probs, int(model["instance_count"])
+        )
+    elif impurity == "entropy":
+        java_impurity_cal = (
+            sc._jvm.org.apache.spark.mllib.tree.impurity.EntropyCalculator(
+                java_probs, int(model["instance_count"])
+            )
+        )
+    else:
+        # never reach here
+        raise ValueError("Unsupported impurity! ", impurity)
 
     java_leaf_node = sc._jvm.org.apache.spark.ml.tree.LeafNode(
         float(np.argmax(np.asarray(probs))),
         0.0,  # TODO calculate the impurity according to probs, prediction doesn't require it.
-        java_gini_cal,
+        java_impurity_cal,
     )
     return java_leaf_node
 
 
-def translate_trees(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
+def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
     """Translate Cuml RandomForest trees to PySpark trees
 
     Cuml trees
@@ -316,7 +336,11 @@ def translate_trees(sc: SparkContext, model: Dict[str, Any]):  # type: ignore
                 raise ValueError("Unexpected node id")
 
         return create_internal_node(
-            sc, model, translate_trees(sc, left_child), translate_trees(sc, right_child)
+            sc,
+            impurity,
+            model,
+            translate_trees(sc, impurity, left_child),
+            translate_trees(sc, impurity, right_child),
         )
     elif "leaf_value" in model:
-        return create_leaf_node(sc, model)
+        return create_leaf_node(sc, impurity, model)
