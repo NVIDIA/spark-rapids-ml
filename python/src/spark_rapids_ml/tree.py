@@ -23,9 +23,16 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 import cudf
 import numpy as np
 import pandas as pd
+from pyspark.ml.classification import DecisionTreeClassificationModel
+from pyspark.ml.classification import (
+    RandomForestClassificationModel as SparkRandomForestClassificationModel,
+)
 from pyspark.ml.linalg import Vector
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
-from pyspark.ml.tree import _DecisionTreeModel
+from pyspark.ml.regression import DecisionTreeRegressionModel
+from pyspark.ml.regression import (
+    RandomForestRegressionModel as SparkRandomForestRegressionModel,
+)
 from pyspark.sql import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -35,15 +42,15 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
     param_alias,
 )
-from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import _concat_and_free
+from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from .utils import _concat_and_free, _get_spark_session, java_uid, translate_trees
 
 
 class _RandomForestClass(_CumlClass):
@@ -271,10 +278,10 @@ class _RandomForestEstimator(
                     "treelite_model": [final_model],
                     "dtype": rf.dtype.name,
                     "n_cols": rf.n_cols,
+                    "model_json": [mod_jsons],
                 }
                 if is_classification:
                     result["num_classes"] = rf.num_classes
-                    result["model_json"] = [mod_jsons]
                 return result
             else:
                 return {}
@@ -286,10 +293,10 @@ class _RandomForestEstimator(
             StructField("treelite_model", StringType(), False),
             StructField("n_cols", IntegerType(), False),
             StructField("dtype", StringType(), False),
+            StructField("model_json", ArrayType(StringType()), False),
         ]
         if self._is_classification():
             fields.append(StructField("num_classes", IntegerType(), False))
-            fields.append(StructField("model_json", ArrayType(StringType()), False))
 
         return StructType(fields)
 
@@ -322,14 +329,21 @@ class _RandomForestModel(
                 dtype=dtype,
                 n_cols=n_cols,
                 treelite_model=treelite_model,
+                model_json=model_json,
             )
+        self._num_classes = num_classes
+        self._model_json = model_json
+        self._treelite_model = treelite_model
 
-        self.treelite_model = treelite_model
+    def cpu(
+        self,
+    ) -> Union[SparkRandomForestRegressionModel, SparkRandomForestClassificationModel]:
+        raise NotImplementedError()
 
     @property
     def featureImportances(self) -> Vector:
         """Estimate the importance of each feature."""
-        raise NotImplementedError
+        return self.cpu().featureImportances
 
     @property
     def getNumTrees(self) -> int:
@@ -339,39 +353,88 @@ class _RandomForestModel(
     @property
     def toDebugString(self) -> str:
         """Full description of model."""
-        raise NotImplementedError
+        return self.cpu().toDebugString
 
     @property
     def totalNumNodes(self) -> int:
         """Total number of nodes, summed over all trees in the ensemble."""
-        raise NotImplementedError
+        return self.cpu().totalNumNodes
 
     @property
-    def trees(self) -> List[_DecisionTreeModel]:
+    def trees(
+        self,
+    ) -> Union[
+        List[DecisionTreeRegressionModel], List[DecisionTreeClassificationModel]
+    ]:
         """Trees in this ensemble. Warning: These have null parent Estimators."""
-        raise NotImplementedError
+        return self.cpu().trees
 
     @property
     def treeWeights(self) -> List[float]:
         """Return the weights for each tree."""
-        raise NotImplementedError
+        return self.cpu().treeWeights
 
     def predict(self, value: Vector) -> float:
         """
-        (Not supported) Predict label for the given features.
+        Predict label for the given features.
         """
-        raise NotImplementedError
+        return self.cpu().predict(value)
 
     def predictLeaf(self, value: Vector) -> float:
         """
-        (Not supported) Predict the indices of the leaves corresponding to the feature vector.
+        Predict the indices of the leaves corresponding to the feature vector.
         """
-        raise NotImplementedError
+        return self.cpu().predictLeaf(value)
 
     @abstractmethod
     def _is_classification(self) -> bool:
         """Indicate if it is regression or classification model"""
         raise NotImplementedError()
+
+    def _convert_to_java_trees(self, impurity: str) -> Tuple[Any, List[Any]]:
+        """Convert cuml trees to Java decision tree model"""
+        sc = _get_spark_session().sparkContext
+        assert sc._jvm is not None
+        assert sc._gateway is not None
+        print(self._model_json)
+
+        # Convert cuml trees to Spark trees
+        trees = [
+            translate_trees(sc, impurity, trees)
+            for trees_json in self._model_json
+            for trees in json.loads(trees_json)
+        ]
+
+        if self._is_classification():
+            uid = java_uid(sc, "rfc")
+            java_decision_tree_model_class = (
+                sc._jvm.org.apache.spark.ml.classification.DecisionTreeClassificationModel
+            )
+            # Wrap the trees into Spark DecisionTreeClassificationModel
+            decision_trees = [
+                java_decision_tree_model_class(
+                    uid, tree, self.numFeatures, self._num_classes
+                )
+                for tree in trees
+            ]
+        else:
+            uid = java_uid(sc, "rfr")
+            java_decision_tree_model_class = (
+                sc._jvm.org.apache.spark.ml.regression.DecisionTreeRegressionModel
+            )
+            # Wrap the trees into Spark DecisionTreeClassificationModel
+            decision_trees = [
+                java_decision_tree_model_class(uid, tree, self.numFeatures)
+                for tree in trees
+            ]
+
+        java_trees = sc._gateway.new_array(
+            java_decision_tree_model_class, len(decision_trees)
+        )
+        for i in range(len(decision_trees)):
+            java_trees[i] = decision_trees[i]
+
+        return uid, java_trees
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame
@@ -379,7 +442,7 @@ class _RandomForestModel(
         Callable[..., CumlT],
         Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
     ]:
-        treelite_model = self.treelite_model
+        treelite_model = self._treelite_model
 
         is_classification = self._is_classification()
 

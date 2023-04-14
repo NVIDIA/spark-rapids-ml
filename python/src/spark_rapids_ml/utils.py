@@ -199,8 +199,24 @@ def java_uid(sc: SparkContext, prefix: str) -> str:
     return sc._jvm.org.apache.spark.ml.util.Identifiable.randomUID(prefix)
 
 
-def create_internal_node(sc: SparkContext, impurity: str, model: Dict[str, Any], left, right):  # type: ignore
-    """Return a InternalNode"""
+def _fake_java_impurity_calc(sc: SparkContext, count: int = 3):  # type: ignore
+    """Fake a java ImpurityCalculator"""
+    assert sc._jvm is not None
+    assert sc._gateway is not None
+
+    object_class = sc._jvm.double
+    fake_python_impurity_calc = [0 for _ in range(count)]
+    fake_java_impurity_calc = sc._gateway.new_array(
+        object_class, len(fake_python_impurity_calc)
+    )
+    for i in range(len(fake_python_impurity_calc)):
+        fake_java_impurity_calc[i] = float(fake_java_impurity_calc[i])
+
+    return fake_java_impurity_calc
+
+
+def _create_internal_node(sc: SparkContext, impurity: str, model: Dict[str, Any], left, right):  # type: ignore
+    """Return a Java InternalNode"""
 
     assert sc._jvm is not None
     assert sc._gateway is not None
@@ -209,13 +225,7 @@ def create_internal_node(sc: SparkContext, impurity: str, model: Dict[str, Any],
         int(model["split_feature"]), float(model["split_threshold"])
     )
 
-    object_class = sc._jvm.double
-    fake_python_impurity_calc = [0]
-    fake_java_impurity_calc = sc._gateway.new_array(
-        object_class, len(fake_python_impurity_calc)
-    )
-    for i in range(len(fake_python_impurity_calc)):
-        fake_java_impurity_calc[i] = float(fake_java_impurity_calc[i])
+    fake_java_impurity_calc = _fake_java_impurity_calc(sc)
 
     if impurity == "gini":
         java_impurity_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
@@ -224,6 +234,12 @@ def create_internal_node(sc: SparkContext, impurity: str, model: Dict[str, Any],
     elif impurity == "entropy":
         java_impurity_cal = (
             sc._jvm.org.apache.spark.mllib.tree.impurity.EntropyCalculator(
+                fake_java_impurity_calc, int(model["instance_count"])
+            )
+        )
+    elif impurity == "variance":
+        java_impurity_cal = (
+            sc._jvm.org.apache.spark.mllib.tree.impurity.VarianceCalculator(
                 fake_java_impurity_calc, int(model["instance_count"])
             )
         )
@@ -244,8 +260,8 @@ def create_internal_node(sc: SparkContext, impurity: str, model: Dict[str, Any],
     return java_internal_node
 
 
-def create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
-    """Return a LeaftNode
+def _create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
+    """Return a Java LeaftNode
     Please note that, cuml trees uses probs as the leaf values while spark uses
     the stats (how many counts this node has for each label), but they are behave
     the same purpose when doing prediction
@@ -253,30 +269,40 @@ def create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  #
     assert sc._jvm is not None
     assert sc._gateway is not None
 
-    object_class = sc._jvm.double
+    leaf_values = model["leaf_value"]
 
-    probs = model["leaf_value"]
-    java_probs = sc._gateway.new_array(object_class, len(probs))
-    for i in range(len(probs)):
-        java_probs[i] = float(probs[i])
+    if impurity == "gini" or impurity == "entropy":
+        object_class = sc._jvm.double
+        java_probs = sc._gateway.new_array(object_class, len(leaf_values))
+        for i in range(len(leaf_values)):
+            java_probs[i] = float(leaf_values[i])
 
-    if impurity == "gini":
-        java_impurity_cal = sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
-            java_probs, int(model["instance_count"])
-        )
-    elif impurity == "entropy":
         java_impurity_cal = (
-            sc._jvm.org.apache.spark.mllib.tree.impurity.EntropyCalculator(
+            sc._jvm.org.apache.spark.mllib.tree.impurity.GiniCalculator(
+                java_probs, int(model["instance_count"])
+            )
+            if impurity == "gini"
+            else sc._jvm.org.apache.spark.mllib.tree.impurity.EntropyCalculator(
                 java_probs, int(model["instance_count"])
             )
         )
+        prediction = np.argmax(np.asarray(leaf_values))
+
+    elif impurity == "variance":
+        fake_java_impurity_calc = _fake_java_impurity_calc(sc, 3)
+        java_impurity_cal = (
+            sc._jvm.org.apache.spark.mllib.tree.impurity.VarianceCalculator(
+                fake_java_impurity_calc, int(model["instance_count"])
+            )
+        )
+        prediction = leaf_values[0]
     else:
         # never reach here
         raise ValueError("Unsupported impurity! ", impurity)
 
     java_leaf_node = sc._jvm.org.apache.spark.ml.tree.LeafNode(
-        float(np.argmax(np.asarray(probs))),
-        0.0,  # TODO calculate the impurity according to probs, prediction doesn't require it.
+        float(prediction),
+        0.0,  # TODO calculate the impurity according to leaf value, prediction doesn't require it.
         java_impurity_cal,
     )
     return java_leaf_node
@@ -335,7 +361,7 @@ def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # 
             else:
                 raise ValueError("Unexpected node id")
 
-        return create_internal_node(
+        return _create_internal_node(
             sc,
             impurity,
             model,
@@ -343,4 +369,4 @@ def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # 
             translate_trees(sc, impurity, right_child),
         )
     elif "leaf_value" in model:
-        return create_leaf_node(sc, impurity, model)
+        return _create_leaf_node(sc, impurity, model)

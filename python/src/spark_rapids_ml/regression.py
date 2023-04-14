@@ -21,11 +21,11 @@ from pyspark import Row
 from pyspark.ml.common import _py2java
 from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
+from pyspark.ml.regression import LinearRegressionSummary
 from pyspark.ml.regression import (
-    LinearRegressionSummary,
-    _LinearRegressionParams,
-    _RandomForestRegressorParams,
+    RandomForestRegressionModel as SparkRandomForestRegressionModel,
 )
+from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -611,12 +611,36 @@ class RandomForestRegressionModel(
         n_cols: int,
         dtype: str,
         treelite_model: str,
+        model_json: List[str],
     ):
         super().__init__(
             dtype=dtype,
             n_cols=n_cols,
             treelite_model=treelite_model,
+            model_json=model_json,
         )
+
+        self._rf_spark_model: Optional[SparkRandomForestRegressionModel] = None
+
+    def cpu(self) -> SparkRandomForestRegressionModel:
+        """Return the PySpark ML RandomForestRegressionModel"""
+
+        if self._rf_spark_model is None:
+            sc = _get_spark_session().sparkContext
+            assert sc._jvm is not None
+
+            uid, java_trees = self._convert_to_java_trees(self.getImpurity())
+            # Create the Spark RandomForestClassificationModel
+            java_rf_model = (
+                sc._jvm.org.apache.spark.ml.regression.RandomForestRegressionModel(
+                    uid,
+                    java_trees,
+                    self.numFeatures,
+                )
+            )
+            self._rf_spark_model = SparkRandomForestRegressionModel(java_rf_model)
+            self._copyValues(self._rf_spark_model)
+        return self._rf_spark_model
 
     def _is_classification(self) -> bool:
         return False
