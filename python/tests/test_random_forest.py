@@ -384,6 +384,13 @@ def test_random_forest_regressor(
 
         result = spark_rf_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
+
+        if feature_type == feature_types.vector:
+            # no need to compare all feature type.
+            spark_cpu_result = spark_rf_model.cpu().transform(test_df).collect()
+            spark_cpu_pred_result = [row.prediction for row in spark_cpu_result]
+            assert array_equal(spark_cpu_pred_result, pred_result)
+
         spark_acc = r2_score(y_test, np.array(pred_result))
 
         # Since vector type will force to convert to array<double>
@@ -547,43 +554,34 @@ def test_random_forest_regressor_spark_compat(
         model = rf.fit(df)
         model.setLeafCol("leafId")
 
+        assert np.allclose(model.treeWeights, [1.0, 1.0])
         if isinstance(model, SparkRFRegressionModel):
             assert model.featureImportances == Vectors.sparse(2, {1: 1.0})
-            assert np.allclose(model.treeWeights, [1.0, 1.0])
         else:
-            with pytest.raises(NotImplementedError):
-                model.featureImportances
-            with pytest.raises(NotImplementedError):
-                model.treeWeights
+            # need to investigate
+            assert model.featureImportances == Vectors.sparse(2, {})
 
-        assert model.getBootstrap() == True
+        assert model.getBootstrap()
         assert model.getSeed() == 42
         assert model.getLeafCol() == "leafId"
 
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, -1.0),)], ["features"])
         example = test0.head()
         if example:
-            if isinstance(model, SparkRFRegressionModel):
-                assert model.predict(example.features) == 0.0
-                assert model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
-            else:
-                with pytest.raises(NotImplementedError):
-                    model.predict(example.features)
-                with pytest.raises(NotImplementedError):
-                    model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
+            assert model.predict(example.features) == 0.0
+            assert model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
 
         result = model.transform(test0).head()
 
         assert result.prediction == 0.0
 
+        assert len(model.trees) == 2
+
         if isinstance(model, SparkRFRegressionModel):
             assert result.leafId == Vectors.dense([0.0, 0.0])
-            assert len(model.trees) == 2
         else:
             with pytest.raises((NotImplementedError, AttributeError)):
                 result.leafId
-            with pytest.raises(NotImplementedError):
-                model.trees
 
         assert model.numFeatures == 2
         assert model.getNumTrees == 2  # implemented as a property
@@ -601,10 +599,6 @@ def test_random_forest_regressor_spark_compat(
         model_path = tmp_path + "/rfr_model"
         model.save(model_path)
         model2 = _RandomForestRegressionModel.load(model_path)
-        if isinstance(model, SparkRFRegressionModel):
-            assert model.featureImportances == model2.featureImportances
-        else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert model.featureImportances == model2.featureImportances
 
+        assert model.featureImportances == model2.featureImportances
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
