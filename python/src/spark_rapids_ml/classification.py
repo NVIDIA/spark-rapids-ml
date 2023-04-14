@@ -13,17 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import json
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 import cudf
 import numpy as np
 import pandas as pd
 from pyspark import Row
-from pyspark.ml.classification import (
-    BinaryRandomForestClassificationSummary,
-    DecisionTreeClassificationModel,
-)
+from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
@@ -44,7 +40,7 @@ from .tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from .utils import _get_spark_session, java_uid, translate_trees
+from .utils import _get_spark_session
 
 
 class _RFClassifierParams(
@@ -202,33 +198,13 @@ class RandomForestClassificationModel(
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
 
     def cpu(self) -> SparkRandomForestClassificationModel:
+        """Return the PySpark ML RandomForestClassificationModel"""
+
         if self._rf_spark_model is None:
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None
-            assert sc._gateway is not None
 
-            uid = java_uid(sc, "rfc")
-
-            # Convert cuml trees to Spark trees
-            trees = [
-                translate_trees(sc, self.getImpurity(), trees)
-                for trees_json in self._model_json
-                for trees in json.loads(trees_json)
-            ]
-
-            # Wrap the trees into Spark DecisionTreeClassificationModel
-            decision_trees = [
-                sc._jvm.org.apache.spark.ml.classification.DecisionTreeClassificationModel(
-                    uid, tree, self.numFeatures, self._num_classes
-                )
-                for tree in trees
-            ]
-            object_class = (
-                sc._jvm.org.apache.spark.ml.classification.DecisionTreeClassificationModel
-            )
-            java_trees = sc._gateway.new_array(object_class, len(decision_trees))
-            for i in range(len(decision_trees)):
-                java_trees[i] = decision_trees[i]
+            uid, java_trees = self._convert_to_java_trees(self.getImpurity())
 
             # Create the Spark RandomForestClassificationModel
             java_rf_model = sc._jvm.org.apache.spark.ml.classification.RandomForestClassificationModel(
@@ -278,18 +254,6 @@ class RandomForestClassificationModel(
         """Number of classes (values which the label can take)."""
         return self._num_classes
 
-    def predict(self, value: Vector) -> float:
-        """
-        Predict label for the given features.
-        """
-        return self.cpu().predict(value)
-
-    def predictLeaf(self, value: Vector) -> float:
-        """
-        Predict the indices of the leaves corresponding to the feature vector.
-        """
-        return self.cpu().predictLeaf(value)
-
     def predictRaw(self, value: Vector) -> Vector:
         """
         Raw prediction for each possible label.
@@ -316,29 +280,3 @@ class RandomForestClassificationModel(
             Test dataset to evaluate model on.
         """
         return self.cpu().evaluate(dataset)
-
-    @property
-    def featureImportances(self) -> Vector:
-        """
-        Estimate of the importance of each feature.
-
-        Each feature's importance is the average of its importance across all trees in the ensemble
-        The importance vector is normalized to sum to 1. This method is suggested by Hastie et al.
-        (Hastie, Tibshirani, Friedman. "The Elements of Statistical Learning, 2nd Edition." 2001.)
-        and follows the implementation from scikit-learn.
-
-        See Also
-        --------
-        DecisionTreeClassificationModel.featureImportances
-        """
-        return self.cpu().featureImportances
-
-    @property
-    def treeWeights(self) -> List[float]:
-        """Return the weights for each tree"""
-        return self.cpu().treeWeights
-
-    @property
-    def trees(self) -> List[DecisionTreeClassificationModel]:  # type: ignore
-        """Trees in this ensemble. Warning: These have null parent Estimators."""
-        return self.cpu().trees
