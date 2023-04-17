@@ -17,17 +17,16 @@ pip install --upgrade pip
 pip install --ignore-installed "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"
 
 # install cudf and cuml
-pip install cudf-cu11~=${RAPIDS_VERSION} \
-cuml-cu11~=${RAPIDS_VERSION} \
-pylibraft-cu11~=${RAPIDS_VERSION} \
-rmm-cu11~=${RAPIDS_VERSION} \
+pip install cudf-cu11==${RAPIDS_VERSION} \
+cuml-cu11==${RAPIDS_VERSION} \
 --extra-index-url=https://pypi.nvidia.com
 
-# rapids pip package patch: link ucx libraries in ucx-py to default location searched by raft_dask
-ln -s /opt/conda/miniconda3/lib/python3.8/site-packages/ucx_py_cu11.libs/ucx /usr/lib/ucx
-
 # install benchmark files
-BENCHMARK_HOME=$(get_metadata_attribute benchmark-home leey-test/benchmark)
+BENCHMARK_HOME=$(get_metadata_attribute benchmark-home UNSET)
+if [[ ${BENCHMARK_HOME} == "UNSET" ]]; then
+    echo "Please set --metadata benchmark-home"
+    exit 1
+fi
 
 gsutil cp gs://${BENCHMARK_HOME}/benchmark_runner.py .
 gsutil cp gs://${BENCHMARK_HOME}/spark_rapids_ml.zip .
