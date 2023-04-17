@@ -49,10 +49,10 @@ class CumlContext:
         3. if require_ucx is true, initialize ucx and inject ucx together with nccl into a handle
         """
         # need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
-        from pylibraft.common import Handle
+        from ucp import Endpoint
+        from pylibraft.common import Handle  # isort: split
         from raft_dask.common import UCX
         from raft_dask.common.nccl import nccl
-        from ucp import Endpoint
 
         self.enable = enable
         self._handle: Optional["Handle"] = None
