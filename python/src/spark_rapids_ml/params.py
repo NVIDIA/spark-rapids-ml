@@ -102,10 +102,12 @@ class _CumlClass(object):
     ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
         """
         Return a dictionary of cuML parameter names and a function mapping their Spark ML Param string
-        values to cuML string values.
+        values to cuML values of either str, float, or int type.
 
-        If the mapped value is None, then the Spark value is unsupported, and an error will be
-        raised.
+        The mapped function should accept all string inputs and return None for any unmapped input values.
+
+        If it is desired that a cuML string value be accepted as a valid input, it must be explicitly mapped to
+        itself in the function (see "eig" below).
 
         Example
         -------
@@ -114,15 +116,14 @@ class _CumlClass(object):
 
             # For LinearRegression
             return {
-                "loss": {
+                "loss": lambda x: {
                     "squaredError": "squared_loss",
-                    "huber": None,
-                },
-                "solver": {
+                }.get(x, None),
+                "solver": lambda x: {
                     "auto": "eig",
                     "normal": "eig",
-                    "l-bfgs": None,
-                }
+                    "eig": "eig",
+                }.get(x, None)
             }
 
         """
