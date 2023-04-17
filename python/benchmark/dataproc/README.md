@@ -1,6 +1,6 @@
 # Benchmarking on Dataproc
 
-This directory contains shell scripts for running larger scale benchmarks on a Google Dataproc cluster.  You will need a Dataproc account to run them.  The benchmarks use datasets synthetically generated using [gen_data.py](../gen_data.py).  For convenience, these have been precomputed and currently stored in the public GCS bucket `gs://spark-rapids-ml-benchmarking/datasets`.  The benchmark scripts are currently configured to read the data from there.
+This directory contains shell scripts for running larger scale benchmarks on a Google Dataproc cluster.  You will need a Dataproc account to run them.  The benchmarks use datasets synthetically generated using [gen_data.py](../gen_data.py).  For internal users, these have been precomputed and stored in the GCS bucket `gs://spark-rapids-ml-benchmarking/datasets`.   By default, the benchmark scripts will read the data from this location.  For external users, you will need to modify the `BENCHMARK_DATA_HOME` environment variable in the `run_benchmark.sh` after generating the datasets.
 
 ## Setup
 
