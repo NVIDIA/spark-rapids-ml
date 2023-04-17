@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Tuple, Type, TypeVar
+from typing import Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
@@ -111,7 +111,7 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
             "n_bins": 17,
             "max_depth": 9,
             "n_estimators": 17,
-            "max_features": str(1 / 3.0),
+            "max_features": 1 / 3.0,
         }
     )
     assert_params(est, expected_spark_params, expected_cuml_params)
@@ -401,6 +401,44 @@ def test_random_forest_regressor(
             assert pytest.approx(cu_acc) == spark_acc
         else:
             assert cu_acc - spark_acc < 0.09
+
+
+@pytest.mark.parametrize("rf_type", [RandomForestClassifier, RandomForestRegressor])
+@pytest.mark.parametrize(
+    "feature_subset", ["auto", "all", "0.85", "2", "onethird", "log2", "sqrt", "foo"]
+)
+def test_random_forest_featuresubset(
+    rf_type: RandomForestType,
+    feature_subset: str,
+) -> None:
+    rf_estimator = rf_type(featureSubsetStrategy=feature_subset)
+    with CleanSparkSession() as spark:
+        df = spark.createDataFrame(
+            [
+                (1.0, Vectors.dense(1.0, 0.0)),
+                (1.0, Vectors.dense(0.8, 1.0)),
+                (0.0, Vectors.dense(0.2, 0.8)),
+                (0.0, Vectors.sparse(2, [1], [1.0])),
+                (1.0, Vectors.dense(1.0, 0.0)),
+                (1.0, Vectors.dense(0.8, 1.0)),
+                (0.0, Vectors.dense(0.2, 0.8)),
+                (0.0, Vectors.sparse(2, [1], [1.0])),
+            ],
+            ["label", "features"],
+        )
+
+        rf = rf_type(
+            numTrees=3,
+            maxDepth=2,
+            labelCol="label",
+            seed=42,
+            featureSubsetStrategy=feature_subset,
+        )
+        if feature_subset != "foo":
+            m = rf.fit(df)
+        else:
+            with pytest.raises(ValueError):
+                m = rf.fit(df)
 
 
 @pytest.mark.compat

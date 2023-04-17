@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import cupy
 from pyspark.ml.param import Param, Params, TypeConverters
@@ -97,9 +97,11 @@ class _CumlClass(object):
         return {}
 
     @classmethod
-    def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
         """
-        Return a dictionary of cuML parameter names and their mapping of Spark ML Param string
+        Return a dictionary of cuML parameter names and a function mapping their Spark ML Param string
         values to cuML string values.
 
         If the mapped value is None, then the Spark value is unsupported, and an error will be
@@ -407,16 +409,8 @@ class _CumlParams(_CumlClass, Params):
             self._cuml_params[k] = v
         else:
             # value map exists
-            supported_values = set([x for x in value_map[k].values() if x is not None])
-            if v in supported_values:
-                # already a valid value
-                self._cuml_params[k] = v
+            mapped_v = value_map[k](v)
+            if mapped_v:
+                self._cuml_params[k] = mapped_v
             else:
-                # try to map to a valid value
-                mapped_v = value_map[k].get(v, None)
-                if mapped_v:
-                    self._cuml_params[k] = mapped_v
-                else:
-                    raise ValueError(
-                        f"Value '{v}' for '{k}' param is unsupported, expected: {supported_values}"
-                    )
+                raise ValueError(f"Value '{v}' for '{k}' param is unsupported")
