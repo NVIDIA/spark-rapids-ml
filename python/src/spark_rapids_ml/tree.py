@@ -115,7 +115,7 @@ class _RandomForestClass(_CumlClass):
                 return _numerical
             else:
                 _str = _maybe_numerical
-                _tree_string_mapping: dict[str, Union[None, str, float, int]] = {
+                _tree_string_mapping: Dict[str, Union[None, str, float, int]] = {
                     "onethird": 1 / 3.0,
                     "all": 1.0,
                     "auto": "auto",
