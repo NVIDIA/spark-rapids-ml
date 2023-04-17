@@ -10,16 +10,13 @@ function get_metadata_attribute() {
 
 RAPIDS_VERSION=$(get_metadata_attribute rapids-version 23.02)
 
-# upgrade pip
-pip install --upgrade pip
-
-# patch existing
-pip install --ignore-installed "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"
+# patch existing packages
+mamba install "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"
 
 # install cudf and cuml
-pip install cudf-cu11==${RAPIDS_VERSION} \
-cuml-cu11==${RAPIDS_VERSION} \
---extra-index-url=https://pypi.nvidia.com
+pip install --upgrade pip
+pip install cudf-cu11==${RAPIDS_VERSION} cuml-cu11==${RAPIDS_VERSION} \
+    --extra-index-url=https://pypi.nvidia.com
 
 # install benchmark files
 BENCHMARK_HOME=$(get_metadata_attribute benchmark-home UNSET)
