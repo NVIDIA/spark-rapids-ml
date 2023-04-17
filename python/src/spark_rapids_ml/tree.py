@@ -62,7 +62,13 @@ from .core import (
     param_alias,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from .utils import _concat_and_free, _get_spark_session, java_uid, translate_trees
+from .utils import (
+    _concat_and_free,
+    _get_spark_session,
+    _str_or_numerical,
+    java_uid,
+    translate_trees,
+)
 
 
 class _RandomForestClass(_CumlClass):
@@ -111,15 +117,27 @@ class _RandomForestClass(_CumlClass):
         }
 
     @classmethod
-    def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+        def _tree_mapping(feature_subset: str) -> Union[None, str, float, int]:
+            _maybe_numerical = _str_or_numerical(feature_subset)
+            if isinstance(_maybe_numerical, int) or isinstance(_maybe_numerical, float):
+                _numerical = _maybe_numerical
+                return _numerical
+            else:
+                _str = _maybe_numerical
+                _tree_string_mapping: Dict[str, Union[None, str, float, int]] = {
+                    "onethird": 1 / 3.0,
+                    "all": 1.0,
+                    "auto": "auto",
+                    "sqrt": "sqrt",
+                    "log2": "log2",
+                }
+                return _tree_string_mapping.get(_str, None)
+
         return {
-            "max_features": {
-                "onethird": str(1 / 3.0),
-                "all": "1.0",
-                "auto": "auto",
-                "sqrt": "sqrt",
-                "log2": "log2",
-            },
+            "max_features": _tree_mapping,
         }
 
 

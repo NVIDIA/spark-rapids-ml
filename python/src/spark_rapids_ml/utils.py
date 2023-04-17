@@ -44,6 +44,21 @@ def _is_local(sc: SparkContext) -> bool:
     return sc._jsc.sc().isLocal()  # type: ignore
 
 
+def _str_or_numerical(x: str) -> Union[str, float, int]:
+    """
+    Convert to int if x is str representation of integer,
+    otherwise float if x is representation of float, otherwise return input string.
+    """
+    try:
+        _x: Union[str, int, float] = int(x)
+    except:
+        try:
+            _x = float(x)
+        except:
+            _x = x
+    return _x
+
+
 def _get_gpu_id(task_context: TaskContext) -> int:
     """Get the gpu id from the task resources"""
     if task_context is None:
