@@ -411,7 +411,6 @@ def test_random_forest_featuresubset(
     rf_type: RandomForestType,
     feature_subset: str,
 ) -> None:
-    rf_estimator = rf_type(featureSubsetStrategy=feature_subset)
     with CleanSparkSession() as spark:
         df = spark.createDataFrame(
             [
@@ -427,18 +426,24 @@ def test_random_forest_featuresubset(
             ["label", "features"],
         )
 
-        rf = rf_type(
-            numTrees=3,
-            maxDepth=2,
-            labelCol="label",
-            seed=42,
-            featureSubsetStrategy=feature_subset,
-        )
         if feature_subset != "foo":
+            rf = rf_type(
+                numTrees=3,
+                maxDepth=2,
+                labelCol="label",
+                seed=42,
+                featureSubsetStrategy=feature_subset,
+            )
             m = rf.fit(df)
         else:
             with pytest.raises(ValueError):
-                m = rf.fit(df)
+                rf = rf_type(
+                    numTrees=3,
+                    maxDepth=2,
+                    labelCol="label",
+                    seed=42,
+                    featureSubsetStrategy=feature_subset,
+                )
 
 
 @pytest.mark.compat
