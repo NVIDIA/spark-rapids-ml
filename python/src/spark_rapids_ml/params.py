@@ -107,7 +107,7 @@ class _CumlClass(object):
         The mapped function should accept all string inputs and return None for any unmapped input values.
 
         If it is desired that a cuML string value be accepted as a valid input, it must be explicitly mapped to
-        itself in the function (see "eig" below).
+        itself in the function (see "squared_loss" and "eig" in example below).
 
         Example
         -------
@@ -118,12 +118,15 @@ class _CumlClass(object):
             return {
                 "loss": lambda x: {
                     "squaredError": "squared_loss",
+                    "huber": None,
+                    "squared_loss": "squared_loss",
                 }.get(x, None),
                 "solver": lambda x: {
                     "auto": "eig",
                     "normal": "eig",
+                    "l-bfgs": None,
                     "eig": "eig",
-                }.get(x, None)
+                }.get(x, None),
             }
 
         """
