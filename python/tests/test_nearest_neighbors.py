@@ -13,9 +13,33 @@ from .sparksession import CleanSparkSession
 from .utils import (
     array_equal,
     create_pyspark_dataframe,
+    get_default_cuml_parameters,
     idfn,
     pyspark_supported_feature_types,
 )
+
+
+def test_default_cuml_params() -> None:
+    from cuml import NearestNeighbors as CumlNearestNeighbors
+    from cuml.neighbors.nearest_neighbors_mg import (
+        NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
+    )
+
+    cuml_params = get_default_cuml_parameters(
+        [CumlNearestNeighbors, NearestNeighborsMG],
+        [
+            "handle",
+            "algorithm",
+            "metric",
+            "p",
+            "algo_params",
+            "metric_expanded",
+            "metric_params",
+            "output_type",
+        ],
+    )
+    spark_params = NearestNeighbors()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 def test_example(gpu_number: int, tmp_path: str) -> None:

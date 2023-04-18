@@ -44,6 +44,7 @@ from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     make_classification_dataset,
     make_regression_dataset,
@@ -73,6 +74,31 @@ RandomForestModelType = TypeVar(
     Type[RandomForestClassificationModel],
     Type[RandomForestRegressionModel],
 )
+
+
+@pytest.mark.parametrize("Estimator", [RandomForestClassifier, RandomForestRegressor])
+def test_default_cuml_params(Estimator: RandomForest) -> None:
+    from cuml.ensemble.randomforest_common import BaseRandomForestModel
+
+    cuml_params = get_default_cuml_parameters(
+        [BaseRandomForestModel],
+        [
+            "handle",
+            "output_type",
+            "accuracy_metric",
+            "dtype",
+            "criterion",
+            "min_weight_fraction_leaf",
+            "max_leaf_nodes",
+            "min_impurity_split",
+            "oob_score",
+            "n_jobs",
+            "warm_start",
+            "class_weight",
+        ],
+    )
+    spark_params = Estimator()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 @pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])

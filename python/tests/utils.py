@@ -27,7 +27,7 @@ from sklearn.datasets import make_classification, make_regression
 from sklearn.model_selection import train_test_split
 
 from spark_rapids_ml.params import _CumlParams
-from spark_rapids_ml.utils import dtype_to_pyspark_type
+from spark_rapids_ml.utils import _get_default_params_from_func, dtype_to_pyspark_type
 
 FeatureTypes = namedtuple("FeatureTypes", ("vector", "array", "multi_cols"))
 feature_types = FeatureTypes("vector", "array", "multi_cols")
@@ -188,3 +188,12 @@ def make_classification_dataset(
         dataset = _make_classification_dataset_uncached(nrows, ncols, **kwargs)
 
     return map(lambda arr: arr.astype(datatype), dataset)
+
+
+def get_default_cuml_parameters(
+    cuml_classes: List[type], excludes: List[str] = []
+) -> Dict[str, Any]:
+    params = {}
+    for cuml_cls in cuml_classes:
+        params.update(_get_default_params_from_func(cuml_cls, excludes))
+    return params

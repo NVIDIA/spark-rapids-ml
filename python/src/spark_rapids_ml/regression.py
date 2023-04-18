@@ -50,40 +50,26 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
     param_alias,
 )
-from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.tree import (
+from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from .tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from spark_rapids_ml.utils import (
-    PartitionDescriptor,
-    _get_spark_session,
-    cudf_to_cuml_array,
-    java_uid,
-)
+from .utils import PartitionDescriptor, _get_spark_session, cudf_to_cuml_array, java_uid
 
 T = TypeVar("T")
 
 
 class LinearRegressionClass(_CumlClass):
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        # from cuml.dask.linear_model import LinearRegression
-        from cuml.linear_model.linear_regression import LinearRegression
-        from cuml.linear_model.ridge import Ridge
-        from cuml.solvers import CD
-
-        return [LinearRegression, Ridge, CD]
-
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
@@ -119,9 +105,20 @@ class LinearRegressionClass(_CumlClass):
             }.get(x, None),
         }
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return ["handle", "output_type"]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+            "algorithm": "eig",
+            "fit_intercept": True,
+            "normalize": False,
+            "verbose": False,
+            "alpha": 0.0001,
+            "solver": "eig",
+            "loss": "squared_loss",
+            "l1_ratio": 0.15,
+            "max_iter": 1000,
+            "tol": 0.001,
+            "shuffle": True,
+        }
 
 
 class _LinearRegressionCumlParams(

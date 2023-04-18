@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
 import numpy as np
 import pandas as pd
-from pyspark.ml import Model
 from pyspark.ml.common import _py2java
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.feature import _PCAParams
@@ -39,15 +38,15 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModelWithColumns,
     param_alias,
 )
-from spark_rapids_ml.params import P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import (
+from .params import P, _CumlClass, _CumlParams
+from .utils import (
     PartitionDescriptor,
     _get_spark_session,
     dtype_to_pyspark_type,
@@ -57,25 +56,16 @@ from spark_rapids_ml.utils import (
 
 class PCAClass(_CumlClass):
     @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml import PCA
-
-        return [PCA]
-
-    @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {"k": "n_components"}
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return [
-            "copy",
-            "handle",
-            "iterated_power",
-            "output_type",
-            "random_state",
-            "tol",
-        ]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+            "n_components": None,
+            "svd_solver": "auto",
+            "verbose": False,
+            "whiten": False,
+        }
 
 
 class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
