@@ -31,7 +31,8 @@ from typing import (
     Union,
 )
 
-import cudf
+if TYPE_CHECKING:
+    import cudf
 import numpy as np
 import pandas as pd
 from pyspark import RDD, TaskContext
@@ -613,7 +614,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         self, dataset: DataFrame
     ) -> Tuple[
         Callable[..., CumlT],
-        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
     ]:
         """
         Subclass must implement this function to return two functions,
