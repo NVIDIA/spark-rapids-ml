@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,21 +18,18 @@ import base64
 import json
 import os
 from asyncio import AbstractEventLoop
-from typing import Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import psutil
 
-# need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
-from ucp import Endpoint
+if TYPE_CHECKING:
+    # need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
+    from ucp import Endpoint
+    from pylibraft.common import Handle  # isort: split
+    from raft_dask.common import UCX
+    from raft_dask.common.nccl import nccl
 
-from pylibraft.common import Handle  # isort: split
 from pyspark import BarrierTaskContext
-from raft_dask.common import UCX
-from raft_dask.common.comms_utils import (
-    inject_comms_on_handle,
-    inject_comms_on_handle_coll_only,
-)
-from raft_dask.common.nccl import nccl
 
 
 class CumlContext:
@@ -51,8 +48,14 @@ class CumlContext:
         2. do all gather for all the workers to get the nccl unique uid.
         3. if require_ucx is true, initialize ucx and inject ucx together with nccl into a handle
         """
+        # need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
+        from ucp import Endpoint
+        from pylibraft.common import Handle  # isort: split
+        from raft_dask.common import UCX
+        from raft_dask.common.nccl import nccl
+
         self.enable = enable
-        self._handle: Optional[Handle] = None
+        self._handle: Optional["Handle"] = None
         self._loop: Optional[AbstractEventLoop] = None
 
         if not enable:
@@ -63,9 +66,9 @@ class CumlContext:
         self._require_ucx = require_ucx
 
         self._handle = Handle(n_streams=0)
-        self._nccl_comm: Optional[nccl] = None
+        self._nccl_comm: Optional["nccl"] = None
         self._nccl_unique_id = None
-        self._ucx: Optional[UCX] = None
+        self._ucx: Optional["UCX"] = None
         self._ucx_port = None
         self._ucx_eps = None
 
@@ -100,18 +103,22 @@ class CumlContext:
             self._ports = [json.loads(msg)[1] for msg in msgs]
 
     @property
-    def handle(self) -> Optional[Handle]:
+    def handle(self) -> Optional["Handle"]:
         return self._handle
 
     def __enter__(self) -> "CumlContext":
         if not self.enable:
             return self
 
+        from raft_dask.common.nccl import nccl
+
         # initialize nccl and inject it to the handle. A GPU must be assigned exclusively before init() is called
         self._nccl_comm = nccl()
         self._nccl_comm.init(self._nranks, self._nccl_unique_id, self._rank)
 
         if self._require_ucx is False:
+            from raft_dask.common.comms_utils import inject_comms_on_handle_coll_only
+
             inject_comms_on_handle_coll_only(
                 self._handle, self._nccl_comm, self._nranks, self._rank, True
             )
@@ -125,6 +132,8 @@ class CumlContext:
                     )
                 )
             )
+
+            from raft_dask.common.comms_utils import inject_comms_on_handle
 
             inject_comms_on_handle(
                 self._handle,
@@ -161,10 +170,10 @@ class CumlContext:
 
     @staticmethod
     async def _ucp_create_endpoints(
-        ucx_worker: UCX,
+        ucx_worker: "UCX",
         target_ip_ports: List[Tuple[str, int]],
         additional_timeout: float = 0.1,
-    ) -> Endpoint:
+    ) -> "Endpoint":
         """
         ucp initialization may require a larger additional_timeout a complex network environment
         """

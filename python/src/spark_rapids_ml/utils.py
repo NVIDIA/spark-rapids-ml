@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,19 +16,12 @@
 import inspect
 import logging
 import sys
-from typing import Any, Callable, Dict, List, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Tuple, Union
 
-import cudf
+if TYPE_CHECKING:
+    import cudf
+
 import numpy as np
-
-try:
-    # Compatible with older cuml version (before 23.02)
-    from cuml.common.array import CumlArray
-    from cuml.common.input_utils import input_to_cuml_array
-except ImportError:
-    from cuml.common import input_to_cuml_array
-    from cuml.internals.array import CumlArray
-
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.sql import SparkSession
 
@@ -167,9 +160,12 @@ def _concat_and_free(
     return concated
 
 
-def cudf_to_cuml_array(
-    gdf: Union[cudf.DataFrame, cudf.Series], order: str = "F"
-) -> CumlArray:
+def cudf_to_cuml_array(gdf: Union["cudf.DataFrame", "cudf.Series"], order: str = "F"):  # type: ignore
+    try:
+        # Compatible with older cuml version (before 23.02)
+        from cuml.common.input_utils import input_to_cuml_array
+    except ImportError:
+        from cuml.common import input_to_cuml_array
     cumlarray, _, _, _ = input_to_cuml_array(gdf, order=order)
     return cumlarray
 
