@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 
+from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
-from spark_rapids_ml.utils import _get_default_params_from_func, _is_local
+from .utils import _is_local
 
 P = TypeVar("P", bound="_CumlParams")
 
@@ -52,33 +53,6 @@ class _CumlClass(object):
 
     Defines helper methods for mapping Spark ML Params to cuML class parameters.
     """
-
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        """
-        Return a list of cuML python counterpart class names, which will be used to
-        auto-generate Spark params.
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        """
-        Return a list of cuML class parameters which should not be auto-populated into the
-        Spark class.
-
-        Example
-        -------
-
-        .. code-block::python
-
-            return [
-                "handle",
-                "output_type",
-            ]
-
-        """
-        return []
 
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
@@ -147,18 +121,14 @@ class _CumlClass(object):
         """
         return {}
 
-    @classmethod
-    def _get_cuml_params_default(cls) -> Dict[str, Any]:
-        """
-        Inspect the __init__ function of associated _cuml_cls() to return a dictionary of
-        parameter names and their default values.
-        """
-        params = {}
-        for cls_type in cls._cuml_cls():
-            params.update(
-                _get_default_params_from_func(cls_type, cls._param_excludes())
-            )
-        return params
+    @abstractmethod
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        """Return a dictionary of parameter names and their default values.
+
+        Note, please don't import cuml class and inspect the signatures to
+        get the parameters, since it may break the rule that spark-rapids-ml should
+        run on the driver side without rapids dependencies"""
+        raise NotImplementedError()
 
 
 class _CumlParams(_CumlClass, Params):

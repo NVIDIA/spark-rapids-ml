@@ -31,8 +31,6 @@ from typing import (
     Union,
 )
 
-if TYPE_CHECKING:
-    import cudf
 import numpy as np
 import pandas as pd
 from pyspark import RDD, TaskContext
@@ -65,9 +63,9 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.common.cuml_context import CumlContext
-from spark_rapids_ml.params import _CumlParams
-from spark_rapids_ml.utils import (
+from .common.cuml_context import CumlContext
+from .params import _CumlParams
+from .utils import (
     _ArrayOrder,
     _get_gpu_id,
     _get_spark_session,
@@ -77,6 +75,7 @@ from spark_rapids_ml.utils import (
 )
 
 if TYPE_CHECKING:
+    import cudf
     from cuml.cluster.kmeans_mg import KMeansMG
     from cuml.decomposition.pca_mg import PCAMG
 

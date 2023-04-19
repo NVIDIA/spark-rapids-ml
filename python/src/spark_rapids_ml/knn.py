@@ -55,7 +55,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlCaller,
@@ -64,36 +64,17 @@ from spark_rapids_ml.core import (
     alias,
     param_alias,
 )
-from spark_rapids_ml.params import P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import _concat_and_free
+from .params import P, _CumlClass, _CumlParams
+from .utils import _concat_and_free
 
 
 class NearestNeighborsClass(_CumlClass):
     @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml import NearestNeighbors as cumlNearestNeighbors
-        from cuml.neighbors.nearest_neighbors_mg import (
-            NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
-        )
-
-        return [cumlNearestNeighbors, NearestNeighborsMG]
-
-    @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {"k": "n_neighbors"}
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return [
-            "handle",
-            "algorithm",
-            "metric",
-            "p",
-            "algo_params",
-            "metric_expanded",
-            "metric_params",
-            "output_type",
-        ]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {"n_neighbors": 5, "verbose": False, "batch_size": 2000000}
 
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):

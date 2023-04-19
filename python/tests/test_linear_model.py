@@ -33,6 +33,7 @@ from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     make_regression_dataset,
     pyspark_supported_feature_types,
@@ -78,6 +79,20 @@ def train_with_cuml_linear_regression(
 
     lr.fit(X, y)
     return lr
+
+
+def test_default_cuml_params() -> None:
+    from cuml.linear_model.linear_regression import (
+        LinearRegression as CumlLinearRegression,
+    )
+    from cuml.linear_model.ridge import Ridge
+    from cuml.solvers import CD
+
+    cuml_params = get_default_cuml_parameters(
+        [CumlLinearRegression, Ridge, CD], ["handle", "output_type"]
+    )
+    spark_params = LinearRegression()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 @pytest.mark.parametrize("reg", [0.0, 0.7])
