@@ -46,8 +46,9 @@ If you already have a Dataproc account, you can run the example notebooks on a E
   --applications Name=Hadoop Name=Livy Name=Spark Name=JupyterEnterpriseGateway \
   --service-role EMR_DefaultRole \
   --ec2-attributes SubnetId=${SUBNET_ID},InstanceProfile=EMR_EC2_DefaultRole \
-  --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.4xlarge \
+  --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.10xlarge \
                     InstanceGroupType=CORE,InstanceCount=1,InstanceType=g4dn.2xlarge \
+                    InstanceGroupType=TASK,InstanceCount=1,InstanceType=g4dn.2xlarge \
                     InstanceGroupType=TASK,InstanceCount=1,InstanceType=g4dn.2xlarge \
   --configurations file://${CUR_DIR}/init-configurations.json \
   --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${S3_BUCKET}/init-bootstrap-action.sh
@@ -76,7 +77,3 @@ If you already have a Dataproc account, you can run the example notebooks on a E
   ```
   **Note**: these settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
 - Run the notebook cells.  
-- Add the following to a new cell at the end of the notebook to close the `SparkSession`:
-  ```
-  spark.stop()
-  ```
