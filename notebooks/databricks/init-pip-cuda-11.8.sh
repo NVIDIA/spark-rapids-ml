@@ -33,6 +33,8 @@ ldconfig
 # install cudf, cuml and their rapids dependencies
 /databricks/python/bin/pip install cudf-cu11==${RAPIDS_VERSION} \
 cuml-cu11==${RAPIDS_VERSION} \
+pylibraft-cu11==${RAPIDS_VERSION} \
+rmm-cu11==${RAPIDS_VERSION} \
 --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml
