@@ -73,29 +73,6 @@ from .utils import (
 
 class _RandomForestClass(_CumlClass):
     @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml.ensemble.randomforest_common import BaseRandomForestModel
-
-        return [BaseRandomForestModel]
-
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return [
-            "handle",
-            "output_type",
-            "accuracy_metric",
-            "dtype",
-            "criterion",
-            "min_weight_fraction_leaf",
-            "max_leaf_nodes",
-            "min_impurity_split",
-            "oob_score",
-            "n_jobs",
-            "warm_start",
-            "class_weight",
-        ]
-
-    @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
             "maxBins": "n_bins",
@@ -138,6 +115,24 @@ class _RandomForestClass(_CumlClass):
 
         return {
             "max_features": _tree_mapping,
+        }
+
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+            "n_streams": 4,
+            "n_estimators": 100,
+            "max_depth": 16,
+            "max_features": "auto",
+            "n_bins": 128,
+            "bootstrap": True,
+            "verbose": False,
+            "min_samples_leaf": 1,
+            "min_samples_split": 2,
+            "max_samples": 1.0,
+            "max_leaves": -1,
+            "min_impurity_decrease": 0.0,
+            "random_state": None,
+            "max_batch_size": 4096,
         }
 
 

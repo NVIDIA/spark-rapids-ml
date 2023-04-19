@@ -45,15 +45,15 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModelSupervised,
     param_alias,
 )
-from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import (
+from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
@@ -63,12 +63,6 @@ from spark_rapids_ml.utils import (
 
 
 class KMeansClass(_CumlClass):
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml import KMeans
-
-        return [KMeans]
-
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
@@ -82,16 +76,18 @@ class KMeansClass(_CumlClass):
             "weightCol": None,
         }
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        """
-        For some reason, spark-rapids-ml may not support all the parameters.
-        In that case, we need to explicitly exclude them.
-        """
-        return [
-            "handle",
-            "output_type",
-        ]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+            "n_clusters": 8,
+            "max_iter": 300,
+            "tol": 0.0001,
+            "verbose": False,
+            "random_state": 1,
+            "init": "scalable-k-means++",
+            "n_init": 1,
+            "oversampling_factor": 2.0,
+            "max_samples_per_batch": 32768,
+        }
 
 
 class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):

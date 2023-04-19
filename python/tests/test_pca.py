@@ -33,12 +33,31 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
+    get_default_cuml_parameters,
     idfn,
     pyspark_supported_feature_types,
 )
 
 PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
 PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
+
+
+def test_default_cuml_params() -> None:
+    from cuml import PCA as CumlPCA
+
+    cuml_params = get_default_cuml_parameters(
+        [CumlPCA],
+        [
+            "copy",
+            "handle",
+            "iterated_power",
+            "output_type",
+            "random_state",
+            "tol",
+        ],
+    )
+    spark_params = PCA()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 def test_fit(gpu_number: int) -> None:

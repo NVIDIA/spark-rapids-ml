@@ -32,6 +32,7 @@ from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     pyspark_supported_feature_types,
 )
@@ -51,6 +52,14 @@ def assert_centers_equal(
         b_center = b_clusters[i]
         assert len(a_center) == len(b_center)
         assert a_center == pytest.approx(b_center, tolerance)
+
+
+def test_default_cuml_params() -> None:
+    from cuml import KMeans as CumlKMeans
+
+    cuml_params = get_default_cuml_parameters([CumlKMeans], ["handle", "output_type"])
+    spark_params = KMeans()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:

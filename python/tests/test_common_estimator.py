@@ -46,8 +46,9 @@ from spark_rapids_ml.core import (
     param_alias,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
-from spark_rapids_ml.utils import PartitionDescriptor
-from tests.utils import assert_params
+from spark_rapids_ml.utils import PartitionDescriptor, _get_default_params_from_func
+
+from .utils import assert_params, get_default_cuml_parameters
 
 
 class CumlDummy(object):
@@ -65,10 +66,6 @@ class CumlDummy(object):
 
 class SparkRapidsMLDummyClass(_CumlClass):
     @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        return [CumlDummy]
-
-    @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
             "alpha": "a",  # direct map, different names
@@ -77,9 +74,8 @@ class SparkRapidsMLDummyClass(_CumlClass):
             "k": "k",  # direct map, same name
         }
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return ["b"]  # dropped from cuML side
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {"a": 10.0, "k": 30, "x": 40.0}
 
 
 class _SparkRapidsMLDummyParams(_CumlParams):
@@ -302,6 +298,12 @@ class SparkRapidsMLDummyModel(
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return input_schema
+
+
+def test_default_cuml_params() -> None:
+    cuml_params = get_default_cuml_parameters([CumlDummy], ["b"])
+    spark_params = SparkRapidsMLDummy()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
