@@ -10,7 +10,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   Default region name [None]: <region-code>
   Default output format [None]: <json>
   ```
-- Create a S3 bucket if you don't already have one.
+- Create an S3 bucket if you don't already have one.
   ```
   export S3_BUCKET=<your_gcs_bucket_name>
   aws s3 mb s3://${S3_BUCKET}
@@ -22,17 +22,18 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   ```
 - Upload the zip file and the initialization script to S3.
   ```
-  aws s3 cp init-bootstrap-action.sh s3://${S3_BUCKET}/init-bootstrap-action.sh
   aws s3 cp spark_rapids_ml.zip s3://${S3_BUCKET}/spark_rapids_ml.zip
+  cd ../../notebooks/aws-emr
+  aws s3 cp init-bootstrap-action.sh s3://${S3_BUCKET}/init-bootstrap-action.sh
   ```
 - Print out available subnets in CLI then pick a SubnetId (e.g. subnet-0744566f of AvailabilityZone us-east-2a).
 
   ```
   aws ec2 describe-subnets
-  export SUBNET_ID=<subnet-0744566f>
+  export SUBNET_ID=<your_SubnetId>
   ```
 
-- Create a cluster with at least two single-gpu workers.
+- Create a cluster with at least two single-gpu TASK workers. You will obtain a ClusterId in terminal.  
 
   ```
 
@@ -52,13 +53,10 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   --configurations file://${CUR_DIR}/init-configurations.json \
   --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${S3_BUCKET}/init-bootstrap-action.sh
   ```
-- In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Clusters", you can find the cluster id of the new created cluster. 
-  ```
-  export CLUSTER_ID=<cluster id>
-  ```
-- In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Workspace(Notebooks)", then creaet a workspace. Wait until the status becomes ready. 
+- In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Clusters", you can find the cluster id of the created cluster. Wait until all the instances have the Status turned to "Running".
+- In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Workspace(Notebooks)", then create a workspace. Wait until the status becomes ready and a JupyterLab webpage will pop up. 
 
-- Click to enter the created workspace. Click the "Cluster" button (usually the top second button of the left navigation bar). Attach the workspace to the newly created EC2 cluster.     
+- Click to enter the created workspace. Click the "Cluster" button (usually the top second button of the left navigation bar). Attach the workspace to the newly created cluster through cluster id.
 
 - Use the default notebook or create/upload a new notebook. Set the notebook kernel to "PySpark".  
 
@@ -67,12 +65,10 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   %%configure -f
   {
       "conf":{
-            "spark.pyspark.python": "python3.9",
-            "spark.dynamicAllocation.enabled":false,
             "spark.submit.pyFiles": "s3 path to spark_rapids_ml.zip"
       }
   }
   
   ```
-  **Note**: these settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
 - Run the notebook cells.  
+  **Note**: these settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
