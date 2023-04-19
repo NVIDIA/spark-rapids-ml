@@ -1,8 +1,8 @@
 ## Running notebooks on AWS EMR 
 
-If you already have a Dataproc account, you can run the example notebooks on a EMR cluster, as follows:
+If you already have a AWS EMR account, you can run the example notebooks on an EMR cluster, as follows:
 - Install the [AWS CLI](https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-cli.html).
-- initialize the CLI via `aws configure`. You may need to create access keys by following [Authenticating using IAM user credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-user.html). You can find your default region name (e.g. Ohio) on the right of the top navigation bar. Clicking the region name will show the region code (e.g. us-east-2 for Ohio). 
+- Initialize the CLI via `aws configure`. You may need to create access keys by following [Authenticating using IAM user credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-user.html). You can find your default region name (e.g. Ohio) on the right of the top navigation bar. Clicking the region name will show the region code (e.g. us-east-2 for Ohio). 
   ```
   aws configure
   AWS Access Key ID [None]: <your_access_key>
@@ -13,10 +13,9 @@ If you already have a Dataproc account, you can run the example notebooks on a E
 - Create a S3 bucket if you don't already have one.
   ```
   export S3_BUCKET=<your_gcs_bucket_name>
-
   aws s3 mb s3://${S3_BUCKET}
   ```
-- Create a zip file for the `spark-rapids-ml` package
+- Create a zip file for the `spark-rapids-ml` package.
   ```
   cd spark-rapids-ml/python/src
   zip -r spark_rapids_ml.zip spark_rapids_ml
@@ -26,7 +25,7 @@ If you already have a Dataproc account, you can run the example notebooks on a E
   aws s3 cp init-bootstrap-action.sh s3://${S3_BUCKET}/init-bootstrap-action.sh
   aws s3 cp spark_rapids_ml.zip s3://${S3_BUCKET}/spark_rapids_ml.zip
   ```
-- Print out available subnets in CLI then pick a SubnetId (e.g. subnet-0744566f of AvailabilityZone us-east-2a) 
+- Print out available subnets in CLI then pick a SubnetId (e.g. subnet-0744566f of AvailabilityZone us-east-2a).
 
   ```
   aws ec2 describe-subnets
