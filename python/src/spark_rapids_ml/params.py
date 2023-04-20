@@ -308,17 +308,17 @@ class _CumlParams(_CumlClass, Params):
                     num_workers = cupy.cuda.runtime.getDeviceCount()
                 else:
                     num_executors = int(
-                        spark.conf.get("spark.executor.instances", "-1")
+                        spark.conf.get("spark.executor.instances", "-1")  # type: ignore
                     )
                     if num_executors == -1:
                         jsc = spark.sparkContext._jsc.sc()
                         num_executors = len(jsc.statusTracker().getExecutorInfos()) - 1
 
                     gpus_per_executor = float(
-                        spark.conf.get("spark.executor.resource.gpu.amount", "1")
+                        spark.conf.get("spark.executor.resource.gpu.amount", "1")  # type: ignore
                     )
                     gpus_per_task = float(
-                        spark.conf.get("spark.task.resource.gpu.amount", "1")
+                        spark.conf.get("spark.task.resource.gpu.amount", "1")  # type: ignore
                     )
 
                     if gpus_per_task != 1:
