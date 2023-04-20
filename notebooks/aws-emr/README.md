@@ -46,7 +46,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   --applications Name=Hadoop Name=Livy Name=Spark Name=JupyterEnterpriseGateway \
   --service-role EMR_DefaultRole \
   --ec2-attributes SubnetId=${SUBNET_ID},InstanceProfile=EMR_EC2_DefaultRole \
-  --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.10xlarge \
+  --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.4xlarge \
                     InstanceGroupType=CORE,InstanceCount=1,InstanceType=g4dn.2xlarge \
                     InstanceGroupType=TASK,InstanceCount=1,InstanceType=g4dn.2xlarge \
                     InstanceGroupType=TASK,InstanceCount=1,InstanceType=g4dn.2xlarge \
@@ -56,16 +56,16 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
 - In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Clusters", you can find the cluster id of the created cluster. Wait until all the instances have the Status turned to "Running".
 - In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Workspace(Notebooks)", then create a workspace. Wait until the status becomes ready and a JupyterLab webpage will pop up. 
 
-- Click to enter the created workspace. Click the "Cluster" button (usually the top second button of the left navigation bar). Attach the workspace to the newly created cluster through cluster id.
+- Enter the created workspace. Click the "Cluster" button (usually the top second button of the left navigation bar). Attach the workspace to the newly created cluster through cluster id.
 
 - Use the default notebook or create/upload a new notebook. Set the notebook kernel to "PySpark".  
 
-- Add the following to a new cell at the beginning of the notebook. Replace "s3 path to spark\_rapids\_ml.zip" with the actual s3 path.  
+- Add the following to a new cell at the beginning of the notebook. Replace "s3://path/to/spark\_rapids\_ml.zip" with the actual s3 path.  
   ```
   %%configure -f
   {
       "conf":{
-            "spark.submit.pyFiles": "s3 path to spark_rapids_ml.zip"
+            "spark.submit.pyFiles": "s3://path/to/spark_rapids_ml.zip"
       }
   }
   

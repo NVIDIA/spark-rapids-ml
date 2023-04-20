@@ -10,8 +10,7 @@ sudo bash -c "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz && t
 
 RAPIDS_VERSION=23.2.0
 
-# upgrade pip
-#sudo /usr/local/bin/pip3.9 install --upgrade pip
+# install scikit-learn 
 sudo /usr/local/bin/pip3.9 install scikit-learn
 
 # install cudf and cuml

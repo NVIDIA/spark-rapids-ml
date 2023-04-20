@@ -71,6 +71,8 @@
 		"spark.pyspark.python":"python3.9",
 		"spark.pyspark.driver.python":"python3.9",
 		"spark.dynamicAllocation.enabled":"false",
+		"spark.driver.memory":"20g",
+		"spark.rpc.message.maxSize":"512",
 		"spark.executorEnv.CUPY_CACHE_DIR":"/tmp/.cupy",
 		"spark.executorEnv.NCCL_DEBUG":"INFO",
 		"spark.executorEnv.NCCL_SOCKET_IFNAME":"eth"
