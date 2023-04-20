@@ -12,7 +12,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   ```
 - Create an S3 bucket if you don't already have one.
   ```
-  export S3_BUCKET=<your_gcs_bucket_name>
+  export S3_BUCKET=<your_s3_bucket_name>
   aws s3 mb s3://${S3_BUCKET}
   ```
 - Create a zip file for the `spark-rapids-ml` package.
@@ -33,10 +33,9 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   export SUBNET_ID=<your_SubnetId>
   ```
 
-- Create a cluster with at least two single-gpu TASK workers. You will obtain a ClusterId in terminal.  
+- Create a cluster with at least two single-gpu workers. You will obtain a ClusterId in terminal. Noted three GPU nodes are requested here, because EMR cherry picks one node (either CORE or TASK) to run JupyterLab service for notebooks and will not use the node for compute.
 
   ```
-
   export CLUSTER_NAME="spark_rapids_ml"
   export CUR_DIR=$(pwd)
 
@@ -46,10 +45,9 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   --applications Name=Hadoop Name=Livy Name=Spark Name=JupyterEnterpriseGateway \
   --service-role EMR_DefaultRole \
   --ec2-attributes SubnetId=${SUBNET_ID},InstanceProfile=EMR_EC2_DefaultRole \
-  --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.4xlarge \
+  --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.2xlarge \
                     InstanceGroupType=CORE,InstanceCount=1,InstanceType=g4dn.2xlarge \
-                    InstanceGroupType=TASK,InstanceCount=1,InstanceType=g4dn.2xlarge \
-                    InstanceGroupType=TASK,InstanceCount=1,InstanceType=g4dn.2xlarge \
+                    InstanceGroupType=TASK,InstanceCount=2,InstanceType=g4dn.2xlarge \
   --configurations file://${CUR_DIR}/init-configurations.json \
   --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${S3_BUCKET}/init-bootstrap-action.sh
   ```
