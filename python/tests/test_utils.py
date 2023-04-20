@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,26 +52,22 @@ def test_clean_sparksession() -> None:
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(1)}
     # Clean SparkSession with extra conf
     with CleanSparkSession(conf) as spark:
-        assert int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 1
+        assert spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch") == "1"
 
     # Clean SparkSession
     with CleanSparkSession() as spark:
-        assert (
-            int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 10000
-        )
+        assert spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch") == "10000"
 
     # Test Nested SparkSession
     with CleanSparkSession(conf) as spark:
-        assert int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 1
+        assert spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch") == "1"
 
         # Nested SparkSession will reset the conf
         with CleanSparkSession() as spark:
             assert (
-                int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch"))
-                == 10000
+                spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")
+                == "10000"
             )
 
         # The conf has been reset.
-        assert (
-            int(spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch")) == 10000
-        )
+        assert spark.conf.get("spark.sql.execution.arrow.maxRecordsPerBatch") == "10000"
