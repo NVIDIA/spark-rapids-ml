@@ -18,7 +18,7 @@ ARG CUDA_VERSION=11.8.0
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
 ARG PYSPARK_VERSION=3.3.1
-ARG RAPIDS_VERSION=23.02
+ARG RAPIDS_VERSION=23.4.0
 
 # Install packages to build spark-rapids-ml
 RUN apt-get update -y \
@@ -31,13 +31,14 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists
 
 # install RAPIDS
+# using ~= pulls in micro version patches
 RUN pip install --no-cache-dir \
-    cudf-cu11==${RAPIDS_VERSION} \
-    cuml-cu11==${RAPIDS_VERSION} \
-    dask-cudf-cu11==${RAPIDS_VERSION} \
-    pylibraft-cu11==${RAPIDS_VERSION} \
-    raft-dask-cu11==${RAPIDS_VERSION} \
-    rmm-cu11==${RAPIDS_VERSION} \
+    cudf-cu11~=${RAPIDS_VERSION} \
+    cuml-cu11~=${RAPIDS_VERSION} \
+    dask-cudf-cu11~=${RAPIDS_VERSION} \
+    pylibraft-cu11~=${RAPIDS_VERSION} \
+    raft-dask-cu11~=${RAPIDS_VERSION} \
+    rmm-cu11~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install python dependencies
