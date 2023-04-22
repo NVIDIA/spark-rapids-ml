@@ -46,8 +46,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   --service-role EMR_DefaultRole \
   --ec2-attributes SubnetId=${SUBNET_ID},InstanceProfile=EMR_EC2_DefaultRole \
   --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.2xlarge \
-                    InstanceGroupType=CORE,InstanceCount=1,InstanceType=g4dn.2xlarge \
-                    InstanceGroupType=TASK,InstanceCount=2,InstanceType=g4dn.2xlarge \
+                    InstanceGroupType=CORE,InstanceCount=3,InstanceType=g4dn.2xlarge \
   --configurations file://${CUR_DIR}/init-configurations.json \
   --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${S3_BUCKET}/init-bootstrap-action.sh
   ```
