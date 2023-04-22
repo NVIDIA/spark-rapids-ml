@@ -8,16 +8,17 @@ function get_metadata_attribute() {
   /usr/share/google/get_metadata_value "attributes/${attribute_name}" || echo -n "${default_value}"
 }
 
-RAPIDS_VERSION=$(get_metadata_attribute rapids-version 23.02)
+RAPIDS_VERSION=$(get_metadata_attribute rapids-version 23.4.0)
 
 # patch existing packages
 mamba install "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"
 
 # install cudf and cuml
+# using ~= pulls in lates micro version patches
 pip install --upgrade pip
-pip install cudf-cu11==${RAPIDS_VERSION} cuml-cu11==${RAPIDS_VERSION} \
-    pylibraft-cu11==${RAPIDS_VERSION} \
-    rmm-cu11==${RAPIDS_VERSION} \
+pip install cudf-cu11~=${RAPIDS_VERSION} cuml-cu11~=${RAPIDS_VERSION} \
+    pylibraft-cu11~=${RAPIDS_VERSION} \
+    rmm-cu11~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install benchmark files

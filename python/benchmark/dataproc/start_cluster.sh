@@ -14,7 +14,7 @@ fi
 
 BENCHMARK_HOME=${BENCHMARK_HOME:-${GCS_BUCKET}/benchmark}
 CUDA_VERSION=${CUDA_VERSION:-11.8}
-RAPIDS_VERSION=${RAPIDS_VERSION:-23.02}
+RAPIDS_VERSION=${RAPIDS_VERSION:-23.4.0}
 
 gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
