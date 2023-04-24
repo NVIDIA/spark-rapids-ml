@@ -18,6 +18,7 @@ spark\_rapids\_ml.classification module
 .. automodule:: spark_rapids_ml.classification
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.clustering module
@@ -26,6 +27,7 @@ spark\_rapids\_ml.clustering module
 .. automodule:: spark_rapids_ml.clustering
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.core module
@@ -34,6 +36,7 @@ spark\_rapids\_ml.core module
 .. automodule:: spark_rapids_ml.core
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.feature module
@@ -42,6 +45,7 @@ spark\_rapids\_ml.feature module
 .. automodule:: spark_rapids_ml.feature
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.knn module
@@ -50,6 +54,7 @@ spark\_rapids\_ml.knn module
 .. automodule:: spark_rapids_ml.knn
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.params module
@@ -58,6 +63,7 @@ spark\_rapids\_ml.params module
 .. automodule:: spark_rapids_ml.params
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.regression module
@@ -66,6 +72,7 @@ spark\_rapids\_ml.regression module
 .. automodule:: spark_rapids_ml.regression
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.tree module
@@ -74,6 +81,7 @@ spark\_rapids\_ml.tree module
 .. automodule:: spark_rapids_ml.tree
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 spark\_rapids\_ml.utils module
@@ -82,6 +90,7 @@ spark\_rapids\_ml.utils module
 .. automodule:: spark_rapids_ml.utils
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:
 
 Module contents
@@ -90,4 +99,5 @@ Module contents
 .. automodule:: spark_rapids_ml
    :members:
    :undoc-members:
+   :inherited-members:
    :show-inheritance:

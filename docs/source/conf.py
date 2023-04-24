@@ -31,6 +31,8 @@ intersphinx_mapping = {
     'cuml': ('https://docs.rapids.ai/api/cuml/stable', None),
 }
 
+autodoc_member_order = 'groupwise'
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
