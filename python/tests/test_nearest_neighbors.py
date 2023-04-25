@@ -204,7 +204,7 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
 
         assert len(knnjoin_queries) == len(query)
         for i in range(len(knnjoin_queries)):
-            if i is 2:
+            if i == 2:
                 assert array_equal(knnjoin_queries[i]["features"], query[i][0])
             else:
                 assert knnjoin_queries[i]["features"] == query[i][0]
@@ -358,17 +358,10 @@ def test_nearest_neighbors(
             item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
         )
 
-        self_distance = [kdist[0] for kdist in distances]
-        assert array_equal(self_distance, [0.0 for i in range(data_shape[0])])
-        cuml_self_distance = [kdist[0] for kdist in cuml_distances]
-        assert array_equal(cuml_self_distance, [0.0 for i in range(data_shape[0])], 0.1)
-
-        # test kneighbors: compare non-self distances
+        # test kneighbors: compare distances
         assert len(distances) == len(cuml_distances)
-        nonself_distances = [knn[1:] for knn in distances]
-        cuml_nonself_distances = [knn[1:] for knn in cuml_distances]
         for i in range(len(distances)):
-            assert array_equal(nonself_distances[i], cuml_nonself_distances[i])
+            assert array_equal(distances[i], cuml_distances[i])
 
         # test exactNearestNeighborsJoin
         with pytest.raises(ValueError):
