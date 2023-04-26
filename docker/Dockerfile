@@ -98,7 +98,7 @@ ENV RAFT_PATH=/raft
 
 ### END OF CACHE ###
 
-#ARG RAPIDS_ML_VER=23.02
+#ARG RAPIDS_ML_VER=23.04
 #RUN git clone -b branch-$RAPIDS_ML_VER https://github.com/NVIDIA/spark-rapids-ml.git
 COPY . /spark-rapids-ml
 WORKDIR /spark-rapids-ml/jvm
