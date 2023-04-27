@@ -6,7 +6,7 @@ BENCHMARK_ZIP=/dbfs/path/to/benchmark.zip
 # also RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 23.4.0 and not 23.04.0)
 # while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.04.0 and not 23.4.0)
 RAPIDS_VERSION=23.4.0
-SPARK_RAPIDS_VERSION=23.02.0
+SPARK_RAPIDS_VERSION=23.04.0
 
 curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
 
