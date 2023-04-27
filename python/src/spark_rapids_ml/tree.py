@@ -421,7 +421,6 @@ class _RandomForestModel(
         sc = _get_spark_session().sparkContext
         assert sc._jvm is not None
         assert sc._gateway is not None
-        print(self._model_json)
 
         # Convert cuml trees to Spark trees
         trees = [
