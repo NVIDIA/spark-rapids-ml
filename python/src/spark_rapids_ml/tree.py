@@ -66,8 +66,8 @@ from .utils import (
     _concat_and_free,
     _get_spark_session,
     _str_or_numerical,
-    _translate_trees,
     java_uid,
+    translate_trees,
 )
 
 
@@ -427,7 +427,7 @@ class _RandomForestModel(
 
         # Convert cuml trees to Spark trees
         trees = [
-            _translate_trees(sc, impurity, trees)
+            translate_trees(sc, impurity, trees)
             for trees_json in self._model_json
             for trees in json.loads(trees_json)
         ]

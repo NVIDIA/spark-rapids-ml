@@ -340,7 +340,7 @@ def _create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  
     return java_leaf_node
 
 
-def _translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
+def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
     """Translate Cuml RandomForest trees to PySpark trees
 
     Cuml trees
@@ -397,8 +397,8 @@ def _translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  #
             sc,
             impurity,
             model,
-            _translate_trees(sc, impurity, left_child),
-            _translate_trees(sc, impurity, right_child),
+            translate_trees(sc, impurity, left_child),
+            translate_trees(sc, impurity, right_child),
         )
     elif "leaf_value" in model:
         return _create_leaf_node(sc, impurity, model)
