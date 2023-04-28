@@ -8,7 +8,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; spark-rapids-ml 23.2.0 documentation</title>
+    <title>Index &#8212; spark-rapids-ml 23.4.0 documentation</title>
   
   
   
@@ -18,12 +18,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
 
   
-  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -32,8 +32,8 @@
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d" />
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
 
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
@@ -106,7 +106,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.2.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 23.4.0 documentation</p>
   
 </a></div>
     
@@ -267,6 +267,8 @@ document.write(`
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#W"><strong>W</strong></a>
  
 </div>
 <h2 id="A">A</h2>
@@ -292,12 +294,16 @@ document.write(`
 </li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.coefficients">coefficients (spark_rapids_ml.regression.LinearRegressionModel property)</a>
 </li>
-      <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.cpu">cpu() (spark_rapids_ml.clustering.KMeansModel method)</a>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.cpu">cpu() (spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
 
       <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.cpu">(spark_rapids_ml.clustering.KMeansModel method)</a>
+</li>
         <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel.cpu">(spark_rapids_ml.feature.PCAModel method)</a>
 </li>
         <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.cpu">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
+</li>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressionModel.cpu">(spark_rapids_ml.regression.RandomForestRegressionModel method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -326,8 +332,12 @@ document.write(`
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.evaluate">evaluate() (spark_rapids_ml.regression.LinearRegressionModel method)</a>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.evaluate">evaluate() (spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.LinearRegressionModel.evaluate">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin">exactNearestNeighborsJoin() (spark_rapids_ml.knn.NearestNeighborsModel method)</a>
@@ -503,10 +513,10 @@ document.write(`
 </li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAClass">PCAClass (class in spark_rapids_ml.feature)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.feature.PCAModel">PCAModel (class in spark_rapids_ml.feature)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Pred">Pred (class in spark_rapids_ml.core)</a>
 </li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.clustering.KMeansModel.predict">predict() (spark_rapids_ml.clustering.KMeansModel method)</a>
@@ -516,6 +526,10 @@ document.write(`
 </li>
       </ul></li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Pred.prediction">prediction (spark_rapids_ml.core.Pred attribute)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability">predictProbability() (spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
+</li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw">predictRaw() (spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
 </li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Pred.probability">probability (spark_rapids_ml.core.Pred attribute)</a>
 </li>
@@ -529,12 +543,18 @@ document.write(`
 </li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.classification.RandomForestClassifier">RandomForestClassifier (class in spark_rapids_ml.classification)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressionModel">RandomForestRegressionModel (class in spark_rapids_ml.regression)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.regression.RandomForestRegressor">RandomForestRegressor (class in spark_rapids_ml.regression)</a>
 </li>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.knn.NearestNeighbors.read">read() (spark_rapids_ml.knn.NearestNeighbors class method)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.knn.NearestNeighborsModel.read">(spark_rapids_ml.knn.NearestNeighborsModel class method)</a>
+</li>
+      </ul></li>
       <li><a href="spark_rapids_ml.html#spark_rapids_ml.core.Alias.row_number">row_number (spark_rapids_ml.core.Alias attribute)</a>
 </li>
   </ul></td>
@@ -666,6 +686,26 @@ document.write(`
   </ul></td>
 </tr></table>
 
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.utils.translate_trees">translate_trees() (in module spark_rapids_ml.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="spark_rapids_ml.html#spark_rapids_ml.knn.NearestNeighbors.write">write() (spark_rapids_ml.knn.NearestNeighbors method)</a>
+
+      <ul>
+        <li><a href="spark_rapids_ml.html#spark_rapids_ml.knn.NearestNeighborsModel.write">(spark_rapids_ml.knn.NearestNeighborsModel method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
 
 
                 </article>
@@ -673,9 +713,15 @@ document.write(`
               
               
                 <footer class="bd-footer-article">
-                  <!-- Previous / next buttons -->
+                  
+<div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item"><!-- Previous / next buttons -->
 <div class="prev-next-area">
+</div></div>
+  
 </div>
+
                 </footer>
               
             </div>
@@ -685,7 +731,7 @@ document.write(`
             
           </div>
           <footer class="bd-footer-content">
-            <div class="bd-footer-content__inner"></div>
+            
           </footer>
         
       </main>
@@ -693,8 +739,8 @@ document.write(`
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d"></script>
+  <script src="_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -712,7 +758,7 @@ document.write(`
       
         <div class="footer-item">
   <p class="sphinx-version">
-    Created using <a href="https://sphinx-doc.org/">Sphinx</a> 5.3.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     <br/>
   </p>
 </div>
@@ -723,7 +769,7 @@ document.write(`
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.1.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
 </p></div>
       
     </div>

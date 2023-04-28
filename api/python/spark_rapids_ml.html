@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>spark_rapids_ml package &#8212; spark-rapids-ml 23.2.0 documentation</title>
+    <title>spark_rapids_ml package &#8212; spark-rapids-ml 23.4.0 documentation</title>
   
   
   
@@ -19,12 +19,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
 
   
-  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=12da95d707ffb74b382d" rel="stylesheet" />
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -33,8 +33,8 @@
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d" />
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
 
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
@@ -107,7 +107,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.2.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 23.4.0 documentation</p>
   
 </a></div>
     
@@ -317,7 +317,7 @@ document.write(`
 <span id="spark-rapids-ml-classification-module"></span><h2>spark_rapids_ml.classification module<a class="headerlink" href="#module-spark_rapids_ml.classification" title="Permalink to this heading">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.classification.</span></span><span class="sig-name descname"><span class="pre">RandomForestClassificationModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">treelite_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.classification.</span></span><span class="sig-name descname"><span class="pre">RandomForestClassificationModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">treelite_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_json</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestClass</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestModel</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestCumlParams</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_RFClassifierParams</span></code></p>
 <p>Model fitted by <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassifier" title="spark_rapids_ml.classification.RandomForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestClassifier</span></code></a>.</p>
 <dl class="field-list simple">
@@ -359,77 +359,83 @@ document.write(`
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>([extra])</p></td>
 <td><p>Creates a copy of this instance with the same uid and some extra params.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code>()</p></td>
-<td><p>Return the equivalent PySpark CPU model</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.cpu" title="spark_rapids_ml.classification.RandomForestClassificationModel.cpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code></a>()</p></td>
+<td><p>Return the PySpark ML RandomForestClassificationModel</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.evaluate" title="spark_rapids_ml.classification.RandomForestClassificationModel.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a>(dataset)</p></td>
+<td><p>Evaluates the model on a test dataset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code>(param)</p></td>
 <td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code>()</p></td>
 <td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code>([extra])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code>([extra])</p></td>
 <td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code>(model_attributes)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code>(model_attributes)</p></td>
 <td><p>Default to pass all the attributes of the model to the model constructor, So please make sure if the constructor can accept all of them.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getBootstrap</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getBootstrap</span></code>()</p></td>
 <td><p>Gets the value of bootstrap or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getCacheNodeIds</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getCacheNodeIds</span></code>()</p></td>
 <td><p>Gets the value of cacheNodeIds or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getCheckpointInterval</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getCheckpointInterval</span></code>()</p></td>
 <td><p>Gets the value of checkpointInterval or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeatureSubsetStrategy</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeatureSubsetStrategy</span></code>()</p></td>
 <td><p>Gets the value of featureSubsetStrategy or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code>()</p></td>
 <td><p>Gets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code> or <code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCols</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCols</span></code>()</p></td>
 <td><p>Gets the value of featuresCols or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getImpurity</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getImpurity</span></code>()</p></td>
 <td><p>Gets the value of impurity or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code>()</p></td>
 <td><p>Gets the value of labelCol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLeafCol</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLeafCol</span></code>()</p></td>
 <td><p>Gets the value of leafCol or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxBins</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxBins</span></code>()</p></td>
 <td><p>Gets the value of maxBins or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxDepth</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxDepth</span></code>()</p></td>
 <td><p>Gets the value of maxDepth or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxMemoryInMB</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxMemoryInMB</span></code>()</p></td>
 <td><p>Gets the value of maxMemoryInMB or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinInfoGain</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinInfoGain</span></code>()</p></td>
 <td><p>Gets the value of minInfoGain or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinInstancesPerNode</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinInstancesPerNode</span></code>()</p></td>
 <td><p>Gets the value of minInstancesPerNode or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinWeightFractionPerNode</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinWeightFractionPerNode</span></code>()</p></td>
 <td><p>Gets the value of minWeightFractionPerNode or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
 <td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
 <td><p>Gets a param by its name.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code>()</p></td>
 <td><p>Gets the value of predictionCol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getProbabilityCol</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getProbabilityCol</span></code>()</p></td>
 <td><p>Gets the value of probabilityCol or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getRawPredictionCol</span></code>()</p></td>
+<td><p>Gets the value of rawPredictionCol or its default value.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
 <td><p>Gets the value of seed or its default value.</p></td>
@@ -465,10 +471,16 @@ document.write(`
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code>(value)</p></td>
-<td><p>(Not supported) Predict label for the given features.</p></td>
+<td><p>Predict label for the given features.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictLeaf</span></code>(value)</p></td>
-<td><p>(Not supported) Predict the indices of the leaves corresponding to the feature vector.</p></td>
+<td><p>Predict the indices of the leaves corresponding to the feature vector.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictProbability</span></code></a>(value)</p></td>
+<td><p>Predict the probability of each class given the features.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictRaw</span></code></a>(value)</p></td>
+<td><p>Raw prediction for each possible label.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
 <td><p>Returns an MLReader instance for this class.</p></td>
@@ -494,16 +506,19 @@ document.write(`
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setProbabilityCol</span></code>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">probabilityCol</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code>(context, is_local[, is_transform])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRawPredictionCol</span></code>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">rawPredictionCol</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code>(context, is_local[, is_transform])</p></td>
 <td><p>Set gpu device according to the spark task resources.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**kwargs)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**kwargs)</p></td>
 <td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code>(dataset[, params])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code>(dataset[, params])</p></td>
 <td><p>Transforms the input dataset with optional parameters.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code>()</p></td>
 <td><p>Returns an MLWriter instance for this ML instance.</p></td>
 </tr>
 </tbody>
@@ -515,6 +530,26 @@ document.write(`
 </tr>
 </tbody>
 </table>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.cpu">
+<span class="sig-name descname"><span class="pre">cpu</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.RandomForestClassificationModel.html#pyspark.ml.classification.RandomForestClassificationModel" title="(in PySpark vmaster)"><span class="pre">RandomForestClassificationModel</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.cpu" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the PySpark ML RandomForestClassificationModel</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.BinaryRandomForestClassificationSummary.html#pyspark.ml.classification.BinaryRandomForestClassificationSummary" title="(in PySpark vmaster)"><span class="pre">BinaryRandomForestClassificationSummary</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.RandomForestClassificationSummary.html#pyspark.ml.classification.RandomForestClassificationSummary" title="(in PySpark vmaster)"><span class="pre">RandomForestClassificationSummary</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.evaluate" title="Permalink to this definition">#</a></dt>
+<dd><p>Evaluates the model on a test dataset.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>dataset</strong><span class="classifier"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></span></dt><dd><p>Test dataset to evaluate model on.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.hasSummary">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">hasSummary</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasSummary" title="Permalink to this definition">#</a></dt>
@@ -525,6 +560,18 @@ document.write(`
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.numClasses">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">numClasses</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses" title="Permalink to this definition">#</a></dt>
 <dd><p>Number of classes (values which the label can take).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability">
+<span class="sig-name descname"><span class="pre">predictProbability</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.linalg.Vector.html#pyspark.ml.linalg.Vector" title="(in PySpark vmaster)"><span class="pre">Vector</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.linalg.Vector.html#pyspark.ml.linalg.Vector" title="(in PySpark vmaster)"><span class="pre">Vector</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability" title="Permalink to this definition">#</a></dt>
+<dd><p>Predict the probability of each class given the features.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw">
+<span class="sig-name descname"><span class="pre">predictRaw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.linalg.Vector.html#pyspark.ml.linalg.Vector" title="(in PySpark vmaster)"><span class="pre">Vector</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.linalg.Vector.html#pyspark.ml.linalg.Vector" title="(in PySpark vmaster)"><span class="pre">Vector</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw" title="Permalink to this definition">#</a></dt>
+<dd><p>Raw prediction for each possible label.</p>
 </dd></dl>
 
 </dd></dl>
@@ -548,7 +595,7 @@ data so that each worker builds trees on a subset of the total dataset works
 well, but it generally requires the data to be well-shuffled in advance.</p>
 <p>RandomForestClassifier automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.RandomForestClassifier.html#pyspark.ml.classification.RandomForestClassifier" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestClassifier</span></code></a> and in the constructors of
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api.html#cuml.ensemble.RandomForestClassifier" title="(in cuml v23.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ensemble.RandomForestClassifier</span></code></a>. And it can automatically map pyspark
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ensemble.RandomForestClassifier" title="(in cuml v23.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ensemble.RandomForestClassifier</span></code></a>. And it can automatically map pyspark
 parameters to cuML parameters.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span>
@@ -577,7 +624,7 @@ parameters to cuML parameters.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">test1</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">([(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">sparse</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">]),)],</span> <span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">test1</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">()</span><span class="o">.</span><span class="n">prediction</span>
 <span class="go">1.0</span>
-<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">rfc_path</span> <span class="o">=</span> <span class="n">temp_path</span> <span class="o">+</span> <span class="s2">&quot;/rfc&quot;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">rf</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">rfc_path</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">rf2</span> <span class="o">=</span> <span class="n">RandomForestClassifier</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">rfc_path</span><span class="p">)</span>
@@ -685,62 +732,68 @@ parameters to cuML parameters.</p>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getProbabilityCol</span></code>()</p></td>
 <td><p>Gets the value of probabilityCol or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getRawPredictionCol</span></code>()</p></td>
+<td><p>Gets the value of rawPredictionCol or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
 <td><p>Gets the value of seed or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSubsamplingRate</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSubsamplingRate</span></code>()</p></td>
 <td><p>Gets the value of subsamplingRate or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getWeightCol</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getWeightCol</span></code>()</p></td>
 <td><p>Gets the value of weightCol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code>(param)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code>(param)</p></td>
 <td><p>Checks whether a param has a default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code>(paramName)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code>(paramName)</p></td>
 <td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code>(verbose)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code>(verbose)</p></td>
 <td><p>Initializes the logger for cuML.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code>()</p></td>
 <td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code>(param)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code>(param)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(path)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(path)</p></td>
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
 <td><p>Returns an MLReader instance for this class.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(path)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(path)</p></td>
 <td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code>(param, value)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code>(param, value)</p></td>
 <td><p>Sets a parameter in the embedded param map.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code>(value)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code> or <code class="xref py py-attr docutils literal notranslate"><span class="pre">featureCols</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code>(value)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code>(value)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLeafCol</span></code>(value)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLeafCol</span></code>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">leafCol</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassifier.setNumTrees" title="spark_rapids_ml.classification.RandomForestClassifier.setNumTrees"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNumTrees</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassifier.setNumTrees" title="spark_rapids_ml.classification.RandomForestClassifier.setNumTrees"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNumTrees</span></code></a>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">numTrees</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setProbabilityCol</span></code>(value)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setProbabilityCol</span></code>(value)</p></td>
 <td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">probabilityCol</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRawPredictionCol</span></code>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">rawPredictionCol</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code>(context, is_local[, is_transform])</p></td>
 <td><p>Set gpu device according to the spark task resources.</p></td>
@@ -838,7 +891,8 @@ More iterations help generate more accurate centers.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;/tmp/kmeans_model&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.clustering</span> <span class="kn">import</span> <span class="n">KMeans</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># vector column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.clustering</span> <span class="kn">import</span> <span class="n">KMeans</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]),),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),),</span>
@@ -851,7 +905,8 @@ More iterations help generate more accurate centers.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_kmeans</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># multi-column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="mf">9.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">),]</span>
@@ -916,20 +971,26 @@ More iterations help generate more accurate centers.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code>()</p></td>
 <td><p>Gets the value of <cite>k</cite></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxIter</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxBlockSizeInMB</span></code>()</p></td>
+<td><p>Gets the value of maxBlockSizeInMB or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxIter</span></code>()</p></td>
 <td><p>Gets the value of maxIter or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
 <td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
 <td><p>Gets a param by its name.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code>()</p></td>
 <td><p>Gets the value of predictionCol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
 <td><p>Gets the value of seed or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSolver</span></code>()</p></td>
+<td><p>Gets the value of solver or its default value.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getTol</span></code>()</p></td>
 <td><p>Gets the value of tol or its default value.</p></td>
@@ -1107,20 +1168,26 @@ Refer to the KMeans class for learning the k centers.</p>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code>()</p></td>
 <td><p>Gets the value of <cite>k</cite></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxIter</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxBlockSizeInMB</span></code>()</p></td>
+<td><p>Gets the value of maxBlockSizeInMB or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxIter</span></code>()</p></td>
 <td><p>Gets the value of maxIter or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code>(param)</p></td>
 <td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code>(paramName)</p></td>
 <td><p>Gets a param by its name.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPredictionCol</span></code>()</p></td>
 <td><p>Gets the value of predictionCol or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code>()</p></td>
 <td><p>Gets the value of seed or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSolver</span></code>()</p></td>
+<td><p>Gets the value of solver or its default value.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">getTol</span></code>()</p></td>
 <td><p>Gets the value of tol or its default value.</p></td>
@@ -1417,7 +1484,8 @@ store output vectors in a single column.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_pca</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;/tmp/pca&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># vector column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]),),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]),),]</span>
@@ -1428,7 +1496,8 @@ store output vectors in a single column.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_pca</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># multi-column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
 <span class="gp">... </span>        <span class="p">(</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">),]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;f1&quot;</span><span class="p">,</span> <span class="s2">&quot;f2&quot;</span><span class="p">])</span>
@@ -1738,6 +1807,31 @@ Each column is one principal component.</p>
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">NearestNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsClass" title="spark_rapids_ml.knn.NearestNeighborsClass"><code class="xref py py-class docutils literal notranslate"><span class="pre">NearestNeighborsClass</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_CumlEstimatorSupervised</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_NearestNeighborsCumlParams</span></code></p>
+<p>NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each
+query vector. The main methods accept distributed CPU dataframes as inputs,
+leverage GPUs to accelerate computation, and take care of communication and
+aggregation automatically. However, it should be noted that only the euclidean
+distance (also known as L2 distance) is supported in the current implementations
+and the feature data type must be of the float type. All other data types will
+be converted into float during computation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>k: int (default = 5)</strong></dt><dd><p>the default number nearest neighbors to retrieve for each query.</p>
+</dd>
+<dt><strong>inputCol: str</strong></dt><dd><p>the name of the column that contains input vectors. inputCol should be set when feature vectors
+are stored in a single column of a dataframe.</p>
+</dd>
+<dt><strong>inputCols: List[str]</strong></dt><dd><p>the names of feature columns that form input vectors. inputCols should be set when input vectors
+are stored as multiple feature columns of a dataframe.</p>
+</dd>
+<dt><strong>idCol: str</strong></dt><dd><p>the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
+if such a column exists in the dataframe. If idCol is not set, a column with the name <cite>unique_id</cite>
+will be automatically added to the dataframe and used as unique identifier for each vector.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.knn</span> <span class="kn">import</span> <span class="n">NearestNeighbors</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),</span>
@@ -1783,6 +1877,35 @@ Each column is one principal component.</p>
 <span class="go">|{2, [3.0, 3.0]}|{4, [3.0, 3.0]}|              0.0|</span>
 <span class="go">|{1, [2.0, 2.0]}|{4, [3.0, 3.0]}|        1.4142135|</span>
 <span class="go">+---------------+---------------+-----------------+</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># vector column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.knn</span> <span class="kn">import</span> <span class="n">NearestNeighbors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),),</span>
+<span class="gp">... </span>        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]),),</span>
+<span class="gp">... </span>        <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]),)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;features&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">3</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),),</span>
+<span class="gp">... </span>         <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">]),)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;features&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">topk</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_knn</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">()</span><span class="o">.</span><span class="n">setInputCol</span><span class="p">(</span><span class="s2">&quot;features&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setIdCol</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setK</span><span class="p">(</span><span class="n">topk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_knn</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data_df</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># multi-column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.knn</span> <span class="kn">import</span> <span class="n">NearestNeighbors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="gp">... </span>        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+<span class="gp">... </span>        <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;id int, f1 float, f2 float&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="gp">... </span>         <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">query_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;id int, f1 float, f2 float&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">topk</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_knn</span> <span class="o">=</span> <span class="n">NearestNeighbors</span><span class="p">()</span><span class="o">.</span><span class="n">setInputCols</span><span class="p">([</span><span class="s2">&quot;f1&quot;</span><span class="p">,</span> <span class="s2">&quot;f2&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">setIdCol</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setK</span><span class="p">(</span><span class="n">topk</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_knn</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data_df</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="field-list simple">
@@ -1860,7 +1983,7 @@ Each column is one principal component.</p>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(path)</p></td>
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.read" title="spark_rapids_ml.knn.NearestNeighbors.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
 <td><p>Returns an MLReader instance for this class.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(path)</p></td>
@@ -1887,11 +2010,23 @@ Each column is one principal component.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code>(**kwargs)</p></td>
 <td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.write" title="spark_rapids_ml.knn.NearestNeighbors.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
 <td><p>Returns an MLWriter instance for this ML instance.</p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.read">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLReader.html#pyspark.ml.util.MLReader" title="(in PySpark vmaster)"><span class="pre">MLReader</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns an MLReader instance for this class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLWriter.html#pyspark.ml.util.MLWriter" title="(in PySpark vmaster)"><span class="pre">MLWriter</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.write" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns an MLWriter instance for this ML instance.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1988,7 +2123,7 @@ Each column is one principal component.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(path)</p></td>
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.read" title="spark_rapids_ml.knn.NearestNeighborsModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
 <td><p>Returns an MLReader instance for this class.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(path)</p></td>
@@ -2018,7 +2153,7 @@ Each column is one principal component.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code>(dataset[, params])</p></td>
 <td><p>Transforms the input dataset with optional parameters.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.write" title="spark_rapids_ml.knn.NearestNeighborsModel.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
 <td><p>Returns an MLWriter instance for this ML instance.</p></td>
 </tr>
 </tbody>
@@ -2085,6 +2220,18 @@ column stores the ids/distances of knn item_df vectors.</p>
 </dl>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.read">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLReader.html#pyspark.ml.util.MLReader" title="(in PySpark vmaster)"><span class="pre">MLReader</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns an MLReader instance for this class.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLWriter.html#pyspark.ml.util.MLWriter" title="(in PySpark vmaster)"><span class="pre">MLWriter</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.write" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns an MLWriter instance for this ML instance.</p>
 </dd></dl>
 
 </dd></dl>
@@ -2185,17 +2332,17 @@ PySpark Pipeline and PySpark ML meta algorithms like
 </ul>
 <p>LinearRegression automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.LinearRegression.html#pyspark.ml.regression.LinearRegression" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearRegression</span></code></a> and in the constructors of
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api.html#cuml.LinearRegression" title="(in cuml v23.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api.html#cuml.Ridge" title="(in cuml v23.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api.html#cuml.Lasso" title="(in cuml v23.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
-and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api.html#cuml.ElasticNet" title="(in cuml v23.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v23.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v23.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v23.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
+and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v23.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
 to cuML parameters.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.regression</span> <span class="kn">import</span> <span class="n">LinearRegression</span><span class="p">,</span> <span class="n">LinearRegressionModel</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
-<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">([</span>
 <span class="gp">... </span>    <span class="p">(</span><span class="mf">6.5</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)),</span>
 <span class="gp">... </span>    <span class="p">(</span><span class="mf">3.5</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">sparse</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mi">2</span><span class="p">}))],</span> <span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="s2">&quot;features&quot;</span><span class="p">])</span>
-<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">lr</span> <span class="o">=</span> <span class="n">LinearRegression</span><span class="p">(</span><span class="n">regParam</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s2">&quot;normal&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">lr</span><span class="o">.</span><span class="n">setMaxIter</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
 <span class="go">LinearRegression...</span>
@@ -2665,7 +2812,7 @@ Fall back to PySpark ML LinearRegressionModel</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressionModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.regression.</span></span><span class="sig-name descname"><span class="pre">RandomForestRegressionModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">treelite_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressionModel" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.regression.</span></span><span class="sig-name descname"><span class="pre">RandomForestRegressionModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">treelite_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_json</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressionModel" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestRegressorClass</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestModel</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestCumlParams</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">_RandomForestRegressorParams</span></code></p>
 <p>Model fitted by <a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor" title="spark_rapids_ml.regression.RandomForestRegressor"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a>.</p>
 <dl class="field-list simple">
@@ -2703,8 +2850,8 @@ Fall back to PySpark ML LinearRegressionModel</p>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>([extra])</p></td>
 <td><p>Creates a copy of this instance with the same uid and some extra params.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code>()</p></td>
-<td><p>Return the equivalent PySpark CPU model</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressionModel.cpu" title="spark_rapids_ml.regression.RandomForestRegressionModel.cpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code></a>()</p></td>
+<td><p>Return the PySpark ML RandomForestRegressionModel</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code>(param)</p></td>
 <td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
@@ -2806,10 +2953,10 @@ Fall back to PySpark ML LinearRegressionModel</p>
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code>(value)</p></td>
-<td><p>(Not supported) Predict label for the given features.</p></td>
+<td><p>Predict label for the given features.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictLeaf</span></code>(value)</p></td>
-<td><p>(Not supported) Predict the indices of the leaves corresponding to the feature vector.</p></td>
+<td><p>Predict the indices of the leaves corresponding to the feature vector.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>()</p></td>
 <td><p>Returns an MLReader instance for this class.</p></td>
@@ -2853,6 +3000,12 @@ Fall back to PySpark ML LinearRegressionModel</p>
 </tr>
 </tbody>
 </table>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressionModel.cpu">
+<span class="sig-name descname"><span class="pre">cpu</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.RandomForestRegressionModel.html#pyspark.ml.regression.RandomForestRegressionModel" title="(in PySpark vmaster)"><span class="pre">RandomForestRegressionModel</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressionModel.cpu" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the PySpark ML RandomForestRegressionModel</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -2872,7 +3025,7 @@ data so that each worker builds trees on a subset of the total dataset works
 well, but it generally requires the data to be well-shuffled in advance.</p>
 <p>RandomForestRegressor automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.RandomForestRegressor.html#pyspark.ml.regression.RandomForestRegressor" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a> and in the constructors of
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api.html#cuml.ensemble.RandomForestRegressor" title="(in cuml v23.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ensemble.RandomForestRegressor</span></code></a>. And it can automatically map
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ensemble.RandomForestRegressor" title="(in cuml v23.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ensemble.RandomForestRegressor</span></code></a>. And it can automatically map
 pyspark parameters to cuML parameters.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.regression</span> <span class="kn">import</span> <span class="n">RandomForestRegressor</span><span class="p">,</span> <span class="n">RandomForestRegressionModel</span>
@@ -3105,7 +3258,7 @@ rank: rank to be mapped</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="spark_rapids_ml.utils.cudf_to_cuml_array">
-<span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.utils.</span></span><span class="sig-name descname"><span class="pre">cudf_to_cuml_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gdf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Series</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'F'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CumlArray</span></span></span><a class="headerlink" href="#spark_rapids_ml.utils.cudf_to_cuml_array" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.utils.</span></span><span class="sig-name descname"><span class="pre">cudf_to_cuml_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gdf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">cudf.DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">cudf.Series</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'F'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.utils.cudf_to_cuml_array" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -3126,6 +3279,64 @@ rank: rank to be mapped</p>
 <dd><p>Returns a random UID that concatenates the given prefix, “_”, and 12 random hex chars.</p>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="spark_rapids_ml.utils.translate_trees">
+<span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.utils.</span></span><span class="sig-name descname"><span class="pre">translate_trees</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkContext</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">impurity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.utils.translate_trees" title="Permalink to this definition">#</a></dt>
+<dd><p>Translate Cuml RandomForest trees to PySpark trees</p>
+<p>Cuml trees
+[</p>
+<blockquote>
+<div><dl>
+<dt>{</dt><dd><p>“nodeid”: 0,
+“split_feature”: 3,
+“split_threshold”: 0.827687974732221,
+“gain”: 0.41999999999999998,
+“instance_count”: 10,
+“yes”: 1,
+“no”: 2,
+“children”: [</p>
+<blockquote>
+<div><dl>
+<dt>{</dt><dd><p>“nodeid”: 1,
+“leaf_value”: [</p>
+<blockquote>
+<div><p>1,
+0</p>
+</div></blockquote>
+<p>],
+“instance_count”: 7</p>
+</dd>
+</dl>
+<p>},
+{</p>
+<blockquote>
+<div><p>“nodeid”: 2,
+“leaf_value”: [</p>
+<blockquote>
+<div><p>0,
+1</p>
+</div></blockquote>
+<p>],
+“instance_count”: 3</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p>]</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>]</p>
+<dl>
+<dt>Spark trees,</dt><dd><blockquote>
+<div><p>InternalNode {split{featureIndex=3, threshold=0.827687974732221}, gain = 0.41999999999999998}
+/                    left        right</p>
+</div></blockquote>
+<p>/                 LeafNode           LeafNode</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-spark_rapids_ml">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-spark_rapids_ml" title="Permalink to this heading">#</a></h2>
@@ -3138,9 +3349,15 @@ rank: rank to be mapped</p>
               
               
                 <footer class="bd-footer-article">
-                  <!-- Previous / next buttons -->
+                  
+<div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item"><!-- Previous / next buttons -->
 <div class="prev-next-area">
+</div></div>
+  
 </div>
+
                 </footer>
               
             </div>
@@ -3159,8 +3376,12 @@ rank: rank to be mapped</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-spark_rapids_ml.classification">spark_rapids_ml.classification module</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.cpu"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.cpu()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.evaluate"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.evaluate()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasSummary"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.hasSummary</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.numClasses</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.predictProbability()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.predictRaw()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassifier"><code class="docutils literal notranslate"><span class="pre">RandomForestClassifier</span></code></a><ul class="nav section-nav flex-column">
@@ -3226,11 +3447,17 @@ rank: rank to be mapped</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-spark_rapids_ml.knn">spark_rapids_ml.knn module</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.read"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.write"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.write()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsClass"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsClass</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.exactNearestNeighborsJoin"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.exactNearestNeighborsJoin()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.kneighbors()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.read"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.write"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.write()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -3264,7 +3491,10 @@ rank: rank to be mapped</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.scale"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.scale</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressionModel"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressionModel</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressionModel"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressionModel</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressionModel.cpu"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressionModel.cpu()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a></li>
 </ul>
 </li>
@@ -3278,6 +3508,7 @@ rank: rank to be mapped</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.utils.dtype_to_pyspark_type"><code class="docutils literal notranslate"><span class="pre">dtype_to_pyspark_type()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.utils.get_logger"><code class="docutils literal notranslate"><span class="pre">get_logger()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.utils.java_uid"><code class="docutils literal notranslate"><span class="pre">java_uid()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.utils.translate_trees"><code class="docutils literal notranslate"><span class="pre">translate_trees()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-spark_rapids_ml">Module contents</a></li>
@@ -3297,7 +3528,7 @@ rank: rank to be mapped</p>
             
           </div>
           <footer class="bd-footer-content">
-            <div class="bd-footer-content__inner"></div>
+            
           </footer>
         
       </main>
@@ -3305,8 +3536,8 @@ rank: rank to be mapped</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=12da95d707ffb74b382d"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=12da95d707ffb74b382d"></script>
+  <script src="_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -3324,7 +3555,7 @@ rank: rank to be mapped</p>
       
         <div class="footer-item">
   <p class="sphinx-version">
-    Created using <a href="https://sphinx-doc.org/">Sphinx</a> 5.3.0.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     <br/>
   </p>
 </div>
@@ -3335,7 +3566,7 @@ rank: rank to be mapped</p>
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.1.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
 </p></div>
       
     </div>
