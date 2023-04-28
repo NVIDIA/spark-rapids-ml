@@ -44,6 +44,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   --release-label emr-6.10.0 \
   --applications Name=Hadoop Name=Livy Name=Spark Name=JupyterEnterpriseGateway \
   --service-role EMR_DefaultRole \
+  --log-uri s3://${S3_BUCKET}/logs \
   --ec2-attributes SubnetId=${SUBNET_ID},InstanceProfile=EMR_EC2_DefaultRole \
   --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.2xlarge \
                     InstanceGroupType=CORE,InstanceCount=3,InstanceType=g4dn.2xlarge \
