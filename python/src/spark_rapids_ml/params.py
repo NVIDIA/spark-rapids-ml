@@ -1,10 +1,26 @@
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+#
+# Copyright (c) 2023, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import cupy
+from abc import abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
-from spark_rapids_ml.utils import _get_default_params_from_func, _is_local
+from .utils import _is_local
 
 P = TypeVar("P", bound="_CumlParams")
 
@@ -39,33 +55,6 @@ class _CumlClass(object):
     """
 
     @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        """
-        Return a list of cuML python counterpart class names, which will be used to
-        auto-generate Spark params.
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        """
-        Return a list of cuML class parameters which should not be auto-populated into the
-        Spark class.
-
-        Example
-        -------
-
-        .. code-block::python
-
-            return [
-                "handle",
-                "output_type",
-            ]
-
-        """
-        return []
-
-    @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         """
         Return a mapping of Spark ML Param names to cuML parameter names, which is used maintain
@@ -97,13 +86,17 @@ class _CumlClass(object):
         return {}
 
     @classmethod
-    def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
         """
-        Return a dictionary of cuML parameter names and their mapping of Spark ML Param string
-        values to cuML string values.
+        Return a dictionary of cuML parameter names and a function mapping their Spark ML Param string
+        values to cuML values of either str, float, or int type.
 
-        If the mapped value is None, then the Spark value is unsupported, and an error will be
-        raised.
+        The mapped function should accept all string inputs and return None for any unmapped input values.
+
+        If it is desired that a cuML string value be accepted as a valid input, it must be explicitly mapped to
+        itself in the function (see "squared_loss" and "eig" in example below).
 
         Example
         -------
@@ -112,32 +105,30 @@ class _CumlClass(object):
 
             # For LinearRegression
             return {
-                "loss": {
+                "loss": lambda x: {
                     "squaredError": "squared_loss",
                     "huber": None,
-                },
-                "solver": {
+                    "squared_loss": "squared_loss",
+                }.get(x, None),
+                "solver": lambda x: {
                     "auto": "eig",
                     "normal": "eig",
                     "l-bfgs": None,
-                }
+                    "eig": "eig",
+                }.get(x, None),
             }
 
         """
         return {}
 
-    @classmethod
-    def _get_cuml_params_default(cls) -> Dict[str, Any]:
-        """
-        Inspect the __init__ function of associated _cuml_cls() to return a dictionary of
-        parameter names and their default values.
-        """
-        params = {}
-        for cls_type in cls._cuml_cls():
-            params.update(
-                _get_default_params_from_func(cls_type, cls._param_excludes())
-            )
-        return params
+    @abstractmethod
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        """Return a dictionary of parameter names and their default values.
+
+        Note, please don't import cuml class and inspect the signatures to
+        get the parameters, since it may break the rule that spark-rapids-ml should
+        run on the driver side without rapids dependencies"""
+        raise NotImplementedError()
 
 
 class _CumlParams(_CumlClass, Params):
@@ -311,20 +302,23 @@ class _CumlParams(_CumlClass, Params):
                 sc = spark.sparkContext
                 if _is_local(sc):
                     # assume using all local GPUs for Spark local mode
+                    # TODO suggest using more CPUs (e.g. local[*]) if number of GPUs > number of CPUs
+                    import cupy
+
                     num_workers = cupy.cuda.runtime.getDeviceCount()
                 else:
                     num_executors = int(
-                        spark.conf.get("spark.executor.instances", "-1")
+                        spark.conf.get("spark.executor.instances", "-1")  # type: ignore
                     )
                     if num_executors == -1:
                         jsc = spark.sparkContext._jsc.sc()
                         num_executors = len(jsc.statusTracker().getExecutorInfos()) - 1
 
                     gpus_per_executor = float(
-                        spark.conf.get("spark.executor.resource.gpu.amount", "1")
+                        spark.conf.get("spark.executor.resource.gpu.amount", "1")  # type: ignore
                     )
                     gpus_per_task = float(
-                        spark.conf.get("spark.task.resource.gpu.amount", "1")
+                        spark.conf.get("spark.task.resource.gpu.amount", "1")  # type: ignore
                     )
 
                     if gpus_per_task != 1:
@@ -406,16 +400,8 @@ class _CumlParams(_CumlClass, Params):
             self._cuml_params[k] = v
         else:
             # value map exists
-            supported_values = set([x for x in value_map[k].values() if x is not None])
-            if v in supported_values:
-                # already a valid value
-                self._cuml_params[k] = v
+            mapped_v = value_map[k](v)
+            if mapped_v:
+                self._cuml_params[k] = mapped_v
             else:
-                # try to map to a valid value
-                mapped_v = value_map[k].get(v, None)
-                if mapped_v:
-                    self._cuml_params[k] = mapped_v
-                else:
-                    raise ValueError(
-                        f"Value '{v}' for '{k}' param is unsupported, expected: {supported_values}"
-                    )
+                raise ValueError(f"Value '{v}' for '{k}' param is unsupported")

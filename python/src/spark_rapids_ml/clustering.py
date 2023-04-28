@@ -14,9 +14,21 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
-import cudf
+if TYPE_CHECKING:
+    import cudf
+
 import numpy as np
 import pandas as pd
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
@@ -33,15 +45,15 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlEstimator,
     _CumlModelSupervised,
     param_alias,
 )
-from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import (
+from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
@@ -51,12 +63,6 @@ from spark_rapids_ml.utils import (
 
 
 class KMeansClass(_CumlClass):
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml import KMeans
-
-        return [KMeans]
-
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
@@ -70,16 +76,18 @@ class KMeansClass(_CumlClass):
             "weightCol": None,
         }
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        """
-        For some reason, spark-rapids-ml may not support all the parameters.
-        In that case, we need to explicitly exclude them.
-        """
-        return [
-            "handle",
-            "output_type",
-        ]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+            "n_clusters": 8,
+            "max_iter": 300,
+            "tol": 0.0001,
+            "verbose": False,
+            "random_state": 1,
+            "init": "scalable-k-means++",
+            "n_init": 1,
+            "oversampling_factor": 2.0,
+            "max_samples_per_batch": 32768,
+        }
 
 
 class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
@@ -196,6 +204,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     >>> gpu_kmeans.save("/tmp/kmeans")
     >>> gpu_model.save("/tmp/kmeans_model")
 
+    >>> # vector column input
     >>> from spark_rapids_ml.clustering import KMeans
     >>> from pyspark.ml.linalg import Vectors
     >>> data = [(Vectors.dense([0.0, 0.0]),),
@@ -208,6 +217,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     'features'
     >>> gpu_model = gpu_kmeans.fit(df)
 
+    >>> # multi-column input
     >>> data = [(0.0, 0.0),
     ...         (1.0, 1.0),
     ...         (9.0, 8.0),
@@ -388,7 +398,7 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         self, dataset: DataFrame
     ) -> Tuple[
         Callable[..., CumlT],
-        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
     ]:
         cuml_alg_params = self.cuml_params.copy()
 

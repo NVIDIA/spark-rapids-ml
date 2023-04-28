@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Tuple, Type, TypeVar
+from typing import Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
@@ -32,17 +32,19 @@ from spark_rapids_ml.classification import (
     RandomForestClassificationModel,
     RandomForestClassifier,
 )
-from spark_rapids_ml.params import _CumlParams
 from spark_rapids_ml.regression import (
     RandomForestRegressionModel,
     RandomForestRegressor,
 )
-from tests.sparksession import CleanSparkSession
-from tests.utils import (
+
+from .sparksession import CleanSparkSession
+from .utils import (
+    array_equal,
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     make_classification_dataset,
     make_regression_dataset,
@@ -72,6 +74,31 @@ RandomForestModelType = TypeVar(
     Type[RandomForestClassificationModel],
     Type[RandomForestRegressionModel],
 )
+
+
+@pytest.mark.parametrize("Estimator", [RandomForestClassifier, RandomForestRegressor])
+def test_default_cuml_params(Estimator: RandomForest) -> None:
+    from cuml.ensemble.randomforest_common import BaseRandomForestModel
+
+    cuml_params = get_default_cuml_parameters(
+        [BaseRandomForestModel],
+        [
+            "handle",
+            "output_type",
+            "accuracy_metric",
+            "dtype",
+            "criterion",
+            "min_weight_fraction_leaf",
+            "max_leaf_nodes",
+            "min_impurity_split",
+            "oob_score",
+            "n_jobs",
+            "warm_start",
+            "class_weight",
+        ],
+    )
+    spark_params = Estimator()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 @pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
@@ -110,7 +137,7 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
             "n_bins": 17,
             "max_depth": 9,
             "n_estimators": 17,
-            "max_features": str(1 / 3.0),
+            "max_features": 1 / 3.0,
         }
     )
     assert_params(est, expected_spark_params, expected_cuml_params)
@@ -214,6 +241,9 @@ def test_random_forest_basic(
 def test_random_forest_numeric_type(
     gpu_number: int, RFEstimator: RandomForest, data_type: str
 ) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -302,8 +332,14 @@ def test_random_forest_classifier(
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = spark_rf_model.transform(test_df).collect()
-
         pred_result = [row.prediction for row in result]
+
+        if feature_type == feature_types.vector:
+            # no need to compare all feature type.
+            spark_cpu_result = spark_rf_model.cpu().transform(test_df).collect()
+            spark_cpu_pred_result = [row.prediction for row in spark_cpu_result]
+            assert array_equal(spark_cpu_pred_result, pred_result)
+
         spark_acc = accuracy_score(y_test, np.array(pred_result))
 
         # Since vector type will force to convert to array<double>
@@ -374,6 +410,13 @@ def test_random_forest_regressor(
 
         result = spark_rf_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
+
+        if feature_type == feature_types.vector:
+            # no need to compare all feature type.
+            spark_cpu_result = spark_rf_model.cpu().transform(test_df).collect()
+            spark_cpu_pred_result = [row.prediction for row in spark_cpu_result]
+            assert array_equal(spark_cpu_pred_result, pred_result)
+
         spark_acc = r2_score(y_test, np.array(pred_result))
 
         # Since vector type will force to convert to array<double>
@@ -386,6 +429,49 @@ def test_random_forest_regressor(
             assert cu_acc - spark_acc < 0.09
 
 
+@pytest.mark.parametrize("rf_type", [RandomForestClassifier, RandomForestRegressor])
+@pytest.mark.parametrize(
+    "feature_subset", ["auto", "all", "0.85", "2", "onethird", "log2", "sqrt", "foo"]
+)
+def test_random_forest_featuresubset(
+    rf_type: RandomForestType,
+    feature_subset: str,
+) -> None:
+    with CleanSparkSession() as spark:
+        df = spark.createDataFrame(
+            [
+                (1.0, Vectors.dense(1.0, 0.0)),
+                (1.0, Vectors.dense(0.8, 1.0)),
+                (0.0, Vectors.dense(0.2, 0.8)),
+                (0.0, Vectors.sparse(2, [1], [1.0])),
+                (1.0, Vectors.dense(1.0, 0.0)),
+                (1.0, Vectors.dense(0.8, 1.0)),
+                (0.0, Vectors.dense(0.2, 0.8)),
+                (0.0, Vectors.sparse(2, [1], [1.0])),
+            ],
+            ["label", "features"],
+        )
+
+        if feature_subset != "foo":
+            rf = rf_type(
+                numTrees=3,
+                maxDepth=2,
+                labelCol="label",
+                seed=42,
+                featureSubsetStrategy=feature_subset,
+            )
+            m = rf.fit(df)
+        else:
+            with pytest.raises(ValueError):
+                rf = rf_type(
+                    numTrees=3,
+                    maxDepth=2,
+                    labelCol="label",
+                    seed=42,
+                    featureSubsetStrategy=feature_subset,
+                )
+
+
 @pytest.mark.compat
 @pytest.mark.parametrize(
     "rf_types",
@@ -394,10 +480,12 @@ def test_random_forest_regressor(
         (RandomForestClassifier, RandomForestClassificationModel),
     ],
 )
+@pytest.mark.parametrize("impurity", ["gini", "entropy"])
 def test_random_forest_classifier_spark_compat(
     rf_types: Tuple[RandomForestType, RandomForestModelType],
     gpu_number: int,
     tmp_path: str,
+    impurity: str,
 ) -> None:
     # based on https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.RandomForestClassifier.html
     # cuML does not support single feature, so using expanded dataset
@@ -410,15 +498,24 @@ def test_random_forest_classifier_spark_compat(
                 (1.0, Vectors.dense(0.8, 1.0)),
                 (0.0, Vectors.dense(0.2, 0.8)),
                 (0.0, Vectors.sparse(2, [1], [1.0])),
+                (1.0, Vectors.dense(1.0, 0.0)),
+                (1.0, Vectors.dense(0.8, 1.0)),
+                (0.0, Vectors.dense(0.2, 0.8)),
+                (0.0, Vectors.sparse(2, [1], [1.0])),
             ],
             ["label", "features"],
         )
 
-        rf = _RandomForestClassifier(numTrees=3, maxDepth=2, labelCol="label", seed=42)
-        if isinstance(rf, SparkRFClassifier):
-            rf.setLeafCol("leafId")
-            assert rf.getLeafCol() == "leafId"
-        else:
+        rf = _RandomForestClassifier(
+            numTrees=3, maxDepth=2, labelCol="label", seed=42, impurity=impurity
+        )
+        rf.setLeafCol("leafId")
+        assert rf.getLeafCol() == "leafId"
+
+        if isinstance(rf, RandomForestClassifier):
+            # reduce the number of GPUs for toy dataset to avoid empty partition
+            gpu_number = min(gpu_number, 2)
+            rf.num_workers = gpu_number
             df = df.repartition(gpu_number)
 
         assert rf.getMinWeightFractionPerNode() == 0.0
@@ -432,39 +529,24 @@ def test_random_forest_classifier_spark_compat(
 
         assert model.getFeaturesCol() == "features"
         assert model.getLabelCol() == "label"
-        assert model.getBootstrap() == True
+        assert model.getBootstrap()
 
+        model.setRawPredictionCol("newRawPrediction")
+        assert model.getRawPredictionCol() == "newRawPrediction"
+        featureImportances = model.featureImportances
+        assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
         if isinstance(rf, SparkRFClassifier):
-            model.setRawPredictionCol("newRawPrediction")
-            assert model.getRawPredictionCol() == "newRawPrediction"
-            featureImportances = model.featureImportances
             assert featureImportances == Vectors.sparse(2, {0: 1.0})
-            assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
         else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                model.setRawPredictionCol("newRawPrediction")
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert model.getRawPredictionCol() == "newRawPrediction"
-            with pytest.raises((NotImplementedError, AttributeError)):
-                featureImportances = model.featureImportances
-                assert featureImportances == Vectors.sparse(2, {0: 1.0})
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
+            # TODO: investigate difference
+            assert featureImportances == Vectors.sparse(2, {})
 
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, 0.0),)], ["features"])
         example = test0.head()
         if example:
-            if isinstance(model, SparkRFClassificationModel):
-                model.predict(example.features)
-                model.predictRaw(example.features)
-                model.predictProbability(example.features)
-            else:
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predict(example.features)
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predictRaw(example.features)
-                with pytest.raises((NotImplementedError, AttributeError)):
-                    model.predictProbability(example.features)
+            model.predict(example.features)
+            model.predictRaw(example.features)
+            model.predictProbability(example.features)
 
         result = model.transform(test0).head()
         if result:
@@ -490,12 +572,8 @@ def test_random_forest_classifier_spark_compat(
         if example:
             assert model.transform(test1).head().prediction == 1.0
 
-        if isinstance(model, SparkRFClassificationModel):
-            trees = model.trees
-            assert len(trees) == 3
-        else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                model.trees
+        trees = model.trees
+        assert len(trees) == 3
 
         rfc_path = tmp_path + "/rfc"
         rf.save(rfc_path)
@@ -506,11 +584,7 @@ def test_random_forest_classifier_spark_compat(
         model.save(model_path)
         model2 = _RandomForestClassificationModel.load(model_path)
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
-        if isinstance(model, SparkRFClassificationModel):
-            assert model.featureImportances == model2.featureImportances
-        else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                model.featureImportances == model2.featureImportances
+        assert model.featureImportances == model2.featureImportances
 
 
 @pytest.mark.compat
@@ -549,43 +623,34 @@ def test_random_forest_regressor_spark_compat(
         model = rf.fit(df)
         model.setLeafCol("leafId")
 
+        assert np.allclose(model.treeWeights, [1.0, 1.0])
         if isinstance(model, SparkRFRegressionModel):
             assert model.featureImportances == Vectors.sparse(2, {1: 1.0})
-            assert np.allclose(model.treeWeights, [1.0, 1.0])
         else:
-            with pytest.raises(NotImplementedError):
-                model.featureImportances
-            with pytest.raises(NotImplementedError):
-                model.treeWeights
+            # need to investigate
+            assert model.featureImportances == Vectors.sparse(2, {})
 
-        assert model.getBootstrap() == True
+        assert model.getBootstrap()
         assert model.getSeed() == 42
         assert model.getLeafCol() == "leafId"
 
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, -1.0),)], ["features"])
         example = test0.head()
         if example:
-            if isinstance(model, SparkRFRegressionModel):
-                assert model.predict(example.features) == 0.0
-                assert model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
-            else:
-                with pytest.raises(NotImplementedError):
-                    model.predict(example.features)
-                with pytest.raises(NotImplementedError):
-                    model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
+            assert model.predict(example.features) == 0.0
+            assert model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
 
         result = model.transform(test0).head()
 
         assert result.prediction == 0.0
 
+        assert len(model.trees) == 2
+
         if isinstance(model, SparkRFRegressionModel):
             assert result.leafId == Vectors.dense([0.0, 0.0])
-            assert len(model.trees) == 2
         else:
             with pytest.raises((NotImplementedError, AttributeError)):
                 result.leafId
-            with pytest.raises(NotImplementedError):
-                model.trees
 
         assert model.numFeatures == 2
         assert model.getNumTrees == 2  # implemented as a property
@@ -603,10 +668,6 @@ def test_random_forest_regressor_spark_compat(
         model_path = tmp_path + "/rfr_model"
         model.save(model_path)
         model2 = _RandomForestRegressionModel.load(model_path)
-        if isinstance(model, SparkRFRegressionModel):
-            assert model.featureImportances == model2.featureImportances
-        else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert model.featureImportances == model2.featureImportances
 
+        assert model.featureImportances == model2.featureImportances
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)

@@ -6,18 +6,46 @@ import pytest
 from pyspark.sql import DataFrame
 from sklearn.datasets import make_blobs
 
+from spark_rapids_ml.core import alias
 from spark_rapids_ml.knn import NearestNeighbors
 
 from .sparksession import CleanSparkSession
 from .utils import (
     array_equal,
     create_pyspark_dataframe,
+    get_default_cuml_parameters,
     idfn,
     pyspark_supported_feature_types,
 )
 
 
-def test_example(gpu_number: int) -> None:
+def test_default_cuml_params() -> None:
+    from cuml import NearestNeighbors as CumlNearestNeighbors
+    from cuml.neighbors.nearest_neighbors_mg import (
+        NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
+    )
+
+    cuml_params = get_default_cuml_parameters(
+        [CumlNearestNeighbors, NearestNeighborsMG],
+        [
+            "handle",
+            "algorithm",
+            "metric",
+            "p",
+            "algo_params",
+            "metric_expanded",
+            "metric_params",
+            "output_type",
+        ],
+    )
+    spark_params = NearestNeighbors()._get_cuml_params_default()
+    assert cuml_params == spark_params
+
+
+def test_example(gpu_number: int, tmp_path: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         ([1.0, 1.0], "a"),
         ([2.0, 2.0], "b"),
@@ -49,7 +77,14 @@ def test_example(gpu_number: int) -> None:
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setK(topk)
 
+        with pytest.raises(NotImplementedError):
+            gpu_knn.save(tmp_path + "/knn_esimator")
+
         gpu_model = gpu_knn.fit(data_df)
+
+        with pytest.raises(NotImplementedError):
+            gpu_model.save(tmp_path + "/knn_model")
+
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
@@ -76,13 +111,17 @@ def test_example(gpu_number: int) -> None:
             assert array_equal(distances[3], [0.0, math.sqrt(2.0)])
             assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
 
+        item_ids = list(
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+        )
+
         def assert_indices_equal(indices: List[List[int]]) -> None:
             assert len(indices) == len(query)
-            assert indices[0] == [0, 1]
-            assert indices[1] == [0, 1]
-            assert indices[2] == [3, 4]
-            assert indices[3] == [7, 6]
-            assert indices[4] == [7, 6]
+            assert indices[0] == [item_ids[0], item_ids[1]]
+            assert indices[1] == [item_ids[0], item_ids[1]]
+            assert indices[2] == [item_ids[3], item_ids[4]]
+            assert indices[3] == [item_ids[7], item_ids[6]]
+            assert indices[4] == [item_ids[7], item_ids[6]]
 
         assert_distances_equal(distances=distances)
         assert_indices_equal(indices=indices)
@@ -139,7 +178,7 @@ def test_example(gpu_number: int) -> None:
             .collect()
         )
 
-        assert len(knnjoin_items) == len([0, 1, 3, 4, 6, 7])
+        assert len(knnjoin_items) == 6
         assert knnjoin_items[0]["features"] == data[0][0]
         assert knnjoin_items[0]["metadata"] == data[0][1]
         assert knnjoin_items[1]["features"] == data[1][0]
@@ -165,7 +204,7 @@ def test_example(gpu_number: int) -> None:
 
         assert len(knnjoin_queries) == len(query)
         for i in range(len(knnjoin_queries)):
-            if i is 2:
+            if i == 2:
                 assert array_equal(knnjoin_queries[i]["features"], query[i][0])
             else:
                 assert knnjoin_queries[i]["features"] == query[i][0]
@@ -173,6 +212,9 @@ def test_example(gpu_number: int) -> None:
 
 
 def test_example_with_id(gpu_number: int) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         (101, [1.0, 1.0], "a"),
         (102, [2.0, 2.0], "b"),
@@ -311,21 +353,15 @@ def test_nearest_neighbors(
 
         # test kneighbors: compare top-1 nn indices(self) and distances(self)
         self_index = [knn[0] for knn in indices]
-        assert self_index == list(range(data_shape[0]))
-        cuml_self_index = [knn[0] for knn in cuml_indices]
-        assert self_index == cuml_self_index
 
-        self_distance = [kdist[0] for kdist in distances]
-        assert array_equal(self_distance, [0.0 for i in range(data_shape[0])])
-        cuml_self_distance = [kdist[0] for kdist in cuml_distances]
-        assert array_equal(cuml_self_distance, [0.0 for i in range(data_shape[0])], 0.1)
+        assert self_index == list(
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+        )
 
-        # test kneighbors: compare non-self distances
+        # test kneighbors: compare distances
         assert len(distances) == len(cuml_distances)
-        nonself_distances = [knn[1:] for knn in distances]
-        cuml_nonself_distances = [knn[1:] for knn in cuml_distances]
         for i in range(len(distances)):
-            assert array_equal(nonself_distances[i], cuml_nonself_distances[i])
+            assert array_equal(distances[i], cuml_distances[i])
 
         # test exactNearestNeighborsJoin
         with pytest.raises(ValueError):
@@ -344,46 +380,29 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
     from pyspark.ml.linalg import Vectors
     from pyspark.sql.functions import col
 
+    # reduce the number of GPUs for toy dataset to avoid empty partition.
+    # cuml backend requires k <= the number of rows in the smallest index partition.
+    gpu_number = min(gpu_number, 2)
     topk = 2
 
     with CleanSparkSession() as spark:
         dataA = [
-            (
-                0,
-                Vectors.dense([1.0, 1.0]),
-            ),
-            (
-                1,
-                Vectors.dense([1.0, -1.0]),
-            ),
-            (
-                2,
-                Vectors.dense([-1.0, -1.0]),
-            ),
-            (
-                3,
-                Vectors.dense([-1.0, 1.0]),
-            ),
+            (0, Vectors.dense([1.0, 1.0])),
+            (1, Vectors.dense([1.0, -1.0])),
+            (2, Vectors.dense([-1.0, -1.0])),
+            (3, Vectors.dense([-1.0, 1.0])),
+            (4, Vectors.dense([100.0, 100.0])),
+            (5, Vectors.dense([100.0, -100.0])),
+            (6, Vectors.dense([-100.0, -100.0])),
+            (7, Vectors.dense([-100.0, 100.0])),
         ]
         dfA = spark.createDataFrame(dataA, ["id", "features"])
 
         dataB = [
-            (
-                4,
-                Vectors.dense([1.0, 0.0]),
-            ),
-            (
-                5,
-                Vectors.dense([-1.0, 0.0]),
-            ),
-            (
-                6,
-                Vectors.dense([0.0, 1.0]),
-            ),
-            (
-                7,
-                Vectors.dense([0.0, -1.0]),
-            ),
+            (4, Vectors.dense([1.0, 0.0])),
+            (5, Vectors.dense([-1.0, 0.0])),
+            (6, Vectors.dense([0.0, 1.0])),
+            (7, Vectors.dense([0.0, -1.0])),
         ]
         dfB = spark.createDataFrame(dataB, ["id", "features"])
         dfA.show()
@@ -400,7 +419,9 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
         spark_res.show(truncate=False)
 
         # get GPU results with exactNearestNeighborsJoin(dfA, dfB, k, distCol="EuclideanDistance")
-        gpu_knn = NearestNeighbors(inputCol="features").setK(topk)
+        gpu_knn = NearestNeighbors(num_workers=gpu_number, inputCol="features").setK(
+            topk
+        )
         gpu_model = gpu_knn.fit(dfA)
         gpu_res = gpu_model.exactNearestNeighborsJoin(
             query_df=dfB, distCol="EuclideanDistance"

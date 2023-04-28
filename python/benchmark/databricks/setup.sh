@@ -8,11 +8,10 @@ if [[ -z $DB_PROFILE ]]; then
 fi
 
 if [[ -z $BENCHMARK_HOME ]]; then
-    echo "please export BENCHMARK_HOME_ROOT per README.md"
+    echo "please export BENCHMARK_HOME per README.md"
     exit 1
 fi
 
-#BENCHMARK_HOME_ROOT=/${USER}/spark-rapids-ml/benchmarking
 SPARK_RAPIDS_ML_HOME='../..'
 
 echo "**** copying benchmarking related files to ${BENCHMARK_HOME} ****"

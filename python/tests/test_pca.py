@@ -33,6 +33,7 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
+    get_default_cuml_parameters,
     idfn,
     pyspark_supported_feature_types,
 )
@@ -41,7 +42,28 @@ PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
 PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 
 
+def test_default_cuml_params() -> None:
+    from cuml import PCA as CumlPCA
+
+    cuml_params = get_default_cuml_parameters(
+        [CumlPCA],
+        [
+            "copy",
+            "handle",
+            "iterated_power",
+            "output_type",
+            "random_state",
+            "tol",
+        ],
+    )
+    spark_params = PCA()._get_cuml_params_default()
+    assert cuml_params == spark_params
+
+
 def test_fit(gpu_number: int) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]
     topk = 1
 
@@ -72,6 +94,9 @@ def test_fit(gpu_number: int) -> None:
 
 
 def test_fit_rectangle(gpu_number: int) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [[1.0, 1.0], [1.0, 3.0], [5.0, 1.0], [5.0, 3.0]]
 
     topk = 2
@@ -165,6 +190,9 @@ def test_pca_params(gpu_number: int, tmp_path: str) -> None:
 
 
 def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     # Train a PCA model
     data = [[1.0, 1.0, 1.0], [1.0, 3.0, 2.0], [5.0, 1.0, 3.9], [5.0, 3.0, 2.9]]
     topk = 2
@@ -232,6 +260,9 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
 def test_pca_numeric_type(gpu_number: int, data_type: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -315,6 +346,9 @@ def test_pca_spark_compat(
 
     with CleanSparkSession() as spark:
         data = [
+            (Vectors.sparse(5, [(1, 1.0), (3, 7.0)]),),
+            (Vectors.dense([2.0, 0.0, 3.0, 4.0, 5.0]),),
+            (Vectors.dense([4.0, 0.0, 0.0, 6.0, 7.0]),),
             (Vectors.sparse(5, [(1, 1.0), (3, 7.0)]),),
             (Vectors.dense([2.0, 0.0, 3.0, 4.0, 5.0]),),
             (Vectors.dense([4.0, 0.0, 0.0, 6.0, 7.0]),),

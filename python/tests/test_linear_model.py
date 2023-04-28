@@ -33,6 +33,7 @@ from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     make_regression_dataset,
     pyspark_supported_feature_types,
@@ -78,6 +79,20 @@ def train_with_cuml_linear_regression(
 
     lr.fit(X, y)
     return lr
+
+
+def test_default_cuml_params() -> None:
+    from cuml.linear_model.linear_regression import (
+        LinearRegression as CumlLinearRegression,
+    )
+    from cuml.linear_model.ridge import Ridge
+    from cuml.solvers import CD
+
+    cuml_params = get_default_cuml_parameters(
+        [CumlLinearRegression, Ridge, CD], ["handle", "output_type"]
+    )
+    spark_params = LinearRegression()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 @pytest.mark.parametrize("reg", [0.0, 0.7])
@@ -143,6 +158,8 @@ def test_linear_regression_params(tmp_path: str, reg: float) -> None:
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
 def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -168,12 +185,16 @@ def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None
 @pytest.mark.parametrize("data_shape", [(10, 2)], ids=idfn)
 @pytest.mark.parametrize("reg", [0.0, 0.7])
 def test_linear_regression_basic(
+    gpu_number: int,
     tmp_path: str,
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
     reg: float,
 ) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     # Train a toy model
     X, _, y, _ = make_regression_dataset(data_type, data_shape[0], data_shape[1])
     with CleanSparkSession() as spark:
@@ -181,7 +202,7 @@ def test_linear_regression_basic(
             spark, feature_type, data_type, X, y
         )
 
-        lr = LinearRegression()
+        lr = LinearRegression(num_workers=gpu_number)
         lr.setRegParam(reg)
 
         lr.setFeaturesCol(features_col)
@@ -426,14 +447,24 @@ def test_linear_regression_spark_compat(
 
 
 @pytest.mark.parametrize("params_exception", params_exception)
-def test_fail_run_on_1_col(params_exception: Tuple[Dict[str, Any], bool]) -> None:
+def test_fail_run_on_1_col(
+    gpu_number: int, params_exception: Tuple[Dict[str, Any], bool]
+) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     params, exception = params_exception
     with CleanSparkSession() as spark:
         df = spark.createDataFrame(
-            [(1.0, Vectors.dense(1.0)), (0.0, Vectors.sparse(1, [], []))],
+            [
+                (1.0, Vectors.dense(1.0)),
+                (0.0, Vectors.sparse(1, [], [])),
+                (1.0, Vectors.dense(1.0)),
+                (0.0, Vectors.sparse(1, [], [])),
+            ],
             ["label", "features"],
         )
-        lr = LinearRegression(**params)
+        lr = LinearRegression(num_workers=gpu_number, **params)
 
         if exception:
             with pytest.raises(

@@ -15,9 +15,21 @@
 #
 
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
-import cudf
+if TYPE_CHECKING:
+    import cudf
+
 import numpy as np
 import pandas as pd
 from pyspark.ml.functions import vector_to_array
@@ -30,8 +42,9 @@ from pyspark.ml.param.shared import (
     Params,
     TypeConverters,
 )
+from pyspark.ml.util import MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
-from pyspark.sql.functions import col, lit
+from pyspark.sql.functions import col, lit, monotonically_increasing_id
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
@@ -42,7 +55,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlCaller,
@@ -51,36 +64,17 @@ from spark_rapids_ml.core import (
     alias,
     param_alias,
 )
-from spark_rapids_ml.params import P, _CumlClass, _CumlParams
-from spark_rapids_ml.utils import _concat_and_free
+from .params import P, _CumlClass, _CumlParams
+from .utils import _concat_and_free
 
 
 class NearestNeighborsClass(_CumlClass):
     @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        from cuml import NearestNeighbors as cumlNearestNeighbors
-        from cuml.neighbors.nearest_neighbors_mg import (
-            NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
-        )
-
-        return [cumlNearestNeighbors, NearestNeighborsMG]
-
-    @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {"k": "n_neighbors"}
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return [
-            "handle",
-            "algorithm",
-            "metric",
-            "p",
-            "algo_params",
-            "metric_expanded",
-            "metric_params",
-            "output_type",
-        ]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {"n_neighbors": 5, "verbose": False, "batch_size": 2000000}
 
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
@@ -131,7 +125,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
     def setIdCol(self: P, value: str) -> P:
         """
-        Sets the value of `id_col`. If not set, an id column will be added with column name `id`. The id column is used to specify nearest neighbor vectors by associated id value.
+        Sets the value of `id_col`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
         """
         self.set_params(id_col=value)
         return self
@@ -152,29 +146,45 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
                 + "Please specify an id column"
             )
 
+        id_col_name = self.getIdCol()
         df_withid = (
-            df if self.isSet("id_col") else self._df_zip_with_index(df, self.getIdCol())
+            df
+            if self.isSet("id_col")
+            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
         )
         return df_withid
-
-    @staticmethod
-    def _df_zip_with_index(df: DataFrame, id_col_name: str) -> DataFrame:
-        """
-        Add a row number column (or equivalently id column) to df using zipWithIndex. Used when id_col is not set.
-        TODO: May replace zipWithIndex with monotonically_increasing_id if row number does not have to consecutive.
-        """
-        out_schema = StructType(
-            [StructField(id_col_name, LongType(), False)] + df.schema.fields
-        )
-        zipped_rdd = df.rdd.zipWithIndex()
-        new_rdd = zipped_rdd.map(lambda row: [row[1]] + list(row[0]))
-        return new_rdd.toDF(schema=out_schema)
 
 
 class NearestNeighbors(
     NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
 ):
     """
+    NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each
+    query vector. The main methods accept distributed CPU dataframes as inputs,
+    leverage GPUs to accelerate computation, and take care of communication and
+    aggregation automatically. However, it should be noted that only the euclidean
+    distance (also known as L2 distance) is supported in the current implementations
+    and the feature data type must be of the float type. All other data types will
+    be converted into float during computation.
+
+    Parameters
+    ----------
+    k: int (default = 5)
+        the default number nearest neighbors to retrieve for each query.
+
+    inputCol: str
+        the name of the column that contains input vectors. inputCol should be set when feature vectors
+        are stored in a single column of a dataframe.
+
+    inputCols: List[str]
+        the names of feature columns that form input vectors. inputCols should be set when input vectors
+        are stored as multiple feature columns of a dataframe.
+
+    idCol: str
+        the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
+        if such a column exists in the dataframe. If idCol is not set, a column with the name `unique_id`
+        will be automatically added to the dataframe and used as unique identifier for each vector.
+
     Examples
     --------
     >>> from spark_rapids_ml.knn import NearestNeighbors
@@ -221,6 +231,33 @@ class NearestNeighbors(
     |{2, [3.0, 3.0]}|{4, [3.0, 3.0]}|              0.0|
     |{1, [2.0, 2.0]}|{4, [3.0, 3.0]}|        1.4142135|
     +---------------+---------------+-----------------+
+
+    >>> # vector column input
+    >>> from spark_rapids_ml.knn import NearestNeighbors
+    >>> from pyspark.ml.linalg import Vectors
+    >>> data = [(0, Vectors.dense([1.0, 1.0]),),
+    ...         (1, Vectors.dense([2.0, 2.0]),),
+    ...         (2, Vectors.dense([3.0, 3.0]),)]
+    >>> data_df = spark.createDataFrame(data, ["id", "features"])
+    >>> query = [(3, Vectors.dense([1.0, 1.0]),),
+    ...          (4, Vectors.dense([3.0, 3.0]),)]
+    >>> query_df = spark.createDataFrame(query, ["id", "features"])
+    >>> topk = 2
+    >>> gpu_knn = NearestNeighbors().setInputCol("features").setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
+
+    >>> # multi-column input
+    >>> from spark_rapids_ml.knn import NearestNeighbors
+    >>> data = [(0, 1.0, 1.0),
+    ...         (1, 2.0, 2.0),
+    ...         (2, 3.0, 3.0),]
+    >>> data_df = spark.createDataFrame(data, schema="id int, f1 float, f2 float")
+    >>> query = [(3, 1.0, 1.0),
+    ...          (4, 3.0, 3.0),]
+    >>> query_df = spark.createDataFrame(query, schema="id int, f1 float, f2 float")
+    >>> topk = 2
+    >>> gpu_knn = NearestNeighbors().setInputCols(["f1", "f2"]).setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -267,6 +304,17 @@ class NearestNeighbors(
         This class overrides _fit and will not call _get_cuml_fit_func.
         """
         pass
+
+    def write(self) -> MLWriter:
+        raise NotImplementedError(
+            "NearestNeighbors does not support saving/loading, just re-create the estimator."
+        )
+
+    @classmethod
+    def read(cls) -> MLReader:
+        raise NotImplementedError(
+            "NearestNeighbors does not support saving/loading, just re-create the estimator."
+        )
 
 
 class NearestNeighborsModel(
@@ -523,7 +571,7 @@ class NearestNeighborsModel(
         self, dataset: DataFrame
     ) -> Tuple[
         Callable[..., CumlT],
-        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
     ]:
         raise NotImplementedError(
             "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
@@ -598,3 +646,14 @@ class NearestNeighborsModel(
             )
 
         return knnjoin_df
+
+    def write(self) -> MLWriter:
+        raise NotImplementedError(
+            "NearestNeighborsModel does not support saving/loading, just re-fit the estimator to re-create a model."
+        )
+
+    @classmethod
+    def read(cls) -> MLReader:
+        raise NotImplementedError(
+            "NearestNeighborsModel does not support loading/loading, just re-fit the estimator to re-create a model."
+        )

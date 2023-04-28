@@ -32,6 +32,7 @@ from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     pyspark_supported_feature_types,
 )
@@ -51,6 +52,14 @@ def assert_centers_equal(
         b_center = b_clusters[i]
         assert len(a_center) == len(b_center)
         assert a_center == pytest.approx(b_center, tolerance)
+
+
+def test_default_cuml_params() -> None:
+    from cuml import KMeans as CumlKMeans
+
+    cuml_params = get_default_cuml_parameters([CumlKMeans], ["handle", "output_type"])
+    spark_params = KMeans()._get_cuml_params_default()
+    assert cuml_params == spark_params
 
 
 def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
@@ -117,6 +126,8 @@ def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
 
 
 def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
     data = [[1.0, 1.0], [1.0, 2.0], [3.0, 2.0], [4.0, 3.0]]
 
     with CleanSparkSession() as spark:
@@ -184,6 +195,8 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
 def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -286,9 +299,13 @@ def test_kmeans(
     "kmeans_types", [(SparkKMeans, SparkKMeansModel), (KMeans, KMeansModel)]
 )
 def test_kmeans_spark_compat(
+    gpu_number: int,
     kmeans_types: Tuple[KMeansType, KMeansModelType],
     tmp_path: str,
 ) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+
     # based on https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.feature.PCA.htm
     _KMeans, _KMeansModel = kmeans_types
 

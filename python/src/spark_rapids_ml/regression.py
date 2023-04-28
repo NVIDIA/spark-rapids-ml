@@ -12,20 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
-import cudf
+if TYPE_CHECKING:
+    import cudf
+
 import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.ml.common import _py2java
 from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
+from pyspark.ml.regression import LinearRegressionSummary
 from pyspark.ml.regression import (
-    LinearRegressionSummary,
-    _LinearRegressionParams,
-    _RandomForestRegressorParams,
+    RandomForestRegressionModel as SparkRandomForestRegressionModel,
 )
+from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -37,40 +50,26 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import (
+from .core import (
     CumlInputType,
     CumlT,
     _CumlEstimatorSupervised,
     _CumlModelSupervised,
     param_alias,
 )
-from spark_rapids_ml.params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from spark_rapids_ml.tree import (
+from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from .tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from spark_rapids_ml.utils import (
-    PartitionDescriptor,
-    _get_spark_session,
-    cudf_to_cuml_array,
-    java_uid,
-)
+from .utils import PartitionDescriptor, _get_spark_session, cudf_to_cuml_array, java_uid
 
 T = TypeVar("T")
 
 
 class LinearRegressionClass(_CumlClass):
-    @classmethod
-    def _cuml_cls(cls) -> List[type]:
-        # from cuml.dask.linear_model import LinearRegression
-        from cuml.linear_model.linear_regression import LinearRegression
-        from cuml.linear_model.ridge import Ridge
-        from cuml.solvers import CD
-
-        return [LinearRegression, Ridge, CD]
-
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
@@ -89,15 +88,37 @@ class LinearRegressionClass(_CumlClass):
         }
 
     @classmethod
-    def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
         return {
-            "loss": {"squaredError": "squared_loss", "huber": None},
-            "solver": {"auto": "eig", "normal": "eig", "l-bfgs": None},
+            "loss": lambda x: {
+                "squaredError": "squared_loss",
+                "huber": None,
+                "squared_loss": "squared_loss",
+            }.get(x, None),
+            "solver": lambda x: {
+                "auto": "eig",
+                "normal": "eig",
+                "l-bfgs": None,
+                "eig": "eig",
+            }.get(x, None),
         }
 
-    @classmethod
-    def _param_excludes(cls) -> List[str]:
-        return ["handle", "output_type"]
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+            "algorithm": "eig",
+            "fit_intercept": True,
+            "normalize": False,
+            "verbose": False,
+            "alpha": 0.0001,
+            "solver": "eig",
+            "loss": "squared_loss",
+            "l1_ratio": 0.15,
+            "max_iter": 1000,
+            "tol": 0.001,
+            "shuffle": True,
+        }
 
 
 class _LinearRegressionCumlParams(
@@ -487,7 +508,7 @@ class LinearRegressionModel(
         self, dataset: DataFrame
     ) -> Tuple[
         Callable[..., CumlT],
-        Callable[[CumlT, Union[cudf.DataFrame, np.ndarray]], pd.DataFrame],
+        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
     ]:
         coef_ = self.coef_
         intercept_ = self.intercept_
@@ -505,7 +526,7 @@ class LinearRegressionModel(
 
             return lr
 
-        def _predict(lr: CumlT, pdf: Union[cudf.DataFrame, np.ndarray]) -> pd.Series:
+        def _predict(lr: CumlT, pdf: Union["cudf.DataFrame", np.ndarray]) -> pd.Series:
             ret = lr.predict(pdf)
             return pd.Series(ret)
 
@@ -514,9 +535,13 @@ class LinearRegressionModel(
 
 class _RandomForestRegressorClass(_RandomForestClass):
     @classmethod
-    def _param_value_mapping(cls) -> Dict[str, Dict[str, Union[str, None]]]:
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
         mapping = super()._param_value_mapping()
-        mapping["split_criterion"] = {"variance": "mse"}
+        mapping["split_criterion"] = lambda x: {"variance": "mse", "mse": "mse"}.get(
+            x, None
+        )
         return mapping
 
 
@@ -611,8 +636,36 @@ class RandomForestRegressionModel(
         n_cols: int,
         dtype: str,
         treelite_model: str,
+        model_json: List[str],
     ):
-        super().__init__(dtype=dtype, n_cols=n_cols, treelite_model=treelite_model)
+        super().__init__(
+            dtype=dtype,
+            n_cols=n_cols,
+            treelite_model=treelite_model,
+            model_json=model_json,
+        )
+
+        self._rf_spark_model: Optional[SparkRandomForestRegressionModel] = None
+
+    def cpu(self) -> SparkRandomForestRegressionModel:
+        """Return the PySpark ML RandomForestRegressionModel"""
+
+        if self._rf_spark_model is None:
+            sc = _get_spark_session().sparkContext
+            assert sc._jvm is not None
+
+            uid, java_trees = self._convert_to_java_trees(self.getImpurity())
+            # Create the Spark RandomForestClassificationModel
+            java_rf_model = (
+                sc._jvm.org.apache.spark.ml.regression.RandomForestRegressionModel(
+                    uid,
+                    java_trees,
+                    self.numFeatures,
+                )
+            )
+            self._rf_spark_model = SparkRandomForestRegressionModel(java_rf_model)
+            self._copyValues(self._rf_spark_model)
+        return self._rf_spark_model
 
     def _is_classification(self) -> bool:
         return False

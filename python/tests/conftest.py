@@ -63,6 +63,7 @@ _default_conf = {
     "spark.python.worker.reuse": "false",
     "spark.driver.host": "127.0.0.1",
     "spark.task.maxFailures": "1",
+    "spark.driver.memory": "5g",
     "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
     "spark.sql.pyspark.jvmStacktrace.enabled": "true",
 }
