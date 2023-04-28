@@ -28,12 +28,6 @@ numpydoc_show_class_members = False
 
 autodoc_inherit_docstrings = False
 
-
-autodoc_default_options = {
-   'undoc-members': False,
-   'private-members': False,
-}
-
 templates_path = ['_templates']
 exclude_patterns = []
 
@@ -42,14 +36,10 @@ intersphinx_mapping = {
     'cuml': ('https://docs.rapids.ai/api/cuml/stable', None),
 }
 
-autodoc_member_order = 'groupwise'
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'pydata_sphinx_theme'
-
-html_static_path = ['_static']
 
 import inspect
 from spark_rapids_ml.utils import _unsupported_methods_attributes

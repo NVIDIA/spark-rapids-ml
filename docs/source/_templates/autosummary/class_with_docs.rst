@@ -48,7 +48,9 @@
 
     .. autosummary::
     {% for item in attributes %}
+    {%- if item != "uid" %}
        ~{{ name }}.{{ item }}
+    {%- endif %}
     {%- endfor %}
 
     {% endif %}
@@ -72,7 +74,9 @@
     .. rubric:: Attributes Documentation
 
     {% for item in attributes %}
+    {%- if item != "uid" %}
     .. autoattribute:: {{ item }}
+    {%- endif %}
     {%- endfor %}
 
     {% endif %}

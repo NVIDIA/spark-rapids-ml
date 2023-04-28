@@ -41,7 +41,7 @@ Classification
 
 .. autosummary::
     :template: autosummary/class_with_docs.rst
-    :toctree: api/classification
+    :toctree: api
 
     RandomForestClassifier
     RandomForestClassificationModel
@@ -53,7 +53,7 @@ Clustering
 
 .. autosummary::
     :template: autosummary/class_with_docs.rst
-    :toctree: api/clustering
+    :toctree: api
 
     KMeans
     KMeansModel
@@ -66,7 +66,7 @@ Regression
 
 .. autosummary::
     :template: autosummary/class_with_docs.rst
-    :toctree: api/regression
+    :toctree: api
 
     LinearRegression
     LinearRegressionModel
@@ -81,7 +81,7 @@ Nearest Neighbors
 
 .. autosummary::
     :template: autosummary/class_with_docs.rst
-    :toctree: api/knn
+    :toctree: api
 
     NearestNeighbors
     NearestNeighborsModel

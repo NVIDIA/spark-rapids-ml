@@ -4,8 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to spark-rapids-ml's documentation!
-=====================================
-This is the auto-generated documentation!!
+===========================================
 
 .. toctree::
    :maxdepth: 2
