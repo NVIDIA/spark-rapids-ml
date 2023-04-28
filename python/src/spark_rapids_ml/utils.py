@@ -16,7 +16,7 @@
 import inspect
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Set, Tuple, Union
 
 if TYPE_CHECKING:
     import cudf
@@ -26,6 +26,27 @@ from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.sql import SparkSession
 
 _ArrayOrder = Literal["C", "F"]
+
+
+def _method_names_from_param(spark_param_name: str) -> List[str]:
+    cap = spark_param_name[0].upper() + spark_param_name[1:]
+    getter = f"get{cap}"
+    setter = f"set{cap}"
+    return [getter, setter]
+
+
+def _unsupported_methods_attributes(clazz: Any) -> Set[str]:
+    if "_param_mapping" in [
+        member_name for member_name, _ in inspect.getmembers(clazz, inspect.ismethod)
+    ]:
+        param_map = clazz._param_mapping()
+        _unsupported_params = [k for k, v in param_map.items() if not v]
+        _unsupported_methods: List[str] = sum(
+            [_method_names_from_param(k) for k in _unsupported_params], []
+        )
+        return set(_unsupported_params + _unsupported_methods)
+    else:
+        return set()
 
 
 def _get_spark_session() -> SparkSession:
@@ -319,7 +340,7 @@ def _create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  
     return java_leaf_node
 
 
-def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
+def _translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
     """Translate Cuml RandomForest trees to PySpark trees
 
     Cuml trees
@@ -376,8 +397,8 @@ def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # 
             sc,
             impurity,
             model,
-            translate_trees(sc, impurity, left_child),
-            translate_trees(sc, impurity, right_child),
+            _translate_trees(sc, impurity, left_child),
+            _translate_trees(sc, impurity, right_child),
         )
     elif "leaf_value" in model:
         return _create_leaf_node(sc, impurity, model)

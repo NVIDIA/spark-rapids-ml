@@ -66,8 +66,8 @@ from .utils import (
     _concat_and_free,
     _get_spark_session,
     _str_or_numerical,
+    _translate_trees,
     java_uid,
-    translate_trees,
 )
 
 
@@ -182,6 +182,9 @@ class _RandomForestCumlParams(
         return self
 
     def setSeed(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`seed`.
+        """
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
         return self.set_params(seed=value)
@@ -424,7 +427,7 @@ class _RandomForestModel(
 
         # Convert cuml trees to Spark trees
         trees = [
-            translate_trees(sc, impurity, trees)
+            _translate_trees(sc, impurity, trees)
             for trees_json in self._model_json
             for trees in json.loads(trees_json)
         ]

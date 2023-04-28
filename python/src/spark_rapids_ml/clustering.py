@@ -134,6 +134,18 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
         self.set_params(predictionCol=value)
         return self
 
+    # override unsupported methods with empty docstring and pass or exception depending
+
+    # def getInitSteps(self: P) -> int:
+    #     """jlkjlkj
+    #     :meta private:
+    #     """
+    #     raise NotImplementedError
+    #     return 0
+
+    # initSteps = 0
+    # """:meta private:"""
+
 
 class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     """
