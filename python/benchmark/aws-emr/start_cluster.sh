@@ -35,6 +35,6 @@ aws emr create-cluster \
 --log-uri s3://${BENCHMARK_HOME}/logs \
 --ec2-attributes SubnetId=${SUBNET_ID},InstanceProfile=EMR_EC2_DefaultRole \
 --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m4.2xlarge \
-                  InstanceGroupType=CORE,InstanceCount=2,InstanceType=${core_type} \
+                  InstanceGroupType=CORE,InstanceCount=3,InstanceType=${core_type} \
 --configurations ${config_json} \
 --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${BENCHMARK_HOME}/init-bootstrap-action.sh

@@ -36,9 +36,9 @@ This directory contains shell scripts for running larger scale benchmarks on a A
   ```
   **Note**: monitor benchmark progress periodically in case of a possible hang, to avoid incurring cloud costs in such cases.
 
-- Extract timing information.
+- Extract timing information. To view original EMR log files, please log in AWS EMR console. Click "Clusters", choose the created cluster, click "Steps", then click "stdout" of each spark submit application.  
   ```
-  egrep -e "[0-9.]* seconds" benchmark.log
+  egrep -e "[0-9.]* seconds" *.log
   ```
 
 - Stop the cluster via the AWS EMR Console, or via command line. cluster\_id is available in benchmark.log. 

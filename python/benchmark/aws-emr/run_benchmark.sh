@@ -90,16 +90,27 @@ fi
 
 poll_stdout () {
     stdout_path=s3://${BENCHMARK_HOME}/logs/$1/steps/$2/stdout.gz
-    res=$(aws s3 ls ${stdout_path})
-    while [[ ${res} == "" ]]
+    res="PENDING"
+    while [[ ${res} != *"COMPLETED"* ]]
     do
         sleep 30
-        echo "polling ${stdout_path}"
-        res=$(aws s3 ls ${stdout_path})
+        res=$(aws emr describe-step --cluster-id $1 --step-id $2 | grep "State")
+        echo ${res}
+        if [[ ${res} == *"FAILED"* ]]; then
+            echo "Failed to finish step $2."
+            exit 1
+        fi
     done
-    aws s3 cp ${stdout_path} ./.stdout.gz
-    gunzip -c .stdout.gz 
-    rm ./.stdout.gz
+
+    # check if EMR stdout.gz is complete
+    res=""
+    while [[ ${res} != *"datetime"* ]]
+    do
+        sleep 30
+        aws s3 cp ${stdout_path} ./.stdout.gz
+        res=$(gunzip -c .stdout.gz)
+    done
+    gunzip -c .stdout.gz | tee $3
 }
 
 # run benchmarks
@@ -126,7 +137,7 @@ for i in `seq $kmeans_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} KMeans",ActionOnFailure=CONTINUE,Args=[${kmeans_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./kmeans_$i.out
 done
 
 echo
@@ -146,9 +157,8 @@ for i in `seq $num_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} PCA",ActionOnFailure=CONTINUE,Args=[${pca_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./pca_$i.out
 done
-exit 1
 
 echo
 echo "$sep algo: linear regression - no regularization $sep"
@@ -168,7 +178,7 @@ for i in `seq $num_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} Linear Regression",ActionOnFailure=CONTINUE,Args=[${linear_regression_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./linear_regression_noreg_$i.out
 done
 
 echo
@@ -191,7 +201,7 @@ for i in `seq $num_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} Linear Regression - Elasticnet",ActionOnFailure=CONTINUE,Args=[${elasticnet_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./linear_regression_elasticnet_$i.out
 done
 
 echo
@@ -214,7 +224,7 @@ for i in `seq $num_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} Linear Regression - Ridge",ActionOnFailure=CONTINUE,Args=[${ridge_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./linear_regression_ridge_$i.out
 done
 
 echo ${extra_args}
@@ -238,7 +248,7 @@ for i in `seq $rf_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} Random Forest Classification",ActionOnFailure=CONTINUE,Args=[${rf_classification_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./random_forest_classifier_$i.out
 done
 
 echo
@@ -260,5 +270,5 @@ for i in `seq $rf_runs`; do
     STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
         --steps Type=Spark,Name="${device} Random Forest Regressor",ActionOnFailure=CONTINUE,Args=[${rf_regressor_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
-    poll_stdout $CLUSTER_ID $STEP_ID
+    poll_stdout $CLUSTER_ID $STEP_ID ./random_forest_regressor_$i.out
 done
