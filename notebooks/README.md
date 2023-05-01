@@ -28,9 +28,9 @@ To run notebooks using Spark local mode on a server with one or more NVIDIA GPUs
     ```bash
     export USER=<your_username>
     export HOST=<your_hostname>
-    ssh -A -L 8888:127.0.0.1:8888 -L 4040:127.0.0.1:4040 -L $USER@$HOST
+    ssh -A -L 8888:127.0.0.1:8888 -L 4040:127.0.0.1:4040 $USER@$HOST
     ```
-    Then, browse to the `127.0.0.1` URL printed by the command in step 4.
+    Then, browse to the `127.0.0.1` URL printed by the command in step 4.   Note that a tunnel is also opened to the Spark UI server on port 4040.  Once a notebook is opened, you can view it by browsing to `http://127.0.0.1:4040` in another tab or window.
 8. **OPTIONAL**: If you have multiple GPUs in your server, replace the `CUDA_VISIBLE_DEVICES` setting in step 4 with a comma-separated list of the corresponding indices.  For example, for two GPUs use `CUDA_VISIBLE_DEVICES=0,1`.
 
 ## Running notebooks on Databricks
