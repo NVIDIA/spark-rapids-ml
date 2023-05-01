@@ -24,13 +24,13 @@ set -e
 
 # KMeans
 if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/blobs/5k_3k_float64.parquet" ]]; then
+    if [[ ! -d "/tmp/blobs/5k_3k_float32.parquet" ]]; then
         python ./benchmark/gen_data.py blobs \
             --num_rows 5000 \
             --num_cols 3000 \
-            --dtype "float64" \
+            --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/blobs/5k_3k_float64.parquet" \
+            --output_dir "/tmp/blobs/5k_3k_float32.parquet" \
             --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
@@ -39,7 +39,7 @@ if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
         --k 3 \
         --num_gpus 1 \
         --num_cpus 0 \
-        --train_path "/tmp/blobs/5k_3k_float64.parquet" \
+        --train_path "/tmp/blobs/5k_3k_float32.parquet" \
         --report_path "report_kmeans.csv" \
         --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
@@ -74,13 +74,13 @@ fi
 
 # Linear Regression
 if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/regression/5k_3k_float64.parquet" ]]; then
+    if [[ ! -d "/tmp/regression/5k_3k_float32.parquet" ]]; then
         python ./benchmark/gen_data.py regression \
             --num_rows 5000 \
             --num_cols 3000 \
-            --dtype "float64" \
+            --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/regression/5k_3k_float64.parquet" \
+            --output_dir "/tmp/regression/5k_3k_float32.parquet" \
             --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
@@ -88,8 +88,8 @@ if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
     python ./benchmark/benchmark_runner.py linear_regression \
         --num_gpus 1 \
         --num_cpus 0 \
-        --train_path "/tmp/regression/5k_3k_float64.parquet" \
-        --transform_path "/tmp/regression/5k_3k_float64.parquet" \
+        --train_path "/tmp/regression/5k_3k_float32.parquet" \
+        --transform_path "/tmp/regression/5k_3k_float32.parquet" \
         --report_path "report_linear_regression.csv" \
         --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
@@ -99,13 +99,13 @@ fi
 
 # PCA
 if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/blobs/5k_3k_float64.parquet" ]]; then
+    if [[ ! -d "/tmp/blobs/5k_3k_float32.parquet" ]]; then
         python ./benchmark/gen_data.py blobs \
             --num_rows 5000 \
             --num_cols 3000 \
-            --dtype "float64" \
+            --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/blobs/5k_3k_float64.parquet" \
+            --output_dir "/tmp/blobs/5k_3k_float32.parquet" \
             --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
@@ -114,7 +114,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
         --k 3 \
         --num_gpus 1 \
         --num_cpus 0 \
-        --train_path "/tmp/blobs/5k_3k_float64.parquet" \
+        --train_path "/tmp/blobs/5k_3k_float32.parquet" \
         --report_path "report_pca.csv" \
         --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
@@ -130,7 +130,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
 #        --num_gpus 2 \
 #        --num_cpus 0 \
 #        --num_runs 3 \
-#        --parquet_path "/tmp/blobs/5k_3k_float64.parquet" \
+#        --parquet_path "/tmp/blobs/5k_3k_float32.parquet" \
 #        --report_path "./report_standalone.csv" \
 #        --spark_confs "spark.master=${SPARK_MASTER}" \
 #        --spark_confs "spark.driver.memory=128g" \
@@ -145,13 +145,13 @@ fi
 
 # Random Forest Classification
 if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d /tmp/classification/5k_3k_float64.parquet ]]; then
+    if [[ ! -d /tmp/classification/5k_3k_float32.parquet ]]; then
         python ./benchmark/gen_data.py classification \
             --num_rows 5000 \
             --num_cols 3000 \
-            --dtype "float64" \
+            --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/classification/5k_3k_float64.parquet" \
+            --output_dir "/tmp/classification/5k_3k_float32.parquet" \
             --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
@@ -159,8 +159,8 @@ if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
     python ./benchmark/benchmark_runner.py random_forest_classifier \
         --num_gpus 1 \
         --num_cpus 0 \
-        --train_path "/tmp/classification/5k_3k_float64.parquet" \
-        --transform_path "/tmp/classification/5k_3k_float64.parquet" \
+        --train_path "/tmp/classification/5k_3k_float32.parquet" \
+        --transform_path "/tmp/classification/5k_3k_float32.parquet" \
         --report_path "report_rf_classifier.csv" \
         --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
@@ -170,13 +170,13 @@ fi
 
 # Random Forest Regression
 if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d /tmp/regression/5k_3k_float64.parquet ]]; then
+    if [[ ! -d /tmp/regression/5k_3k_float32.parquet ]]; then
         python ./benchmark/gen_data.py regression \
             --num_rows 5000 \
             --num_cols 3000 \
-            --dtype "float64" \
+            --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/regression/5k_3k_float64.parquet" \
+            --output_dir "/tmp/regression/5k_3k_float32.parquet" \
             --spark_conf "spark.master=local[4]" \
             --spark_confs "spark.driver.memory=128g"
     fi
@@ -184,8 +184,8 @@ if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
     python ./benchmark/benchmark_runner.py random_forest_regressor \
         --num_gpus 1 \
         --num_cpus 0 \
-        --train_path "/tmp/regression/5k_3k_float64.parquet" \
-        --transform_path "/tmp/regression/5k_3k_float64.parquet" \
+        --train_path "/tmp/regression/5k_3k_float32.parquet" \
+        --transform_path "/tmp/regression/5k_3k_float32.parquet" \
         --report_path "report_rf_regressor.csv" \
         --spark_confs "spark.master=local[4]" \
         --spark_confs "spark.driver.memory=128g" \
