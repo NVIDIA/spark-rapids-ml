@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 
-# copies files to GCS bucket
+# copies files to s3 bucket
 
 if [[ -z $BENCHMARK_HOME ]]; then
     echo "please export BENCHMARK_HOME per README.md"
@@ -11,18 +11,18 @@ SPARK_RAPIDS_ML_HOME='../..'
 
 echo "**** copying benchmarking related files to ${BENCHMARK_HOME} ****"
 
-gsutil cp init_benchmark.sh gs://${BENCHMARK_HOME}/init_benchmark.sh
+aws s3 cp ../../../notebooks/aws-emr/init-bootstrap-action.sh s3://${BENCHMARK_HOME}/init-bootstrap-action.sh
 
 pushd ${SPARK_RAPIDS_ML_HOME}/benchmark
-zip -r - benchmark >benchmark.zip
-gsutil cp benchmark.zip gs://${BENCHMARK_HOME}/benchmark.zip
+zip -r - benchmark > benchmark.zip
+aws s3 cp benchmark.zip s3://${BENCHMARK_HOME}/benchmark.zip
 popd
 
 pushd ${SPARK_RAPIDS_ML_HOME}
-gsutil cp benchmark/benchmark_runner.py gs://${BENCHMARK_HOME}/benchmark_runner.py
+aws s3 cp benchmark/benchmark_runner.py s3://${BENCHMARK_HOME}/benchmark_runner.py
 popd
 
 pushd ${SPARK_RAPIDS_ML_HOME}/src
 zip -r - spark_rapids_ml >spark_rapids_ml.zip
-gsutil cp spark_rapids_ml.zip gs://${BENCHMARK_HOME}/spark_rapids_ml.zip
+aws s3 cp spark_rapids_ml.zip s3://${BENCHMARK_HOME}/spark_rapids_ml.zip
 popd
