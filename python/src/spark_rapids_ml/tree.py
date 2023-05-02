@@ -182,6 +182,9 @@ class _RandomForestCumlParams(
         return self
 
     def setSeed(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`seed`.
+        """
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
         return self.set_params(seed=value)

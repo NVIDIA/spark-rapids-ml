@@ -194,8 +194,8 @@ class LinearRegression(
     and :py:class:`cuml.ElasticNet`. And it will automatically map pyspark parameters
     to cuML parameters.
 
-    Note
-    ----
+    Notes
+    -----
         Results for spark ML and spark rapids ml fit() will currently match in all regularization
         cases only if features and labels are standardized in the input dataframe.  Otherwise,
         they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
