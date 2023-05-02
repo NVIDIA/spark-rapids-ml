@@ -1,6 +1,6 @@
 # Benchmarking on Dataproc
 
-This directory contains shell scripts for running larger-scale benchmarks on an AWS EMR cluster. You will need an AWS EMR account to run them.  The benchmarks use datasets synthetically generated using [gen_data.py](../gen_data.py). For convenience, these have been precomputed and are available in the public S3 bucket `spark-rapids-ml-bm-datasets-public`.  The benchmark scripts are currently configured to read the data from there.
+This directory contains shell scripts for running larger-scale benchmarks on an AWS EMR cluster. You will need an AWS account to run them.  The benchmarks use datasets synthetically generated using [gen_data.py](../gen_data.py). For convenience, these have been precomputed and are available in the public S3 bucket `spark-rapids-ml-bm-datasets-public`.  The benchmark scripts are currently configured to read the data from there.
 
 ## Setup
 
@@ -34,6 +34,8 @@ This directory contains shell scripts for running larger-scale benchmarks on an 
   ```
   ./run_benchmark.sh [cpu|gpu] 2>&1 | tee benchmark.log
   ```
+  **Note**: the created cluster is configured to automatically terminate after 30 minutes of idle time, but it can still be manually terminated or deleted via the AWS EMR Console.
+
   **Note**: monitor benchmark progress periodically in case of a possible hang, to avoid incurring cloud costs in such cases.
 
 - Extract timing information. To view the original EMR log files, please log in [AWS EMR console](https://console.aws.amazon.com/emr/). Click "Clusters", choose the created cluster, click "Steps", then click "stdout" of each spark submit application.  

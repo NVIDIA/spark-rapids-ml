@@ -32,6 +32,7 @@ cpu_submit_args=$(cat <<EOF
 --conf,spark.sql.execution.sortBeforeRepartition=false,\
 --conf,spark.executor.cores=8,\
 --conf,spark.driver.memory=10g,\
+--conf,spark.executor.memory=20g,\
 --py-files,"s3://${BENCHMARK_HOME}/spark_rapids_ml.zip,s3://${BENCHMARK_HOME}/benchmark.zip",\
 s3://${BENCHMARK_HOME}/benchmark_runner.py
 EOF
@@ -82,7 +83,7 @@ else
 fi
 
 # start benchmark cluster
-CLUSTER_ID=$(./start_cluster.sh ${cluster_type} | tee /dev/tty | grep "ClusterId" | grep -o 'j-[0-9|A-Z]*')
+CLUSTER_ID=$(./start_cluster.sh ${cluster_type})
 if [[ $? != 0 ]]; then
     echo "Failed to start cluster."
     exit 1
@@ -111,6 +112,7 @@ poll_stdout () {
         res=$(gunzip -c .stdout.gz)
     done
     gunzip -c .stdout.gz | tee $3
+    rm .stdout.gz
 }
 
 # run benchmarks

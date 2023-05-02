@@ -27,7 +27,7 @@ else
     exit 1
 fi
 
-aws emr create-cluster \
+start_cmd="aws emr create-cluster \
 --name ${cluster_name} \
 --release-label emr-6.10.0 \
 --applications Name=Hadoop Name=Spark \
@@ -38,3 +38,8 @@ aws emr create-cluster \
                   InstanceGroupType=CORE,InstanceCount=3,InstanceType=${core_type} \
 --configurations ${config_json} \
 --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${BENCHMARK_HOME}/init-bootstrap-action.sh
+"
+
+CLUSTER_ID=$(eval ${start_cmd} | tee /dev/tty | grep "ClusterId" | grep -o 'j-[0-9|A-Z]*')
+aws emr put-auto-termination-policy --cluster-id ${CLUSTER_ID} --auto-termination-policy IdleTimeout=1800
+echo "${CLUSTER_ID}"
