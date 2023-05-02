@@ -29,6 +29,9 @@ _ArrayOrder = Literal["C", "F"]
 
 
 def _method_names_from_param(spark_param_name: str) -> List[str]:
+    """
+    Returns getter and setter method names, per Spark ML conventions, for passed in attribute.
+    """
     cap = spark_param_name[0].upper() + spark_param_name[1:]
     getter = f"get{cap}"
     setter = f"set{cap}"
@@ -36,6 +39,10 @@ def _method_names_from_param(spark_param_name: str) -> List[str]:
 
 
 def _unsupported_methods_attributes(clazz: Any) -> Set[str]:
+    """
+    Returns set of methods and attributes not supported by spark-rapids-ml for passed in class
+    as determined from empty values in the dictionary returned by _param_mapping() invoked on the class.
+    """
     if "_param_mapping" in [
         member_name for member_name, _ in inspect.getmembers(clazz, inspect.ismethod)
     ]:

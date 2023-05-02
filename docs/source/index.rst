@@ -10,7 +10,7 @@ Welcome to spark-rapids-ml's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   modules
+   spark_rapids_ml
 
 Indices and tables
 ==================

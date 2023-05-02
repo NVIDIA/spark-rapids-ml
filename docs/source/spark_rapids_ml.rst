@@ -17,7 +17,7 @@
 
 
 Spark Rapids ML
-=======================
+===============
 
 .. toctree::
    :maxdepth: 4
