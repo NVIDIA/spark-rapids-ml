@@ -181,6 +181,61 @@ class _RandomForestCumlParams(
         self._set(labelCol=value)  # type: ignore
         return self
 
+    def setPredictionCol(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        self._set(predictionCol=value)  # type: ignore
+        return self
+
+
+class _RandomForestEstimatorParams(_RandomForestCumlParams):
+    def __init__(self) -> None:
+        super().__init__()
+
+    # include setters used only in estimator classes (classifier and regressor) here
+    def setBootstrap(self: P, value: bool) -> P:
+        """
+        Sets the value of :py:attr:`bootstrap`.
+        """
+        return self.set_params(bootstrap=value)
+
+    def setFeatureSubsetStrategy(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`featureSubsetStrategy`.
+        """
+        return self.set_params(featureSubsetStrategy=value)
+
+    def setImpurity(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`impurity`.
+        """
+        return self.set_params(impurity=value)  # type: ignore
+
+    def setMaxBins(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`maxBins`.
+        """
+        return self.set_params(maxBins=value)
+
+    def setMaxDepth(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`maxDepth`.
+        """
+        return self.set_params(maxDepth=value)
+
+    def setMinInstancesPerNode(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`minInstancesPerNode`.
+        """
+        return self.set_params(minInstancesPerNode=value)
+
+    def setNumTrees(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`numTrees`.
+        """
+        return self.set_params(numTrees=value)
+
     def setSeed(self: P, value: int) -> P:
         """
         Sets the value of :py:attr:`seed`.
@@ -192,7 +247,7 @@ class _RandomForestCumlParams(
 
 class _RandomForestEstimator(
     _CumlEstimatorSupervised,
-    _RandomForestCumlParams,
+    _RandomForestEstimatorParams,
 ):
     def __init__(self, **kwargs: Any):
         super().__init__()
