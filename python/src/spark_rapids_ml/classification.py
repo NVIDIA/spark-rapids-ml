@@ -142,12 +142,6 @@ class RandomForestClassifier(
         super().__init__(**kwargs)
         self.set_params(**kwargs)
 
-    def setNumTrees(self, value: int) -> "RandomForestClassifier":
-        """
-        Sets the value of :py:attr:`numTrees`.
-        """
-        return self._set(numTrees=value)
-
     def _pre_process_label(
         self, dataset: DataFrame, feature_type: Union[Type[FloatType], Type[DoubleType]]
     ) -> Column:
