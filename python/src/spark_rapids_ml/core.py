@@ -467,6 +467,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             logger = get_logger(cls)
             logger.info("Initializing cuml context")
 
+            import rmm
+            import cupy as cp
+
+            rmm.reinitialize(managed_memory=True)
+            cp.cuda.set_allocator(rmm.rmm_cupy_allocator)
+
             _CumlCommon.initialize_cuml_logging(cuml_verbose)
 
             context = BarrierTaskContext.get()
