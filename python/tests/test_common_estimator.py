@@ -425,6 +425,15 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         model_loaded = SparkRapidsMLDummyModel.load(model_path)
         assert_model(model_loaded)
 
+        dummy2 = dummy.copy()
+        assert dummy2.cuml_params["a"] == 100
+        with pytest.raises(
+            Exception,
+            match="assert {'a': 9876, 'k': 4, 'x': 40.0} == {'a': 100, 'k': 4, 'x': 40.0}",
+        ):
+            dummy2.fit(df, {dummy2.alpha: 9876})
+        assert dummy2.cuml_params["a"] == 9876
+
         # Transform the training dataset with a clean spark
         with CleanSparkSession() as clean_spark:
             test_df = clean_spark.sparkContext.parallelize(data, m).toDF(input_cols)
