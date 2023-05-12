@@ -363,6 +363,14 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
     with pytest.raises(ValueError, match="Unsupported param 'b'"):
         cuml_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **cuml_params)
 
+    # test the parameter copy
+    dummy = SparkRapidsMLDummy()
+    dummy2 = dummy.copy({dummy.alpha: 1111})
+    assert dummy.getOrDefault(dummy.alpha) == 1
+    assert dummy.cuml_params["a"] == 1
+    assert dummy2.getOrDefault(dummy.alpha) == 1111
+    assert dummy2.cuml_params["a"] == 1111
+
 
 def test_dummy(gpu_number: int, tmp_path: str) -> None:
     data = [
@@ -429,10 +437,11 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         assert dummy2.cuml_params["a"] == 100
         with pytest.raises(
             Exception,
-            match="assert {'a': 9876, 'k': 4, 'x': 40.0} == {'a': 100, 'k': 4, 'x': 40.0}",
+            match="assert {'a': 9876.0, 'k': 4, 'x': 40.0} == {'a': 100, 'k': 4, 'x': 40.0}",
         ):
-            dummy2.fit(df, {dummy2.alpha: 9876})
-        assert dummy2.cuml_params["a"] == 9876
+            dummy2.fit(df, {dummy2.alpha: 9876.0})
+        assert dummy2.cuml_params["a"] == 100
+        assert dummy2.getOrDefault(dummy2.alpha) == 100
 
         # Transform the training dataset with a clean spark
         with CleanSparkSession() as clean_spark:

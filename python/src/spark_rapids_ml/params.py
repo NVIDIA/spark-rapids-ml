@@ -178,17 +178,23 @@ class _CumlParams(_CumlClass, Params):
 
     def copy(self: P, extra: Optional["ParamMap"] = None) -> P:
         # override this function to update cuml_params if possible
+        instance: P = super().copy(extra)
+        cuml_params = instance.cuml_params.copy()
+
         if isinstance(extra, dict):
             for param, value in extra.items():
                 if isinstance(param, Param):
-                    self._set_cuml_param(param.name, value, silent=False)
+                    name = instance._get_cuml_param(param.name, silent=False)
+                    if name is not None:
+                        cuml_params[name] = value
                 else:
                     raise TypeError(
                         "Expecting a valid instance of Param, but received: {}".format(
                             param
                         )
                     )
-        return super().copy(extra)
+        instance._cuml_params = cuml_params
+        return instance
 
     def initialize_cuml_params(self) -> None:
         """
