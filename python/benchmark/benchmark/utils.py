@@ -28,7 +28,6 @@ class WithSparkSession(object):
             key, value = conf.split("=")
             builder = builder.config(key, value)
         self.spark = builder.getOrCreate()
-        self.spark.sparkContext.setLogLevel("INFO")
         self.shutdown = shutdown
 
     def __enter__(self) -> SparkSession:

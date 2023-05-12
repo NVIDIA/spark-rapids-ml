@@ -303,7 +303,35 @@ class _RandomForestEstimator(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            # 1. prepare the dataset
+
+            import cupy as cp
+            from pyspark import BarrierTaskContext
+
+            context = BarrierTaskContext.get()
+            part_id = context.partitionId()
+
+            rf_params = params[param_alias.cuml_init]
+            rf_params.pop("n_estimators")
+
+            if rf_params["max_features"] == "auto":
+                if total_trees == 1:
+                    rf_params["max_features"] = 1.0
+                else:
+                    rf_params["max_features"] = (
+                        "sqrt" if is_classification else (1 / 3.0)
+                    )
+
+            if is_classification:
+                from cuml import RandomForestClassifier as cuRf
+            else:
+                from cuml import RandomForestRegressor as cuRf
+
+            rf = cuRf(
+                n_estimators=n_estimators_per_worker[part_id],
+                output_type="cudf",
+                **rf_params,
+            )
+
             X_list = [item[0] for item in dfs]
             y_list = [item[1] for item in dfs]
             if isinstance(X_list[0], pd.DataFrame):
@@ -311,7 +339,7 @@ class _RandomForestEstimator(
                 y = pd.concat(y_list)
             else:
                 # should be list of np.ndarrays here
-                X = _concat_and_free(cast(List[np.ndarray], X_list))
+                X = _concat_and_free(cast(List[cp.ndarray], X_list))
                 y = _concat_and_free(cast(List[np.ndarray], y_list))
 
             if is_classification:

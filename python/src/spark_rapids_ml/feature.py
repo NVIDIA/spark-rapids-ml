@@ -195,11 +195,14 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
             pdesc = PartitionDescriptor.build(
                 params[param_alias.part_sizes], params[param_alias.num_cols]
             )
+            data_arrays = [x for x, _, _ in dfs]
+            # reverse list order to compensate for cuda managed memory LRU eviction
+            stride = -1
             pca_object.fit(
-                [x for x, _, _ in dfs],
+                data_arrays[::stride],
                 pdesc.m,
                 pdesc.n,
-                pdesc.parts_rank_size,
+                pdesc.parts_rank_size[::stride],
                 pdesc.rank,
                 _transform=False,
             )

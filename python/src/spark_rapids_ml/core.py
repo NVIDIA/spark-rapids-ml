@@ -467,8 +467,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             logger = get_logger(cls)
             logger.info("Initializing cuml context")
 
-            import rmm
             import cupy as cp
+            import rmm
 
             rmm.reinitialize(managed_memory=True)
             cp.cuda.set_allocator(rmm.rmm_cupy_allocator)
@@ -494,7 +494,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     if multi_col_names:
                         features = pdf[multi_col_names]
                     else:
-                        features = np.array(list(pdf[alias.data]), order=array_order)
+                        # it is faster to convert to numpy array and then to cupy array then directly
+                        # invoking cupy array on the list
+                        features = cp.array(
+                            np.array(list(pdf[alias.data]), order=array_order)
+                        )
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
                         pdf[alias.row_number]

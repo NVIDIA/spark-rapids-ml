@@ -272,6 +272,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
+            import cupy as cp
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans_object = CumlKMeansMG(
@@ -283,9 +284,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
             else:
-                # should be list of np.ndarrays here
+                # should be list of cp.ndarrays here
                 concated = _concat_and_free(
-                    cast(List[np.ndarray], df_list), order=array_order
+                    cast(List[cp.ndarray], df_list), order=array_order
                 )
 
             kmeans_object.fit(
