@@ -161,7 +161,7 @@ class BenchmarkPCA(BenchmarkBase):
             gpu_model, fit_time = with_benchmark(
                 "gpu fit", lambda: gpu_pca.fit(train_df)
             )
-           
+
             def gpu_transform(df: DataFrame) -> DataFrame:
                 transformed_df = gpu_model.transform(df)
                 transformed_df.select((col(output_col)[0]).alias("zero")).agg(
