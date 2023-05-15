@@ -145,7 +145,7 @@ pipeline {
                         if (TEMP_IMAGE_BUILD) {
                             PREMERGE_TAG = "${BUILD_TAG}"
                             IMAGE_PREMERGE = "${ARTIFACTORY_NAME}/sw-spark-docker-local/spark-rapids-ml:${PREMERGE_TAG}"
-                            docker.build(IMAGE_PREMERGE, "-f ${PREMERGE_DOCKERFILE} -t $IMAGE_PREMERGE .")
+                            docker.build(IMAGE_PREMERGE, "--network=host -f ${PREMERGE_DOCKERFILE} -t $IMAGE_PREMERGE .")
                             uploadDocker(IMAGE_PREMERGE)
                         }
                     }
