@@ -15,6 +15,7 @@
 #
 import json
 import os
+import threading
 from abc import abstractmethod
 from collections import namedtuple
 from typing import (
@@ -22,9 +23,11 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generic,
     Iterator,
     List,
     Optional,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -78,6 +81,7 @@ if TYPE_CHECKING:
     import cudf
     from cuml.cluster.kmeans_mg import KMeansMG
     from cuml.decomposition.pca_mg import PCAMG
+    from pyspark.ml._typing import ParamMap
 
     CumlT = TypeVar("CumlT", PCAMG, KMeansMG)
 else:
@@ -101,9 +105,14 @@ pred = Pred("prediction", "probability")
 
 # Global parameter alias used by core and subclasses.
 ParamAlias = namedtuple(
-    "ParamAlias", ("cuml_init", "handle", "num_cols", "part_sizes", "loop")
+    "ParamAlias",
+    ("cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"),
 )
-param_alias = ParamAlias("cuml_init", "handle", "num_cols", "part_sizes", "loop")
+param_alias = ParamAlias(
+    "cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"
+)
+
+cuM = TypeVar("cuM", bound="_CumlModel")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -371,7 +380,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         raise NotImplementedError()
 
     def _call_cuml_fit_func(
-        self, dataset: DataFrame, partially_collect: bool = True
+        self,
+        dataset: DataFrame,
+        partially_collect: bool = True,
+        paramMaps: Optional[Sequence["ParamMap"]] = None,
     ) -> RDD:
         """
         Fits a model to the input dataset. This is called by the default implementation of fit.
@@ -400,9 +412,21 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
+        # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
         }
+
+        # Convert the paramMaps into cuml paramMaps
+        fit_multiple_params = []
+        if paramMaps is not None:
+            for paramMap in paramMaps:
+                tmp_fit_multiple_params = {}
+                for k, v in paramMap.items():
+                    name = self._get_cuml_param(k.name, False)
+                    tmp_fit_multiple_params[name] = v
+                fit_multiple_params.append(tmp_fit_multiple_params)
+        params[param_alias.fit_multiple_params] = fit_multiple_params
 
         cuml_fit_func = self._get_cuml_fit_func(dataset)
         array_order = self._fit_array_order()
@@ -484,6 +508,53 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         return "F"
 
 
+class _FitMultipleIterator(Generic[cuM]):
+    """
+    Used by default implementation of Estimator.fitMultiple to produce models in a thread safe
+    iterator. This class handles the gpu versioned of fitMultiple where all param maps should be
+    fit in a single pass.
+
+    Parameters
+    ----------
+    fitMultipleModels : function
+        Callable[[], Transformer] which fits an estimator to a dataset.
+        `fitSingleModel` may be called up to `numModels` times, with a unique index each time.
+        Each call to `fitSingleModel` with an index should return the Model associated with
+        that index.
+    numModel : int
+        Number of models this iterator should produce.
+
+    Notes
+    -----
+    See :py:meth:`Estimator.fitMultiple` for more info.
+    """
+
+    def __init__(self, fitMultipleModels: Callable[[], List[cuM]], numModels: int):
+        """ """
+        self.fitMultipleModels = fitMultipleModels
+        self.numModel = numModels
+        self.counter = 0
+        self.lock = threading.Lock()
+        self.models: List[cuM] = []
+
+    def __iter__(self) -> Iterator[Tuple[int, cuM]]:
+        return self
+
+    def __next__(self) -> Tuple[int, cuM]:
+        with self.lock:
+            index = self.counter
+            if index >= self.numModel:
+                raise StopIteration("No models remaining.")
+            if index == 0:
+                self.models = self.fitMultipleModels()
+            self.counter += 1
+        return index, self.models[index]
+
+    def next(self) -> Tuple[int, cuM]:
+        """For python2 compatibility."""
+        return self.__next__()
+
+
 class _CumlEstimator(Estimator, _CumlCaller):
     """
     The common estimator to handle the fit callback (_fit). It should:
@@ -504,17 +575,75 @@ class _CumlEstimator(Estimator, _CumlCaller):
         """
         raise NotImplementedError()
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
-        pipelined_rdd = self._call_cuml_fit_func(
-            dataset=dataset, partially_collect=True
-        )
-        ret = pipelined_rdd.collect()[0]
+    def _enable_fit_mulitple_in_single_pass(self) -> bool:
+        """flag to indicate if fitMultiple in a single pass is supported.
+        If not, fallback to super().fitMultiple"""
+        return False
 
-        model = self._create_pyspark_model(ret)
-        model._num_workers = self._num_workers
-        self._copyValues(model)
-        self._copy_cuml_params(model)  # type: ignore
-        return model
+    def fitMultiple(
+        self, dataset: DataFrame, paramMaps: Sequence["ParamMap"]
+    ) -> Iterator[Tuple[int, "_CumlModel"]]:
+        """
+        Fits multiple models to the input dataset for all param maps in a single pass.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            input dataset.
+        paramMaps : :py:class:`collections.abc.Sequence`
+            A Sequence of param maps.
+
+        Returns
+        -------
+        :py:class:`_FitMultipleIterator`
+            A thread safe iterable which contains one model for each param map. Each
+            call to `next(modelIterator)` will return `(index, model)` where model was fit
+            using `paramMaps[index]`. `index` values may not be sequential.
+        """
+
+        if self._enable_fit_mulitple_in_single_pass():
+            estimator = self.copy()
+
+            def fitMultipleModels() -> List["_CumlModel"]:
+                return estimator._fit_internal(dataset, paramMaps)
+
+            return _FitMultipleIterator(fitMultipleModels, len(paramMaps))
+        else:
+            return super().fitMultiple(dataset, paramMaps)
+
+    def _fit_internal(
+        self, dataset: DataFrame, paramMaps: Optional[Sequence["ParamMap"]]
+    ) -> List["_CumlModel"]:
+        """Fit multiple models according to the parameters maps"""
+        pipelined_rdd = self._call_cuml_fit_func(
+            dataset=dataset,
+            partially_collect=True,
+            paramMaps=paramMaps,
+        )
+        rows = pipelined_rdd.collect()
+
+        models: List["_CumlModel"] = [None]  # type: ignore
+        if paramMaps is not None:
+            models = [None] * len(paramMaps)  # type: ignore
+
+        for index in range(len(models)):
+            model = self._create_pyspark_model(rows[index])
+            model._num_workers = self._num_workers
+
+            if paramMaps is not None:
+                self._copyValues(model, paramMaps[index])
+            else:
+                self._copyValues(model)
+
+            self._copy_cuml_params(model)  # type: ignore
+
+            models[index] = model  # type: ignore
+
+        return models
+
+    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+        """fit only 1 model"""
+        return self._fit_internal(dataset, None)[0]
 
     def write(self) -> MLWriter:
         return _CumlEstimatorWriter(self)

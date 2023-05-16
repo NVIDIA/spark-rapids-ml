@@ -671,3 +671,46 @@ def test_random_forest_regressor_spark_compat(
 
         assert model.featureImportances == model2.featureImportances
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
+
+
+@pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
+@pytest.mark.parametrize("feature_type", [feature_types.vector])
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_fit_multiple_in_single_pass(
+    RFEstimator: RandomForest,
+    feature_type: str,
+    data_type: np.dtype,
+) -> None:
+    X_train, _, y_train, _ = make_classification_dataset(
+        datatype=data_type,
+        nrows=100,
+        ncols=5,
+    )
+
+    with CleanSparkSession() as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+
+        assert label_col is not None
+        rf = RFEstimator(bootstrap=False, max_features=1.0, random_state=1.0)
+        rf.setFeaturesCol(features_col)
+        rf.setLabelCol(label_col)
+
+        initial_rf = rf.copy()
+
+        param_maps = [
+            {rf.maxDepth: 3, rf.maxBins: 16},
+            {rf.maxDepth: 3, rf.maxBins: 42},
+            {rf.maxDepth: 6, rf.maxBins: 16},
+            {rf.maxDepth: 6, rf.maxBins: 42},
+        ]
+        models = rf.fit(train_df, param_maps)
+
+        for i, param_map in enumerate(param_maps):
+            rf = initial_rf.copy()
+            single_model = rf.fit(train_df, param_map)
+
+            assert single_model._treelite_model == models[i]._treelite_model
+            assert models[i].getMaxDepth() == param_map[rf.maxDepth]
+            assert models[i].getMaxBins() == param_map[rf.maxBins]
