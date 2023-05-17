@@ -4,18 +4,16 @@
    contain the root `toctree` directive.
 
 Welcome to spark-rapids-ml's documentation!
-=====================================
-This is the auto-generated documentation!!
+===========================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-
+   spark_rapids_ml
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
