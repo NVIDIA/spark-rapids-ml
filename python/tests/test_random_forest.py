@@ -26,6 +26,7 @@ from pyspark.ml.classification import RandomForestClassifier as SparkRFClassifie
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.regression import RandomForestRegressionModel as SparkRFRegressionModel
 from pyspark.ml.regression import RandomForestRegressor as SparkRFRegressor
+from pyspark.sql.types import DoubleType
 from sklearn.metrics import r2_score
 
 from spark_rapids_ml.classification import (
@@ -226,6 +227,10 @@ def test_random_forest_basic(
 
         # train a model
         model = est.fit(df)
+        assert (
+            model.transform(df).schema[model.getPredictionCol()].dataType
+            == DoubleType()
+        )
 
         # model persistence
         path = tmp_path + "/random_forest_tests"

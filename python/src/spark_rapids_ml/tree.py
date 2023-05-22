@@ -596,3 +596,9 @@ class _RandomForestModel(
 
         # TBD: figure out why RF algo's warns regardless of what np array order is set
         return _construct_rf, _predict
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        df = super()._transform(dataset)
+        return df.withColumn(
+            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+        )

@@ -534,6 +534,12 @@ class LinearRegressionModel(
 
         return _construct_lr, _predict
 
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        df = super()._transform(dataset)
+        return df.withColumn(
+            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+        )
+
 
 class _RandomForestRegressorClass(_RandomForestClass):
     @classmethod
