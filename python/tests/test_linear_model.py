@@ -23,6 +23,7 @@ from pyspark.ml.linalg import Vectors
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
 from pyspark.sql.functions import array, col
+from pyspark.sql.types import DoubleType
 
 from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 
@@ -240,6 +241,10 @@ def test_linear_regression_basic(
 
         # train a model
         lr_model = lr.fit(df)
+        assert (
+            lr_model.transform(df).schema[lr.getPredictionCol()].dataType
+            == DoubleType()
+        )
 
         assert isinstance(lr_model.cpu(), SparkLinearRegressionModel)
         assert_cuml_pyspark_model(lr_model, lr_model.cpu())
