@@ -261,9 +261,8 @@ class _RandomForestEstimator(
         """Indicate if it is regression or classification estimator"""
         raise NotImplementedError()
 
-    def _estimators_per_worker(self) -> List[int]:
+    def _estimators_per_worker(self, n_estimators: int) -> List[int]:
         """Calculate the number of trees each task should train according to n_estimators"""
-        n_estimators = self.cuml_params["n_estimators"]
         n_workers = self.num_workers
         if n_estimators < n_workers:
             raise ValueError("n_estimators cannot be lower than number of spark tasks.")
@@ -276,13 +275,27 @@ class _RandomForestEstimator(
         return n_estimators_per_worker
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        n_estimators_per_worker = self._estimators_per_worker()
+        # Each element of n_estimators_of_all_params is a list value which
+        # is composed of n_estimators per worker.
+        n_estimators_of_all_params: List[List[int]] = []
+        total_trees: List[int] = []
+
+        all_params = [{}] if extra_params is None else extra_params
+
+        for params in all_params:
+            num_trees = (
+                self.cuml_params["n_estimators"]
+                if "n_estimators" not in params
+                else params["n_estimators"]
+            )
+            n_estimators_of_all_params.append(self._estimators_per_worker(num_trees))
+            total_trees.append(num_trees)
 
         is_classification = self._is_classification()
-
-        total_trees = self.cuml_params["n_estimators"]
 
         def _rf_fit(
             dfs: CumlInputType,
@@ -308,17 +321,6 @@ class _RandomForestEstimator(
 
             context = BarrierTaskContext.get()
             part_id = context.partitionId()
-
-            rf_params = params[param_alias.cuml_init]
-            rf_params.pop("n_estimators")
-
-            if rf_params["max_features"] == "auto":
-                if total_trees == 1:
-                    rf_params["max_features"] = 1.0
-                else:
-                    rf_params["max_features"] = (
-                        "sqrt" if is_classification else (1 / 3.0)
-                    )
 
             def _single_fit(rf: cuRf) -> Dict[str, Any]:
                 # Fit a random forest model on the dataset (X, y)
@@ -369,6 +371,15 @@ class _RandomForestEstimator(
                 else:
                     return {}
 
+            rf_params = params[param_alias.cuml_init]
+            if rf_params["max_features"] == "auto":
+                if total_trees == 1:
+                    rf_params["max_features"] = 1.0
+                else:
+                    rf_params["max_features"] = (
+                        "sqrt" if is_classification else (1 / 3.0)
+                    )
+
             fit_multiple_params = params[param_alias.fit_multiple_params]
 
             if len(fit_multiple_params) == 0:
@@ -378,8 +389,18 @@ class _RandomForestEstimator(
             for i in range(len(fit_multiple_params)):
                 tmp_rf_params = rf_params.copy()
                 tmp_rf_params.update(fit_multiple_params[i])
+                tmp_rf_params.pop("n_estimators")
+
+                if tmp_rf_params["max_features"] == "auto":
+                    if total_trees[i] == 1:
+                        tmp_rf_params["max_features"] = 1.0
+                    else:
+                        tmp_rf_params["max_features"] = (
+                            "sqrt" if is_classification else (1 / 3.0)
+                        )
+
                 rf = cuRf(
-                    n_estimators=n_estimators_per_worker[part_id],
+                    n_estimators=n_estimators_of_all_params[i][part_id],
                     output_type="cudf",
                     **tmp_rf_params,
                 )
@@ -410,7 +431,7 @@ class _RandomForestEstimator(
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return False, False
 
-    def _enable_fit_mulitple_in_single_pass(self) -> bool:
+    def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True
 
 

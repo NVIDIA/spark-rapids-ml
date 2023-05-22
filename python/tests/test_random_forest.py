@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import json
 from typing import Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -700,12 +700,22 @@ def test_fit_multiple_in_single_pass(
         initial_rf = rf.copy()
 
         param_maps = [
-            {rf.maxDepth: 3, rf.maxBins: 16},
-            {rf.maxDepth: 3, rf.maxBins: 42},
-            {rf.maxDepth: 6, rf.maxBins: 16},
-            {rf.maxDepth: 6, rf.maxBins: 42},
+            {rf.maxDepth: 3, rf.maxBins: 3, rf.numTrees: 5},
+            {rf.maxDepth: 4, rf.maxBins: 4, rf.numTrees: 6},
+            {rf.maxDepth: 5, rf.maxBins: 5},
+            {rf.maxDepth: 6, rf.maxBins: 6, rf.numTrees: 8},
         ]
         models = rf.fit(train_df, param_maps)
+
+        def get_num_trees(
+            model: Union[RandomForestClassificationModel, RandomForestRegressionModel]
+        ) -> int:
+            trees = [
+                None
+                for trees_json in model._model_json
+                for trees in json.loads(trees_json)
+            ]
+            return len(trees)
 
         for i, param_map in enumerate(param_maps):
             rf = initial_rf.copy()
@@ -714,3 +724,8 @@ def test_fit_multiple_in_single_pass(
             assert single_model._treelite_model == models[i]._treelite_model
             assert models[i].getMaxDepth() == param_map[rf.maxDepth]
             assert models[i].getMaxBins() == param_map[rf.maxBins]
+            assert (
+                get_num_trees(models[i]) == param_map[rf.numTrees]
+                if rf.numTrees in param_map
+                else rf.getNumTrees()
+            )

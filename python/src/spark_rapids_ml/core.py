@@ -112,7 +112,7 @@ param_alias = ParamAlias(
     "cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"
 )
 
-cuM = TypeVar("cuM", bound="_CumlModel")
+CumlModel = TypeVar("CumlModel", bound="_CumlModel")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -353,7 +353,9 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
     @abstractmethod
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         """
         Subclass must implement this function to return a cuml fit function that will be
@@ -361,7 +363,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         Eg,
 
-        def _get_cuml_fit_func(self, dataset: DataFrame):
+        def _get_cuml_fit_func(self, dataset: DataFrame, extra_params: Optional[List[Dict[str, Any]]] = None):
             ...
             def _cuml_fit(df: CumlInputType, params: Dict[str, Any]) -> Dict[str, Any]:
                 "" "
@@ -424,11 +426,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 tmp_fit_multiple_params = {}
                 for k, v in paramMap.items():
                     name = self._get_cuml_param(k.name, False)
+                    assert name is not None
                     tmp_fit_multiple_params[name] = v
                 fit_multiple_params.append(tmp_fit_multiple_params)
         params[param_alias.fit_multiple_params] = fit_multiple_params
 
-        cuml_fit_func = self._get_cuml_fit_func(dataset)
+        cuml_fit_func = self._get_cuml_fit_func(
+            dataset, None if len(fit_multiple_params) == 0 else fit_multiple_params
+        )
         array_order = self._fit_array_order()
 
         cuml_verbose = self.cuml_params.get("verbose", False)
@@ -508,7 +513,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         return "F"
 
 
-class _FitMultipleIterator(Generic[cuM]):
+class _FitMultipleIterator(Generic[CumlModel]):
     """
     Used by default implementation of Estimator.fitMultiple to produce models in a thread safe
     iterator. This class handles the gpu versioned of fitMultiple where all param maps should be
@@ -517,11 +522,8 @@ class _FitMultipleIterator(Generic[cuM]):
     Parameters
     ----------
     fitMultipleModels : function
-        Callable[[], Transformer] which fits an estimator to a dataset.
-        `fitSingleModel` may be called up to `numModels` times, with a unique index each time.
-        Each call to `fitSingleModel` with an index should return the Model associated with
-        that index.
-    numModel : int
+        Callable[[], CumlModel] which fits multiple models to a dataset in a single pass.
+    numModels : int
         Number of models this iterator should produce.
 
     Notes
@@ -529,29 +531,31 @@ class _FitMultipleIterator(Generic[cuM]):
     See :py:meth:`Estimator.fitMultiple` for more info.
     """
 
-    def __init__(self, fitMultipleModels: Callable[[], List[cuM]], numModels: int):
+    def __init__(
+        self, fitMultipleModels: Callable[[], List[CumlModel]], numModels: int
+    ):
         """ """
         self.fitMultipleModels = fitMultipleModels
-        self.numModel = numModels
+        self.numModels = numModels
         self.counter = 0
         self.lock = threading.Lock()
-        self.models: List[cuM] = []
+        self.models: List[CumlModel] = []
 
-    def __iter__(self) -> Iterator[Tuple[int, cuM]]:
+    def __iter__(self) -> Iterator[Tuple[int, CumlModel]]:
         return self
 
-    def __next__(self) -> Tuple[int, cuM]:
+    def __next__(self) -> Tuple[int, CumlModel]:
         with self.lock:
             index = self.counter
-            if index >= self.numModel:
+            if index >= self.numModels:
                 raise StopIteration("No models remaining.")
             if index == 0:
                 self.models = self.fitMultipleModels()
+                assert len(self.models) == self.numModels
             self.counter += 1
         return index, self.models[index]
 
-    def next(self) -> Tuple[int, cuM]:
-        """For python2 compatibility."""
+    def next(self) -> Tuple[int, CumlModel]:
         return self.__next__()
 
 
@@ -575,7 +579,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         """
         raise NotImplementedError()
 
-    def _enable_fit_mulitple_in_single_pass(self) -> bool:
+    def _enable_fit_multiple_in_single_pass(self) -> bool:
         """flag to indicate if fitMultiple in a single pass is supported.
         If not, fallback to super().fitMultiple"""
         return False
@@ -601,7 +605,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
             using `paramMaps[index]`. `index` values may not be sequential.
         """
 
-        if self._enable_fit_mulitple_in_single_pass():
+        if self._enable_fit_multiple_in_single_pass():
             estimator = self.copy()
 
             def fitMultipleModels() -> List["_CumlModel"]:
