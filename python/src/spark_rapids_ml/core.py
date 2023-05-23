@@ -536,7 +536,6 @@ class _FitMultipleIterator(Generic[CumlModel]):
     def __init__(
         self, fitMultipleModels: Callable[[], List[CumlModel]], numModels: int
     ):
-        """ """
         self.fitMultipleModels = fitMultipleModels
         self.numModels = numModels
         self.counter = 0

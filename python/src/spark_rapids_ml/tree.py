@@ -372,14 +372,6 @@ class _RandomForestEstimator(
                     return {}
 
             rf_params = params[param_alias.cuml_init]
-            if rf_params["max_features"] == "auto":
-                if total_trees == 1:
-                    rf_params["max_features"] = 1.0
-                else:
-                    rf_params["max_features"] = (
-                        "sqrt" if is_classification else (1 / 3.0)
-                    )
-
             fit_multiple_params = params[param_alias.fit_multiple_params]
 
             if len(fit_multiple_params) == 0:
