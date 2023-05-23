@@ -518,7 +518,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 class _FitMultipleIterator(Generic[CumlModel]):
     """
     Used by default implementation of Estimator.fitMultiple to produce models in a thread safe
-    iterator. This class handles the gpu versioned of fitMultiple where all param maps should be
+    iterator. This class handles the gpu version of fitMultiple where all param maps should be
     fit in a single pass.
 
     Parameters
