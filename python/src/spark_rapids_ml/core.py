@@ -427,7 +427,9 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 for k, v in paramMap.items():
                     name = self._get_cuml_param(k.name, False)
                     assert name is not None
-                    tmp_fit_multiple_params[name] = v
+                    tmp_fit_multiple_params[name] = self._get_cuml_mapping_value(
+                        name, v
+                    )
                 fit_multiple_params.append(tmp_fit_multiple_params)
         params[param_alias.fit_multiple_params] = fit_multiple_params
 

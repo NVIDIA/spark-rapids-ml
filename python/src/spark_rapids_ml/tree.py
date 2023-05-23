@@ -398,7 +398,6 @@ class _RandomForestEstimator(
                         tmp_rf_params["max_features"] = (
                             "sqrt" if is_classification else (1 / 3.0)
                         )
-
                 rf = cuRf(
                     n_estimators=n_estimators_of_all_params[i][part_id],
                     output_type="cudf",

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import json
-from typing import Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
@@ -24,6 +24,7 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.classification import RandomForestClassifier as SparkRFClassifier
 from pyspark.ml.linalg import Vectors
+from pyspark.ml.param import Param
 from pyspark.ml.regression import RandomForestRegressionModel as SparkRFRegressionModel
 from pyspark.ml.regression import RandomForestRegressor as SparkRFRegressor
 from pyspark.sql.types import DoubleType
@@ -704,10 +705,31 @@ def test_fit_multiple_in_single_pass(
 
         initial_rf = rf.copy()
 
-        param_maps = [
-            {rf.maxDepth: 3, rf.maxBins: 3, rf.numTrees: 5},
-            {rf.maxDepth: 4, rf.maxBins: 4, rf.numTrees: 6},
-            {rf.maxDepth: 5, rf.maxBins: 5},
+        param_maps: List[Dict[Param, Any]] = [
+            # all supported pyspark parameters
+            {
+                rf.maxDepth: 3,
+                rf.maxBins: 3,
+                rf.numTrees: 5,
+                rf.featureSubsetStrategy: "onethird",
+                rf.impurity: "entropy"
+                if isinstance(rf, RandomForestClassifier)
+                else "variance",
+                rf.minInstancesPerNode: 2,
+            },
+            # different values for all supported pyspark parameters
+            {
+                rf.maxDepth: 4,
+                rf.maxBins: 4,
+                rf.numTrees: 6,
+                rf.featureSubsetStrategy: "sqrt",
+                rf.impurity: "gini"
+                if isinstance(rf, RandomForestClassifier)
+                else "variance",
+                rf.minInstancesPerNode: 3,
+            },
+            # part of all supported pyspark parameters.
+            {rf.maxDepth: 5, rf.maxBins: 5, rf.featureSubsetStrategy: "log2"},
             {rf.maxDepth: 6, rf.maxBins: 6, rf.numTrees: 8},
         ]
         models = rf.fit(train_df, param_maps)
@@ -730,7 +752,24 @@ def test_fit_multiple_in_single_pass(
             assert models[i].getMaxDepth() == param_map[rf.maxDepth]
             assert models[i].getMaxBins() == param_map[rf.maxBins]
             assert (
+                models[i].getFeatureSubsetStrategy()
+                == param_map[rf.featureSubsetStrategy]
+                if rf.featureSubsetStrategy in param_map
+                else single_model.getFeatureSubsetStrategy()
+            )
+            assert (
+                models[i].getImpurity() == param_map[rf.impurity]
+                if rf.impurity in param_map
+                else single_model.getImpurity()
+            )
+            assert (
+                models[i].getMinInstancesPerNode() == param_map[rf.minInstancesPerNode]
+                if rf.minInstancesPerNode in param_map
+                else single_model.getMinInstancesPerNode()
+            )
+
+            assert (
                 get_num_trees(models[i]) == param_map[rf.numTrees]
                 if rf.numTrees in param_map
-                else rf.getNumTrees()
+                else single_model.getNumTrees
             )

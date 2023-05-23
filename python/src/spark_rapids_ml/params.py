@@ -186,7 +186,9 @@ class _CumlParams(_CumlClass, Params):
                 if isinstance(param, Param):
                     name = instance._get_cuml_param(param.name, silent=False)
                     if name is not None:
-                        cuml_params[name] = value
+                        cuml_params[name] = instance._get_cuml_mapping_value(
+                            name, value
+                        )
                 else:
                     raise TypeError(
                         "Expecting a valid instance of Param, but received: {}".format(
@@ -418,6 +420,19 @@ class _CumlParams(_CumlClass, Params):
             # if Spark Param is mapped to cuML parameter, set cuml_params
             self._set_cuml_value(cuml_param, spark_value)
 
+    def _get_cuml_mapping_value(self, k: str, v: Any) -> Any:
+        value_map = self._param_value_mapping()
+        if k not in value_map:
+            # no value mapping required
+            return v
+        else:
+            # value map exists
+            mapped_v = value_map[k](v)
+            if mapped_v is not None:
+                return mapped_v
+            else:
+                raise ValueError(f"Value '{v}' for '{k}' param is unsupported")
+
     def _set_cuml_value(self, k: str, v: Any) -> None:
         """
         Set a cuml_params parameter with a (mapped) value.
@@ -438,14 +453,5 @@ class _CumlParams(_CumlClass, Params):
             If a value mapping exists, but the mapped value is None, this means that there is
             no equivalent value for the cuML side, so an exception is raised.
         """
-        value_map = self._param_value_mapping()
-        if k not in value_map:
-            # no value mapping required
-            self._cuml_params[k] = v
-        else:
-            # value map exists
-            mapped_v = value_map[k](v)
-            if mapped_v:
-                self._cuml_params[k] = mapped_v
-            else:
-                raise ValueError(f"Value '{v}' for '{k}' param is unsupported")
+        value_map = self._get_cuml_mapping_value(k, v)
+        self._cuml_params[k] = value_map
