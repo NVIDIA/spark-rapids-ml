@@ -249,7 +249,10 @@ class _CumlCommon(MLWritable, MLReadable):
         else:
             gpu_id = _get_gpu_id(context)
 
-        cupy.cuda.Device(gpu_id).use()
+        # always set CUDA_VISIBLE_DEVICES to assigned single gpu id for consistency with spark rapids plugin
+        # gpu enabled python worker setup
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        cupy.cuda.Device(0).use()
 
     @staticmethod
     def initialize_cuml_logging(verbose: Optional[Union[bool, int]]) -> None:
