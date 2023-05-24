@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import json
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
@@ -556,14 +556,14 @@ def test_random_forest_classifier_spark_compat(
             model.predictProbability(example.features)
 
         result = model.transform(test0).head()
-        if result:
-            if isinstance(model, SparkRFClassificationModel):
-                assert result.prediction == 0.0
-                assert np.argmax(result.probability) == 0
-            else:
-                # TODO: investigate difference
-                assert result.prediction == 1.0
-                assert np.argmax(result.probability) == 1
+        assert result is not None
+        if isinstance(model, SparkRFClassificationModel):
+            assert result.prediction == 0.0
+            assert np.argmax(result.probability) == 0
+        else:
+            # TODO: investigate difference
+            assert result.prediction == 1.0
+            assert np.argmax(result.probability) == 1
 
         if isinstance(model, SparkRFClassificationModel):
             assert np.argmax(result.newRawPrediction) == 0
@@ -576,8 +576,10 @@ def test_random_forest_classifier_spark_compat(
 
         test1 = spark.createDataFrame([(Vectors.sparse(2, [0], [1.0]),)], ["features"])
         example = test1.head()
-        if example:
-            assert model.transform(test1).head().prediction == 1.0
+        assert example is not None
+        tmp = model.transform(test1).head()
+        assert tmp is not None
+        assert tmp.prediction == 1.0
 
         trees = model.trees
         assert len(trees) == 3
