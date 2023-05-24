@@ -175,7 +175,9 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         return self.set_params(k=value)
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         def _cuml_fit(
             dfs: CumlInputType,

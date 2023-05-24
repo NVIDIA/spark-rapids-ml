@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from typing import Tuple, Type, TypeVar, Union
+import json
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pytest
@@ -24,6 +24,7 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.classification import RandomForestClassifier as SparkRFClassifier
 from pyspark.ml.linalg import Vectors
+from pyspark.ml.param import Param
 from pyspark.ml.regression import RandomForestRegressionModel as SparkRFRegressionModel
 from pyspark.ml.regression import RandomForestRegressor as SparkRFRegressor
 from pyspark.sql.types import DoubleType
@@ -676,3 +677,99 @@ def test_random_forest_regressor_spark_compat(
 
         assert model.featureImportances == model2.featureImportances
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
+
+
+@pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
+@pytest.mark.parametrize("feature_type", [feature_types.vector])
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_fit_multiple_in_single_pass(
+    RFEstimator: RandomForest,
+    feature_type: str,
+    data_type: np.dtype,
+) -> None:
+    X_train, _, y_train, _ = make_classification_dataset(
+        datatype=data_type,
+        nrows=100,
+        ncols=5,
+    )
+
+    with CleanSparkSession() as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+
+        assert label_col is not None
+        rf = RFEstimator(bootstrap=False, max_features=1.0, random_state=1.0)
+        rf.setFeaturesCol(features_col)
+        rf.setLabelCol(label_col)
+
+        initial_rf = rf.copy()
+
+        param_maps: List[Dict[Param, Any]] = [
+            # all supported pyspark parameters
+            {
+                rf.maxDepth: 3,
+                rf.maxBins: 3,
+                rf.numTrees: 5,
+                rf.featureSubsetStrategy: "onethird",
+                rf.impurity: "entropy"
+                if isinstance(rf, RandomForestClassifier)
+                else "variance",
+                rf.minInstancesPerNode: 2,
+            },
+            # different values for all supported pyspark parameters
+            {
+                rf.maxDepth: 4,
+                rf.maxBins: 4,
+                rf.numTrees: 6,
+                rf.featureSubsetStrategy: "sqrt",
+                rf.impurity: "gini"
+                if isinstance(rf, RandomForestClassifier)
+                else "variance",
+                rf.minInstancesPerNode: 3,
+            },
+            # part of all supported pyspark parameters.
+            {rf.maxDepth: 5, rf.maxBins: 5, rf.featureSubsetStrategy: "log2"},
+            {rf.maxDepth: 6, rf.maxBins: 6, rf.numTrees: 8},
+        ]
+        models = rf.fit(train_df, param_maps)
+
+        def get_num_trees(
+            model: Union[RandomForestClassificationModel, RandomForestRegressionModel]
+        ) -> int:
+            trees = [
+                None
+                for trees_json in model._model_json
+                for trees in json.loads(trees_json)
+            ]
+            return len(trees)
+
+        for i, param_map in enumerate(param_maps):
+            rf = initial_rf.copy()
+            single_model = rf.fit(train_df, param_map)
+
+            assert single_model._treelite_model == models[i]._treelite_model
+            assert models[i].getMaxDepth() == param_map[rf.maxDepth]
+            assert models[i].getMaxBins() == param_map[rf.maxBins]
+            assert (
+                models[i].getFeatureSubsetStrategy()
+                == param_map[rf.featureSubsetStrategy]
+                if rf.featureSubsetStrategy in param_map
+                else single_model.getFeatureSubsetStrategy()
+            )
+            assert (
+                models[i].getImpurity() == param_map[rf.impurity]
+                if rf.impurity in param_map
+                else single_model.getImpurity()
+            )
+            assert (
+                models[i].getMinInstancesPerNode() == param_map[rf.minInstancesPerNode]
+                if rf.minInstancesPerNode in param_map
+                else single_model.getMinInstancesPerNode()
+            )
+
+            assert (
+                get_num_trees(models[i]) == param_map[rf.numTrees]
+                if rf.numTrees in param_map
+                else single_model.getNumTrees
+            )
