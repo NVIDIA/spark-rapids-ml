@@ -318,7 +318,9 @@ class LinearRegression(
         return select_cols, multi_col_names, dimension, feature_type
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         def _linear_regression_fit(
             dfs: CumlInputType,

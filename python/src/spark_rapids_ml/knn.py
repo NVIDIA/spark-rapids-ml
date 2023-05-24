@@ -440,8 +440,10 @@ class NearestNeighborsModel(
 
         return (self._item_df_withid, query_df_withid, knn_df)
 
-    def _get_cuml_fit_func(  # type: ignore
-        self, dataset: DataFrame
+    def _get_cuml_fit_func(
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         label_isdata = self._label_isdata
         label_isquery = self._label_isquery

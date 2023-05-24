@@ -172,7 +172,9 @@ class SparkRapidsMLDummy(
         return self.set_params(**{"k": value})
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         num_workers = self.num_workers
         partition_num = self.partition_num

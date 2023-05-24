@@ -269,7 +269,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         return "C"
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
         cls = self.__class__
 
