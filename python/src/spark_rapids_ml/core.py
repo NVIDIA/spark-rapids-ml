@@ -112,7 +112,7 @@ param_alias = ParamAlias(
     "cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"
 )
 
-CumlModel = TypeVar("CumlModel", bound="_CumlModel")
+M = TypeVar("M", bound="_CumlModel")
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -515,7 +515,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         return "F"
 
 
-class _FitMultipleIterator(Generic[CumlModel]):
+class _FitMultipleIterator(Generic[M]):
     """
     Used by default implementation of Estimator.fitMultiple to produce models in a thread safe
     iterator. This class handles the gpu version of fitMultiple where all param maps should be
@@ -533,19 +533,17 @@ class _FitMultipleIterator(Generic[CumlModel]):
     See :py:meth:`Estimator.fitMultiple` for more info.
     """
 
-    def __init__(
-        self, fitMultipleModels: Callable[[], List[CumlModel]], numModels: int
-    ):
+    def __init__(self, fitMultipleModels: Callable[[], List[M]], numModels: int):
         self.fitMultipleModels = fitMultipleModels
         self.numModels = numModels
         self.counter = 0
         self.lock = threading.Lock()
-        self.models: List[CumlModel] = []
+        self.models: List[M] = []
 
-    def __iter__(self) -> Iterator[Tuple[int, CumlModel]]:
+    def __iter__(self) -> Iterator[Tuple[int, M]]:
         return self
 
-    def __next__(self) -> Tuple[int, CumlModel]:
+    def __next__(self) -> Tuple[int, M]:
         with self.lock:
             index = self.counter
             if index >= self.numModels:
@@ -556,11 +554,11 @@ class _FitMultipleIterator(Generic[CumlModel]):
             self.counter += 1
         return index, self.models[index]
 
-    def next(self) -> Tuple[int, CumlModel]:
+    def next(self) -> Tuple[int, M]:
         return self.__next__()
 
 
-class _CumlEstimator(Estimator, _CumlCaller):
+class _CumlEstimator(Estimator[M], _CumlCaller):
     """
     The common estimator to handle the fit callback (_fit). It should:
     1. set the default parameters
@@ -574,7 +572,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         super().__init__()
 
     @abstractmethod
-    def _create_pyspark_model(self, result: Row) -> "_CumlModel":
+    def _create_pyspark_model(self, result: Row) -> M:
         """
         Create the model according to the collected Row
         """
@@ -587,7 +585,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
     def fitMultiple(
         self, dataset: DataFrame, paramMaps: Sequence["ParamMap"]
-    ) -> Iterator[Tuple[int, "_CumlModel"]]:
+    ) -> Iterator[Tuple[int, M]]:
         """
         Fits multiple models to the input dataset for all param maps in a single pass.
 
@@ -609,7 +607,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         if self._enable_fit_multiple_in_single_pass():
             estimator = self.copy()
 
-            def fitMultipleModels() -> List["_CumlModel"]:
+            def fitMultipleModels() -> List[M]:
                 return estimator._fit_internal(dataset, paramMaps)
 
             return _FitMultipleIterator(fitMultipleModels, len(paramMaps))
@@ -618,7 +616,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
     def _fit_internal(
         self, dataset: DataFrame, paramMaps: Optional[Sequence["ParamMap"]]
-    ) -> List["_CumlModel"]:
+    ) -> List[M]:
         """Fit multiple models according to the parameters maps"""
         pipelined_rdd = self._call_cuml_fit_func(
             dataset=dataset,
@@ -627,7 +625,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         )
         rows = pipelined_rdd.collect()
 
-        models: List["_CumlModel"] = [None]  # type: ignore
+        models: List[M] = [None]  # type: ignore
         if paramMaps is not None:
             models = [None] * len(paramMaps)  # type: ignore
 
@@ -646,7 +644,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         return models
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+    def _fit(self, dataset: DataFrame) -> M:
         """fit only 1 model"""
         return self._fit_internal(dataset, None)[0]
 
@@ -658,7 +656,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         return _CumlEstimatorReader(cls)
 
 
-class _CumlEstimatorSupervised(_CumlEstimator, HasLabelCol):
+class _CumlEstimatorSupervised(_CumlEstimator[M], HasLabelCol):
     """
     Base class for Cuml Supervised machine learning.
     """

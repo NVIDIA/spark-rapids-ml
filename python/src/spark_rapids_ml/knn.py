@@ -79,7 +79,7 @@ class NearestNeighborsClass(_CumlClass):
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
     """
-    Shared Spark Params for NearestNeighbor and NearestNeighborModel.
+    Shared Spark Params for NearestNeighbors and NearestNeighborsModel.
     """
 
     def __init__(self) -> None:
@@ -156,7 +156,9 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
 
 class NearestNeighbors(
-    NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
+    NearestNeighborsClass,
+    _CumlEstimatorSupervised["NearestNeighborsModel"],
+    _NearestNeighborsCumlParams,
 ):
     """
     NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each

@@ -170,7 +170,7 @@ class _LinearRegressionCumlParams(
 
 class LinearRegression(
     LinearRegressionClass,
-    _CumlEstimatorSupervised,
+    _CumlEstimatorSupervised["LinearRegressionModel"],
     _LinearRegressionCumlParams,
 ):
     """LinearRegression is a machine learning model where the response y is modeled
@@ -555,7 +555,7 @@ class _RandomForestRegressorClass(_RandomForestClass):
 
 class RandomForestRegressor(
     _RandomForestRegressorClass,
-    _RandomForestEstimator,
+    _RandomForestEstimator["RandomForestRegressionModel"],
     _RandomForestCumlParams,
     _RandomForestRegressorParams,
 ):

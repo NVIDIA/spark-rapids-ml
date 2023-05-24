@@ -321,7 +321,9 @@ def test_pca(
         assert model.getOutputCol() == model.cpu().getOutputCol()
         assert model.getOutputCol() == "pca_features"
 
-        assert array_equal(cu_pca.components_, model.components_, 1e-3, with_sign=False)
+        assert array_equal(
+            cu_pca.components_, np.asarray(model.components_), 1e-3, with_sign=False
+        )
         assert array_equal(
             cu_pca.explained_variance_ratio_, model.explained_variance_ratio_, 1e-3
         )

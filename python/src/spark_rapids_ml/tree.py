@@ -26,6 +26,7 @@ from typing import (
     List,
     Optional,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -69,6 +70,8 @@ from .utils import (
     java_uid,
     translate_trees,
 )
+
+RFM = TypeVar("RFM", bound="_RandomForestModel")
 
 
 class _RandomForestClass(_CumlClass):
@@ -246,7 +249,7 @@ class _RandomForestEstimatorParams(_RandomForestCumlParams):
 
 
 class _RandomForestEstimator(
-    _CumlEstimatorSupervised,
+    _CumlEstimatorSupervised[RFM],
     _RandomForestEstimatorParams,
 ):
     def __init__(self, **kwargs: Any):

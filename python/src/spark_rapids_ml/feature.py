@@ -96,7 +96,7 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
         return self.set_params(outputCol=value)
 
 
-class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
+class PCA(PCAClass, _CumlEstimator["PCAModel"], _PCACumlParams):
     """
     PCA algorithm learns principal component vectors to project high-dimensional vectors
     into low-dimensional vectors, while preserving the similarity of the vectors. PCA

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import json
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pytest
@@ -56,11 +56,7 @@ from .utils import (
 RandomForest = TypeVar(
     "RandomForest", Type[RandomForestClassifier], Type[RandomForestRegressor]
 )
-RandomForestModel = TypeVar(
-    "RandomForestModel",
-    Type[RandomForestClassificationModel],
-    Type[RandomForestRegressionModel],
-)
+RandomForestModel = Union[RandomForestClassificationModel, RandomForestRegressionModel]
 
 RandomForestType = TypeVar(
     "RandomForestType",
@@ -222,7 +218,9 @@ def test_random_forest_basic(
             assert lhs.n_cols == rhs.n_cols
             assert lhs.n_cols == data_shape[1]
 
-            if isinstance(lhs, RandomForestClassificationModel):
+            if isinstance(lhs, RandomForestClassificationModel) and isinstance(
+                rhs, RandomForestClassificationModel
+            ):
                 assert lhs.numClasses == rhs.numClasses
                 assert lhs.numClasses == n_classes
 
@@ -532,6 +530,9 @@ def test_random_forest_classifier_spark_compat(
         assert rf.getLabelCol() == "label"
 
         model = rf.fit(df)
+        assert isinstance(model, RandomForestClassificationModel) or isinstance(
+            model, SparkRFClassificationModel
+        )
 
         assert model.getFeaturesCol() == "features"
         assert model.getLabelCol() == "label"
@@ -647,7 +648,7 @@ def test_random_forest_regressor_spark_compat(
             assert model.predictLeaf(example.features) == Vectors.dense([0.0, 0.0])
 
         result = model.transform(test0).head()
-
+        assert result is not None
         assert result.prediction == 0.0
 
         assert len(model.trees) == 2

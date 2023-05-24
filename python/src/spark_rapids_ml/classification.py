@@ -70,7 +70,7 @@ class _RFClassifierParams(
 
 class RandomForestClassifier(
     _RandomForestClass,
-    _RandomForestEstimator,
+    _RandomForestEstimator["RandomForestClassificationModel"],
     _RandomForestCumlParams,
     _RFClassifierParams,
 ):

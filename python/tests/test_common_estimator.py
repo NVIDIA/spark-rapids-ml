@@ -123,7 +123,7 @@ class _SparkRapidsMLDummyParams(_CumlParams):
 
 class SparkRapidsMLDummy(
     SparkRapidsMLDummyClass,
-    _CumlEstimator,
+    _CumlEstimator["SparkRapidsMLDummyModel"],
     _SparkRapidsMLDummyParams,
     HasInputCols,
     HasOutputCols,

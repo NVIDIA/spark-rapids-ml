@@ -432,6 +432,7 @@ def test_linear_regression_spark_compat(
 
         model.setPredictionCol("prediction")
         output = model.transform(df).head()
+        assert output is not None
         # Row(weight=1.0, label=2.0374512672424316, features=DenseVector([-0.2052, 1.4941]), prediction=2.037452415464224)
         assert np.isclose(output.prediction, 2.037452415464224)
 

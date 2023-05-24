@@ -135,7 +135,7 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
         return self
 
 
-class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
+class KMeans(KMeansClass, _CumlEstimator["KMeansModel"], _KMeansCumlParams):
     """
     KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.
     The algorithm initializes a set of k random centers then runs in iterations.

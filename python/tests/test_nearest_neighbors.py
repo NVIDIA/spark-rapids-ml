@@ -112,7 +112,8 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
             assert array_equal(distances[4], [math.sqrt(2.0), math.sqrt(8.0)])
 
         item_ids = list(
-            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+            # Value of type PandasDataFrameLike? is not indexable. just type ignore
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]  # type: ignore
         )
 
         def assert_indices_equal(indices: List[List[int]]) -> None:
@@ -346,8 +347,8 @@ def test_nearest_neighbors(
         distances_df = knn_df.select("distances")
         indices_df = knn_df.select("indices")
         # test kneighbors: compare spark results with cuml results
-        distances = distances_df.collect()
-        distances = [r[0] for r in distances]
+        distances_rows = distances_df.collect()
+        distances: List[List[float]] = [r[0] for r in distances_rows]
         indices = indices_df.collect()
         indices = [r[0] for r in indices]
 
@@ -355,7 +356,7 @@ def test_nearest_neighbors(
         self_index = [knn[0] for knn in indices]
 
         assert self_index == list(
-            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
+            item_df_withid.select(alias.row_number).toPandas()[alias.row_number]  # type: ignore
         )
 
         # test kneighbors: compare distances
