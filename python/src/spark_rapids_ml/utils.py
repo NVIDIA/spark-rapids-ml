@@ -89,16 +89,22 @@ def _str_or_numerical(x: str) -> Union[str, float, int]:
 
 def _get_gpu_id(task_context: TaskContext) -> int:
     """Get the gpu id from the task resources"""
-    if task_context is None:
-        # safety check.
-        raise RuntimeError("_get_gpu_id should not be invoked from driver side.")
-    resources = task_context.resources()
-    if "gpu" not in resources:
-        raise RuntimeError(
-            "Couldn't get the gpu id, Please check the GPU resource configuration."
-        )
-    # return the first gpu id.
-    return int(resources["gpu"].addresses[0].strip())
+    import os
+
+    if "CUDA_VISIBLE_DEVICES" in os.environ and os.environ["CUDA_VISIBLE_DEVICES"]:
+        # when CUDA_VISIBLE_DEVICES is set and non-empty, use 0-th index entry
+        return 0
+    else:
+        if task_context is None:
+            # safety check.
+            raise RuntimeError("_get_gpu_id should not be invoked from driver side.")
+        resources = task_context.resources()
+        if "gpu" not in resources:
+            raise RuntimeError(
+                "Couldn't get the gpu id, Please check the GPU resource configuration."
+            )
+        # return the first gpu id.
+        return int(resources["gpu"].addresses[0].strip())
 
 
 def _get_default_params_from_func(
