@@ -25,9 +25,6 @@ from typing import (
     Union,
 )
 
-if TYPE_CHECKING:
-    import cudf
-
 import numpy as np
 import pandas as pd
 from pyspark import Row
@@ -51,11 +48,16 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    TransformInputType,
+    _ConstructFunc,
     _CumlEstimatorSupervised,
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .tree import (
@@ -321,9 +323,9 @@ class LinearRegression(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         def _linear_regression_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             init_parameters = params[param_alias.cuml_init]
@@ -434,7 +436,7 @@ class LinearRegression(
 
 class LinearRegressionModel(
     LinearRegressionClass,
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
     _LinearRegressionCumlParams,
 ):
     """Model fitted by :class:`LinearRegression`."""
@@ -507,11 +509,8 @@ class LinearRegressionModel(
         return self.cpu().evaluate(dataset)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         coef_ = self.coef_
         intercept_ = self.intercept_
         n_cols = self.n_cols
@@ -528,11 +527,11 @@ class LinearRegressionModel(
 
             return lr
 
-        def _predict(lr: CumlT, pdf: Union["cudf.DataFrame", np.ndarray]) -> pd.Series:
+        def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
             ret = lr.predict(pdf)
             return pd.Series(ret)
 
-        return _construct_lr, _predict
+        return _construct_lr, _predict, None
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         df = super()._transform(dataset)

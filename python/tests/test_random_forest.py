@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import json
+import math
 from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -333,9 +334,11 @@ def test_random_forest_classifier(
         )
         spark_rf.setFeaturesCol(features_col)
         spark_rf.setLabelCol(label_col)
-        spark_rf_model = spark_rf.fit(train_df)
+        spark_rf_model: RandomForestClassificationModel = spark_rf.fit(train_df)
 
-        test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
+        test_df, _, _ = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_test, y_test
+        )
 
         result = spark_rf_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
@@ -359,6 +362,22 @@ def test_random_forest_classifier(
             np.testing.assert_allclose(pred_proba_result, cu_preds_proba, rtol=1e-3)
         else:
             assert cu_acc - spark_acc < 0.07
+
+        # for multi-class classification evaluation
+        if n_classes > 2:
+            from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+
+            evaluator = MulticlassClassificationEvaluator(
+                predictionCol=spark_rf_model.getPredictionCol(),
+                labelCol=spark_rf_model.getLabelCol(),
+            )
+
+            spark_cuml_f1_score = spark_rf_model._transformEvaluate(test_df)
+
+            transformed_df = spark_rf_model.transform(test_df)
+            pyspark_f1_score = evaluator.evaluate(transformed_df)
+
+            assert math.fabs(pyspark_f1_score - spark_cuml_f1_score) < 1e-6
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)

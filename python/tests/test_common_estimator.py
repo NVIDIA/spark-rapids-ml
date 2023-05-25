@@ -14,20 +14,7 @@
 # limitations under the License.
 #
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
-)
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -39,14 +26,18 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
 from spark_rapids_ml.core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    _ConstructFunc,
     _CumlEstimator,
     _CumlModel,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
-from spark_rapids_ml.utils import PartitionDescriptor, _get_default_params_from_func
+from spark_rapids_ml.utils import PartitionDescriptor
 
 from .utils import assert_params, get_default_cuml_parameters
 
@@ -175,7 +166,7 @@ class SparkRapidsMLDummy(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         num_workers = self.num_workers
         partition_num = self.partition_num
         m = self.m
@@ -188,7 +179,7 @@ class SparkRapidsMLDummy(
         runtime_check = self.runtime_check
 
         def _cuml_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             context = TaskContext.get()
@@ -281,11 +272,8 @@ class SparkRapidsMLDummyModel(
         return self._set(outputCols=value)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         model_attribute_a = self.model_attribute_a
 
         # if the common framework tries to pickle the whole class,
@@ -310,7 +298,7 @@ class SparkRapidsMLDummyModel(
                 # TODO: implement when adding single column test
                 raise NotImplementedError()
 
-        return _construct_dummy, _dummy_transform
+        return _construct_dummy, _dummy_transform, None
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return input_schema
