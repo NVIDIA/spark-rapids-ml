@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
+
+from .metrics.MulticlassMetrics import MulticlassMetrics
 
 if TYPE_CHECKING:
-    import cudf
+    from pyspark.ml._typing import ParamMap
 
-import numpy as np
 import pandas as pd
 from pyspark import Row
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
@@ -33,9 +34,25 @@ from pyspark.ml.linalg import Vector
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
-from pyspark.sql.types import DoubleType, FloatType, IntegerType, IntegralType
+from pyspark.sql.types import (
+    DoubleType,
+    FloatType,
+    IntegerType,
+    IntegralType,
+    StructField,
+    StructType,
+)
 
-from .core import CumlT, alias, pred
+from .core import (
+    CumlT,
+    TransformInputType,
+    _ConstructFunc,
+    _EvaluateFunc,
+    _TransformFunc,
+    alias,
+    pred,
+    transform_evaluate,
+)
 from .tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
@@ -213,30 +230,6 @@ class RandomForestClassificationModel(
             self._copyValues(self._rf_spark_model)
         return self._rf_spark_model
 
-    def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
-        _construct_rf, _ = super()._get_cuml_transform_func(dataset)
-
-        def _predict(rf: CumlT, pdf: Union["cudf.DataFrame", np.ndarray]) -> pd.Series:
-            data = {}
-            rf.update_labels = False
-            data[pred.prediction] = rf.predict(pdf)
-            probs = rf.predict_proba(pdf)
-            if isinstance(probs, pd.DataFrame):
-                # For 2302, when input is multi-cols, the output will be DataFrame
-                data[pred.probability] = pd.Series(probs.values.tolist())
-            else:
-                # should be np.ndarray
-                data[pred.probability] = pd.Series(list(probs))
-
-            return pd.DataFrame(data)
-
-        return _construct_rf, _predict
-
     def _is_classification(self) -> bool:
         return True
 
@@ -276,3 +269,109 @@ class RandomForestClassificationModel(
             Test dataset to evaluate model on.
         """
         return self.cpu().evaluate(dataset)
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+        _construct_rf, _, _ = super()._get_cuml_transform_func(dataset)
+
+        def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
+            data = {}
+            rf.update_labels = False
+            data[pred.prediction] = rf.predict(pdf)
+
+            if category == transform_evaluate.transform:
+                # transform_evaluate doesn't need probs for f1 score.
+                probs = rf.predict_proba(pdf)
+                if isinstance(probs, pd.DataFrame):
+                    # For 2302, when input is multi-cols, the output will be DataFrame
+                    data[pred.probability] = pd.Series(probs.values.tolist())
+                else:
+                    # should be np.ndarray
+                    data[pred.probability] = pd.Series(list(probs))
+
+            return pd.DataFrame(data)
+
+        def _evaluate(
+            input: TransformInputType,
+            transformed: TransformInputType,
+        ) -> pd.DataFrame:
+            # calculate the count of (label, prediction)
+            comb = pd.DataFrame(
+                {
+                    "label": input[alias.label],
+                    "prediction": transformed[pred.prediction],
+                }
+            )
+            confusion = (
+                comb.groupby(["label", "prediction"]).size().reset_index(name="total")
+            )
+            return confusion
+
+        return _construct_rf, _predict, _evaluate
+
+    def _transformEvaluate(
+        self, dataset: DataFrame, params: Optional["ParamMap"] = None
+    ) -> float:
+        """
+        Transforms and evaluates the input dataset with optional parameters in a single pass.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            a dataset that contains labels/observations and predictions
+        params : dict, optional
+            an optional param map that overrides embedded params
+
+        Returns
+        -------
+        float
+            metric
+        """
+
+        if self._num_classes <= 2:
+            raise NotImplementedError("Binary classification is unsupported yet.")
+
+        if self.getLabelCol() not in dataset.schema.names:
+            raise RuntimeError("Label column is not existing.")
+
+        dataset = dataset.withColumnRenamed(self.getLabelCol(), alias.label)
+
+        schema = StructType(
+            [
+                StructField("label", FloatType()),
+                StructField("prediction", FloatType()),
+                StructField("total", FloatType()),
+            ]
+        )
+
+        rows = super()._transform_evaluate_internal(dataset, schema).collect()
+
+        tp_by_class = {}
+        fp_by_class = {}
+        label_count_by_class = {}
+        label_count = 0
+
+        for i in range(self._num_classes):
+            tp_by_class[float(i)] = 0.0
+            label_count_by_class[float(i)] = 0.0
+            fp_by_class[float(i)] = 0.0
+
+        for row in rows:
+            label_count += row.total
+            label_count_by_class[row.label] += row.total
+
+            if row.label == row.prediction:
+                tp_by_class[row.label] += row.total
+            else:
+                fp_by_class[row.prediction] += row.total
+
+        metrics = MulticlassMetrics(
+            num_class=self._num_classes,
+            tp=tp_by_class,
+            fp=fp_by_class,
+            label=label_count_by_class,
+            label_count=label_count,
+        )
+        f1_score = metrics.weighted_fmeasure()
+        return f1_score

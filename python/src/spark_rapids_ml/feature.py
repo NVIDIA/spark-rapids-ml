@@ -15,10 +15,7 @@
 #
 
 import itertools
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -39,11 +36,15 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    _ConstructFunc,
     _CumlEstimator,
     _CumlModelWithColumns,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from .params import P, _CumlClass, _CumlParams
 from .utils import (
@@ -178,9 +179,9 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         def _cuml_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
@@ -339,11 +340,8 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         return self._pca_ml_model
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 
         n_cols = self.n_cols
@@ -397,7 +395,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
             return pd.Series(list(res))
 
-        return _construct_pca, _transform_internal
+        return _construct_pca, _transform_internal, None
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
