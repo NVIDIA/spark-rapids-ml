@@ -30,9 +30,6 @@ from typing import (
     cast,
 )
 
-if TYPE_CHECKING:
-    import cudf
-
 import numpy as np
 import pandas as pd
 from pyspark.ml.classification import DecisionTreeClassificationModel
@@ -55,11 +52,16 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    TransformInputType,
+    _ConstructFunc,
     _CumlEstimatorSupervised,
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
@@ -278,7 +280,7 @@ class _RandomForestEstimator(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         # Each element of n_estimators_of_all_params is a list value which
         # is composed of n_estimators per worker.
         n_estimators_of_all_params: List[List[int]] = []
@@ -298,7 +300,7 @@ class _RandomForestEstimator(
         is_classification = self._is_classification()
 
         def _rf_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             # 1. prepare the dataset
@@ -427,7 +429,7 @@ class _RandomForestEstimator(
 
 
 class _RandomForestModel(
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
     _RandomForestCumlParams,
 ):
     def __init__(
@@ -558,13 +560,9 @@ class _RandomForestModel(
         return uid, java_trees
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         treelite_model = self._treelite_model
-
         is_classification = self._is_classification()
 
         def _construct_rf() -> CumlT:
@@ -580,13 +578,13 @@ class _RandomForestModel(
 
             return rf
 
-        def _predict(rf: CumlT, pdf: Union["cudf.DataFrame", np.ndarray]) -> pd.Series:
+        def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
             rf.update_labels = False
             ret = rf.predict(pdf)
             return pd.Series(ret)
 
         # TBD: figure out why RF algo's warns regardless of what np array order is set
-        return _construct_rf, _predict
+        return _construct_rf, _predict, None
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         df = super()._transform(dataset)
