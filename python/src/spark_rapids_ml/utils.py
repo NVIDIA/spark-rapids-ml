@@ -91,10 +91,15 @@ def _get_gpu_id(task_context: TaskContext) -> int:
     """Get the gpu id from the task resources"""
     import os
 
-    if "CUDA_VISIBLE_DEVICES" in os.environ and os.environ["CUDA_VISIBLE_DEVICES"]:
-        num_assigned = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
-        # when CUDA_VISIBLE_DEVICES is set and non-empty, use 0-th index entry
-        gpu_id = 0
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        if os.environ["CUDA_VISIBLE_DEVICES"]:
+            num_assigned = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
+            # when CUDA_VISIBLE_DEVICES is set and non-empty, use 0-th index entry
+            gpu_id = 0
+        else:
+            raise RuntimeError(
+                "Couldn't get gpu id since CUDA_VISIBLE_DEVICES is set to an empty string.  Please check the GPU resource configuration."
+            )
     else:
         if task_context is None:
             # safety check.
