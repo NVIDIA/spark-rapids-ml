@@ -89,16 +89,37 @@ def _str_or_numerical(x: str) -> Union[str, float, int]:
 
 def _get_gpu_id(task_context: TaskContext) -> int:
     """Get the gpu id from the task resources"""
-    if task_context is None:
-        # safety check.
-        raise RuntimeError("_get_gpu_id should not be invoked from driver side.")
-    resources = task_context.resources()
-    if "gpu" not in resources:
-        raise RuntimeError(
-            "Couldn't get the gpu id, Please check the GPU resource configuration."
+    import os
+
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        if os.environ["CUDA_VISIBLE_DEVICES"]:
+            num_assigned = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
+            # when CUDA_VISIBLE_DEVICES is set and non-empty, use 0-th index entry
+            gpu_id = 0
+        else:
+            raise RuntimeError(
+                "Couldn't get gpu id since CUDA_VISIBLE_DEVICES is set to an empty string.  Please check the GPU resource configuration."
+            )
+    else:
+        if task_context is None:
+            # safety check.
+            raise RuntimeError("_get_gpu_id should not be invoked from driver side.")
+        resources = task_context.resources()
+        if "gpu" not in resources:
+            raise RuntimeError(
+                "Couldn't get the gpu id, Please check the GPU resource configuration."
+            )
+        num_assigned = len(resources["gpu"].addresses)
+        # return the first gpu id.
+        gpu_id = int(resources["gpu"].addresses[0].strip())
+
+    if num_assigned > 1:
+        logger = get_logger(_get_gpu_id)
+        logger.warn(
+            f"Task got assigned {num_assigned} GPUs but using only 1.  This could be a waste of GPU resources."
         )
-    # return the first gpu id.
-    return int(resources["gpu"].addresses[0].strip())
+
+    return gpu_id
 
 
 def _get_default_params_from_func(
@@ -120,11 +141,11 @@ def _get_default_params_from_func(
     return filtered_params_dict
 
 
-def _get_class_name(cls: type) -> str:
+def _get_class_or_callable_name(cls_or_callable: Union[type, Callable]) -> str:
     """
     Return the class name.
     """
-    return f"{cls.__module__}.{cls.__name__}"
+    return f"{cls_or_callable.__module__}.{cls_or_callable.__name__}"
 
 
 class PartitionDescriptor:
@@ -214,9 +235,11 @@ def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
 
 
 # similar to https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/utils.py
-def get_logger(cls: type, level: str = "INFO") -> logging.Logger:
+def get_logger(
+    cls_or_callable: Union[type, Callable], level: str = "INFO"
+) -> logging.Logger:
     """Gets a logger by name, or creates and configures it for the first time."""
-    name = _get_class_name(cls)
+    name = _get_class_or_callable_name(cls_or_callable)
     logger = logging.getLogger(name)
 
     logger.setLevel(level)
