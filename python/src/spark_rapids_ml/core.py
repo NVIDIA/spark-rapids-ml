@@ -588,6 +588,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
     5. create the pyspark model
     """
 
+    # used by keywords_only
+    _input_kwargs: Dict[str, Any]
+
     def __init__(self) -> None:
         super().__init__()
 

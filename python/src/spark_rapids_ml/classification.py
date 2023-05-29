@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from .metrics.MulticlassMetrics import MulticlassMetrics
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
 
 import pandas as pd
-from pyspark import Row
+from pyspark import Row, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
@@ -96,9 +96,9 @@ class RandomForestClassifier(
     binary and multiclass labels. It implements cuML's GPU accelerated
     RandomForestClassifier algorithm based on cuML python library,
     and it can be used in PySpark Pipeline and PySpark ML meta algorithms like
-    :py:class:`~pyspark.ml.tuning.CrossValidator`/
-    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
-    :py:class:`~pyspark.ml.classification.OneVsRest`
+    :py:class:`~pyspark.ml.tuning.CrossValidator`,
+    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`,
+    :py:class:`~pyspark.ml.classification.OneVsRest`.
 
     The distributed algorithm uses an *embarrassingly-parallel* approach. For a
     forest with `N` trees being built on `w` workers, each worker simply builds `N/w`
@@ -107,9 +107,86 @@ class RandomForestClassifier(
     well, but it generally requires the data to be well-shuffled in advance.
 
     RandomForestClassifier automatically supports most of the parameters from both
-    :py:class:`~pyspark.ml.classification.RandomForestClassifier` and in the constructors of
-    :py:class:`cuml.ensemble.RandomForestClassifier`. And it can automatically map pyspark
-    parameters to cuML parameters.
+    :py:class:`~pyspark.ml.classification.RandomForestClassifier`
+    and :py:class:`cuml.ensemble.RandomForestClassifier`. And it can automatically
+    map pyspark parameters to cuML parameters.
+
+
+    Parameters
+    ----------
+
+    featuresCol:
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of string, the feature columns must be numeric types.
+    labelCol:
+        The lable column name.
+    predictionCol:
+        The predictionCol column name.
+    probabilityCol
+        The column name for predicted class conditional probabilities.
+    rawPredictionCol:
+        The raw prediction column name.
+    maxDepth:
+        Maximum tree depth. Must be greater than 0.
+    maxBins:
+        Maximum number of bins used by the split algorithm per feature.
+    minInstancesPerNode:
+        The minimum number of samples (rows) in each leaf node.
+    impurity: str = "gini",
+        The criterion used to split nodes.\n
+            * ``'gini'`` for gini impurity
+            * ``'entropy'`` for information gain (entropy)
+    numTrees:
+        Total number of trees in the forest.
+    featureSubsetStrategy:
+        Ratio of number of features (columns) to consider per node split.\n
+        The supported options:\n
+            ``'auto'``:  If numTrees == 1, set to 'all', If numTrees > 1 (forest), set to 'sqrt'\n
+            ``'all'``: use all features\n
+            ``'onethird'``: use 1/3 of the features\n
+            ``'sqrt'``: use sqrt(number of features)\n
+            ``'log2'``: log2(number of features)\n
+            ``'n'``: when n is in the range (0, 1.0], use n * number of features. When n
+            is in the range (1, number of features), use n features.
+    seed:
+        Seed for the random number generator.
+    bootstrap:
+        Control bootstrapping.\n
+            * If ``True``, each tree in the forest is built on a bootstrapped
+              sample with replacement.
+            * If ``False``, the whole dataset is used to build each tree.
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+    verbose:
+        Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+    n_streams:
+        Number of parallel streams used for forest building.
+        Please note that there is a bug running spark-rapids-ml on the node with multi-gpus
+        when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
+    min_samples_split:
+        The minimum number of samples required to split an internal node.\n
+         * If type ``int``, then ``min_samples_split`` represents the minimum
+           number.
+         * If type ``float``, then ``min_samples_split`` represents a fraction
+           and ``ceil(min_samples_split * n_rows)`` is the minimum number of
+           samples for each split.    max_samples:
+        Ratio of dataset rows used while fitting each tree.
+    max_leaves:
+        Maximum leaf nodes per tree. Soft constraint. Unlimited, If -1.
+    min_impurity_decrease:
+        Minimum decrease in impurity required for node to be split.
+    max_batch_size:
+        Maximum number of nodes that can be processed in a given batch.
 
     Examples
     --------
@@ -155,9 +232,35 @@ class RandomForestClassifier(
 
     """
 
-    def __init__(self, **kwargs: Any):
-        super().__init__(**kwargs)
-        self.set_params(**kwargs)
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        featuresCol: Union[str, List[str]] = "features",
+        labelCol: str = "label",
+        predictionCol: str = "prediction",
+        probabilityCol: str = "probability",
+        rawPredictionCol: str = "rawPrediction",
+        maxDepth: int = 5,
+        maxBins: int = 32,
+        minInstancesPerNode: int = 1,
+        impurity: str = "gini",
+        numTrees: int = 20,
+        featureSubsetStrategy: str = "auto",
+        seed: Optional[int] = None,
+        bootstrap: Optional[bool] = True,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        n_streams: int = 1,
+        min_samples_split: Union[int, float] = 2,
+        max_samples: float = 1.0,
+        max_leaves: int = -1,
+        min_impurity_decrease: float = 0.0,
+        max_batch_size: int = 4096,
+        **kwargs: Any,
+    ):
+        super().__init__()
+        self.set_params(**self._input_kwargs)
 
     def _pre_process_label(
         self, dataset: DataFrame, feature_type: Union[Type[FloatType], Type[DoubleType]]
