@@ -259,7 +259,7 @@ class RandomForestClassifier(
         max_batch_size: int = 4096,
         **kwargs: Any,
     ):
-        super().__init__()
+        super().__init__(**self._input_kwargs)
         self.set_params(**self._input_kwargs)
 
     def _pre_process_label(
