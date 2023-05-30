@@ -120,7 +120,7 @@ class RandomForestClassifier(
             * When the value is string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of string, the feature columns must be numeric types.
     labelCol:
-        The lable column name.
+        The label column name.
     predictionCol:
         The predictionCol column name.
     probabilityCol
@@ -182,7 +182,7 @@ class RandomForestClassifier(
            samples for each split.    max_samples:
         Ratio of dataset rows used while fitting each tree.
     max_leaves:
-        Maximum leaf nodes per tree. Soft constraint. Unlimited, If -1.
+        Maximum leaf nodes per tree. Soft constraint. Unlimited, if -1.
     min_impurity_decrease:
         Minimum decrease in impurity required for node to be split.
     max_batch_size:
