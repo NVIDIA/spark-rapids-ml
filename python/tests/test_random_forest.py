@@ -125,7 +125,7 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
     assert_params(est, default_spark_params, default_cuml_params)
 
     # Spark ML Params
-    spark_params = {
+    spark_params: Dict[str, Any] = {
         "maxBins": 17,
         "maxDepth": 9,
         "numTrees": 17,
@@ -304,7 +304,7 @@ def test_random_forest_classifier(
         n_repeated=0,
     )
 
-    rf_params = {
+    rf_params: Dict[str, Any] = {
         "n_estimators": 100,
         "n_bins": 128,
         "max_depth": 16,
