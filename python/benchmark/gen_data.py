@@ -324,7 +324,8 @@ class RegressionDataGen(DataGenBase):
             params["random_state"] = 1
 
         print(f"Passing {params} to make_regression")
-
+        
+        #TODO: Add support for returning coefs; needed for testing. 
         def make_regression_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
             """Pandas udf to call make_regression of sklearn to generate regression dataset"""
             total_rows = 0
