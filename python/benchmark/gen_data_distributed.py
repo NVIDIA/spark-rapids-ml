@@ -33,26 +33,7 @@ from sklearn.datasets import (
 )
 
 from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
-
-
-def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
-    """Convert np.dtype to the corresponding pyspark type"""
-    dtype = np.dtype(dtype)
-    if dtype == np.float32:
-        return "float"
-    elif dtype == np.float64:
-        return "double"
-    else:
-        raise RuntimeError("Unsupported dtype, found ", dtype)
-
-
-class DataGen(object):
-    """DataGen interface"""
-
-    @abstractmethod
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
-        raise NotImplementedError()
-
+from gen_data import dtype_to_pyspark_type, DataGen
 
 class DataGenBase(DataGen):
     """Base class datagen"""

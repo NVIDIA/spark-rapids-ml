@@ -2,8 +2,6 @@ import numpy as np
 from gen_data_distributed import (
     BlobsDataGen,
     ClassificationDataGen,
-    DataGen,
-    DataGenBase,
     LowRankMatrixDataGen,
     RegressionDataGen,
 )
