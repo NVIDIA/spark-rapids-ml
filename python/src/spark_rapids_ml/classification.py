@@ -260,7 +260,6 @@ class RandomForestClassifier(
         **kwargs: Any,
     ):
         super().__init__(**self._input_kwargs)
-        self.set_params(**self._input_kwargs)
 
     def _pre_process_label(
         self, dataset: DataFrame, feature_type: Union[Type[FloatType], Type[DoubleType]]

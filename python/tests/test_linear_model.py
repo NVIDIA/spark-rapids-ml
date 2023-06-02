@@ -122,7 +122,7 @@ def test_linear_regression_params(tmp_path: str, reg: float) -> None:
     assert_params(default_lr, default_spark_params, default_cuml_params)
 
     # Spark ML Params
-    spark_params = {
+    spark_params: Dict[str, Any] = {
         "fitIntercept": False,
         "standardization": False,
         "regParam": reg,
