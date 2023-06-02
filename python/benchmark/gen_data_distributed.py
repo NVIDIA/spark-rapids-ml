@@ -68,7 +68,7 @@ class BlobsDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
-        num_partitions = self.args_.output_num_files
+        num_partitions = self.args.output_num_files
 
         # Produce partition seeds for reproducibility.
         random.seed(params["random_state"])
@@ -152,7 +152,7 @@ class LowRankMatrixDataGen(DataGenBase):
         rows = self.num_rows
         cols = self.num_cols
 
-        num_partitions = self.args_.output_num_files
+        num_partitions = self.args.output_num_files
         generator = check_random_state(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
