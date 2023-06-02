@@ -1,15 +1,25 @@
+# Copyright (c) 2007-2023 The scikit-learn developers. All rights reserved.
+# Modifications copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import numpy as np
 from gen_data_distributed import (
     BlobsDataGen,
     ClassificationDataGen,
     LowRankMatrixDataGen,
     RegressionDataGen,
-)
-from sklearn.datasets import (
-    make_blobs,
-    make_classification,
-    make_low_rank_matrix,
-    make_regression,
 )
 from sklearn.utils._testing import (
     assert_allclose,
@@ -55,3 +65,36 @@ def test_make_blobs():
         cluster_stds = [0.7 for _ in range(3)]
         for i, (ctr, std) in enumerate(zip(centers, cluster_stds)):
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
+
+
+def test_make_low_rank_matrix():
+    args = [
+        "--num_rows",
+        "50",
+        "--num_cols",
+        "20",
+        "--dtype",
+        "float64",
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "2",
+        "--effective_rank",
+        "5",
+        "--tail_strength",
+        "0.01",
+        "--random_state",
+        "0",
+        "--test",
+    ]
+    data_gen = LowRankMatrixDataGen(args)
+    args = data_gen.args
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _ = data_gen.gen_dataframe(spark)
+        X = df.toPandas().to_numpy()
+
+        assert X.shape == (50, 20), "X shape mismatch"
+        from numpy.linalg import svd
+
+        u, s, v = svd(X)
+        assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
