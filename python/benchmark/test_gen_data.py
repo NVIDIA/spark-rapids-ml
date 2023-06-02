@@ -13,24 +13,27 @@ from gen_data import DataGen, DataGenBase, BlobsDataGen, LowRankMatrixDataGen, R
 from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
 
 
-def test_make_blobs():    
+def test_make_blobs(): 
+    n_centers = 3
+    cluster_stds = [0.9 for _ in range(n_centers)]   
     args = ['--num_rows', '50', '--num_cols', '2', '--dtype', 'float64', '--output_dir', 'temp', 
-            '--output_num_files', '3', '--random_state', '0']
+            '--output_num_files', '3', '--cluster_std', '0.9', '--random_state', '0']
     data_gen = BlobsDataGen(args)
     args = data_gen.args
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _ = data_gen.gen_dataframe(spark)
         pdf = df.toPandas()
-        X = pdf.iloc[:, :-1].to_numpy()
-        y = pdf.iloc[:, -1].to_numpy()
+        # centers will be appended to X as the last k rows; labels for centers can be ignored
+        X = pdf.iloc[:-n_centers, :-1].to_numpy()
+        y = pdf.iloc[:-n_centers, -1].to_numpy()
+        centers = pdf.iloc[-n_centers:, :-1].values.tolist()
 
         assert X.shape == (50, 2), "X shape mismatch"
         assert y.shape == (50,), "y shape mismatch"
         assert np.unique(y).shape == (3,), "Unexpected number of blobs"
-        '''
-        for i, (ctr, std) in enumerate(zip(cluster_centers, cluster_stds)):
+        for i, (ctr, std) in enumerate(zip(centers, cluster_stds)):
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
-        '''
+        
 
 
 def test_make_low_rank_matrix():
@@ -57,9 +60,9 @@ def test_make_regression():
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _ = data_gen.gen_dataframe(spark)
         pdf = df.toPandas()
+        # c will be appended to X as the last row; label for c can be ignored
         X = pdf.iloc[:-1, :-1].to_numpy()
         y = pdf.iloc[:-1, -1].to_numpy()
-        # c will be appended to X as the last row; label for c can be ignored
         c = pdf.iloc[-1, :-1].to_numpy()
 
         assert X.shape == (100, 10), "X shape mismatch"
