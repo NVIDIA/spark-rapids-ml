@@ -14,12 +14,12 @@
 # limitations under the License.
 #
 import inspect
-import numpy as np
 import numbers
 from distutils.util import strtobool
 from time import time
 from typing import Any, Callable, Dict, List
 
+import numpy as np
 from pyspark.sql import SparkSession
 
 
@@ -75,7 +75,8 @@ def inspect_default_params_from_func(
 def to_bool(literal: str) -> bool:
     return bool(strtobool(literal))
 
-def check_random_state(seed):
+
+def check_random_state(seed: int) -> np.random.RandomState:
     """Turn seed into a np.random.RandomState instance.
 
     Parameters

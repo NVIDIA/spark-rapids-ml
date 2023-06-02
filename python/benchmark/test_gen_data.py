@@ -31,7 +31,7 @@ from sklearn.utils._testing import (
 from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
 
 
-def test_make_blobs():
+def test_make_blobs() -> None:
     args = [
         "--num_rows",
         "50",
@@ -67,7 +67,7 @@ def test_make_blobs():
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
 
 
-def test_make_low_rank_matrix():
+def test_make_low_rank_matrix() -> None:
     args = [
         "--num_rows",
         "50",

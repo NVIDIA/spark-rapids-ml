@@ -22,6 +22,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from gen_data import DataGen, dtype_to_pyspark_type
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array
@@ -33,8 +34,13 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool, check_random_state
-from gen_data import dtype_to_pyspark_type, DataGen
+from benchmark.utils import (
+    WithSparkSession,
+    check_random_state,
+    inspect_default_params_from_func,
+    to_bool,
+)
+
 
 class DataGenBase(DataGen):
     """Base class datagen"""
@@ -324,21 +330,25 @@ class LowRankMatrixDataGen(DataGenBase):
         partition_sizes[-1] += rows % num_partitions
         # Check to ensure QR decomp produces a matrix of the correct dimension.
         for size in partition_sizes:
-            assert size > cols, f"Num samples per partition must be > num_features; \
+            assert (
+                size > cols
+            ), f"Num samples per partition must be > num_features; \
                                     decrease output_num_files to < {rows // cols}"
 
-        # Generate U, S, V, the SVD decomposition of the output matrix. 
-        # S and V are generated upfront, U is generated across partitions. 
+        # Generate U, S, V, the SVD decomposition of the output matrix.
+        # S and V are generated upfront, U is generated across partitions.
         singular_ind = np.arange(n, dtype=np.float64)
-        low_rank = (1 - params["tail_strength"]) * np.exp(-1.0 * (singular_ind / params["effective_rank"]) ** 2)
+        low_rank = (1 - params["tail_strength"]) * np.exp(
+            -1.0 * (singular_ind / params["effective_rank"]) ** 2
+        )
         tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
         s = np.identity(n) * (low_rank + tail)
         # compute V upfront
         v, _ = linalg.qr(
-                generator.standard_normal(size=(cols, n)),
-                mode="economic",
-                check_finite=False,
-            )
+            generator.standard_normal(size=(cols, n)),
+            mode="economic",
+            check_finite=False,
+        )
 
         # UDF for distributed generation of U, and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
@@ -356,7 +366,9 @@ class LowRankMatrixDataGen(DataGenBase):
                 yield pd.DataFrame(data=mat)
 
         return (
-            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(make_matrix_udf, schema=",".join(self.schema))
+            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
+                make_matrix_udf, schema=",".join(self.schema)
+            )
         ), self.feature_cols
 
 
