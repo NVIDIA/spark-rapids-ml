@@ -267,7 +267,7 @@ class BlobsDataGen(DataGenBase):
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
 
-        # For unit tests, return the centers for validation. Feature columns aren't needed.
+        # For unit tests, additionally return the centers for validation. Feature columns aren't needed.
         if self.args_.test:
             return (
                 spark.range(
