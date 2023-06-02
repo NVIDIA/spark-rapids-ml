@@ -34,7 +34,12 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool, check_random_state
+from benchmark.utils import (
+    WithSparkSession,
+    check_random_state,
+    inspect_default_params_from_func,
+    to_bool,
+)
 
 
 class BlobsDataGen(DataGenBase):
@@ -56,7 +61,9 @@ class BlobsDataGen(DataGenBase):
 
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -139,7 +146,9 @@ class LowRankMatrixDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -221,7 +230,9 @@ class RegressionDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         num_cols = self.num_cols
         dtype = self.dtype
 
@@ -279,7 +290,9 @@ class ClassificationDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         num_cols = self.num_cols
         dtype = self.dtype
 

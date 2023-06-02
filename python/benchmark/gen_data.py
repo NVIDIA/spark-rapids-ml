@@ -187,7 +187,9 @@ class DefaultDataGen(DataGenBase):
 
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         params = self.extra_params
 
         if "seed" not in params:
@@ -227,7 +229,9 @@ class BlobsDataGen(DataGenBase):
 
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         "More information about the implementation can be found in RegressionDataGen."
 
         dtype = self.dtype
@@ -271,7 +275,9 @@ class LowRankMatrixDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         "More information about the implementation can be found in RegressionDataGen."
 
         dtype = self.dtype
@@ -315,7 +321,9 @@ class RegressionDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         num_cols = self.num_cols
         dtype = self.dtype
 
@@ -372,7 +380,9 @@ class ClassificationDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         num_cols = self.num_cols
         dtype = self.dtype
 
@@ -462,7 +472,7 @@ if __name__ == "__main__":
     args = data_gen.args
 
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, feature_cols = data_gen.gen_dataframe(spark)
+        df, feature_cols, _ = data_gen.gen_dataframe(spark)
 
         if args.feature_type == "array":
             df = df.withColumn("feature_array", array(*feature_cols)).drop(
