@@ -25,6 +25,7 @@ import pandas as pd
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array
+from scipy import linalg
 from sklearn.datasets import (
     make_blobs,
     make_classification,
@@ -32,7 +33,7 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
+from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool, check_random_state
 from gen_data import dtype_to_pyspark_type, DataGen
 
 class DataGenBase(DataGen):
@@ -300,30 +301,62 @@ class LowRankMatrixDataGen(DataGenBase):
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
-        "More information about the implementation can be found in RegressionDataGen."
-
         dtype = self.dtype
-
         params = self.extra_params
 
         if "random_state" not in params:
             # for reproducible dataset.
             params["random_state"] = 1
 
+        print(f"Passing {params} to make_low_rank_matrix")
+
         rows = self.num_rows
         cols = self.num_cols
 
-        print(f"Passing {params} to make_low_rank_matrix")
+        num_partitions = self.args_.output_num_files
+        generator = check_random_state(params["random_state"])
+        n = min(rows, cols)
+        # If params not provided, set to defaults.
+        tail_strength = params.get("tail_strength", 0.5)
+        effective_rank = params.get("effective_rank", 10)
 
+        partition_sizes = [rows // num_partitions] * num_partitions
+        partition_sizes[-1] += rows % num_partitions
+        # Check to ensure QR decomp produces a matrix of the correct dimension.
+        for size in partition_sizes:
+            assert size > cols, f"Num samples per partition must be > num_features; \
+                                    decrease output_num_files to < {rows // cols}"
+
+        # Generate U, S, V, the SVD decomposition of the output matrix. 
+        # S and V are generated upfront, U is generated across partitions. 
+        singular_ind = np.arange(n, dtype=np.float64)
+        low_rank = (1 - params["tail_strength"]) * np.exp(-1.0 * (singular_ind / params["effective_rank"]) ** 2)
+        tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
+        s = np.identity(n) * (low_rank + tail)
+        # compute V upfront
+        v, _ = linalg.qr(
+                generator.standard_normal(size=(cols, n)),
+                mode="economic",
+                check_finite=False,
+            )
+
+        # UDF for distributed generation of U, and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            data = make_low_rank_matrix(n_samples=rows, n_features=cols, **params)
-            data = data.astype(dtype)
-            yield pd.DataFrame(data=data)
+            for pdf in iter:
+                partition_index = pdf.iloc[0][0]
+                n_partition_rows = partition_sizes[partition_index]
+                u, _ = linalg.qr(
+                    generator.standard_normal(size=(n_partition_rows, n)),
+                    mode="economic",
+                    check_finite=False,
+                )
+                # Include partition-wise normalization to ensure overall unit norm.
+                u *= np.sqrt(1 / num_partitions)
+                mat = np.dot(np.dot(u, s), v.T)
+                yield pd.DataFrame(data=mat)
 
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_matrix_udf, schema=",".join(self.schema)  # type: ignore
-            )
+            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(make_matrix_udf, schema=",".join(self.schema))
         ), self.feature_cols
 
 
@@ -352,8 +385,6 @@ class RegressionDataGen(DataGenBase):
         if "random_state" not in params:
             # for reproducible dataset.
             params["random_state"] = 1
-
-        # if "coef" in params and params["coef"]:
 
         print(f"Passing {params} to make_regression")
 
