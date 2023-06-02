@@ -55,7 +55,9 @@ class BlobsDataGen(DataGenBase):
 
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -67,7 +69,8 @@ class BlobsDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
-        num_partitions = self.args_.output_num_files
+        assert self.args is not None
+        num_partitions = self.args.output_num_files
 
         # Produce partition seeds for reproducibility.
         random.seed(params["random_state"])
@@ -138,7 +141,9 @@ class LowRankMatrixDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         "More information about the implementation can be found in RegressionDataGen."
 
         dtype = self.dtype
@@ -182,7 +187,9 @@ class RegressionDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         num_cols = self.num_cols
         dtype = self.dtype
 
@@ -242,7 +249,9 @@ class ClassificationDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         num_cols = self.num_cols
         dtype = self.dtype
 

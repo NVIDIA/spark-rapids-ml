@@ -21,8 +21,8 @@ from sklearn.utils._testing import (
 from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
 
 
-def test_make_blobs():
-    args = [
+def test_make_blobs() -> None:
+    input_args = [
         "--num_rows",
         "50",
         "--num_cols",
@@ -38,8 +38,9 @@ def test_make_blobs():
         "--random_state",
         "0",
     ]
-    data_gen = BlobsDataGen(args)
+    data_gen = BlobsDataGen(input_args)
     args = data_gen.args
+    assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _, centers = data_gen.gen_dataframe(spark)
         pdf = df.toPandas()
