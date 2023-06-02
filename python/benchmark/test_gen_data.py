@@ -84,7 +84,6 @@ def test_make_low_rank_matrix() -> None:
         "0.01",
         "--random_state",
         "0",
-        "--test",
     ]
     data_gen = LowRankMatrixDataGen(args)
     args = data_gen.args

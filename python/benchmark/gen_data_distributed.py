@@ -34,7 +34,7 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
+from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool, check_random_state
 
 
 class BlobsDataGen(DataGenBase):
