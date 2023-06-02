@@ -22,7 +22,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from gen_data import DataGen, dtype_to_pyspark_type
+from gen_data import DataGenBase, DefaultDataGen
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array
@@ -34,170 +34,7 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import (
-    WithSparkSession,
-    check_random_state,
-    inspect_default_params_from_func,
-    to_bool,
-)
-
-
-class DataGenBase(DataGen):
-    """Base class datagen"""
-
-    def __init__(self) -> None:
-        # Global parameters
-        self._parser = argparse.ArgumentParser()
-        self._parser.add_argument(
-            "--num_rows",
-            type=int,
-            default=100,
-            help="total number of rows. default to 100",
-        )
-        self._parser.add_argument(
-            "--num_cols",
-            type=int,
-            default=30,
-            help="total number of columns. default to 30",
-        )
-        self._parser.add_argument(
-            "--dtype",
-            type=str,
-            choices=["float64", "float32"],
-            default="float32",
-            help="the data type, default to float32",
-        )
-        self._parser.add_argument(
-            "--feature_type",
-            type=str,
-            choices=["array", "vector", "multi_cols"],
-            default="multi_cols",
-            help="array - 1 column with ArrayType<dtype>, vector - 1 column with VectorUDT type, multi_cols: multiple columns with dtype. Default to multiple",
-        )
-        self._parser.add_argument(
-            "--output_dir", type=str, required=True, help="the dataset output directory"
-        )
-        self._parser.add_argument(
-            "--output_num_files", type=int, help="the number of files to be generated"
-        )
-        self._parser.add_argument(
-            "--overwrite", action="store_true", help="if overwrite the output directory"
-        )
-        self._parser.add_argument(
-            "--spark_confs",
-            action="append",
-            default=[],
-            help="the optional spark configurations",
-        )
-        self._parser.add_argument(
-            "--no_shutdown",
-            action="store_true",
-            help="do not stop spark session when finished",
-        )
-        self._parser.add_argument(
-            "--test",
-            action="store_true",
-            help="test mode: return blob centers/regression coefficients for test evaluation; only to be used in unit tests",
-        )
-
-        def _restrict_train_size(x: float) -> float:
-            # refer to https://stackoverflow.com/a/12117065/1928940
-            try:
-                x = float(x)
-            except ValueError:
-                raise argparse.ArgumentTypeError(f"{x} is not a floating-point literal")
-
-            if x < 0.0 or x > 1.0:
-                raise argparse.ArgumentTypeError(f"{x} is not in range [0.0, 1.0]")
-
-            return x
-
-        self._parser.add_argument(
-            "--train_fraction",
-            type=_restrict_train_size,  # type: ignore
-            help="the value should be between 0.0 and 1.0 and represent "
-            "the proportion of the dataset to include in the train split",
-        )
-
-        self._add_extra_parameters()
-
-        self.args_: Optional[argparse.Namespace] = None
-
-    def _add_extra_parameters(self) -> None:
-        self.supported_extra_params = self._supported_extra_params()
-        for name, value in self.supported_extra_params.items():
-            if value is None:
-                raise RuntimeError("Must convert None value to the correct type")
-            elif type(value) is type:
-                # value is already type
-                self._parser.add_argument("--" + name, type=value)
-            elif type(value) is bool:
-                self._parser.add_argument("--" + name, type=to_bool)
-            else:
-                # get the type from the value
-                self._parser.add_argument("--" + name, type=type(value))
-
-    def _supported_extra_params(self) -> Dict[str, Any]:
-        """Function to inspect the specific function to get the parameters and values"""
-        return {}
-
-    def _parse_arguments(self, argv: List[Any]) -> None:
-        """Subclass must call this function in __init__"""
-        self.args_ = self._parser.parse_args(argv)
-
-        self.num_rows = self.args_.num_rows
-        self.num_cols = self.args_.num_cols
-        self.dtype = np.dtype(self.args_.dtype)
-
-        self.pyspark_type = dtype_to_pyspark_type(self.dtype)
-        self.feature_cols: List[str] = [f"c{i}" for i in range(self.num_cols)]
-        self.schema = [f"{c} {self.pyspark_type}" for c in self.feature_cols]
-
-        self.extra_params = {
-            k: v
-            for k, v in vars(self.args_).items()
-            if k in self.supported_extra_params and v is not None
-        }
-
-    @property
-    def args(self) -> Optional[argparse.Namespace]:
-        return self.args_
-
-
-class DefaultDataGen(DataGenBase):
-    """Generate default dataset only containing features"""
-
-    def __init__(self, argv: List[Any]) -> None:
-        super().__init__()
-        self._parse_arguments(argv)
-
-    def _supported_extra_params(self) -> Dict[str, Any]:
-        params = inspect_default_params_from_func(RandomRDDs.uniformVectorRDD, [])
-        # must replace the None to the correct type
-        params["numPartitions"] = int
-        params["seed"] = int
-
-        return params
-
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
-        params = self.extra_params
-
-        if "seed" not in params:
-            # for reproducible dataset.
-            params["seed"] = 1
-
-        print(f"Passing {params} to RandomRDDs.uniformVectorRDD")
-
-        rdd = RandomRDDs.uniformVectorRDD(
-            spark.sparkContext, self.num_rows, self.num_cols, **params
-        ).map(
-            lambda nparray: nparray.tolist()  # type: ignore
-        )
-
-        return (
-            spark.createDataFrame(rdd, schema=",".join(self.schema)),
-            self.feature_cols,
-        )
+from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
 
 
 class BlobsDataGen(DataGenBase):
@@ -274,19 +111,15 @@ class BlobsDataGen(DataGenBase):
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
 
-        # For unit tests, additionally return the centers for validation. Feature columns aren't needed.
-        if self.args_.test:
-            return (
+        return (
+            (
                 spark.range(
                     0, num_partitions, numPartitions=num_partitions
                 ).mapInPandas(make_blobs_udf, schema=",".join(self.schema))
-            ), centers
-
-        return (
-            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
-                make_blobs_udf, schema=",".join(self.schema)
-            )
-        ), self.feature_cols
+            ),
+            self.feature_cols,
+            centers,
+        )
 
 
 class LowRankMatrixDataGen(DataGenBase):
@@ -536,7 +369,7 @@ if __name__ == "__main__":
     args = data_gen.args
 
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, feature_cols = data_gen.gen_dataframe(spark)
+        df, feature_cols, _ = data_gen.gen_dataframe(spark)
 
         if args.feature_type == "array":
             df = df.withColumn("feature_array", array(*feature_cols)).drop(

@@ -47,12 +47,11 @@ def test_make_blobs() -> None:
         "0.7",
         "--random_state",
         "0",
-        "--test",
     ]
     data_gen = BlobsDataGen(args)
     args = data_gen.args
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, centers = data_gen.gen_dataframe(spark)
+        df, _, centers = data_gen.gen_dataframe(spark)
         pdf = df.toPandas()
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()

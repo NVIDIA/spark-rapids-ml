@@ -49,7 +49,9 @@ class DataGen(object):
     """DataGen interface"""
 
     @abstractmethod
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
         raise NotImplementedError()
 
 
