@@ -15,6 +15,7 @@
 #
 
 import argparse
+import random
 import sys
 from abc import abstractmethod
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
@@ -104,6 +105,11 @@ class DataGenBase(DataGen):
             "--no_shutdown",
             action="store_true",
             help="do not stop spark session when finished",
+        )
+        self._parser.add_argument(
+            "--test",
+            action="store_true",
+            help="test mode: return blob centers/regression coefficients for test evaluation; only to be used in unit tests",
         )
 
         def _restrict_train_size(x: float) -> float:
@@ -207,7 +213,7 @@ class DefaultDataGen(DataGenBase):
 
 
 class BlobsDataGen(DataGenBase):
-    """Generate random dataset using sklearn.datasets.make_blobs,
+    """Generate random dataset using distributed calls to sklearn.datasets.make_blobs,
     which creates blobs for benchmarking unsupervised clustering algorithms (e.g. KMeans)
     """
 
@@ -226,8 +232,6 @@ class BlobsDataGen(DataGenBase):
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
-        "More information about the implementation can be found in RegressionDataGen."
-
         dtype = self.dtype
         params = self.extra_params
 
@@ -239,21 +243,66 @@ class BlobsDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
+        num_partitions = self.args_.output_num_files
 
-        def make_blobs_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            data, _ = make_blobs(n_samples=rows, n_features=cols, **params)
-            data = data.astype(dtype)
-            yield pd.DataFrame(data=data)
+        # Produce partition seeds for reproducibility.
+        random.seed(params["random_state"])
+        seed_maxval = 100 * num_partitions
+        partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
+
+        partition_sizes = [rows // num_partitions] * num_partitions
+        partition_sizes[-1] += rows % num_partitions
+
+        # Generate centers upfront.
+        _, _, centers = make_blobs(
+            n_samples=0, n_features=cols, **params, return_centers=True
+        )
+
+        # Update params for partition-specific calls.
+        params["centers"] = centers
+        del params["random_state"]
+
+        # UDF to distribute make_blobs() calls across partitions. Each partition
+        # produces an equal fraction of the total samples around the predefined centers.
+        def make_blobs_udf(iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            for pdf in iter:
+                partition_index = pdf.iloc[0][0]
+                n_partition_samples = partition_sizes[partition_index]
+                data, labels = make_blobs(
+                    n_samples=n_partition_samples,
+                    n_features=cols,
+                    **params,
+                    random_state=partition_seeds[partition_index],
+                )
+                data = np.concatenate(
+                    (
+                        data.astype(dtype),
+                        labels.reshape(n_partition_samples, 1).astype(dtype),
+                    ),
+                    axis=1,
+                )
+                yield pd.DataFrame(data=data)
+
+        label_col = "label"
+        self.schema.append(f"{label_col} {self.pyspark_type}")
+
+        # For unit tests, return the centers for validation. Feature columns aren't needed.
+        if self.args_.test:
+            return (
+                spark.range(
+                    0, num_partitions, numPartitions=num_partitions
+                ).mapInPandas(make_blobs_udf, schema=",".join(self.schema))
+            ), centers
 
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_blobs_udf, schema=",".join(self.schema)  # type: ignore
+            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
+                make_blobs_udf, schema=",".join(self.schema)
             )
         ), self.feature_cols
 
 
 class LowRankMatrixDataGen(DataGenBase):
-    """Generate random dataset using sklearn.datasets.make_low_rank_matrix,
+    """Generate random dataset using a distributed version of sklearn.datasets.make_low_rank_matrix,
     which creates large low rank matrices for benchmarking dimensionality reduction algos like pca
     """
 
@@ -322,13 +371,12 @@ class RegressionDataGen(DataGenBase):
         if "random_state" not in params:
             # for reproducible dataset.
             params["random_state"] = 1
-        
-        #if "coef" in params and params["coef"]:
 
+        # if "coef" in params and params["coef"]:
 
         print(f"Passing {params} to make_regression")
-        
-        #TODO: Add support for returning coefs; needed for testing. 
+
+        # TODO: Add support for returning coefs; needed for testing.
         def make_regression_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
             """Pandas udf to call make_regression of sklearn to generate regression dataset"""
             total_rows = 0
@@ -482,6 +530,7 @@ if __name__ == "__main__":
             )
 
         def write_files(dataframe: DataFrame, path: str) -> None:
+            # TODO: only need to repartition for DefaultDataGen
             if args.output_num_files is not None:
                 dataframe = dataframe.repartition(args.output_num_files)
 
