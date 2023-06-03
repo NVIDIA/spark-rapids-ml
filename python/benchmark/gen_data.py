@@ -207,6 +207,7 @@ class DefaultDataGen(DataGenBase):
         return (
             spark.createDataFrame(rdd, schema=",".join(self.schema)),
             self.feature_cols,
+            _,
         )
 
 
@@ -252,10 +253,14 @@ class BlobsDataGen(DataGenBase):
             yield pd.DataFrame(data=data)
 
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_blobs_udf, schema=",".join(self.schema)  # type: ignore
-            )
-        ), self.feature_cols
+            (
+                spark.range(0, self.num_rows, 1, 1).mapInPandas(
+                    make_blobs_udf, schema=",".join(self.schema)  # type: ignore
+                )
+            ),
+            self.feature_cols,
+            _,
+        )
 
 
 class LowRankMatrixDataGen(DataGenBase):
@@ -299,10 +304,14 @@ class LowRankMatrixDataGen(DataGenBase):
             yield pd.DataFrame(data=data)
 
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_matrix_udf, schema=",".join(self.schema)  # type: ignore
-            )
-        ), self.feature_cols
+            (
+                spark.range(0, self.num_rows, 1, 1).mapInPandas(
+                    make_matrix_udf, schema=",".join(self.schema)  # type: ignore
+                )
+            ),
+            self.feature_cols,
+            _,
+        )
 
 
 class RegressionDataGen(DataGenBase):
@@ -359,10 +368,14 @@ class RegressionDataGen(DataGenBase):
         # matrix without issues with 60g executor memory, which, I think, is really enough
         # to do the perf test.
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_regression_udf, schema=",".join(self.schema)  # type: ignore
-            )
-        ), self.feature_cols
+            (
+                spark.range(0, self.num_rows, 1, 1).mapInPandas(
+                    make_regression_udf, schema=",".join(self.schema)  # type: ignore
+                )
+            ),
+            self.feature_cols,
+            _,
+        )
 
 
 class ClassificationDataGen(DataGenBase):
@@ -419,10 +432,14 @@ class ClassificationDataGen(DataGenBase):
         # matrix without issues with 60g executor memory, which, I think, is really enough
         # to do the perf test.
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_classification_udf, schema=",".join(self.schema)  # type: ignore
-            )
-        ), self.feature_cols
+            (
+                spark.range(0, self.num_rows, 1, 1).mapInPandas(
+                    make_classification_udf, schema=",".join(self.schema)  # type: ignore
+                )
+            ),
+            self.feature_cols,
+            _,
+        )
 
 
 if __name__ == "__main__":
