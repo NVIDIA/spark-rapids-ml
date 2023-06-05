@@ -27,7 +27,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pyspark import Row
+from pyspark import Row, keyword_only
 from pyspark.ml.common import _py2java
 from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
@@ -191,7 +191,7 @@ class LinearRegression(
     * L2 + L1 (elastic net)
 
     LinearRegression automatically supports most of the parameters from both
-    :py:class:`~pyspark.ml.regression.LinearRegression` and in the constructors of
+    :py:class:`~pyspark.ml.regression.LinearRegression`,
     :py:class:`cuml.LinearRegression`, :py:class:`cuml.Ridge`, :py:class:`cuml.Lasso`
     and :py:class:`cuml.ElasticNet`. And it will automatically map pyspark parameters
     to cuML parameters.
@@ -201,6 +201,50 @@ class LinearRegression(
         Results for spark ML and spark rapids ml fit() will currently match in all regularization
         cases only if features and labels are standardized in the input dataframe.  Otherwise,
         they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
+
+    Parameters
+    ----------
+
+    featuresCol:
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
+    labelCol:
+        The label column name.
+    predictionCol:
+        The prediction column name.
+    maxIter:
+        Max number of iterations (>= 0).
+    regParam:
+        Regularization parameter (>= 0)
+    elasticNetParam:
+        The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
+        the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
+    tol:
+        The convergence tolerance for iterative algorithms (>= 0).
+    fitIntercept:
+        whether to fit an intercept term.
+    standardization:
+        Whether to standardize the training features before fitting the model.
+    solver:
+        The solver algorithm for optimization. If this is not set or empty, default value is 'auto'.\n
+        The supported options: 'auto', 'normal' and 'eig', all of them will be mapped to 'eig' in cuML.
+    loss:
+        The loss function to be optimized.
+        The supported options: 'squaredError'
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+    verbose:
+        Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
 
     Examples
     --------
@@ -257,9 +301,27 @@ class LinearRegression(
 
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        featuresCol: Union[str, List[str]] = "features",
+        labelCol: str = "label",
+        predictionCol: str = "prediction",
+        maxIter: int = 100,
+        regParam: float = 0.0,
+        elasticNetParam: float = 0.0,
+        tol: float = 1e-6,
+        fitIntercept: bool = True,
+        standardization: bool = True,
+        solver: str = "auto",
+        loss: str = "squaredError",
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ):
         super().__init__()
-        self.set_params(**kwargs)
+        self.set_params(**self._input_kwargs)
 
     def setMaxIter(self, value: int) -> "LinearRegression":
         """
@@ -560,10 +622,10 @@ class RandomForestRegressor(
 ):
     """RandomForestRegressor implements a Random Forest regressor model which
     fits multiple decision tree in an ensemble. It implements cuML's
-    GPU accelerated RandomForestRegressor algorithm based on cuML python library,\
+    GPU accelerated RandomForestRegressor algorithm based on cuML python library,
     and it can be used in PySpark Pipeline and PySpark ML meta algorithms like
-    :py:class:`~pyspark.ml.tuning.CrossValidator`/
-    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
+    :py:class:`~pyspark.ml.tuning.CrossValidator`,
+    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`,
     :py:class:`~pyspark.ml.classification.OneVsRest`
 
     The distributed algorithm uses an *embarrassingly-parallel* approach. For a
@@ -573,9 +635,81 @@ class RandomForestRegressor(
     well, but it generally requires the data to be well-shuffled in advance.
 
     RandomForestRegressor automatically supports most of the parameters from both
-    :py:class:`~pyspark.ml.regression.RandomForestRegressor` and in the constructors of
+    :py:class:`~pyspark.ml.regression.RandomForestRegressor` and
     :py:class:`cuml.ensemble.RandomForestRegressor`. And it can automatically map
     pyspark parameters to cuML parameters.
+
+
+    Parameters
+    ----------
+
+    featuresCol:
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
+    labelCol:
+        The label column name.
+    predictionCol:
+        The prediction column name.
+    maxDepth:
+        Maximum tree depth. Must be greater than 0.
+    maxBins:
+        Maximum number of bins used by the split algorithm per feature.
+    minInstancesPerNode:
+        The minimum number of samples (rows) in each leaf node.
+    impurity: str = "variance",
+        The criterion used to split nodes.
+    numTrees:
+        Total number of trees in the forest.
+    featureSubsetStrategy:
+        Ratio of number of features (columns) to consider per node split.\n
+        The supported options:\n
+            ``'auto'``:  If numTrees == 1, set to 'all', If numTrees > 1 (forest), set to 'onethird'\n
+            ``'all'``: use all features\n
+            ``'onethird'``: use 1/3 of the features\n
+            ``'sqrt'``: use sqrt(number of features)\n
+            ``'log2'``: log2(number of features)\n
+            ``'n'``: when n is in the range (0, 1.0], use n * number of features. When n
+            is in the range (1, number of features), use n features.
+    seed:
+        Seed for the random number generator.
+    bootstrap:
+        Control bootstrapping.\n
+            * If ``True``, each tree in the forest is built on a bootstrapped
+              sample with replacement.
+            * If ``False``, the whole dataset is used to build each tree.
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+    verbose:
+        Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+    n_streams:
+        Number of parallel streams used for forest building.
+        Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
+        when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
+    min_samples_split:
+        The minimum number of samples required to split an internal node.\n
+         * If type ``int``, then ``min_samples_split`` represents the minimum
+           number.
+         * If type ``float``, then ``min_samples_split`` represents a fraction
+           and ``ceil(min_samples_split * n_rows)`` is the minimum number of
+           samples for each split.    max_samples:
+        Ratio of dataset rows used while fitting each tree.
+    max_leaves:
+        Maximum leaf nodes per tree. Soft constraint. Unlimited, if -1.
+    min_impurity_decrease:
+        Minimum decrease in impurity required for node to be split.
+    max_batch_size:
+        Maximum number of nodes that can be processed in a given batch.
+
 
     Examples
     --------
@@ -617,9 +751,32 @@ class RandomForestRegressor(
 
     """
 
-    def __init__(self, **kwargs: Any):
-        super().__init__()
-        self.set_params(**kwargs)
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        featuresCol: Union[str, List[str]] = "features",
+        labelCol: str = "label",
+        predictionCol: str = "prediction",
+        maxDepth: int = 5,
+        maxBins: int = 32,
+        minInstancesPerNode: int = 1,
+        impurity: str = "variance",
+        numTrees: int = 20,
+        featureSubsetStrategy: str = "auto",
+        seed: Optional[int] = None,
+        bootstrap: Optional[bool] = True,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        n_streams: int = 1,
+        min_samples_split: Union[int, float] = 2,
+        max_samples: float = 1.0,
+        max_leaves: int = -1,
+        min_impurity_decrease: float = 0.0,
+        max_batch_size: int = 4096,
+        **kwargs: Any,
+    ):
+        super().__init__(**self._input_kwargs)
 
     def _is_classification(self) -> bool:
         return False

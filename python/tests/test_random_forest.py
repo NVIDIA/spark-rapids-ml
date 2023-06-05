@@ -399,7 +399,7 @@ def test_random_forest_regressor(
         ncols=data_shape[1],
     )
 
-    rf_params = {
+    rf_params: Dict[str, Any] = {
         "n_estimators": 100,
         "n_bins": 128,
         "max_depth": 16,
