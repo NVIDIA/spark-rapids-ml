@@ -376,7 +376,7 @@ def test_random_forest_classifier(
                 labelCol=spark_rf_model.getLabelCol(),
             )
 
-            spark_cuml_f1_score = spark_rf_model._transformEvaluate(test_df)
+            spark_cuml_f1_score = spark_rf_model._transformEvaluate(test_df, evaluator)
 
             transformed_df = spark_rf_model.transform(test_df)
             pyspark_f1_score = evaluator.evaluate(transformed_df)
@@ -801,7 +801,7 @@ def test_fit_multiple_in_single_pass(
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
-def test_crossvalidator_randome_forest_classifier(
+def test_crossvalidator_random_forest_classifier(
     tmp_path: str,
     feature_type: str,
     data_type: np.dtype,
@@ -848,7 +848,6 @@ def test_crossvalidator_randome_forest_classifier(
 
         # without exception
         model: CrossValidatorModel = cv.fit(df)
-        model.subModels
 
         spark_cv = SparkCrossValidator(
             estimator=rfc,

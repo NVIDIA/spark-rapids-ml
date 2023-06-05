@@ -29,6 +29,7 @@ from spark_rapids_ml.classification import (
     RandomForestClassificationModel,
     RandomForestClassifier,
 )
+from spark_rapids_ml.core import _CumlModel
 
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
@@ -71,8 +72,9 @@ def _parallelFitTasks(
 
     def singleTask() -> Tuple[int, float, Transformer]:
         index, model = next(modelIter)
-        if isinstance(model, RandomForestClassificationModel) and model.numClasses > 2:
-            metric = model._transformEvaluate(validation, epm[index])
+
+        if isinstance(model, _CumlModel) and model._supportsTransformEvaluate(eva):
+            metric = model._transformEvaluate(validation, eva, epm[index])
         else:
             # TODO: duplicate evaluator to take extra params from input
             #  Note: Supporting tuning params in evaluator need update method

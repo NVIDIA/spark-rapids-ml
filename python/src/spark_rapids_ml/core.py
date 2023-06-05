@@ -38,6 +38,7 @@ import numpy as np
 import pandas as pd
 from pyspark import RDD, TaskContext
 from pyspark.ml import Estimator, Model
+from pyspark.ml.evaluation import Evaluator
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -912,6 +913,35 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
     @classmethod
     def read(cls) -> MLReader:
         return _CumlModelReader(cls)
+
+    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
+        """If supporting _transformEvaluate in a single pass based on the evaluator"""
+        return False
+
+    def _transformEvaluate(
+        self,
+        dataset: DataFrame,
+        evaluator: Evaluator,
+        params: Optional["ParamMap"] = None,
+    ) -> float:
+        """
+        Transforms and evaluates the input dataset with optional parameters in a single pass.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            a dataset that contains labels/observations and predictions
+        evaluator: :py:class:`pyspark.ml.evaluation.Evaluator`
+            an evaluator user intends to use
+        params : dict, optional
+            an optional param map that overrides embedded params
+
+        Returns
+        -------
+        float
+            metric
+        """
+        raise NotImplementedError()
 
 
 class _CumlModelWithColumns(_CumlModel):
