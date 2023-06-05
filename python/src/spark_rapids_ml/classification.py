@@ -117,12 +117,12 @@ class RandomForestClassifier(
 
     featuresCol:
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
-            * When the value is string, the feature columns must be assembled into 1 column with vector or array type.
-            * When the value is a list of string, the feature columns must be numeric types.
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
     labelCol:
         The label column name.
     predictionCol:
-        The predictionCol column name.
+        The prediction column name.
     probabilityCol
         The column name for predicted class conditional probabilities.
     rawPredictionCol:
@@ -171,7 +171,7 @@ class RandomForestClassifier(
             * ``6`` - Enables all messages up to and including trace messages.
     n_streams:
         Number of parallel streams used for forest building.
-        Please note that there is a bug running spark-rapids-ml on the node with multi-gpus
+        Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
         when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
     min_samples_split:
         The minimum number of samples required to split an internal node.\n
@@ -260,7 +260,6 @@ class RandomForestClassifier(
         **kwargs: Any,
     ):
         super().__init__(**self._input_kwargs)
-        self.set_params(**self._input_kwargs)
 
     def _pre_process_label(
         self, dataset: DataFrame, feature_type: Union[Type[FloatType], Type[DoubleType]]
