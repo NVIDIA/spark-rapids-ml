@@ -174,7 +174,7 @@ class LowRankMatrixDataGen(DataGenBase):
         for size in partition_sizes:
             assert (
                 size >= cols
-            ), f"Num samples per partition must be >= num_features; \
+            ), f"Num samples per partition ({size}) must be >= num_features ({cols}); \
                                     decrease output_num_files to <= {rows // cols}"
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
