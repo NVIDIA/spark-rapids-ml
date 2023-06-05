@@ -14,17 +14,14 @@
 # limitations under the License.
 #
 
-import argparse
 import random
-import sys
 from abc import abstractmethod
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import array
 from scipy import linalg
 from sklearn.datasets import (
     make_blobs,
@@ -33,7 +30,7 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func
+from benchmark.utils import check_random_state, inspect_default_params_from_func
 
 
 class DataGenBaseMeta(DataGenBase):
@@ -162,9 +159,9 @@ class LowRankMatrixDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(
+    def gen_dataframe_and_meta(
         self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -224,131 +221,14 @@ class LowRankMatrixDataGen(DataGenBase):
                 yield pd.DataFrame(data=mat)
 
         return (
-            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
-                make_matrix_udf, schema=",".join(self.schema)
-            )
-        ), self.feature_cols
-
-
-class RegressionDataGen(DataGenBase):
-    """Generate regression dataset including features and label."""
-
-    def __init__(self, argv: List[Any]) -> None:
-        super().__init__()
-        self._parse_arguments(argv)
-
-    def _supported_extra_params(self) -> Dict[str, Any]:
-        params = inspect_default_params_from_func(
-            make_regression, ["n_samples", "n_features"]
+            (
+                spark.range(
+                    0, num_partitions, numPartitions=num_partitions
+                ).mapInPandas(make_matrix_udf, schema=",".join(self.schema))
+            ),
+            self.feature_cols,
+            [],
         )
-        # must replace the None to the correct type
-        params["effective_rank"] = int
-        params["random_state"] = int
-        return params
-
-    def gen_dataframe(
-        self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
-        num_cols = self.num_cols
-        dtype = self.dtype
-
-        params = self.extra_params
-
-        if "random_state" not in params:
-            # for reproducible dataset.
-            params["random_state"] = 1
-
-        print(f"Passing {params} to make_regression")
-
-        # TODO: Add support for returning coefs; needed for testing.
-        def make_regression_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            """Pandas udf to call make_regression of sklearn to generate regression dataset"""
-            total_rows = 0
-            for pdf in iter:
-                total_rows += pdf.shape[0]
-            # here we iterator all batches of a single partition to get total rows.
-            # use 10% of num_cols for number of informative features, following ratio for defaults
-            X, y = make_regression(n_samples=total_rows, n_features=num_cols, **params)
-            data = np.concatenate(
-                (X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1
-            )
-            del X
-            del y
-            yield pd.DataFrame(data=data)
-
-        label_col = "label"
-        self.schema.append(f"{label_col} {self.pyspark_type}")
-
-        # Each make_regression calling will return regression dataset with different coef.
-        # So force to only 1 task to generate the regression dataset, which may cause OOM
-        # and perf issue easily. I tested this script can generate 100, 000, 000 * 30
-        # matrix without issues with 60g executor memory, which, I think, is really enough
-        # to do the perf test.
-        return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_regression_udf, schema=",".join(self.schema)  # type: ignore
-            )
-        ), self.feature_cols
-
-
-class ClassificationDataGen(DataGenBase):
-    """Generate classification dataset including features and label."""
-
-    def __init__(self, argv: List[Any]) -> None:
-        super().__init__()
-        self._parse_arguments(argv)
-
-    def _supported_extra_params(self) -> Dict[str, Any]:
-        params = inspect_default_params_from_func(
-            make_classification, ["n_samples", "n_features", "weights"]
-        )
-        # must replace the None to the correct type
-        params["random_state"] = int
-        return params
-
-    def gen_dataframe(
-        self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
-        num_cols = self.num_cols
-        dtype = self.dtype
-
-        params = self.extra_params
-
-        if "random_state" not in params:
-            # for reproducible dataset.
-            params["random_state"] = 1
-
-        print(f"Passing {params} to make_classification")
-
-        def make_classification_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            """Pandas udf to call make_classification of sklearn to generate classification dataset"""
-            total_rows = 0
-            for pdf in iter:
-                total_rows += pdf.shape[0]
-            # here we iterator all batches of a single partition to get total rows.
-            X, y = make_classification(
-                n_samples=total_rows, n_features=num_cols, **params
-            )
-            data = np.concatenate(
-                (X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1
-            )
-            del X
-            del y
-            yield pd.DataFrame(data=data)
-
-        label_col = "label"
-        self.schema.append(f"{label_col} {self.pyspark_type}")
-
-        # Each make_regression calling will return regression dataset with different coef.
-        # So force to only 1 task to generate the regression dataset, which may cause OOM
-        # and perf issue easily. I tested this script can generate 100, 000, 000 * 30
-        # matrix without issues with 60g executor memory, which, I think, is really enough
-        # to do the perf test.
-        return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_classification_udf, schema=",".join(self.schema)  # type: ignore
-            )
-        ), self.feature_cols
 
 
 if __name__ == "__main__":
@@ -359,6 +239,7 @@ if __name__ == "__main__":
     registered_data_gens = {
         "blobs": BlobsDataGen,
         "default": DefaultDataGen,
+        "low_rank_matrix": LowRankMatrixDataGen,
     }
 
     main(registered_data_gens=registered_data_gens, repartition=False)
