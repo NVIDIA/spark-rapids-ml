@@ -109,13 +109,6 @@ class CrossValidator(SparkCrossValidator):
     def _fit(self, dataset: DataFrame) -> "CrossValidatorModel":
         est = self.getOrDefault(self.estimator)
         eva = self.getOrDefault(self.evaluator)
-
-        if not (
-            isinstance(est, RandomForestClassifier)
-            and isinstance(eva, MulticlassClassificationEvaluator)
-        ):
-            return super()._fit(dataset)
-
         epm = self.getOrDefault(self.estimatorParamMaps)
         numModels = len(epm)
         nFolds = self.getOrDefault(self.numFolds)
