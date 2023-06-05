@@ -181,7 +181,7 @@ class LowRankMatrixDataGen(DataGenBase):
 
         partition_sizes = [rows // num_partitions] * num_partitions
         partition_sizes[-1] += rows % num_partitions
-        # Check to ensure QR decomp produces a matrix of the correct dimension.
+        # Check sizes to ensure QR decomp produces a matrix of the correct dimension.
         for size in partition_sizes:
             assert (
                 size >= cols
@@ -203,7 +203,7 @@ class LowRankMatrixDataGen(DataGenBase):
             check_finite=False,
         )
 
-        # UDF for distributed generation of U, and the resultant product U*S*V.T
+        # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.Series]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
