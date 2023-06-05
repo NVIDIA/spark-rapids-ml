@@ -18,7 +18,7 @@ import argparse
 import random
 import sys
 from abc import abstractmethod
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -110,7 +110,7 @@ class BlobsDataGen(DataGenBaseMeta):
 
         # UDF to distribute make_blobs() calls across partitions. Each partition
         # produces an equal fraction of the total samples around the predefined centers.
-        def make_blobs_udf(iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+        def make_blobs_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_samples = partition_sizes[partition_index]
