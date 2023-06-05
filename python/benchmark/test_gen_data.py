@@ -17,12 +17,6 @@
 import numpy as np
 from gen_data_distributed import BlobsDataGen
 from pandas import DataFrame
-from sklearn.datasets import (
-    make_blobs,
-    make_classification,
-    make_low_rank_matrix,
-    make_regression,
-)
 from sklearn.utils._testing import (
     assert_allclose,
     assert_almost_equal,
@@ -55,6 +49,7 @@ def test_make_blobs() -> None:
     assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _, centers = data_gen.gen_dataframe_and_meta(spark)
+        assert df.rdd.getNumPartitions() == 3
         pdf: DataFrame = df.toPandas()
 
         X = pdf.iloc[:, :-1].to_numpy()
@@ -65,6 +60,6 @@ def test_make_blobs() -> None:
         assert centers.shape == (3, 2), "Centers shape mismatch"
         assert np.unique(y).shape == (3,), "Unexpected number of blobs"
 
-        cluster_stds = [0.7 for _ in range(3)]
+        cluster_stds = [0.7] * 3
         for i, (ctr, std) in enumerate(zip(centers, cluster_stds)):
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
