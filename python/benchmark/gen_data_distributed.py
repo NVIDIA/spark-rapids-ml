@@ -173,9 +173,9 @@ class LowRankMatrixDataGen(DataGenBase):
         # Check to ensure QR decomp produces a matrix of the correct dimension.
         for size in partition_sizes:
             assert (
-                size > cols
-            ), f"Num samples per partition must be > num_features; \
-                                    decrease output_num_files to < {rows // cols}"
+                size >= cols
+            ), f"Num samples per partition must be >= num_features; \
+                                    decrease output_num_files to <= {rows // cols}"
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
         # S and V are generated upfront, U is generated across partitions.
