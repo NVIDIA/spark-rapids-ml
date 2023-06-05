@@ -413,7 +413,7 @@ class ClassificationDataGen(DataGenBase):
         ), self.feature_cols
 
 
-if __name__ == "__main__":
+def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
     """
     python gen_data.py [regression|blobs|low_rank_matrix|default|classification] \
         --num_rows 5000 \
@@ -423,14 +423,6 @@ if __name__ == "__main__":
         --spark_confs "spark.master=local[*]" \
         --spark_confs "spark.driver.memory=128g"
     """
-
-    registered_data_gens = {
-        "blobs": BlobsDataGen,
-        "regression": RegressionDataGen,
-        "classification": ClassificationDataGen,
-        "low_rank_matrix": LowRankMatrixDataGen,
-        "default": DefaultDataGen,
-    }
 
     parser = argparse.ArgumentParser(
         description="Generate random dataset.",
@@ -456,6 +448,9 @@ if __name__ == "__main__":
 
     data_gen = registered_data_gens[args.type](sys.argv[2:])  # type: ignore
 
+    # Must repartition for default.
+    if args.type == "default":
+        repartition = True
     assert data_gen.args is not None
     args = data_gen.args
 
@@ -478,7 +473,7 @@ if __name__ == "__main__":
             )
 
         def write_files(dataframe: DataFrame, path: str) -> None:
-            if args.output_num_files is not None:
+            if args.output_num_files is not None and repartition:
                 dataframe = dataframe.repartition(args.output_num_files)
 
             writer = dataframe.write
@@ -499,3 +494,15 @@ if __name__ == "__main__":
         df.printSchema()
 
         print("gen_data finished")
+
+
+if __name__ == "__main__":
+    registered_data_gens = {
+        "blobs": BlobsDataGen,
+        "regression": RegressionDataGen,
+        "classification": ClassificationDataGen,
+        "low_rank_matrix": LowRankMatrixDataGen,
+        "default": DefaultDataGen,
+    }
+
+    main(registered_data_gens=registered_data_gens, repartition=True)
