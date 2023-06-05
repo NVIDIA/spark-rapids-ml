@@ -18,12 +18,11 @@ import argparse
 import random
 import sys
 from abc import abstractmethod
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from gen_data import DataGenBase, DefaultDataGen
-from pyspark.mllib.random import RandomRDDs
+from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array
 from scipy import linalg
@@ -34,15 +33,27 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import (
-    WithSparkSession,
-    check_random_state,
-    inspect_default_params_from_func,
-    to_bool,
-)
+from benchmark.utils import WithSparkSession, inspect_default_params_from_func
 
 
-class BlobsDataGen(DataGenBase):
+class DataGenBaseMeta(DataGenBase):
+    """Base class datagen with meta info support"""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    @abstractmethod
+    def gen_dataframe_and_meta(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
+        raise NotImplementedError()
+
+    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+        df, feature_cols, _ = self.gen_dataframe_and_meta(spark)
+        return df, feature_cols
+
+
+class BlobsDataGen(DataGenBaseMeta):
     """Generate random dataset using distributed calls to sklearn.datasets.make_blobs,
     which creates blobs for benchmarking unsupervised clustering algorithms (e.g. KMeans)
     """
@@ -61,9 +72,9 @@ class BlobsDataGen(DataGenBase):
 
         return params
 
-    def gen_dataframe(
+    def gen_dataframe_and_meta(
         self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -75,7 +86,12 @@ class BlobsDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
+        assert self.args is not None
         num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
 
         # Produce partition seeds for reproducibility.
         random.seed(params["random_state"])
@@ -96,7 +112,7 @@ class BlobsDataGen(DataGenBase):
 
         # UDF to distribute make_blobs() calls across partitions. Each partition
         # produces an equal fraction of the total samples around the predefined centers.
-        def make_blobs_udf(iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+        def make_blobs_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_samples = partition_sizes[partition_index]
@@ -337,88 +353,12 @@ class ClassificationDataGen(DataGenBase):
 
 if __name__ == "__main__":
     """
-    python gen_data.py [regression|blobs|low_rank_matrix|default|classification] \
-        --num_rows 5000 \
-        --num_cols 3000 \
-        --dtype "float64" \
-        --output_dir "./5k_2k_float64.parquet" \
-        --spark_confs "spark.master=local[*]" \
-        --spark_confs "spark.driver.memory=128g"
+    See gen_data.main for more info.
     """
 
     registered_data_gens = {
         "blobs": BlobsDataGen,
-        "regression": RegressionDataGen,
-        "classification": ClassificationDataGen,
-        "low_rank_matrix": LowRankMatrixDataGen,
         "default": DefaultDataGen,
     }
 
-    parser = argparse.ArgumentParser(
-        description="Generate random dataset.",
-        usage="""gen_data.py <type> [<args>]
-
-    Supported types are:
-       blobs                 Generate random blobs datasets using sklearn's make_blobs
-       regression            Generate random regression datasets using sklearn's make_regression
-       classification        Generate random classification datasets using sklearn's make_classification
-       low_rank_matrix       Generate random dataset using sklearn's make_low_rank_matrix
-       default               Generate default dataset using pyspark RandomRDDs.uniformVectorRDD
-    """,
-    )
-    parser.add_argument("type", help="Generate random dataset")
-    # parse_args defaults to [1:] for args, but you need to
-    # exclude the rest of the args too, or validation will fail
-    args = parser.parse_args(sys.argv[1:2])
-
-    if args.type not in registered_data_gens:
-        print("Unrecognized type: ", args.type)
-        parser.print_help()
-        exit(1)
-
-    data_gen = registered_data_gens[args.type](sys.argv[2:])  # type: ignore
-
-    assert data_gen.args is not None
-    args = data_gen.args
-
-    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, feature_cols, _ = data_gen.gen_dataframe(spark)
-
-        if args.feature_type == "array":
-            df = df.withColumn("feature_array", array(*feature_cols)).drop(
-                *feature_cols
-            )
-        elif args.feature_type == "vector":
-            from pyspark.ml.feature import VectorAssembler
-
-            df = (
-                VectorAssembler()
-                .setInputCols(feature_cols)
-                .setOutputCol("feature_array")
-                .transform(df)
-                .drop(*feature_cols)
-            )
-
-        def write_files(dataframe: DataFrame, path: str) -> None:
-            # TODO: only need to repartition for DefaultDataGen
-            if args.output_num_files is not None:
-                dataframe = dataframe.repartition(args.output_num_files)
-
-            writer = dataframe.write
-            if args.overwrite:
-                writer = writer.mode("overwrite")
-            writer.parquet(path)
-
-        if args.train_fraction is not None:
-            train_df, eval_df = df.randomSplit(
-                [args.train_fraction, 1 - args.train_fraction], seed=1
-            )
-            write_files(train_df, f"{args.output_dir}/train")
-            write_files(eval_df, f"{args.output_dir}/eval")
-
-        else:
-            write_files(df, args.output_dir)
-
-        df.printSchema()
-
-        print("gen_data finished")
+    main(registered_data_gens=registered_data_gens, repartition=False)

@@ -15,12 +15,8 @@
 #
 
 import numpy as np
-from gen_data_distributed import (
-    BlobsDataGen,
-    ClassificationDataGen,
-    LowRankMatrixDataGen,
-    RegressionDataGen,
-)
+from gen_data_distributed import BlobsDataGen
+from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
     assert_almost_equal,
@@ -28,11 +24,11 @@ from sklearn.utils._testing import (
     assert_array_equal,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
+from benchmark.utils import WithSparkSession
 
 
 def test_make_blobs() -> None:
-    args = [
+    input_args = [
         "--num_rows",
         "50",
         "--num_cols",
@@ -48,11 +44,13 @@ def test_make_blobs() -> None:
         "--random_state",
         "0",
     ]
-    data_gen = BlobsDataGen(args)
+    data_gen = BlobsDataGen(input_args)
     args = data_gen.args
+    assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, _, centers = data_gen.gen_dataframe(spark)
-        pdf = df.toPandas()
+        df, _, centers = data_gen.gen_dataframe_and_meta(spark)
+        pdf: DataFrame = df.toPandas()
+
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
