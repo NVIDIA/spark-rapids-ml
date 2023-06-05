@@ -15,7 +15,7 @@
 #
 
 import numpy as np
-from gen_data_distributed import BlobsDataGen
+from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen
 from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
@@ -65,7 +65,7 @@ def test_make_blobs() -> None:
 
 
 def test_make_low_rank_matrix() -> None:
-    args = [
+    input_args = [
         "--num_rows",
         "50",
         "--num_cols",
@@ -83,11 +83,13 @@ def test_make_low_rank_matrix() -> None:
         "--random_state",
         "0",
     ]
-    data_gen = LowRankMatrixDataGen(args)
+    data_gen = LowRankMatrixDataGen(input_args)
     args = data_gen.args
+    assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _ = data_gen.gen_dataframe(spark)
-        X = df.toPandas().to_numpy()
+        pdf: DataFrame = df.toPandas()
+        X = pdf.to_numpy()
 
         assert X.shape == (50, 20), "X shape mismatch"
         from numpy.linalg import svd

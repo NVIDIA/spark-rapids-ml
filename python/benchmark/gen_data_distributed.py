@@ -159,9 +159,7 @@ class LowRankMatrixDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe_and_meta(
-        self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], np.ndarray]:
+    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -173,7 +171,7 @@ class LowRankMatrixDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
-
+        assert self.args is not None
         num_partitions = self.args.output_num_files
         generator = check_random_state(params["random_state"])
         n = min(rows, cols)
@@ -206,7 +204,7 @@ class LowRankMatrixDataGen(DataGenBase):
         )
 
         # UDF for distributed generation of U, and the resultant product U*S*V.T
-        def make_matrix_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
+        def make_matrix_udf(iter: Iterable[pd.Series]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
@@ -227,7 +225,6 @@ class LowRankMatrixDataGen(DataGenBase):
                 ).mapInPandas(make_matrix_udf, schema=",".join(self.schema))
             ),
             self.feature_cols,
-            [],
         )
 
 
