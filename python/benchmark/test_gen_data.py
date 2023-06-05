@@ -1,6 +1,5 @@
 import numpy as np
 from gen_data_distributed import BlobsDataGen
-
 from sklearn.datasets import (
     make_blobs,
     make_classification,

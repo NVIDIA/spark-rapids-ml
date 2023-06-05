@@ -34,6 +34,7 @@ from sklearn.datasets import (
 
 from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
 
+
 class DataGenBaseMeta(DataGenBase):
     """Base class datagen with meta info support"""
 
@@ -43,12 +44,13 @@ class DataGenBaseMeta(DataGenBase):
     @abstractmethod
     def gen_dataframe_and_meta(
         self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], List[Any]]:
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
         raise NotImplementedError()
-    
-    def gen_dataframe(self) -> Tuple[DataFrame, List[str]]:
-        df, feature_cols, _ = self.gen_dataframe_and_meta()
+
+    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+        df, feature_cols, _ = self.gen_dataframe_and_meta(spark)
         return df, feature_cols
+
 
 class BlobsDataGen(DataGenBaseMeta):
     """Generate random dataset using distributed calls to sklearn.datasets.make_blobs,
@@ -68,10 +70,10 @@ class BlobsDataGen(DataGenBaseMeta):
         params["random_state"] = int
 
         return params
-        
+
     def gen_dataframe_and_meta(
         self, spark: SparkSession
-    ) -> Tuple[DataFrame, List[str], Optional[List[Any]]]:
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -140,6 +142,7 @@ class BlobsDataGen(DataGenBaseMeta):
             centers,
         )
 
+
 if __name__ == "__main__":
     """
     python gen_data.py [regression|blobs|low_rank_matrix|default|classification] \
@@ -153,11 +156,11 @@ if __name__ == "__main__":
 
     registered_data_gens = {
         "blobs": BlobsDataGen,
-        '''
+        """
         "regression": RegressionDataGen,
         "classification": ClassificationDataGen,
         "low_rank_matrix": LowRankMatrixDataGen,
-        '''
+        """
         "default": DefaultDataGen,
     }
 
@@ -189,7 +192,7 @@ if __name__ == "__main__":
     args = data_gen.args
 
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, feature_cols, _ = data_gen.gen_dataframe(spark)
+        df, feature_cols = data_gen.gen_dataframe(spark)
 
         if args.feature_type == "array":
             df = df.withColumn("feature_array", array(*feature_cols)).drop(
