@@ -1,5 +1,5 @@
-#
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.
+# Copyright (c) 2007-2023 The scikit-learn developers. All rights reserved.
+# Modifications copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
