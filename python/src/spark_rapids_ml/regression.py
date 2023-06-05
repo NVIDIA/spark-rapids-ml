@@ -207,12 +207,12 @@ class LinearRegression(
 
     featuresCol:
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
-            * When the value is string, the feature columns must be assembled into 1 column with vector or array type.
-            * When the value is a list of string, the feature columns must be numeric types.
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
     labelCol:
         The label column name.
     predictionCol:
-        The predictionCol column name.
+        The prediction column name.
     maxIter:
         Max number of iterations (>= 0).
     regParam:
@@ -645,12 +645,12 @@ class RandomForestRegressor(
 
     featuresCol:
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
-            * When the value is string, the feature columns must be assembled into 1 column with vector or array type.
-            * When the value is a list of string, the feature columns must be numeric types.
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
     labelCol:
         The label column name.
     predictionCol:
-        The predictionCol column name.
+        The prediction column name.
     maxDepth:
         Maximum tree depth. Must be greater than 0.
     maxBins:
@@ -693,7 +693,7 @@ class RandomForestRegressor(
             * ``6`` - Enables all messages up to and including trace messages.
     n_streams:
         Number of parallel streams used for forest building.
-        Please note that there is a bug running spark-rapids-ml on the node with multi-gpus
+        Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
         when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
     min_samples_split:
         The minimum number of samples required to split an internal node.\n
