@@ -42,7 +42,7 @@ def test_make_blobs() -> None:
     args = data_gen.args
     assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
-        df, _, centers = data_gen.gen_dataframe(spark)
+        df, _, centers = data_gen.gen_dataframe_and_meta(spark)
         pdf = df.toPandas()
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
