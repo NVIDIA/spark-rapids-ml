@@ -86,10 +86,11 @@ class BlobsDataGen(DataGenBaseMeta):
         rows = self.num_rows
         cols = self.num_cols
         assert self.args is not None
-        # TODO: set num_partitions if output_num_files is not provided
-        # get default parallelism from spark context, get spark context from spark session
-        # spark.sparkContext.defaultParallelism
         num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
 
         # Produce partition seeds for reproducibility.
         random.seed(params["random_state"])
@@ -156,11 +157,6 @@ if __name__ == "__main__":
 
     registered_data_gens = {
         "blobs": BlobsDataGen,
-        """
-        "regression": RegressionDataGen,
-        "classification": ClassificationDataGen,
-        "low_rank_matrix": LowRankMatrixDataGen,
-        """
         "default": DefaultDataGen,
     }
 
@@ -187,6 +183,7 @@ if __name__ == "__main__":
         exit(1)
 
     data_gen = registered_data_gens[args.type](sys.argv[2:])  # type: ignore
+    is_default = args.type == "default"
 
     assert data_gen.args is not None
     args = data_gen.args
@@ -210,8 +207,7 @@ if __name__ == "__main__":
             )
 
         def write_files(dataframe: DataFrame, path: str) -> None:
-            # TODO: only need to repartition for DefaultDataGen
-            if args.output_num_files is not None:
+            if is_default and args.output_num_files is not None:
                 dataframe = dataframe.repartition(args.output_num_files)
 
             writer = dataframe.write
