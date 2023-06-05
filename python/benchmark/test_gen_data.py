@@ -1,5 +1,6 @@
 import numpy as np
 from gen_data_distributed import BlobsDataGen
+from pyspark.sql.pandas._typing import DataFrameLike as PandasDataFrameLike
 from sklearn.datasets import (
     make_blobs,
     make_classification,
@@ -13,7 +14,7 @@ from sklearn.utils._testing import (
     assert_array_equal,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
+from benchmark.utils import WithSparkSession
 
 
 def test_make_blobs() -> None:
@@ -38,7 +39,8 @@ def test_make_blobs() -> None:
     assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _, centers = data_gen.gen_dataframe_and_meta(spark)
-        pdf = df.toPandas()
+        pdf: PandasDataFrameLike = df.toPandas()
+
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
