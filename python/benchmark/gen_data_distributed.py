@@ -196,7 +196,7 @@ class LowRankMatrixDataGen(DataGenBase):
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
         # S and V are generated upfront, U is generated across partitions.
-        singular_ind = np.arange(n, dtype=np.float64)
+        singular_ind = np.arange(n, dtype=dtype)
         low_rank = (1 - params["tail_strength"]) * np.exp(
             -1.0 * (singular_ind / params["effective_rank"]) ** 2
         )
@@ -221,7 +221,7 @@ class LowRankMatrixDataGen(DataGenBase):
                 )
                 # Include partition-wise normalization to ensure overall unit norm.
                 u *= np.sqrt(1 / num_partitions)
-                mat = np.dot(np.dot(u, s), v.T)
+                mat = np.dot(np.dot(u, s), v.T).astype(dtype)
                 del u
                 yield pd.DataFrame(data=mat)
 
