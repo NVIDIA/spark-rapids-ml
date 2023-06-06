@@ -54,7 +54,6 @@ def test_make_blobs() -> None:
 
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
-        print(f"dtype: {X.dtype}")
 
         assert X.dtype == np.float64, "Unexpected dtype"
         assert X.shape == (50, 2), "X shape mismatch"

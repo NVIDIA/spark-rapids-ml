@@ -234,7 +234,7 @@ class LowRankMatrixDataGen(DataGenBase):
             self.feature_cols,
         )
 
-class RegressionDataGen(DataGenBase):
+class RegressionDataGen(DataGenBaseMeta):
     """Generate regression dataset using a distributed version of sklearn.datasets.regression,
     including features and labels.
     """
@@ -252,7 +252,7 @@ class RegressionDataGen(DataGenBase):
         params["random_state"] = int
         return params
 
-    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+    def gen_dataframe_and_meta(self, spark: SparkSession) -> Tuple[DataFrame, List[str], np.ndarray]:
         num_cols = self.num_cols
         dtype = self.dtype
 
