@@ -177,7 +177,7 @@ class LowRankMatrixDataGen(DataGenBase):
         # Set num_partitions to Spark's default if output_num_files is not provided.
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
-        
+
         print(f"num_partitions: {num_partitions}")
         generator = check_random_state(params["random_state"])
         n = min(rows, cols)
@@ -189,10 +189,10 @@ class LowRankMatrixDataGen(DataGenBase):
         partition_sizes[-1] += rows % num_partitions
         # Check sizes to ensure QR decomp produces a matrix of the correct dimension.
         for size in partition_sizes:
-            assert (
-                size >= cols
-            ), f"Num samples per partition ({size}) must be >= num_features ({cols});" \
+            assert size >= cols, (
+                f"Num samples per partition ({size}) must be >= num_features ({cols});"
                 f" decrease num_partitions from {num_partitions} to <= {rows // cols}"
+            )
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
         # S and V are generated upfront, U is generated across partitions.
@@ -233,6 +233,7 @@ class LowRankMatrixDataGen(DataGenBase):
             ),
             self.feature_cols,
         )
+
 
 if __name__ == "__main__":
     """
