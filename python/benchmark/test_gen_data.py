@@ -15,7 +15,7 @@
 #
 
 import numpy as np
-from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen
+from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen, RegressionDataGen
 from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
@@ -100,3 +100,45 @@ def test_make_low_rank_matrix() -> None:
 
         u, s, v = svd(X)
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
+
+def test_make_regression():
+    args = [
+        "--num_rows",
+        "100",
+        "--num_cols",
+        "10",
+        "--dtype",
+        "float64",
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "3",
+        "--n_informative",
+        "3",
+        "--effective_rank",
+        "5",
+        "--coef",
+        "True",
+        "--bias",
+        "0.0",
+        "--noise",
+        "1.0",
+        "--random_state",
+        "0",
+    ]
+    data_gen = RegressionDataGen(args)
+    args = data_gen.args
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _, c = data_gen.gen_dataframe_and_meta(spark)
+        assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
+        pdf: DataFrame = df.toPandas()
+        X = pdf.iloc[:, :-1].to_numpy()
+        y = pdf.iloc[:, -1].to_numpy()
+
+        assert X.shape == (100, 10), "X shape mismatch"
+        assert y.shape == (100,), "y shape mismatch"
+        assert c.shape == (10,), "coef shape mismatch"
+        assert sum(c != 0.0) == 3, "Unexpected number of informative features"
+
+        # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
+        assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
