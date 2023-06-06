@@ -178,7 +178,6 @@ class LowRankMatrixDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
-        print(f"num_partitions: {num_partitions}")
         generator = check_random_state(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
@@ -253,9 +252,7 @@ class RegressionDataGen(DataGenBaseMeta):
         return params
 
     def gen_dataframe_and_meta(self, spark: SparkSession) -> Tuple[DataFrame, List[str], np.ndarray]:
-        num_cols = self.num_cols
         dtype = self.dtype
-
         params = self.extra_params
 
         if "random_state" not in params:
@@ -264,6 +261,23 @@ class RegressionDataGen(DataGenBaseMeta):
 
         print(f"Passing {params} to make_regression")
 
+        rows = self.num_rows
+        cols = self.num_cols
+        assert self.args is not None
+        num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
+
+        generator = check_random_state(params["random_state"])
+        # If params not provided, set to defaults.
+        n_informative = params.get("n_informative", 10)
+        n_targets = params.get("n_targets", 1)
+        bias = params.get("bias", 0.0)
+        effective_rank = params.get("effective_rank", None)
+        tail_strength = params.get("tail_strength", 0.5)
+
         def make_regression_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
             """Pandas udf to call make_regression of sklearn to generate regression dataset"""
             total_rows = 0
@@ -271,7 +285,7 @@ class RegressionDataGen(DataGenBaseMeta):
                 total_rows += pdf.shape[0]
             # here we iterator all batches of a single partition to get total rows.
             # use 10% of num_cols for number of informative features, following ratio for defaults
-            X, y = make_regression(n_samples=total_rows, n_features=num_cols, **params)
+            X, y = make_regression(n_samples=total_rows, n_features=cols, **params)
             data = np.concatenate(
                 (X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1
             )

@@ -134,6 +134,7 @@ def test_make_regression():
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
+        assert X.dtype == np.float64
         assert X.shape == (100, 10), "X shape mismatch"
         assert y.shape == (100,), "y shape mismatch"
         assert c.shape == (10,), "coef shape mismatch"
