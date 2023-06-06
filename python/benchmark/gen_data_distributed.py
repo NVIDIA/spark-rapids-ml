@@ -14,17 +14,15 @@
 # limitations under the License.
 #
 
-import argparse
 import random
-import sys
 from abc import abstractmethod
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import array
+from scipy import linalg
 from sklearn.datasets import (
     make_blobs,
     make_classification,
@@ -32,7 +30,7 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import WithSparkSession, inspect_default_params_from_func
+from benchmark.utils import check_random_state, inspect_default_params_from_func
 
 
 class DataGenBaseMeta(DataGenBase):
@@ -144,6 +142,98 @@ class BlobsDataGen(DataGenBaseMeta):
         )
 
 
+class LowRankMatrixDataGen(DataGenBase):
+    """Generate random dataset using a distributed version of sklearn.datasets.make_low_rank_matrix,
+    which creates large low rank matrices for benchmarking dimensionality reduction algos like pca
+    """
+
+    def __init__(self, argv: List[Any]) -> None:
+        super().__init__()
+        self._parse_arguments(argv)
+
+    def _supported_extra_params(self) -> Dict[str, Any]:
+        params = inspect_default_params_from_func(
+            make_low_rank_matrix, ["n_samples", "n_features"]
+        )
+        # must replace the None to the correct type
+        params["random_state"] = int
+        return params
+
+    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+        dtype = self.dtype
+        params = self.extra_params
+
+        if "random_state" not in params:
+            # for reproducible dataset.
+            params["random_state"] = 1
+
+        print(f"Passing {params} to make_low_rank_matrix")
+
+        rows = self.num_rows
+        cols = self.num_cols
+        assert self.args is not None
+        num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
+        
+        print(f"num_partitions: {num_partitions}")
+        generator = check_random_state(params["random_state"])
+        n = min(rows, cols)
+        # If params not provided, set to defaults.
+        tail_strength = params.get("tail_strength", 0.5)
+        effective_rank = params.get("effective_rank", 10)
+
+        partition_sizes = [rows // num_partitions] * num_partitions
+        partition_sizes[-1] += rows % num_partitions
+        # Check sizes to ensure QR decomp produces a matrix of the correct dimension.
+        for size in partition_sizes:
+            assert (
+                size >= cols
+            ), f"Num samples per partition ({size}) must be >= num_features ({cols});" \
+                f" decrease num_partitions from {num_partitions} to <= {rows // cols}"
+
+        # Generate U, S, V, the SVD decomposition of the output matrix.
+        # S and V are generated upfront, U is generated across partitions.
+        singular_ind = np.arange(n, dtype=dtype)
+        low_rank = (1 - params["tail_strength"]) * np.exp(
+            -1.0 * (singular_ind / params["effective_rank"]) ** 2
+        )
+        tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
+        s = np.identity(n) * (low_rank + tail)
+        # compute V upfront
+        v, _ = linalg.qr(
+            generator.standard_normal(size=(cols, n)),
+            mode="economic",
+            check_finite=False,
+        )
+
+        # UDF for distributed generation of U and the resultant product U*S*V.T
+        def make_matrix_udf(iter: Iterable[pd.Series]) -> Iterable[pd.DataFrame]:
+            for pdf in iter:
+                partition_index = pdf.iloc[0][0]
+                n_partition_rows = partition_sizes[partition_index]
+                u, _ = linalg.qr(
+                    generator.standard_normal(size=(n_partition_rows, n)),
+                    mode="economic",
+                    check_finite=False,
+                )
+                # Include partition-wise normalization to ensure overall unit norm.
+                u *= np.sqrt(1 / num_partitions)
+                mat = np.dot(np.dot(u, s), v.T).astype(dtype)
+                del u
+                yield pd.DataFrame(data=mat)
+
+        return (
+            (
+                spark.range(
+                    0, num_partitions, numPartitions=num_partitions
+                ).mapInPandas(make_matrix_udf, schema=",".join(self.schema))
+            ),
+            self.feature_cols,
+        )
+
 if __name__ == "__main__":
     """
     See gen_data.main for more info.
@@ -152,6 +242,7 @@ if __name__ == "__main__":
     registered_data_gens = {
         "blobs": BlobsDataGen,
         "default": DefaultDataGen,
+        "low_rank_matrix": LowRankMatrixDataGen,
     }
 
     main(registered_data_gens=registered_data_gens, repartition=False)

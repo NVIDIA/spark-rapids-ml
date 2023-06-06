@@ -1,5 +1,5 @@
-#
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2007-2023 The scikit-learn developers. All rights reserved.
+# Modifications copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
 # limitations under the License.
 #
 import inspect
+import numbers
 from distutils.util import strtobool
 from time import time
 from typing import Any, Callable, Dict, List
 
+import numpy as np
 from pyspark.sql import SparkSession
 
 
@@ -72,3 +74,30 @@ def inspect_default_params_from_func(
 
 def to_bool(literal: str) -> bool:
     return bool(strtobool(literal))
+
+
+def check_random_state(seed: int) -> np.random.RandomState:
+    """Turn seed into a np.random.RandomState instance.
+
+    Parameters
+    ----------
+    seed : None, int or instance of RandomState
+        If seed is None, return the RandomState singleton used by np.random.
+        If seed is an int, return a new RandomState instance seeded with seed.
+        If seed is already a RandomState instance, return it.
+        Otherwise raise ValueError.
+
+    Returns
+    -------
+    :class:`numpy:numpy.random.RandomState`
+        The random state object based on `seed` parameter.
+    """
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    if isinstance(seed, numbers.Integral):
+        return np.random.RandomState(seed)
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    raise ValueError(
+        "%r cannot be used to seed a numpy.random.RandomState instance" % seed
+    )
