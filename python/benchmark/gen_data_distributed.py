@@ -173,6 +173,12 @@ class LowRankMatrixDataGen(DataGenBase):
         cols = self.num_cols
         assert self.args is not None
         num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
+        
+        print(f"num_partitions: {num_partitions}")
         generator = check_random_state(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
@@ -185,8 +191,8 @@ class LowRankMatrixDataGen(DataGenBase):
         for size in partition_sizes:
             assert (
                 size >= cols
-            ), f"Num samples per partition ({size}) must be >= num_features ({cols}); \
-                                    decrease output_num_files to <= {rows // cols}"
+            ), f"Num samples per partition ({size}) must be >= num_features ({cols});" \
+                f" decrease num_partitions from {num_partitions} to <= {rows // cols}"
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
         # S and V are generated upfront, U is generated across partitions.

@@ -54,7 +54,9 @@ def test_make_blobs() -> None:
 
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
+        print(f"dtype: {X.dtype}")
 
+        assert X.dtype == np.float64, "Unexpected dtype"
         assert X.shape == (50, 2), "X shape mismatch"
         assert y.shape == (50,), "y shape mismatch"
         assert centers.shape == (3, 2), "Centers shape mismatch"
@@ -92,6 +94,7 @@ def test_make_low_rank_matrix() -> None:
         pdf: DataFrame = df.toPandas()
         X = pdf.to_numpy()
 
+        assert X.dtype == np.float64, "Unexpected dtype"
         assert X.shape == (50, 20), "X shape mismatch"
         from numpy.linalg import svd
 
