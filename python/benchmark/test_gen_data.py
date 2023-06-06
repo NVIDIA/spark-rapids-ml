@@ -49,7 +49,7 @@ def test_make_blobs() -> None:
     assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _, centers = data_gen.gen_dataframe_and_meta(spark)
-        assert df.rdd.getNumPartitions() == 3
+        assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
         pdf: DataFrame = df.toPandas()
 
         X = pdf.iloc[:, :-1].to_numpy()
