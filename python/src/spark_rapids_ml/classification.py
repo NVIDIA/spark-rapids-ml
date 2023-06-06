@@ -15,6 +15,8 @@
 #
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
+from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
+
 from .metrics.MulticlassMetrics import MulticlassMetrics
 
 if TYPE_CHECKING:
@@ -413,7 +415,10 @@ class RandomForestClassificationModel(
         return _construct_rf, _predict, _evaluate
 
     def _transformEvaluate(
-        self, dataset: DataFrame, params: Optional["ParamMap"] = None
+        self,
+        dataset: DataFrame,
+        evaluator: Evaluator,
+        params: Optional["ParamMap"] = None,
     ) -> float:
         """
         Transforms and evaluates the input dataset with optional parameters in a single pass.
@@ -422,6 +427,8 @@ class RandomForestClassificationModel(
         ----------
         dataset : :py:class:`pyspark.sql.DataFrame`
             a dataset that contains labels/observations and predictions
+        evaluator: :py:class:`pyspark.ml.evaluation.Evaluator`
+            an evaluator user intends to use
         params : dict, optional
             an optional param map that overrides embedded params
 
@@ -430,6 +437,14 @@ class RandomForestClassificationModel(
         float
             metric
         """
+
+        if not isinstance(evaluator, MulticlassClassificationEvaluator):
+            raise NotImplementedError(f"{evaluator} is unsupported yet.")
+
+        if evaluator.getMetricName() != "f1":
+            raise NotImplementedError(
+                f"{evaluator.getMetricName()} is not supported yet."
+            )
 
         if self._num_classes <= 2:
             raise NotImplementedError("Binary classification is unsupported yet.")
@@ -477,3 +492,13 @@ class RandomForestClassificationModel(
         )
         f1_score = metrics.weighted_fmeasure()
         return f1_score
+
+    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
+        if (
+            isinstance(evaluator, MulticlassClassificationEvaluator)
+            and evaluator.getMetricName() == "f1"
+            and self.numClasses > 2
+        ):
+            return True
+
+        return False

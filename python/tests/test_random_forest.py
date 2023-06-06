@@ -24,10 +24,13 @@ from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
 )
 from pyspark.ml.classification import RandomForestClassifier as SparkRFClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.param import Param
 from pyspark.ml.regression import RandomForestRegressionModel as SparkRFRegressionModel
 from pyspark.ml.regression import RandomForestRegressor as SparkRFRegressor
+from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
+from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql.types import DoubleType
 from sklearn.metrics import r2_score
 
@@ -39,6 +42,7 @@ from spark_rapids_ml.regression import (
     RandomForestRegressionModel,
     RandomForestRegressor,
 )
+from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -372,7 +376,7 @@ def test_random_forest_classifier(
                 labelCol=spark_rf_model.getLabelCol(),
             )
 
-            spark_cuml_f1_score = spark_rf_model._transformEvaluate(test_df)
+            spark_cuml_f1_score = spark_rf_model._transformEvaluate(test_df, evaluator)
 
             transformed_df = spark_rf_model.transform(test_df)
             pyspark_f1_score = evaluator.evaluate(transformed_df)
@@ -792,3 +796,66 @@ def test_fit_multiple_in_single_pass(
                 if rf.numTrees in param_map
                 else single_model.getNumTrees
             )
+
+
+@pytest.mark.parametrize("feature_type", [feature_types.vector])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+def test_crossvalidator_random_forest_classifier(
+    tmp_path: str,
+    feature_type: str,
+    data_type: np.dtype,
+    data_shape: Tuple[int, int],
+) -> None:
+    # Train a toy model
+    X, _, y, _ = make_classification_dataset(
+        datatype=data_type,
+        nrows=data_shape[0],
+        ncols=data_shape[1],
+        n_classes=4,
+        n_informative=data_shape[1],
+        n_redundant=0,
+        n_repeated=0,
+    )
+
+    with CleanSparkSession() as spark:
+        df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X, y
+        )
+        assert label_col is not None
+
+        rfc = RandomForestClassifier()
+        rfc.setFeaturesCol(features_col)
+        rfc.setLabelCol(label_col)
+
+        evaluator = MulticlassClassificationEvaluator()
+        evaluator.setLabelCol(label_col)
+
+        grid = (
+            ParamGridBuilder()
+            .addGrid(rfc.maxDepth, [2, 4])
+            .addGrid(rfc.maxBins, [3, 5])
+            .build()
+        )
+
+        cv = CrossValidator(
+            estimator=rfc,
+            estimatorParamMaps=grid,
+            evaluator=evaluator,
+            numFolds=2,
+            seed=1,
+        )
+
+        # without exception
+        model: CrossValidatorModel = cv.fit(df)
+
+        spark_cv = SparkCrossValidator(
+            estimator=rfc,
+            estimatorParamMaps=grid,
+            evaluator=evaluator,
+            numFolds=2,
+            seed=1,
+        )
+        spark_cv_model = spark_cv.fit(df)
+
+        assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics)
