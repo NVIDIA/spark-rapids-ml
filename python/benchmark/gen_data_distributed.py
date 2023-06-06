@@ -269,14 +269,23 @@ class RegressionDataGen(DataGenBaseMeta):
         # Set num_partitions to Spark's default if output_num_files is not provided.
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
-
+        
         generator = check_random_state(params["random_state"])
-        # If params not provided, set to defaults.
-        n_informative = params.get("n_informative", 10)
-        n_targets = params.get("n_targets", 1)
         bias = params.get("bias", 0.0)
         effective_rank = params.get("effective_rank", None)
-        tail_strength = params.get("tail_strength", 0.5)
+
+        if effective_rank is None:
+            X = generator.standard_normal(size=(rows, cols))
+        else:
+            # If params not provided, set to defaults.
+            n_informative = params.get("n_informative", 10)
+            n_targets = params.get("n_targets", 1)
+            tail_strength = params.get("tail_strength", 0.5)
+
+            lrm_input_args = ["--num_rows", str(rows), "--num_cols", str(cols), "--dtype", str(dtype), "--output_dir", "temp",
+                            "--output_num_files", str(num_partitions), "--effective_rank", str(effective_rank),
+                            "--tail_strength", str(tail_strength), "random_state", str(params["random_state"])]
+            
 
         def make_regression_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
             """Pandas udf to call make_regression of sklearn to generate regression dataset"""
