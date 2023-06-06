@@ -178,12 +178,11 @@ class LowRankMatrixDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
-        print(f"num_partitions: {num_partitions}")
         generator = check_random_state(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
-        tail_strength = params.get("tail_strength", 0.5)
         effective_rank = params.get("effective_rank", 10)
+        tail_strength = params.get("tail_strength", 0.5)
 
         partition_sizes = [rows // num_partitions] * num_partitions
         partition_sizes[-1] += rows % num_partitions
