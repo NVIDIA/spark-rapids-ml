@@ -31,7 +31,7 @@ from sklearn.datasets import (
 )
 from sklearn.utils import shuffle as util_shuffle
 
-from benchmark.utils import check_random_state, inspect_default_params_from_func
+from benchmark.utils import inspect_default_params_from_func
 
 
 class DataGenBaseMeta(DataGenBase):
@@ -179,38 +179,40 @@ class LowRankMatrixDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
-        generator = check_random_state(params["random_state"])
+        generator = np.random.RandomState(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
-        tail_strength = params.get("tail_strength", 0.5)
         effective_rank = params.get("effective_rank", 10)
+        tail_strength = params.get("tail_strength", 0.5)
 
         partition_sizes = [rows // num_partitions] * num_partitions
         partition_sizes[-1] += rows % num_partitions
         # Check sizes to ensure QR decomp produces a matrix of the correct dimension.
-        for size in partition_sizes:
-            assert size >= cols, (
-                f"Num samples per partition ({size}) must be >= num_features ({cols});"
-                f" decrease num_partitions from {num_partitions} to <= {rows // cols}"
-            )
+        assert partition_sizes[0] >= cols, (
+            f"Num samples per partition ({partition_sizes[0]}) must be >= num_features ({cols});"
+            f" decrease num_partitions from {num_partitions} to <= {rows // cols}"
+        )
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
-        # S and V are generated upfront, U is generated across partitions.
+        # Code adapted from sklearn.datasets.make_low_rank_matrix().
         singular_ind = np.arange(n, dtype=dtype)
-        low_rank = (1 - params["tail_strength"]) * np.exp(
-            -1.0 * (singular_ind / params["effective_rank"]) ** 2
+        low_rank = (1 - tail_strength) * np.exp(
+            -1.0 * (singular_ind / effective_rank) ** 2
         )
         tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
+        # S and V are generated upfront, U is generated across partitions.
         s = np.identity(n) * (low_rank + tail)
-        # compute V upfront
         v, _ = linalg.qr(
             generator.standard_normal(size=(cols, n)),
             mode="economic",
             check_finite=False,
         )
 
+        # Precompute the S*V.T multiplicland with partition-wise normalization.
+        sv_normed = np.dot(s, v.T) * np.sqrt(1 / num_partitions)
+
         # UDF for distributed generation of U and the resultant product U*S*V.T
-        def make_matrix_udf(iter: Iterable[pd.Series]) -> Iterable[pd.DataFrame]:
+        def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
@@ -219,11 +221,7 @@ class LowRankMatrixDataGen(DataGenBase):
                     mode="economic",
                     check_finite=False,
                 )
-                # Include partition-wise normalization to ensure overall unit norm.
-                u *= np.sqrt(1 / num_partitions)
-                mat = np.dot(np.dot(u, s), v.T).astype(dtype)
-                del u
-                yield pd.DataFrame(data=mat)
+                yield pd.DataFrame(data=np.dot(u, sv_normed))
 
         return (
             (

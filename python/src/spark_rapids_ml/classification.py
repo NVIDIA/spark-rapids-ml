@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
@@ -49,6 +49,7 @@ from .core import (
     CumlT,
     TransformInputType,
     _ConstructFunc,
+    _CumlModel,
     _EvaluateFunc,
     _TransformFunc,
     alias,
@@ -284,6 +285,15 @@ class RandomForestClassifier(
     def _is_classification(self) -> bool:
         return True
 
+    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
+        if (
+            isinstance(evaluator, MulticlassClassificationEvaluator)
+            and evaluator.getMetricName() == "f1"
+        ):
+            return True
+
+        return False
+
 
 class RandomForestClassificationModel(
     _RandomForestClass,
@@ -299,8 +309,8 @@ class RandomForestClassificationModel(
         self,
         n_cols: int,
         dtype: str,
-        treelite_model: str,
-        model_json: List[str],
+        treelite_model: Union[str, List[str]],
+        model_json: Union[List[str], List[List[str]]],
         num_classes: int,
     ):
         super().__init__(
@@ -313,6 +323,26 @@ class RandomForestClassificationModel(
         self._num_classes = num_classes
         self._model_json = model_json
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
+
+    @staticmethod
+    def _combine(models: List[_CumlModel]) -> "RandomForestClassificationModel":
+        assert len(models) > 0 and all(
+            isinstance(model, RandomForestClassificationModel) for model in models
+        )
+
+        casted_models = cast(List[RandomForestClassificationModel], models)
+        first_model = casted_models[0]
+
+        treelite_models = [model._treelite_model for model in casted_models]
+        model_jsons = [model._model_json for model in casted_models]
+        attrs = first_model.get_model_attributes()
+        assert attrs is not None
+        attrs["treelite_model"] = treelite_models
+        attrs["model_json"] = model_jsons
+        rf_model = RandomForestClassificationModel(**attrs)
+        first_model._copyValues(rf_model)
+        first_model._copy_cuml_params(rf_model)
+        return rf_model
 
     def cpu(self) -> SparkRandomForestClassificationModel:
         """Return the PySpark ML RandomForestClassificationModel"""
@@ -419,7 +449,7 @@ class RandomForestClassificationModel(
         dataset: DataFrame,
         evaluator: Evaluator,
         params: Optional["ParamMap"] = None,
-    ) -> float:
+    ) -> List[float]:
         """
         Transforms and evaluates the input dataset with optional parameters in a single pass.
 
@@ -446,9 +476,6 @@ class RandomForestClassificationModel(
                 f"{evaluator.getMetricName()} is not supported yet."
             )
 
-        if self._num_classes <= 2:
-            raise NotImplementedError("Binary classification is unsupported yet.")
-
         if self.getLabelCol() not in dataset.schema.names:
             raise RuntimeError("Label column is not existing.")
 
@@ -456,6 +483,7 @@ class RandomForestClassificationModel(
 
         schema = StructType(
             [
+                StructField(pred.model_index, IntegerType()),
                 StructField("label", FloatType()),
                 StructField("prediction", FloatType()),
                 StructField("total", FloatType()),
@@ -464,41 +492,38 @@ class RandomForestClassificationModel(
 
         rows = super()._transform_evaluate_internal(dataset, schema).collect()
 
-        tp_by_class = {}
-        fp_by_class = {}
-        label_count_by_class = {}
-        label_count = 0
+        num_models = (
+            len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
+        )
 
-        for i in range(self._num_classes):
-            tp_by_class[float(i)] = 0.0
-            label_count_by_class[float(i)] = 0.0
-            fp_by_class[float(i)] = 0.0
+        tp_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
+        fp_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
+        label_count_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
+        label_count = [0 for i in range(num_models)]
+
+        for i in range(num_models):
+            for j in range(self._num_classes):
+                tp_by_class[i][float(j)] = 0.0
+                label_count_by_class[i][float(j)] = 0.0
+                fp_by_class[i][float(j)] = 0.0
 
         for row in rows:
-            label_count += row.total
-            label_count_by_class[row.label] += row.total
+            label_count[row.model_index] += row.total
+            label_count_by_class[row.model_index][row.label] += row.total
 
             if row.label == row.prediction:
-                tp_by_class[row.label] += row.total
+                tp_by_class[row.model_index][row.label] += row.total
             else:
-                fp_by_class[row.prediction] += row.total
+                fp_by_class[row.model_index][row.prediction] += row.total
 
-        metrics = MulticlassMetrics(
-            num_class=self._num_classes,
-            tp=tp_by_class,
-            fp=fp_by_class,
-            label=label_count_by_class,
-            label_count=label_count,
-        )
-        f1_score = metrics.weighted_fmeasure()
-        return f1_score
-
-    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
-        if (
-            isinstance(evaluator, MulticlassClassificationEvaluator)
-            and evaluator.getMetricName() == "f1"
-            and self.numClasses > 2
-        ):
-            return True
-
-        return False
+        f1_scores = []
+        for i in range(num_models):
+            metrics = MulticlassMetrics(
+                tp=tp_by_class[i],
+                fp=fp_by_class[i],
+                label=label_count_by_class[i],
+                label_count=label_count[i],
+            )
+            f1_score = metrics.weighted_fmeasure()
+            f1_scores.append(f1_score)
+        return f1_scores

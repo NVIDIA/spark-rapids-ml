@@ -799,8 +799,8 @@ class RandomForestRegressionModel(
         self,
         n_cols: int,
         dtype: str,
-        treelite_model: str,
-        model_json: List[str],
+        treelite_model: Union[str, List[str]],
+        model_json: Union[List[str], List[List[str]]] = [],  # type: ignore
     ):
         super().__init__(
             dtype=dtype,

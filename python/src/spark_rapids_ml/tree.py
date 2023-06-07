@@ -436,8 +436,8 @@ class _RandomForestModel(
         self,
         n_cols: int,
         dtype: str,
-        treelite_model: str,
-        model_json: List[str] = [],
+        treelite_model: Union[str, List[str]],
+        model_json: Union[List[str], List[List[str]]] = [],  # type: ignore
         num_classes: int = -1,  # only for classification
     ):
         if self._is_classification():
@@ -521,10 +521,13 @@ class _RandomForestModel(
         assert sc._jvm is not None
         assert sc._gateway is not None
 
+        # This function shouldn't be called for the multiple models scenario.
+        model_json = cast(List[str], self._model_json)
+
         # Convert cuml trees to Spark trees
         trees = [
             translate_trees(sc, impurity, trees)
-            for trees_json in self._model_json
+            for trees_json in model_json
             for trees in json.loads(trees_json)
         ]
 
@@ -566,17 +569,22 @@ class _RandomForestModel(
         is_classification = self._is_classification()
 
         def _construct_rf() -> CumlT:
-            model = pickle.loads(base64.b64decode(treelite_model))
-
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
             else:
                 from cuml import RandomForestRegressor as cuRf
 
-            rf = cuRf()
-            rf._concatenate_treelite_handle([rf._tl_handle_from_bytes(model)])
+            rfs = []
+            treelite_models = (
+                treelite_model if isinstance(treelite_model, list) else [treelite_model]
+            )
+            for m in treelite_models:
+                model = pickle.loads(base64.b64decode(m))
+                rf = cuRf()
+                rf._concatenate_treelite_handle([rf._tl_handle_from_bytes(model)])
+                rfs.append(rf)
 
-            return rf
+            return rfs
 
         def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
             rf.update_labels = False

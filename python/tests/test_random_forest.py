@@ -15,7 +15,7 @@
 #
 import json
 import math
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pytest
@@ -381,7 +381,7 @@ def test_random_forest_classifier(
             transformed_df = spark_rf_model.transform(test_df)
             pyspark_f1_score = evaluator.evaluate(transformed_df)
 
-            assert math.fabs(pyspark_f1_score - spark_cuml_f1_score) < 1e-6
+            assert math.fabs(pyspark_f1_score - spark_cuml_f1_score[0]) < 1e-6
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
@@ -760,10 +760,9 @@ def test_fit_multiple_in_single_pass(
         def get_num_trees(
             model: Union[RandomForestClassificationModel, RandomForestRegressionModel]
         ) -> int:
+            model_jsons = cast(List[str], model._model_json)
             trees = [
-                None
-                for trees_json in model._model_json
-                for trees in json.loads(trees_json)
+                None for trees_json in model_jsons for trees in json.loads(trees_json)
             ]
             return len(trees)
 
