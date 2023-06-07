@@ -234,6 +234,7 @@ class LowRankMatrixDataGen(DataGenBase):
             self.feature_cols,
         )
 
+
 class RegressionDataGen(DataGenBaseMeta):
     """Generate regression dataset using a distributed version of sklearn.datasets.regression,
     including features and labels.
@@ -252,7 +253,9 @@ class RegressionDataGen(DataGenBaseMeta):
         params["random_state"] = int
         return params
 
-    def gen_dataframe_and_meta(self, spark: SparkSession) -> Tuple[DataFrame, List[str], np.ndarray]:
+    def gen_dataframe_and_meta(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
         dtype = self.dtype
         params = self.extra_params
 
@@ -270,10 +273,10 @@ class RegressionDataGen(DataGenBaseMeta):
         # Set num_partitions to Spark's default if output_num_files is not provided.
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
-        
+
         partition_sizes = [rows // num_partitions] * num_partitions
         partition_sizes[-1] += rows % num_partitions
-        
+
         # Retrieve input params or set to defaults.
         generator = check_random_state(params["random_state"])
         bias = params.get("bias", 0.0)
@@ -286,10 +289,25 @@ class RegressionDataGen(DataGenBaseMeta):
             n_informative = params.get("n_informative", 10)
             n_targets = params.get("n_targets", 1)
             tail_strength = params.get("tail_strength", 0.5)
-            lrm_input_args = ["--num_rows", str(rows), "--num_cols", str(cols), "--dtype", str(dtype), "--output_dir", "temp",
-                            "--output_num_files", str(num_partitions), "--effective_rank", str(effective_rank),
-                            "--tail_strength", str(tail_strength), "--random_state", str(params["random_state"])]
-            
+            lrm_input_args = [
+                "--num_rows",
+                str(rows),
+                "--num_cols",
+                str(cols),
+                "--dtype",
+                str(dtype),
+                "--output_dir",
+                "temp",
+                "--output_num_files",
+                str(num_partitions),
+                "--effective_rank",
+                str(effective_rank),
+                "--tail_strength",
+                str(tail_strength),
+                "--random_state",
+                str(params["random_state"]),
+            ]
+
             X, _ = LowRankMatrixDataGen(lrm_input_args).gen_dataframe(spark)
 
         # Generate ground truth upfront.
@@ -303,7 +321,7 @@ class RegressionDataGen(DataGenBaseMeta):
         generator.shuffle(indices)
         ground_truth = ground_truth[indices]
 
-        # UDF for distributed generation of X and y. 
+        # UDF for distributed generation of X and y.
         def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
@@ -327,7 +345,8 @@ class RegressionDataGen(DataGenBaseMeta):
 
                 y = np.squeeze(y)
                 data = np.concatenate(
-                    (X_p.astype(dtype), y.reshape(n_partition_rows, 1).astype(dtype)), axis=1
+                    (X_p.astype(dtype), y.reshape(n_partition_rows, 1).astype(dtype)),
+                    axis=1,
                 )
                 del X_p
                 del y
@@ -337,10 +356,15 @@ class RegressionDataGen(DataGenBaseMeta):
         self.schema.append(f"{label_col} {self.pyspark_type}")
 
         return (
-            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
-                make_regression_udf, schema=",".join(self.schema)
-            )
-        ), self.feature_cols, np.squeeze(ground_truth)
+            (
+                spark.range(
+                    0, num_partitions, numPartitions=num_partitions
+                ).mapInPandas(make_regression_udf, schema=",".join(self.schema))
+            ),
+            self.feature_cols,
+            np.squeeze(ground_truth),
+        )
+
 
 if __name__ == "__main__":
     """

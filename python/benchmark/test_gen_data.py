@@ -100,6 +100,7 @@ def test_make_low_rank_matrix() -> None:
         u, s, v = svd(X)
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
 
+
 def test_make_regression():
     args = [
         "--num_rows",
