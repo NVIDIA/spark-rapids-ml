@@ -24,18 +24,11 @@ class MulticlassMetrics:
 
     def __init__(
         self,
-        num_class: int,
         tp: Dict[float, float],
         fp: Dict[float, float],
         label: Dict[float, float],
         label_count: int,
     ) -> None:
-        if num_class <= 2:
-            raise RuntimeError(
-                f"MulticlassMetrics requires at least 3 classes. Found {num_class}"
-            )
-
-        self._num_classes = 3
         self._tp_by_class = tp
         self._fp_by_class = fp
         self._label_count_by_class = label

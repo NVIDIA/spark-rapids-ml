@@ -517,7 +517,6 @@ class RandomForestClassificationModel(
         f1_scores = []
         for i in range(num_models):
             metrics = MulticlassMetrics(
-                num_class=self._num_classes,
                 tp=tp_by_class[i],
                 fp=fp_by_class[i],
                 label=label_count_by_class[i],
