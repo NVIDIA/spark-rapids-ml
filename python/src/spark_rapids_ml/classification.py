@@ -325,8 +325,8 @@ class RandomForestClassificationModel(
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
 
     def _combine(self, models: List[_CumlModel]) -> "RandomForestClassificationModel":
-        assert len(models) > 0 and isinstance(
-            models[0], RandomForestClassificationModel
+        assert len(models) > 0 and all(
+            isinstance(model, RandomForestClassificationModel) for model in models
         )
 
         casted_models = cast(List[RandomForestClassificationModel], models)
@@ -474,9 +474,6 @@ class RandomForestClassificationModel(
                 f"{evaluator.getMetricName()} is not supported yet."
             )
 
-        if self._num_classes <= 2:
-            raise NotImplementedError("Binary classification is unsupported yet.")
-
         if self.getLabelCol() not in dataset.schema.names:
             raise RuntimeError("Label column is not existing.")
 
@@ -496,6 +493,7 @@ class RandomForestClassificationModel(
         num_models = (
             len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
         )
+
         tp_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
         fp_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
         label_count_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
