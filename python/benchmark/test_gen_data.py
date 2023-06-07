@@ -29,7 +29,7 @@ from benchmark.utils import WithSparkSession
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_make_blobs(dtype) -> None:
+def test_make_blobs(dtype: str) -> None:
     input_args = [
         "--num_rows",
         "50",
@@ -69,7 +69,7 @@ def test_make_blobs(dtype) -> None:
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_make_low_rank_matrix(dtype) -> None:
+def test_make_low_rank_matrix(dtype: str) -> None:
     input_args = [
         "--num_rows",
         "50",
