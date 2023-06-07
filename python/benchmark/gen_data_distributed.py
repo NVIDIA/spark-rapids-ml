@@ -208,7 +208,7 @@ class LowRankMatrixDataGen(DataGenBase):
         )
 
         # Precompute the S*V.T multiplicland with partition-wise normalization.
-        sv_normed = np.dot(s, v.T)*np.sqrt(1 / num_partitions)
+        sv_normed = np.dot(s, v.T) * np.sqrt(1 / num_partitions)
 
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:

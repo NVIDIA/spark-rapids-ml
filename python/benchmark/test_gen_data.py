@@ -27,9 +27,8 @@ from sklearn.utils._testing import (
 
 from benchmark.utils import WithSparkSession
 
-@pytest.mark.parametrize(
-        "dtype", ["float32", "float64"]
-)
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_make_blobs(dtype) -> None:
     input_args = [
         "--num_rows",
@@ -68,9 +67,8 @@ def test_make_blobs(dtype) -> None:
         for i, (ctr, std) in enumerate(zip(centers, cluster_stds)):
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
 
-@pytest.mark.parametrize(
-        "dtype", ["float32", "float64"]
-)
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_make_low_rank_matrix(dtype) -> None:
     input_args = [
         "--num_rows",
