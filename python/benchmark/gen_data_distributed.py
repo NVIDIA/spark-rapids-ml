@@ -195,8 +195,8 @@ class LowRankMatrixDataGen(DataGenBase):
         # Generate U, S, V, the SVD decomposition of the output matrix.
         # Code adapted from sklearn.datasets.make_low_rank_matrix().
         singular_ind = np.arange(n, dtype=dtype)
-        low_rank = (1 - params["tail_strength"]) * np.exp(
-            -1.0 * (singular_ind / params["effective_rank"]) ** 2
+        low_rank = (1 - tail_strength) * np.exp(
+            -1.0 * (singular_ind / effective_rank) ** 2
         )
         tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
         # S and V are generated upfront, U is generated across partitions.
