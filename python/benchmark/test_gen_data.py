@@ -15,6 +15,7 @@
 #
 
 import numpy as np
+import pytest
 from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen
 from pandas import DataFrame
 from sklearn.utils._testing import (
@@ -26,15 +27,17 @@ from sklearn.utils._testing import (
 
 from benchmark.utils import WithSparkSession
 
-
-def test_make_blobs() -> None:
+@pytest.mark.parametrize(
+        "dtype", ["float32", "float64"]
+)
+def test_make_blobs(dtype) -> None:
     input_args = [
         "--num_rows",
         "50",
         "--num_cols",
         "2",
         "--dtype",
-        "float64",
+        dtype,
         "--output_dir",
         "temp",
         "--output_num_files",
@@ -55,7 +58,7 @@ def test_make_blobs() -> None:
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
-        assert X.dtype == np.float64, "Unexpected dtype"
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
         assert X.shape == (50, 2), "X shape mismatch"
         assert y.shape == (50,), "y shape mismatch"
         assert centers.shape == (3, 2), "Centers shape mismatch"
@@ -65,15 +68,17 @@ def test_make_blobs() -> None:
         for i, (ctr, std) in enumerate(zip(centers, cluster_stds)):
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
 
-
-def test_make_low_rank_matrix() -> None:
+@pytest.mark.parametrize(
+        "dtype", ["float32", "float64"]
+)
+def test_make_low_rank_matrix(dtype) -> None:
     input_args = [
         "--num_rows",
         "50",
         "--num_cols",
         "20",
         "--dtype",
-        "float64",
+        dtype,
         "--output_dir",
         "temp",
         "--output_num_files",
@@ -94,7 +99,7 @@ def test_make_low_rank_matrix() -> None:
         pdf: DataFrame = df.toPandas()
         X = pdf.to_numpy()
 
-        assert X.dtype == np.float64, "Unexpected dtype"
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
         assert X.shape == (50, 20), "X shape mismatch"
         from numpy.linalg import svd
 
