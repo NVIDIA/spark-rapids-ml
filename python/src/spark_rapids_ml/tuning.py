@@ -15,79 +15,19 @@
 #
 
 from multiprocessing.pool import ThreadPool
-from typing import TYPE_CHECKING, Callable, List, Sequence, Tuple, cast
+from typing import List, Optional, Tuple, cast
 
 import numpy as np
 from pyspark import inheritable_thread_target
-from pyspark.ml import Estimator, Model, Transformer
-from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
+from pyspark.ml import Model
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel
 from pyspark.sql import DataFrame
 
-from spark_rapids_ml.classification import (
-    RandomForestClassificationModel,
-    RandomForestClassifier,
-)
-from spark_rapids_ml.core import _CumlModel
-
-if TYPE_CHECKING:
-    from pyspark.ml._typing import ParamMap
+from .core import _CumlEstimator, _CumlModel
 
 
-# Copied from pyspark.ml.tuning
-def _parallelFitTasks(
-    est: Estimator,
-    train: DataFrame,
-    eva: Evaluator,
-    validation: DataFrame,
-    epm: Sequence["ParamMap"],
-    collectSubModel: bool,
-) -> List[Callable[[], Tuple[int, float, Transformer]]]:
-    """
-    Creates a list of callables which can be called from different threads to fit and evaluate
-    an estimator in parallel. Each callable returns an `(index, metric)` pair.
-
-    Parameters
-    ----------
-    est : :py:class:`pyspark.ml.baseEstimator`
-        he estimator to be fit.
-    train : :py:class:`pyspark.sql.DataFrame`
-        DataFrame, training data set, used for fitting.
-    eva : :py:class:`pyspark.ml.evaluation.Evaluator`
-        used to compute `metric`
-    validation : :py:class:`pyspark.sql.DataFrame`
-        DataFrame, validation data set, used for evaluation.
-    epm : :py:class:`collections.abc.Sequence`
-        Sequence of ParamMap, params maps to be used during fitting & evaluation.
-    collectSubModel : bool
-        Whether to collect sub model.
-
-    Returns
-    -------
-    tuple
-        (int, float, subModel), an index into `epm` and the associated metric value.
-    """
-    modelIter = est.fitMultiple(train, epm)
-
-    def singleTask() -> Tuple[int, float, Transformer]:
-        index, model = next(modelIter)
-
-        if isinstance(model, _CumlModel) and model._supportsTransformEvaluate(eva):
-            metric = model._transformEvaluate(validation, eva, epm[index])
-        else:
-            # TODO: duplicate evaluator to take extra params from input
-            #  Note: Supporting tuning params in evaluator need update method
-            #  `MetaAlgorithmReadWrite.getAllNestedStages`, make it return
-            #  all nested stages and evaluators
-            metric = eva.evaluate(model.transform(validation, epm[index]))
-        return index, metric, model if collectSubModel else None
-
-    return [singleTask] * len(epm)
-
-
-# Copied from pyspark.ml.tuning
-def _gen_avg_and_std_metrics(
+def _gen_avg_and_std_metrics_(
     metrics_all: List[List[float]],
 ) -> Tuple[List[float], List[float]]:
     avg_metrics = np.mean(metrics_all, axis=0)
@@ -103,12 +43,19 @@ class CrossValidator(SparkCrossValidator):
     test set exactly once.
 
     It is the gpu version CrossValidator which fits multiple models in a single pass for a single
-    training dataset and transforms/evaluates in a single pass for a single model.
+    training dataset and transforms/evaluates in a single pass for multiple models.
     """
 
     def _fit(self, dataset: DataFrame) -> "CrossValidatorModel":
         est = self.getOrDefault(self.estimator)
         eva = self.getOrDefault(self.evaluator)
+
+        # fallback at very early time.
+        if not (
+            isinstance(est, _CumlEstimator) and est._supportsTransformEvaluate(eva)
+        ):
+            return super()._fit(dataset)
+
         epm = self.getOrDefault(self.estimatorParamMaps)
         numModels = len(epm)
         nFolds = self.getOrDefault(self.numFolds)
@@ -121,27 +68,25 @@ class CrossValidator(SparkCrossValidator):
             subModels = [[None for j in range(numModels)] for i in range(nFolds)]
 
         datasets = self._kFold(dataset)
-        for i in range(nFolds):
-            # TODO, Need to get rid of cache when supporting transform/evaluate
-            # in a single pass for multiple models.
-            validation = datasets[i][1].cache()
-            train = datasets[i][0]
 
-            tasks = map(
-                inheritable_thread_target,
-                _parallelFitTasks(
-                    est, train, eva, validation, epm, collectSubModelsParam
-                ),
-            )
-            for j, metric, subModel in pool.imap_unordered(lambda f: f(), tasks):
-                metrics_all[i][j] = metric
-                if collectSubModelsParam:
-                    assert subModels is not None
-                    subModels[i][j] = subModel
+        def singePassTask(
+            fold: int,
+        ) -> Tuple[int, List[float], Optional[List[_CumlModel]]]:
+            index_models = list(est.fitMultiple(datasets[fold][0], epm))
+            models = [model for _, model in index_models]
+            model = models[0]._combine(models)
+            metrics = model._transformEvaluate(datasets[fold][1], eva)
+            return fold, metrics, models if collectSubModelsParam else None
 
-            validation.unpersist()
+        for fold, metrics, subModels in pool.imap_unordered(
+            inheritable_thread_target(singePassTask), range(nFolds)
+        ):
+            metrics_all[fold] = metrics
+            if collectSubModelsParam:
+                assert subModels is not None
+                subModels[fold] = subModels
 
-        metrics, std_metrics = _gen_avg_and_std_metrics(metrics_all)
+        metrics, std_metrics = _gen_avg_and_std_metrics_(metrics_all)
 
         if eva.isLargerBetter():
             bestIndex = np.argmax(metrics)
@@ -150,7 +95,6 @@ class CrossValidator(SparkCrossValidator):
         bestModel = est.fit(dataset, epm[bestIndex])
 
         try:
-            # since spark3.3.0+
             model = CrossValidatorModel(
                 bestModel, metrics, cast(List[List[Model]], subModels), std_metrics
             )
