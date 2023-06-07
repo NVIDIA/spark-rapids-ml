@@ -193,7 +193,7 @@ class LowRankMatrixDataGen(DataGenBase):
         )
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
-        # Method adapted from sklearn.datasets.make_low_rank_matrix().
+        # Code adapted from sklearn.datasets.make_low_rank_matrix().
         singular_ind = np.arange(n, dtype=dtype)
         low_rank = (1 - params["tail_strength"]) * np.exp(
             -1.0 * (singular_ind / params["effective_rank"]) ** 2
@@ -207,7 +207,7 @@ class LowRankMatrixDataGen(DataGenBase):
             check_finite=False,
         )
 
-        # Precompute the S*V.T multiplicland with partition-wise normalization for overall unit norm.
+        # Precompute the S*V.T multiplicland with partition-wise normalization.
         sv_normed = np.dot(s, v.T)*np.sqrt(1 / num_partitions)
 
         # UDF for distributed generation of U and the resultant product U*S*V.T
