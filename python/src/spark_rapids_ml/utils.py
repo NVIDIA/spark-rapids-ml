@@ -190,7 +190,7 @@ class PartitionDescriptor:
 
 
 def _concat_and_free(
-    array_list: List[Union["cp.ndarray", np.ndarray]], order: _ArrayOrder = "F"
+    array_list: Union[List["cp.ndarray"], List[np.ndarray]], order: _ArrayOrder = "F"
 ) -> Union["cp.ndarray", np.ndarray]:
     """
     concatenates a list of compatible numpy arrays into a 'order' ordered output array,

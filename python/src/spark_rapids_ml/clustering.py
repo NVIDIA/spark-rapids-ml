@@ -284,10 +284,8 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
             else:
-                # should be list of cp.ndarrays here
-                concated = _concat_and_free(
-                    cast(List[cp.ndarray], df_list), order=array_order
-                )
+                # features are either cp or np arrays here
+                concated = _concat_and_free(df_list, order=array_order)
 
             kmeans_object.fit(
                 concated,
