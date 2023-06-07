@@ -30,7 +30,7 @@ from sklearn.datasets import (
     make_regression,
 )
 
-from benchmark.utils import check_random_state, inspect_default_params_from_func
+from benchmark.utils import inspect_default_params_from_func
 
 
 class DataGenBaseMeta(DataGenBase):
@@ -178,7 +178,7 @@ class LowRankMatrixDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
-        generator = check_random_state(params["random_state"])
+        generator = np.random.RandomState(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
         effective_rank = params.get("effective_rank", 10)
