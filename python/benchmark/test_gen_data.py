@@ -116,8 +116,6 @@ def test_make_regression():
         "3",
         "--effective_rank",
         "5",
-        "--coef",
-        "True",
         "--bias",
         "0.0",
         "--noise",

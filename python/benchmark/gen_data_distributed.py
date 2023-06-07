@@ -29,6 +29,7 @@ from sklearn.datasets import (
     make_low_rank_matrix,
     make_regression,
 )
+from sklearn.utils import shuffle as util_shuffle
 
 from benchmark.utils import check_random_state, inspect_default_params_from_func
 
@@ -270,51 +271,76 @@ class RegressionDataGen(DataGenBaseMeta):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
         
+        partition_sizes = [rows // num_partitions] * num_partitions
+        partition_sizes[-1] += rows % num_partitions
+        
+        # Retrieve input params or set to defaults.
         generator = check_random_state(params["random_state"])
         bias = params.get("bias", 0.0)
+        noise = params.get("noise", 0.0)
+        shuffle = params.get("shuffle", True)
         effective_rank = params.get("effective_rank", None)
 
-        if effective_rank is None:
-            X = generator.standard_normal(size=(rows, cols))
-        else:
-            # If params not provided, set to defaults.
+        if effective_rank is not None:
+            # Generate a low-rank, fat tail input set.
             n_informative = params.get("n_informative", 10)
             n_targets = params.get("n_targets", 1)
             tail_strength = params.get("tail_strength", 0.5)
-
             lrm_input_args = ["--num_rows", str(rows), "--num_cols", str(cols), "--dtype", str(dtype), "--output_dir", "temp",
                             "--output_num_files", str(num_partitions), "--effective_rank", str(effective_rank),
-                            "--tail_strength", str(tail_strength), "random_state", str(params["random_state"])]
+                            "--tail_strength", str(tail_strength), "--random_state", str(params["random_state"])]
             
+            X, _ = LowRankMatrixDataGen(lrm_input_args).gen_dataframe(spark)
 
-        def make_regression_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            """Pandas udf to call make_regression of sklearn to generate regression dataset"""
-            total_rows = 0
+        # Generate ground truth upfront.
+        ground_truth = np.zeros((cols, n_targets))
+        ground_truth[:n_informative, :] = 100 * generator.uniform(
+            size=(n_informative, n_targets)
+        )
+
+        # Shuffle feature indices upfront.
+        indices = np.arange(cols)
+        generator.shuffle(indices)
+        ground_truth = ground_truth[indices]
+
+        # UDF for distributed generation of X and y. 
+        def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
-                total_rows += pdf.shape[0]
-            # here we iterator all batches of a single partition to get total rows.
-            # use 10% of num_cols for number of informative features, following ratio for defaults
-            X, y = make_regression(n_samples=total_rows, n_features=cols, **params)
-            data = np.concatenate(
-                (X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1
-            )
-            del X
-            del y
-            yield pd.DataFrame(data=data)
+                partition_index = pdf.iloc[0][0]
+                n_partition_rows = partition_sizes[partition_index]
+
+                if effective_rank is None:
+                    # Randomly generate a well-conditioned input set.
+                    X_p = generator.standard_normal(size=(n_partition_rows, cols))
+                else:
+                    X_p = X[:n_partition_rows, :]
+
+                y = np.dot(X_p, ground_truth) + bias
+
+                if noise > 0.0:
+                    y += generator.normal(scale=noise, size=y.shape)
+                if shuffle:
+                    # Sample-wise shuffle (partition)
+                    X_p, y = util_shuffle(X_p, y, random_state=generator)
+                    # Feature-wise shuffle (global)
+                    X_p[:, :] = X_p[:, indices]
+
+                y = np.squeeze(y)
+                data = np.concatenate(
+                    (X_p.astype(dtype), y.reshape(n_partition_rows, 1).astype(dtype)), axis=1
+                )
+                del X_p
+                del y
+                yield pd.DataFrame(data=data)
 
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
 
-        # Each make_regression calling will return regression dataset with different coef.
-        # So force to only 1 task to generate the regression dataset, which may cause OOM
-        # and perf issue easily. I tested this script can generate 100, 000, 000 * 30
-        # matrix without issues with 60g executor memory, which, I think, is really enough
-        # to do the perf test.
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_regression_udf, schema=",".join(self.schema)  # type: ignore
+            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
+                make_regression_udf, schema=",".join(self.schema)
             )
-        ), self.feature_cols
+        ), self.feature_cols, np.squeeze(ground_truth)
 
 if __name__ == "__main__":
     """
@@ -325,6 +351,7 @@ if __name__ == "__main__":
         "blobs": BlobsDataGen,
         "default": DefaultDataGen,
         "low_rank_matrix": LowRankMatrixDataGen,
+        "regression": RegressionDataGen,
     }
 
     main(registered_data_gens=registered_data_gens, repartition=False)
