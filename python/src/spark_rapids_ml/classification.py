@@ -324,22 +324,24 @@ class RandomForestClassificationModel(
         self._model_json = model_json
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
 
-    def _combine(self, models: List[_CumlModel]) -> "RandomForestClassificationModel":
+    @staticmethod
+    def _combine(models: List[_CumlModel]) -> "RandomForestClassificationModel":
         assert len(models) > 0 and all(
             isinstance(model, RandomForestClassificationModel) for model in models
         )
 
         casted_models = cast(List[RandomForestClassificationModel], models)
+        first_model = casted_models[0]
 
         treelite_models = [model._treelite_model for model in casted_models]
         model_jsons = [model._model_json for model in casted_models]
-        attrs = self.get_model_attributes()
+        attrs = first_model.get_model_attributes()
         assert attrs is not None
         attrs["treelite_model"] = treelite_models
         attrs["model_json"] = model_jsons
         rf_model = RandomForestClassificationModel(**attrs)
-        self._copyValues(rf_model)
-        self._copy_cuml_params(rf_model)
+        first_model._copyValues(rf_model)
+        first_model._copy_cuml_params(rf_model)
         return rf_model
 
     def cpu(self) -> SparkRandomForestClassificationModel:

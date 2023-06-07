@@ -952,7 +952,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         """
         raise NotImplementedError()
 
-    def _combine(self, models: List["_CumlModel"]) -> "_CumlModel":
+    @staticmethod
+    def _combine(models: List["_CumlModel"]) -> "_CumlModel":
         """Combine a list of same type models into a model"""
         raise NotImplementedError()
 
