@@ -276,7 +276,7 @@ class RegressionDataGen(DataGenBaseMeta):
         partition_sizes[-1] += rows % num_partitions
 
         # Retrieve input params or set to defaults.
-        generator = check_random_state(params["random_state"])
+        generator = np.random.RandomState(params["random_state"])
         bias = params.get("bias", 0.0)
         noise = params.get("noise", 0.0)
         shuffle = params.get("shuffle", True)
@@ -307,6 +307,10 @@ class RegressionDataGen(DataGenBaseMeta):
             ]
 
             X, _ = LowRankMatrixDataGen(lrm_input_args).gen_dataframe(spark)
+            assert X.rdd.getNumPartitions == num_partitions, (
+                f"Unexpected num partitions received from LowRankMatrix;"
+                f"expected {num_partitions}, got {X.rdd.getNumPartitions}"
+            )
 
         # Generate ground truth upfront.
         ground_truth = np.zeros((cols, n_targets))
