@@ -15,7 +15,8 @@
 #
 
 import numpy as np
-from gen_data_distributed import BlobsDataGen
+import pytest
+from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen
 from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
@@ -27,14 +28,15 @@ from sklearn.utils._testing import (
 from benchmark.utils import WithSparkSession
 
 
-def test_make_blobs() -> None:
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_make_blobs(dtype: str) -> None:
     input_args = [
         "--num_rows",
         "50",
         "--num_cols",
         "2",
         "--dtype",
-        "float64",
+        dtype,
         "--output_dir",
         "temp",
         "--output_num_files",
@@ -55,6 +57,7 @@ def test_make_blobs() -> None:
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
         assert X.shape == (50, 2), "X shape mismatch"
         assert y.shape == (50,), "y shape mismatch"
         assert centers.shape == (3, 2), "Centers shape mismatch"
@@ -63,3 +66,40 @@ def test_make_blobs() -> None:
         cluster_stds = [0.7] * 3
         for i, (ctr, std) in enumerate(zip(centers, cluster_stds)):
             assert_almost_equal((X[y == i] - ctr).std(), std, 1, "Unexpected std")
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_make_low_rank_matrix(dtype: str) -> None:
+    input_args = [
+        "--num_rows",
+        "50",
+        "--num_cols",
+        "20",
+        "--dtype",
+        dtype,
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "2",
+        "--effective_rank",
+        "5",
+        "--tail_strength",
+        "0.01",
+        "--random_state",
+        "0",
+    ]
+    data_gen = LowRankMatrixDataGen(input_args)
+    args = data_gen.args
+    assert args is not None
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _ = data_gen.gen_dataframe(spark)
+        assert df.rdd.getNumPartitions() == 2, "Unexpected number of partitions"
+        pdf: DataFrame = df.toPandas()
+        X = pdf.to_numpy()
+
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
+        assert X.shape == (50, 20), "X shape mismatch"
+        from numpy.linalg import svd
+
+        _, s, _ = svd(X)
+        assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
