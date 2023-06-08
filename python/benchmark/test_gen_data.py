@@ -16,7 +16,7 @@
 
 import numpy as np
 import pytest
-from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen
+from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen, RegressionDataGen
 from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
@@ -93,7 +93,6 @@ def test_make_low_rank_matrix(dtype: str) -> None:
     assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _ = data_gen.gen_dataframe(spark)
-        assert df.rdd.getNumPartitions() == 2, "Unexpected number of partitions"
         pdf: DataFrame = df.toPandas()
         X = pdf.to_numpy()
 
@@ -101,5 +100,101 @@ def test_make_low_rank_matrix(dtype: str) -> None:
         assert X.shape == (50, 20), "X shape mismatch"
         from numpy.linalg import svd
 
-        _, s, _ = svd(X)
+        u, s, v = svd(X)
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_make_regression_low_rank(dtype: str) -> None:
+    # Effective rank = 5
+    input_args = [
+        "--num_rows",
+        "100",
+        "--num_cols",
+        "10",
+        "--dtype",
+        dtype,
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "3",
+        "--n_informative",
+        "3",
+        "--effective_rank",
+        "5",
+        "--bias",
+        "0.0",
+        "--noise",
+        "1.0",
+        "--random_state",
+        "0",
+    ]
+    data_gen = RegressionDataGen(input_args)
+    args = data_gen.args
+    assert args is not None
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _, c = data_gen.gen_dataframe_and_meta(spark)
+        assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
+        pdf: DataFrame = df.toPandas()
+        X = pdf.iloc[:, :-1].to_numpy()
+        y = pdf.iloc[:, -1].to_numpy()
+
+        print(f"X: {X[:3, :]}")
+        print(f"y: {y}")
+        print(f"c: {c}")
+
+        assert X.dtype == np.dtype(dtype)
+        assert X.shape == (100, 10), "X shape mismatch"
+        assert y.shape == (100,), "y shape mismatch"
+        assert c.shape == (10,), "coef shape mismatch"
+        assert sum(c != 0.0) == 3, "Unexpected number of informative features"
+
+        # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
+        assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_make_regression_well_conditioned(dtype: str) -> None:
+    # Effective rank = None
+    input_args = [
+        "--num_rows",
+        "100",
+        "--num_cols",
+        "10",
+        "--dtype",
+        dtype,
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "3",
+        "--n_informative",
+        "3",
+        "--bias",
+        "0.0",
+        "--noise",
+        "1.0",
+        "--random_state",
+        "0",
+    ]
+    data_gen = RegressionDataGen(input_args)
+    args = data_gen.args
+    assert args is not None
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _, c = data_gen.gen_dataframe_and_meta(spark)
+        assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
+        pdf: DataFrame = df.toPandas()
+        X = pdf.iloc[:, :-1].to_numpy()
+        y = pdf.iloc[:, -1].to_numpy()
+
+        print(f"X: {X[:3, :]}")
+        print(f"y: {y}")
+        print(f"c: {c}")
+
+        assert X.dtype == np.dtype(dtype)
+        assert X.shape == (100, 10), "X shape mismatch"
+        assert y.shape == (100,), "y shape mismatch"
+        assert c.shape == (10,), "coef shape mismatch"
+        assert sum(c != 0.0) == 3, "Unexpected number of informative features"
+
+        # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
+        assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
