@@ -140,10 +140,6 @@ def test_make_regression_low_rank(dtype: str) -> None:
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
-        print(f"X: {X[:3, :]}")
-        print(f"y: {y}")
-        print(f"c: {c}")
-
         assert X.dtype == np.dtype(dtype)
         assert X.shape == (100, 10), "X shape mismatch"
         assert y.shape == (100,), "y shape mismatch"
@@ -186,10 +182,6 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
         pdf: DataFrame = df.toPandas()
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
-
-        print(f"X: {X[:3, :]}")
-        print(f"y: {y}")
-        print(f"c: {c}")
 
         assert X.dtype == np.dtype(dtype)
         assert X.shape == (100, 10), "X shape mismatch"
