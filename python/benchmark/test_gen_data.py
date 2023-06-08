@@ -93,6 +93,7 @@ def test_make_low_rank_matrix(dtype: str) -> None:
     assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _ = data_gen.gen_dataframe(spark)
+        assert df.rdd.getNumPartitions() == 2, "Unexpected number of partitions"
         pdf: DataFrame = df.toPandas()
         X = pdf.to_numpy()
 
@@ -100,7 +101,7 @@ def test_make_low_rank_matrix(dtype: str) -> None:
         assert X.shape == (50, 20), "X shape mismatch"
         from numpy.linalg import svd
 
-        u, s, v = svd(X)
+        _, s, _ = svd(X)
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
 
 
