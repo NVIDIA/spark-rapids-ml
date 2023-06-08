@@ -16,15 +16,11 @@
 
 from gen_data import (
     BlobsDataGen,
+    ClassificationDataGen,
     LowRankMatrixDataGen,
     RegressionDataGen,
-    ClassificationDataGen,
 )
-
-from gen_data_distributed import (
-    BlobsDataGen as BlobsDistributed, 
-    LowRankMatrixDataGen as LowRankMatrixDistributed,
-    RegressionDataGen as RegressionDistributed,
-    ClassificationDataGen as ClassificationDistributed, 
-)
-
+from gen_data_distributed import BlobsDataGen as BlobsDistributed
+from gen_data_distributed import ClassificationDataGen as ClassificationDistributed
+from gen_data_distributed import LowRankMatrixDataGen as LowRankMatrixDistributed
+from gen_data_distributed import RegressionDataGen as RegressionDistributed

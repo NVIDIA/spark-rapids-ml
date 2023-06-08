@@ -103,6 +103,7 @@ def test_make_low_rank_matrix(dtype: str) -> None:
         u, s, v = svd(X)
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
 
+
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 def test_make_regression_low_rank(dtype: str):
     # Effective rank = 5
@@ -112,7 +113,7 @@ def test_make_regression_low_rank(dtype: str):
         "--num_cols",
         "10",
         "--dtype",
-        str(dtype),
+        dtype,
         "--output_dir",
         "temp",
         "--output_num_files",
@@ -137,6 +138,10 @@ def test_make_regression_low_rank(dtype: str):
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
+        print(f"X: {X[:3, :]}")
+        print(f"y: {y}")
+        print(f"c: {c}")
+
         assert X.dtype == np.dtype(dtype)
         assert X.shape == (100, 10), "X shape mismatch"
         assert y.shape == (100,), "y shape mismatch"
@@ -156,7 +161,7 @@ def test_make_regression_well_conditioned(dtype: str):
         "--num_cols",
         "10",
         "--dtype",
-        str(dtype),
+        dtype,
         "--output_dir",
         "temp",
         "--output_num_files",
@@ -178,6 +183,10 @@ def test_make_regression_well_conditioned(dtype: str):
         pdf: DataFrame = df.toPandas()
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
+
+        print(f"X: {X[:3, :]}")
+        print(f"y: {y}")
+        print(f"c: {c}")
 
         assert X.dtype == np.dtype(dtype)
         assert X.shape == (100, 10), "X shape mismatch"

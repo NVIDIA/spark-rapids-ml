@@ -20,8 +20,8 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from pyspark.mllib.random import RandomRDDs
 from gen_data import DataGenBase, DefaultDataGen, main
+from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
 from scipy import linalg
 from sklearn.datasets import (
@@ -280,10 +280,10 @@ class RegressionDataGen(DataGenBaseMeta):
         noise = params.get("noise", 0.0)
         shuffle = params.get("shuffle", True)
         effective_rank = params.get("effective_rank", None)
+        n_informative = params.get("n_informative", 10)
+        n_targets = params.get("n_targets", 1)
 
         if effective_rank is not None:
-            n_informative = params.get("n_informative", 10)
-            n_targets = params.get("n_targets", 1)
             tail_strength = params.get("tail_strength", 0.5)
             lrm_input_args = [
                 "--num_rows",
@@ -305,16 +305,26 @@ class RegressionDataGen(DataGenBaseMeta):
             ]
             # Generate a low-rank, fat tail input set.
             X, _ = LowRankMatrixDataGen(lrm_input_args).gen_dataframe(spark)
-            assert X.rdd.getNumPartitions == num_partitions, (
+            assert X.rdd.getNumPartitions() == num_partitions, (
                 f"Unexpected num partitions received from LowRankMatrix;"
-                f"expected {num_partitions}, got {X.rdd.getNumPartitions}"
+                f"expected {num_partitions}, got {X.rdd.getNumPartitions()}"
             )
         else:
             # Randomly generate a well-conditioned input set.
-            X = RandomRDDs.normalVectorRDD(spark.sparkContext, rows, cols, numPartitions=num_partitions, seed=seed)
-            assert X.getNumPartitions == num_partitions, (
+            X = spark.createDataFrame(
+                RandomRDDs.normalVectorRDD(
+                    spark.sparkContext,
+                    rows,
+                    cols,
+                    numPartitions=num_partitions,
+                    seed=seed,
+                ).map(lambda nparray: nparray.tolist()),
+                schema=",".join(self.schema),
+            )
+
+            assert X.rdd.getNumPartitions() == num_partitions, (
                 f"Unexpected num partitions received from RandomRDDs;"
-                f"expected {num_partitions}, got {X.getNumPartitions}"
+                f"expected {num_partitions}, got {X.rdd.getNumPartitions()}"
             )
 
         # Generate ground truth upfront.
@@ -323,10 +333,11 @@ class RegressionDataGen(DataGenBaseMeta):
             size=(n_informative, n_targets)
         )
 
-        # Shuffle feature indices upfront.
-        indices = np.arange(cols)
-        generator.shuffle(indices)
-        ground_truth = ground_truth[indices]
+        if shuffle:
+            # Shuffle feature indices upfront.
+            indices = np.arange(cols)
+            generator.shuffle(indices)
+            ground_truth = ground_truth[indices]
 
         # UDF for distributed generation of X and y.
         def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
@@ -356,9 +367,7 @@ class RegressionDataGen(DataGenBaseMeta):
         self.schema.append(f"{label_col} {self.pyspark_type}")
 
         return (
-            (
-                X.mapInPandas(make_regression_udf, schema=",".join(self.schema))
-            ),
+            (X.mapInPandas(make_regression_udf, schema=",".join(self.schema))),
             self.feature_cols,
             np.squeeze(ground_truth),
         )
