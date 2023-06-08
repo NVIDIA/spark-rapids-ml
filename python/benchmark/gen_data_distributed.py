@@ -345,14 +345,17 @@ class RegressionDataGen(DataGenBaseMeta):
                 X_p = pdf.to_numpy()
                 n_partition_rows = X_p.shape[0]
 
+                if shuffle:
+                    # Column-wise shuffle (global)
+                    X_p[:, :] = X_p[:, indices]
+
                 y = np.dot(X_p, ground_truth) + bias
                 if noise > 0.0:
                     y += generator.normal(scale=noise, size=y.shape)
+
                 if shuffle:
                     # Row-wise shuffle (partition)
                     X_p, y = util_shuffle(X_p, y, random_state=generator)
-                    # Column-wise shuffle (global)
-                    X_p[:, :] = X_p[:, indices]
 
                 y = np.squeeze(y)
                 data = np.concatenate(
