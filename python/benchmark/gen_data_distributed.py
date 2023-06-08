@@ -379,6 +379,58 @@ class RegressionDataGen(DataGenBaseMeta):
             np.squeeze(ground_truth),
         )
 
+class ClassificationDataGen(DataGenBase):
+    """Generate classification dataset including features and label."""
+
+    def __init__(self, argv: List[Any]) -> None:
+        super().__init__()
+        self._parse_arguments(argv)
+
+    def _supported_extra_params(self) -> Dict[str, Any]:
+        params = inspect_default_params_from_func(
+            make_classification, ["n_samples", "n_features", "weights"]
+        )
+        # must replace the None to the correct type
+        params["random_state"] = int
+        return params
+
+    def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
+        num_cols = self.num_cols
+        dtype = self.dtype
+
+        params = self.extra_params
+
+        if "random_state" not in params:
+            # for reproducible dataset.
+            params["random_state"] = 1
+
+        print(f"Passing {params} to make_classification")
+
+        def make_classification_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
+            """Pandas udf to call make_classification of sklearn to generate classification dataset"""
+            total_rows = 0
+            for pdf in iter:
+                total_rows += pdf.shape[0]
+            # here we iterator all batches of a single partition to get total rows.
+            X, y = make_classification(
+                n_samples=total_rows, n_features=num_cols, **params
+            )
+            data = np.concatenate(
+                (X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1
+            )
+            del X
+            del y
+            yield pd.DataFrame(data=data)
+
+        label_col = "label"
+        self.schema.append(f"{label_col} {self.pyspark_type}")
+
+        return (
+            spark.range(0, self.num_rows, 1, 1).mapInPandas(
+                make_classification_udf, schema=",".join(self.schema)  # type: ignore
+            )
+        ), self.feature_cols
+
 
 if __name__ == "__main__":
     """
@@ -390,6 +442,7 @@ if __name__ == "__main__":
         "default": DefaultDataGen,
         "low_rank_matrix": LowRankMatrixDataGen,
         "regression": RegressionDataGen,
+        "classification": ClassificationDataGen,
     }
 
     main(registered_data_gens=registered_data_gens, repartition=False)

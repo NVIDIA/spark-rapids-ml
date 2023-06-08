@@ -16,7 +16,7 @@
 
 import numpy as np
 import pytest
-from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen, RegressionDataGen
+from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen, RegressionDataGen, ClassificationDataGen
 from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
