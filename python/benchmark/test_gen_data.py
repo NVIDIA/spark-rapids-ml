@@ -105,9 +105,9 @@ def test_make_low_rank_matrix(dtype: str) -> None:
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_make_regression_low_rank(dtype: str):
+def test_make_regression_low_rank(dtype: str) -> None:
     # Effective rank = 5
-    args = [
+    input_args = [
         "--num_rows",
         "100",
         "--num_cols",
@@ -129,8 +129,9 @@ def test_make_regression_low_rank(dtype: str):
         "--random_state",
         "0",
     ]
-    data_gen = RegressionDataGen(args)
+    data_gen = RegressionDataGen(input_args)
     args = data_gen.args
+    assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _, c = data_gen.gen_dataframe_and_meta(spark)
         assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
@@ -153,9 +154,9 @@ def test_make_regression_low_rank(dtype: str):
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_make_regression_well_conditioned(dtype: str):
+def test_make_regression_well_conditioned(dtype: str) -> None:
     # Effective rank = None
-    args = [
+    input_args = [
         "--num_rows",
         "100",
         "--num_cols",
@@ -175,8 +176,9 @@ def test_make_regression_well_conditioned(dtype: str):
         "--random_state",
         "0",
     ]
-    data_gen = RegressionDataGen(args)
+    data_gen = RegressionDataGen(input_args)
     args = data_gen.args
+    assert args is not None
     with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
         df, _, c = data_gen.gen_dataframe_and_meta(spark)
         assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
