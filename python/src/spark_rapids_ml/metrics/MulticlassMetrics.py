@@ -16,6 +16,8 @@
 
 from typing import Dict
 
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+
 
 class MulticlassMetrics:
     """Metrics for multiclass classification."""
@@ -51,9 +53,91 @@ class MulticlassMetrics:
         beta_sqrd = beta * beta
         return 0.0 if (p + r == 0) else (1 + beta_sqrd) * p * r / (beta_sqrd * p + r)
 
+    def false_positive_rate(self, label: float) -> float:
+        """Returns false positive rate for a given label (category)"""
+        fp = self._fp_by_class[label]
+        return fp / (self._label_count - self._label_count_by_class[label])
+
     def weighted_fmeasure(self, beta: float = 1.0) -> float:
         """Returns weighted averaged f1-measure"""
         sum = 0.0
         for k, v in self._label_count_by_class.items():
             sum += self._f_measure(k, beta) * v / self._label_count
         return sum
+
+    def accuracy(self) -> float:
+        """Returns accuracy (equals to the total number of correctly classified instances
+        out of the total number of instances.)"""
+        return sum(self._tp_by_class.values()) / self._label_count
+
+    def weighted_precision(self) -> float:
+        """Returns weighted averaged precision"""
+        return sum(
+            [
+                self._precision(category) * count / self._label_count
+                for category, count in self._label_count_by_class.items()
+            ]
+        )
+
+    def weighted_recall(self) -> float:
+        """Returns weighted averaged recall (equals to precision, recall and f-measure)"""
+        return sum(
+            [
+                self._recall(category) * count / self._label_count
+                for category, count in self._label_count_by_class.items()
+            ]
+        )
+
+    def weighted_true_positive_rate(self) -> float:
+        """Returns weighted true positive rate. (equals to precision, recall and f-measure)"""
+        return self.weighted_recall()
+
+    def weighted_false_positive_rate(self) -> float:
+        """Returns weighted false positive rate"""
+        return sum(
+            [
+                self.false_positive_rate(category) * count / self._label_count
+                for category, count in self._label_count_by_class.items()
+            ]
+        )
+
+    def true_positive_rate_by_label(self, label: float) -> float:
+        """Returns true positive rate for a given label (category)"""
+        return self._recall(label)
+
+    def hamming_loss(self) -> float:
+        """Returns Hamming-loss"""
+        numerator = sum(self._fp_by_class.values())
+        denominator = self._label_count
+        return numerator / denominator
+
+    def evaluate(self, evaluator: MulticlassClassificationEvaluator) -> float:
+        metric_name = evaluator.getMetricName()
+        if metric_name == "f1":
+            return self.weighted_fmeasure()
+        elif metric_name == "accuracy":
+            return self.accuracy()
+        elif metric_name == "weightedPrecision":
+            return self.weighted_precision()
+        elif metric_name == "weightedRecall":
+            return self.weighted_recall()
+        elif metric_name == "weightedTruePositiveRate":
+            return self.weighted_true_positive_rate()
+        elif metric_name == "weightedFalsePositiveRate":
+            return self.weighted_false_positive_rate()
+        elif metric_name == "weightedFMeasure":
+            return self.weighted_fmeasure(evaluator.getBeta())
+        elif metric_name == "truePositiveRateByLabel":
+            return self.true_positive_rate_by_label(evaluator.getMetricLabel())
+        elif metric_name == "falsePositiveRateByLabel":
+            return self.false_positive_rate(evaluator.getMetricLabel())
+        elif metric_name == "precisionByLabel":
+            return self._precision(evaluator.getMetricLabel())
+        elif metric_name == "recallByLabel":
+            return self._recall(evaluator.getMetricLabel())
+        elif metric_name == "fMeasureByLabel":
+            return self._f_measure(evaluator.getMetricLabel(), evaluator.getBeta())
+        elif metric_name == "hammingLoss":
+            return self.hamming_loss()
+        else:
+            raise ValueError(f"Unsupported metric name, found {metric_name}")
