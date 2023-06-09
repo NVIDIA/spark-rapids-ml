@@ -395,9 +395,7 @@ class ClassificationDataGen(DataGenBase):
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
-        num_cols = self.num_cols
         dtype = self.dtype
-
         params = self.extra_params
 
         if "random_state" not in params:
@@ -405,6 +403,28 @@ class ClassificationDataGen(DataGenBase):
             params["random_state"] = 1
 
         print(f"Passing {params} to make_classification")
+
+        rows = self.num_rows
+        cols = self.num_cols
+        assert self.args is not None
+        num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
+
+        # Retrieve input params or set to defaults.
+        n_informative = params.get("n_informative", 2)
+        n_redundant = params.get("n_redundant", 2)
+        n_repeated = params.get("n_repeated", 0)
+        n_classes = params.get("n_classes", 2)
+        n_clusters_per_class = params.get("n_clusters_per_class", 2)
+        flip_y = params.get("flip_y", 0.01)
+        class_sep = params.get("class_sep", 1.0)
+        hypercube = params.get("hypercube", True)
+        shift = params.get("shift", 0.0)
+        scale = params.get("scale", 1.0)
+        shuffle = params.get("shuffle", True)
 
         def make_classification_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
             """Pandas udf to call make_classification of sklearn to generate classification dataset"""
