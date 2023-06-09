@@ -30,6 +30,7 @@ from sklearn.datasets import (
     make_low_rank_matrix,
     make_regression,
 )
+from sklearn.datasets._samples_generator import _generate_hypercube
 from sklearn.utils import shuffle as util_shuffle
 
 from benchmark.utils import inspect_default_params_from_func
@@ -404,8 +405,8 @@ class ClassificationDataGen(DataGenBase):
 
         print(f"Passing {params} to make_classification")
 
-        rows = self.num_rows
-        cols = self.num_cols
+        n_samples = self.num_rows
+        n_features = self.num_cols
         assert self.args is not None
         num_partitions = self.args.output_num_files
 
@@ -426,28 +427,128 @@ class ClassificationDataGen(DataGenBase):
         scale = params.get("scale", 1.0)
         shuffle = params.get("shuffle", True)
 
-        def make_classification_udf(iter: Iterator[pd.Series]) -> pd.DataFrame:
-            """Pandas udf to call make_classification of sklearn to generate classification dataset"""
-            total_rows = 0
+        generator = np.random.RandomState(params["random_state"])
+
+        # Count features, clusters and samples
+        if n_informative + n_redundant + n_repeated > n_features:
+            raise ValueError(
+                "Number of informative, redundant and repeated "
+                "features must sum to less than the number of total"
+                " features"
+            )
+        # Use log2 to avoid overflow errors
+        if n_informative < np.log2(n_classes * n_clusters_per_class):
+            msg = "n_classes({}) * n_clusters_per_class({}) must be"
+            msg += " smaller or equal 2**n_informative({})={}"
+            raise ValueError(
+                msg.format(
+                    n_classes, n_clusters_per_class, n_informative, 2**n_informative
+                )
+            )
+
+        n_useless = n_features - n_informative - n_redundant - n_repeated
+        n_clusters = n_classes * n_clusters_per_class
+
+        # Distribute samples among clusters
+        n_samples_per_cluster = [n_samples // n_clusters] * n_clusters
+        n_samples_per_cluster[-1] += n_samples % n_clusters
+
+        # Distribute cluster samples among partitions.
+        # Generates num_partitions lists, each containing samples to generate per cluster for that partition.
+        def distribute_samples(samples_per_cluster, num_partitions):
+            num_clusters = len(samples_per_cluster)
+            samples_per_partition = [[0] * num_clusters for _ in range(num_partitions)]
+            for i, samples in enumerate(samples_per_cluster):
+                quotient, remainder = divmod(samples, num_partitions)
+                for j in range(num_partitions):
+                    samples_per_partition[j][i] += quotient
+                for j in range(remainder):
+                    samples_per_partition[j][i] += 1
+            return samples_per_partition
+
+        n_samples_per_cluster_partition = distribute_samples(n_samples_per_cluster, num_partitions)
+
+        # Build the polytope whose vertices become cluster centroids
+        centroids = _generate_hypercube(n_clusters, n_informative, generator).astype(
+            float, copy=False
+        )
+        centroids *= 2 * class_sep
+        centroids -= class_sep
+        if not hypercube:
+            centroids *= generator.uniform(size=(n_clusters, 1))
+            centroids *= generator.uniform(size=(1, n_informative))
+
+        # Precompute intermediates / noise params
+        A = 2 * generator.uniform(size=(n_informative, n_informative)) - 1
+        if n_redundant > 0:
+            B = 2 * generator.uniform(size=(n_informative, n_redundant)) - 1
+        if n_repeated > 0:
+            n = n_informative + n_redundant
+            indices = ((n - 1) * generator.uniform(size=n_repeated) + 0.5).astype(np.intp)
+        if shift is None:
+            shift = (2 * generator.uniform(size=n_features) - 1) * class_sep
+        if scale is None:
+            scale = 1 + 100 * generator.uniform(size=n_features)
+        if shuffle:
+            indices = np.arange(n_features)
+            generator.shuffle(indices)
+
+        def make_classification_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
-                total_rows += pdf.shape[0]
-            # here we iterator all batches of a single partition to get total rows.
-            X, y = make_classification(
-                n_samples=total_rows, n_features=num_cols, **params
-            )
-            data = np.concatenate(
-                (X.astype(dtype), y.reshape(total_rows, 1).astype(dtype)), axis=1
-            )
-            del X
-            del y
-            yield pd.DataFrame(data=data)
+                partition_index = pdf.iloc[0][0]
+                n_cluster_samples = n_samples_per_cluster_partition[partition_index]
+                n_partition_samples = sum(n_cluster_samples)
+                X_p = np.zeros((n_partition_samples, n_features))
+                y = np.zeros(n_partition_samples, dtype=int)
+
+                X_p[:, :n_informative] = generator.standard_normal(size=(n_partition_samples, n_informative))
+
+                # Generate the samples per cluster that this partition is responsible for
+                stop = 0
+                for k, centroid in enumerate(centroids):
+                    start, stop = stop, stop + n_cluster_samples[k]
+                    y[start:stop] = k % n_classes  # assign labels
+                    X_k = X_p[start:stop, :n_informative]  # slice a view of the cluster
+                    X_k[...] = np.dot(X_k, A)  # introduce random covariance
+                    X_k += centroid  # shift the cluster to a vertex
+
+                # Create redundant features
+                if n_redundant > 0:
+                    X_p[:, n_informative : n_informative + n_redundant] = np.dot(
+                        X_p[:, :n_informative], B
+                    )
+                # Repeat some features
+                if n_repeated > 0:
+                    X_p[:, n : n + n_repeated] = X_p[:, indices]
+                # Fill useless features
+                if n_useless > 0:
+                    X_p[:, -n_useless:] = generator.standard_normal(size=(n_partition_samples, n_useless))
+                # Randomly replace labels
+                if flip_y >= 0.0:
+                    flip_mask = generator.uniform(size=n_partition_samples) < flip_y
+                    y[flip_mask] = generator.randint(n_classes, size=flip_mask.sum())
+                # Randomly shift and scale
+                X_p += shift
+                X_p *= scale
+                if shuffle:
+                    X_p, y = util_shuffle(X_p, y, random_state=generator) # Randomly permute samples
+                    X_p[:, :] = X_p[:, indices] # Randomly permute features
+
+                data = np.concatenate(
+                    (X_p.astype(dtype), y.reshape(n_partition_samples, 1).astype(dtype)),
+                    axis=1,
+                )
+
+                del X_p 
+                del y
+                yield pd.DataFrame(data=data)
 
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
 
         return (
-            spark.range(0, self.num_rows, 1, 1).mapInPandas(
-                make_classification_udf, schema=",".join(self.schema)  # type: ignore
+            spark.range(0, num_partitions, numPartitions=num_partitions).mapInPandas(
+                make_classification_udf, schema=",".join(self.schema)
             )
         ), self.feature_cols
 
