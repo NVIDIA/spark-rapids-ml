@@ -478,9 +478,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
             if cuda_managed_mem_enabled:
                 import rmm
+                from rmm.allocators.cupy import rmm_cupy_allocator
 
                 rmm.reinitialize(managed_memory=True)
-                cp.cuda.set_allocator(rmm.rmm_cupy_allocator)
+                cp.cuda.set_allocator(rmm_cupy_allocator)
 
             _CumlCommon.initialize_cuml_logging(cuml_verbose)
 
