@@ -193,6 +193,7 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
         assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
+#@pytest.mark.parametrize("dtype, num_rows", [("float32", 2000), ("float32", 2001), ("float64", 2000), ("float64", 2001)])
 def test_make_classification(dtype: str):
     input_args = [
         "--num_rows",
