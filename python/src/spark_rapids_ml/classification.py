@@ -499,10 +499,10 @@ class RandomForestClassificationModel(
             len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
         )
 
-        tp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-        fp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-        label_count_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-        label_count = [0 for _ in range(num_models)]
+        tp_by_class: List[Dict[float, float]] = [{}] * num_models
+        fp_by_class: List[Dict[float, float]] = [{}] * num_models
+        label_count_by_class: List[Dict[float, float]] = [{}] * num_models
+        label_count = [0] * num_models
 
         for i in range(num_models):
             for j in range(self._num_classes):
