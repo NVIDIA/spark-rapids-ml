@@ -140,7 +140,7 @@ def test_make_regression_low_rank(dtype: str) -> None:
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
-        assert X.dtype == np.dtype(dtype)
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
         assert X.shape == (100, 10), "X shape mismatch"
         assert y.shape == (100,), "y shape mismatch"
         assert c.shape == (10,), "coef shape mismatch"
@@ -183,7 +183,7 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
-        assert X.dtype == np.dtype(dtype)
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
         assert X.shape == (100, 10), "X shape mismatch"
         assert y.shape == (100,), "y shape mismatch"
         assert c.shape == (10,), "coef shape mismatch"
@@ -191,3 +191,49 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
 
         # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
         assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_make_classification(dtype: str):
+    input_args = [
+        "--num_rows",
+        "2000",
+        "--num_cols",
+        "31",
+        "--dtype",
+        dtype,
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "3",
+        "--n_informative",
+        "31",
+        "--n_redundant",
+        "0",
+        "--n_repeated",
+        "0",
+        "--hypercube",
+        "True",
+        "--scale",
+        "0.5",
+        "--flip_y",
+        "0",
+        "--random_state",
+        "0",
+    ]
+    data_gen = ClassificationDataGen(input_args)
+    args = data_gen.args
+    assert args is not None
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _ = data_gen.gen_dataframe(spark)
+        assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
+        pdf: DataFrame = df.toPandas()
+        X = pdf.iloc[:, :-1].to_numpy()
+        y = pdf.iloc[:, -1].to_numpy()
+
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
+        assert X.shape == (2000, 31), "X shape mismatch"
+        assert y.shape == (2000,), "y shape mismatch"
+        assert np.unique(y).shape == (2,), "Unexpected number of classes"
+        assert sum(y == 0) == 1000, "Unexpected number of samples in class 0"
+        assert sum(y == 1) == 1000, "Unexpected number of samples in class 1"
+        assert np.unique(X, axis=0).shape[0] == 2000, "Unexpected number of unique rows"
