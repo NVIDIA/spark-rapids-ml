@@ -3,7 +3,7 @@ cat <<EOF
 {
     "num_workers": $num_gpus,
     "cluster_name": "$cluster_name",
-    "spark_version": "10.4.x-gpu-ml-scala2.12",
+    "spark_version": "11.3.x-gpu-ml-scala2.12",
     "spark_conf": {
         "spark.task.resource.gpu.amount": "0.25",
         "spark.task.cpus": "1",
