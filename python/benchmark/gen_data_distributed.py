@@ -383,6 +383,7 @@ class RegressionDataGen(DataGenBaseMeta):
             np.squeeze(ground_truth),
         )
 
+
 class ClassificationDataGen(DataGenBase):
     """Generate classification dataset including features and label."""
 
@@ -458,6 +459,7 @@ class ClassificationDataGen(DataGenBase):
         for i in range(n_samples - sum(n_samples_per_cluster)):
             n_samples_per_cluster[i % n_clusters] += 1
         print(f"n_samples_per_cluster: {n_samples_per_cluster}")
+
         # Distribute cluster samples among partitions.
         # Generates list of num_partitions lists, each containing samples to generate per cluster for that partition.
         def distribute_samples(samples_per_cluster, num_partitions):
@@ -471,7 +473,9 @@ class ClassificationDataGen(DataGenBase):
                     samples_per_partition[j][i] += 1
             return samples_per_partition
 
-        n_samples_per_cluster_partition = distribute_samples(n_samples_per_cluster, num_partitions)
+        n_samples_per_cluster_partition = distribute_samples(
+            n_samples_per_cluster, num_partitions
+        )
         print(f"n_samples_per_cluster_partition: {n_samples_per_cluster_partition}")
         # Build the polytope whose vertices become cluster centroids
         centroids = _generate_hypercube(n_clusters, n_informative, generator).astype(
@@ -483,7 +487,7 @@ class ClassificationDataGen(DataGenBase):
             centroids *= generator.uniform(size=(n_clusters, 1))
             centroids *= generator.uniform(size=(1, n_informative))
 
-        # Precompute intermediates / noise params
+        # Precompute global intermediates / noise params
         A = []
         print(f"n_centroids: {len(centroids)}")
         for _ in range(n_clusters):
@@ -493,26 +497,39 @@ class ClassificationDataGen(DataGenBase):
             B = 2 * generator.uniform(size=(n_informative, n_redundant)) - 1
         if n_repeated > 0:
             n = n_informative + n_redundant
-            indices = ((n - 1) * generator.uniform(size=n_repeated) + 0.5).astype(np.intp)
+            repeat_indices = (
+                (n - 1) * generator.uniform(size=n_repeated) + 0.5
+            ).astype(np.intp)
         if shift is None:
             shift = (2 * generator.uniform(size=n_features) - 1) * class_sep
         if scale is None:
             scale = 1 + 100 * generator.uniform(size=n_features)
         if shuffle:
-            indices = np.arange(n_features)
-            generator.shuffle(indices)
+            shuffle_indices = np.arange(n_features)
+            generator.shuffle(shuffle_indices)
 
-        def make_classification_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+        # Create different seed for sample generation
+        random.seed(params["random_state"])
+        seed_maxval = 100 * num_partitions
+        partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
+
+        def make_classification_udf(
+            iter: Iterable[pd.DataFrame],
+        ) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_cluster_samples = n_samples_per_cluster_partition[partition_index]
                 n_partition_samples = sum(n_cluster_samples)
                 X_p = np.zeros((n_partition_samples, n_features))
                 y = np.zeros(n_partition_samples, dtype=int)
+                generator = np.random.RandomState(partition_seeds[partition_index])
 
-                X_p[:, :n_informative] = generator.standard_normal(size=(n_partition_samples, n_informative))
+                # Create informative features
+                X_p[:, :n_informative] = generator.standard_normal(
+                    size=(n_partition_samples, n_informative)
+                )
 
-                # Generate the samples per cluster that this partition is responsible for
+                # Generate the samples per cluster for which this partition is responsible
                 stop = 0
                 for k, centroid in enumerate(centroids):
                     start, stop = stop, stop + n_cluster_samples[k]
@@ -528,10 +545,12 @@ class ClassificationDataGen(DataGenBase):
                     )
                 # Repeat some features
                 if n_repeated > 0:
-                    X_p[:, n : n + n_repeated] = X_p[:, indices]
+                    X_p[:, n : n + n_repeated] = X_p[:, repeat_indices]
                 # Fill useless features
                 if n_useless > 0:
-                    X_p[:, -n_useless:] = generator.standard_normal(size=(n_partition_samples, n_useless))
+                    X_p[:, -n_useless:] = generator.standard_normal(
+                        size=(n_partition_samples, n_useless)
+                    )
                 # Randomly replace labels
                 if flip_y >= 0.0:
                     flip_mask = generator.uniform(size=n_partition_samples) < flip_y
@@ -540,15 +559,20 @@ class ClassificationDataGen(DataGenBase):
                 X_p += shift
                 X_p *= scale
                 if shuffle:
-                    X_p, y = util_shuffle(X_p, y, random_state=generator) # Randomly permute samples
-                    X_p[:, :] = X_p[:, indices] # Randomly permute features
+                    X_p, y = util_shuffle(
+                        X_p, y, random_state=generator
+                    )  # Randomly permute samples
+                    X_p[:, :] = X_p[:, shuffle_indices]  # Randomly permute features
 
                 data = np.concatenate(
-                    (X_p.astype(dtype), y.reshape(n_partition_samples, 1).astype(dtype)),
+                    (
+                        X_p.astype(dtype),
+                        y.reshape(n_partition_samples, 1).astype(dtype),
+                    ),
                     axis=1,
                 )
 
-                del X_p 
+                del X_p
                 del y
                 yield pd.DataFrame(data=data)
 
