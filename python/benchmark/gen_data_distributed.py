@@ -483,7 +483,11 @@ class ClassificationDataGen(DataGenBase):
             centroids *= generator.uniform(size=(1, n_informative))
 
         # Precompute intermediates / noise params
-        A = 2 * generator.uniform(size=(n_informative, n_informative)) - 1
+        A = []
+        print(f"n_centroids: {len(centroids)}")
+        for _ in range(n_clusters):
+            A.append(2 * generator.uniform(size=(n_informative, n_informative)) - 1)
+        print(f"len A: {len(A)}")
         if n_redundant > 0:
             B = 2 * generator.uniform(size=(n_informative, n_redundant)) - 1
         if n_repeated > 0:
@@ -513,7 +517,7 @@ class ClassificationDataGen(DataGenBase):
                     start, stop = stop, stop + n_cluster_samples[k]
                     y[start:stop] = k % n_classes  # assign labels
                     X_k = X_p[start:stop, :n_informative]  # slice a view of the cluster
-                    X_k[...] = np.dot(X_k, A)  # introduce random covariance
+                    X_k[...] = np.dot(X_k, A[k])  # introduce random covariance
                     X_k += centroid  # shift the cluster to a vertex
 
                 # Create redundant features
