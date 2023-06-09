@@ -471,7 +471,10 @@ class RandomForestClassificationModel(
         if not isinstance(evaluator, MulticlassClassificationEvaluator):
             raise NotImplementedError(f"{evaluator} is unsupported yet.")
 
-        if evaluator.getMetricName() != "f1":
+        if (
+            evaluator.getMetricName()
+            not in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
+        ):
             raise NotImplementedError(
                 f"{evaluator.getMetricName()} is not supported yet."
             )
@@ -496,10 +499,10 @@ class RandomForestClassificationModel(
             len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
         )
 
-        tp_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
-        fp_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
-        label_count_by_class: List[Dict[float, float]] = [{} for i in range(num_models)]
-        label_count = [0 for i in range(num_models)]
+        tp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
+        fp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
+        label_count_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
+        label_count = [0 for _ in range(num_models)]
 
         for i in range(num_models):
             for j in range(self._num_classes):
@@ -516,7 +519,7 @@ class RandomForestClassificationModel(
             else:
                 fp_by_class[row.model_index][row.prediction] += row.total
 
-        f1_scores = []
+        scores = []
         for i in range(num_models):
             metrics = MulticlassMetrics(
                 tp=tp_by_class[i],
@@ -524,6 +527,5 @@ class RandomForestClassificationModel(
                 label=label_count_by_class[i],
                 label_count=label_count[i],
             )
-            f1_score = metrics.weighted_fmeasure()
-            f1_scores.append(f1_score)
-        return f1_scores
+            scores.append(metrics.evaluate(evaluator))
+        return scores
