@@ -105,7 +105,9 @@ def test_make_low_rank_matrix(dtype: str) -> None:
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", 
+                         ["float32", "float64"]
+                         )
 def test_make_regression_low_rank(dtype: str) -> None:
     # Effective rank = 5
     input_args = [
@@ -157,7 +159,7 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
         "--num_rows",
         "100",
         "--num_cols",
-        "10",
+        "30",
         "--dtype",
         dtype,
         "--output_dir",
@@ -165,7 +167,7 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
         "--output_num_files",
         "3",
         "--n_informative",
-        "3",
+        "5",
         "--bias",
         "0.0",
         "--noise",
@@ -184,10 +186,10 @@ def test_make_regression_well_conditioned(dtype: str) -> None:
         y = pdf.iloc[:, -1].to_numpy()
 
         assert X.dtype == np.dtype(dtype)
-        assert X.shape == (100, 10), "X shape mismatch"
+        assert X.shape == (100, 30), "X shape mismatch"
         assert y.shape == (100,), "y shape mismatch"
-        assert c.shape == (10,), "coef shape mismatch"
-        assert sum(c != 0.0) == 3, "Unexpected number of informative features"
+        assert c.shape == (30,), "coef shape mismatch"
+        assert sum(c != 0.0) == 5, "Unexpected number of informative features"
 
         # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
         assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
