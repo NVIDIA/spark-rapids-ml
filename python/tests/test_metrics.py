@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import math
 
 import numpy as np
 import pandas as pd
 import pytest
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
-from python.tests.sparksession import CleanSparkSession
 from spark_rapids_ml.metrics.MulticlassMetrics import MulticlassMetrics
+
+from .sparksession import CleanSparkSession
 
 
 def get_multi_class_metrics(pdf: pd.DataFrame, num_classes: int) -> MulticlassMetrics:
@@ -56,21 +58,7 @@ def get_multi_class_metrics(pdf: pd.DataFrame, num_classes: int) -> MulticlassMe
 @pytest.mark.parametrize("num_classes", [4])
 @pytest.mark.parametrize(
     "metric_name",
-    [
-        "f1",
-        "accuracy",
-        "weightedPrecision",
-        "weightedRecall",
-        "weightedTruePositiveRate",
-        "weightedFalsePositiveRate",
-        "weightedFMeasure",
-        "truePositiveRateByLabel",
-        "falsePositiveRateByLabel",
-        "precisionByLabel",
-        "recallByLabel",
-        "fMeasureByLabel",
-        "hammingLoss",
-    ],
+    MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES,
 )
 def test_multi_class_metrics(
     num_classes: int,
@@ -93,5 +81,4 @@ def test_multi_class_metrics(
         )
 
         evaluator.setMetricName(metric_name)  # type: ignore
-        print(evaluator.evaluate(sdf))
-        print(metrics.evaluate(evaluator))
+        assert math.fabs(evaluator.evaluate(sdf) - metrics.evaluate((evaluator))) < 1e-6

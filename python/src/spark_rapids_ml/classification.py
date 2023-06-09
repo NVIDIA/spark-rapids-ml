@@ -471,7 +471,10 @@ class RandomForestClassificationModel(
         if not isinstance(evaluator, MulticlassClassificationEvaluator):
             raise NotImplementedError(f"{evaluator} is unsupported yet.")
 
-        if evaluator.getMetricName() == "logLoss":
+        if (
+            evaluator.getMetricName()
+            not in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
+        ):
             raise NotImplementedError(
                 f"{evaluator.getMetricName()} is not supported yet."
             )

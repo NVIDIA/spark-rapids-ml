@@ -22,6 +22,22 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 class MulticlassMetrics:
     """Metrics for multiclass classification."""
 
+    SUPPORTED_MULTI_CLASS_METRIC_NAMES = [
+        "f1",
+        "accuracy",
+        "weightedPrecision",
+        "weightedRecall",
+        "weightedTruePositiveRate",
+        "weightedFalsePositiveRate",
+        "weightedFMeasure",
+        "truePositiveRateByLabel",
+        "falsePositiveRateByLabel",
+        "precisionByLabel",
+        "recallByLabel",
+        "fMeasureByLabel",
+        "hammingLoss",
+    ]
+
     # This class is aligning with MulticlassMetrics scala version.
 
     def __init__(
