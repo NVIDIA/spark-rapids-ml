@@ -433,6 +433,13 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
+        cuda_managed_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled:
+            get_logger(cls).info("CUDA managed memory enabled.")
+
         # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
@@ -467,6 +474,15 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             logger = get_logger(cls)
             logger.info("Initializing cuml context")
 
+            import cupy as cp
+
+            if cuda_managed_mem_enabled:
+                import rmm
+                from rmm.allocators.cupy import rmm_cupy_allocator
+
+                rmm.reinitialize(managed_memory=True)
+                cp.cuda.set_allocator(rmm_cupy_allocator)
+
             _CumlCommon.initialize_cuml_logging(cuml_verbose)
 
             context = BarrierTaskContext.get()
@@ -486,9 +502,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 for pdf in pdf_iter:
                     sizes.append(pdf.shape[0])
                     if multi_col_names:
-                        features = pdf[multi_col_names]
+                        features = np.array(pdf[multi_col_names], order=array_order)
                     else:
                         features = np.array(list(pdf[alias.data]), order=array_order)
+                    # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
+                    # invoking cupy array on the list
+                    if cuda_managed_mem_enabled:
+                        features = cp.array(features)
+
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
                         pdf[alias.row_number]

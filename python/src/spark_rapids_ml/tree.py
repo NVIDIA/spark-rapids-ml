@@ -303,16 +303,15 @@ class _RandomForestEstimator(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            # 1. prepare the dataset
             X_list = [item[0] for item in dfs]
             y_list = [item[1] for item in dfs]
             if isinstance(X_list[0], pd.DataFrame):
                 X = pd.concat(X_list)
                 y = pd.concat(y_list)
             else:
-                # should be list of np.ndarrays here
-                X = _concat_and_free(cast(List[np.ndarray], X_list))
-                y = _concat_and_free(cast(List[np.ndarray], y_list))
+                # features are either cp or np arrays here
+                X = _concat_and_free(X_list)
+                y = _concat_and_free(y_list)
 
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
