@@ -385,7 +385,8 @@ class RegressionDataGen(DataGenBaseMeta):
 
 
 class ClassificationDataGen(DataGenBase):
-    """Generate classification dataset including features and label."""
+    """Generate classification dataset using a distributed version of sklearn.datasets.classification,
+    including features and labels."""
 
     def __init__(self, argv: List[Any]) -> None:
         super().__init__()
@@ -431,17 +432,19 @@ class ClassificationDataGen(DataGenBase):
         scale = params.get("scale", 1.0)
         shuffle = params.get("shuffle", True)
 
+        # Code adapted from sklearn.datasets.make_classification.
         generator = np.random.RandomState(params["random_state"])
 
-        # Count features, clusters and samples
+        # Check feature and cluster counts.
         if n_informative + n_redundant + n_repeated > n_features:
             raise ValueError(
                 "Number of informative, redundant and repeated "
                 "features must sum to less than the number of total"
                 " features"
             )
-        # Use log2 to avoid overflow errors
-        if n_informative < np.log2(n_classes * n_clusters_per_class):
+        if n_informative < np.log2(
+            n_classes * n_clusters_per_class
+        ):  # log2 to avoid overflow errors
             msg = "n_classes({}) * n_clusters_per_class({}) must be"
             msg += " smaller or equal 2**n_informative({})={}"
             raise ValueError(
@@ -452,17 +455,18 @@ class ClassificationDataGen(DataGenBase):
 
         n_useless = n_features - n_informative - n_redundant - n_repeated
         n_clusters = n_classes * n_clusters_per_class
-        print(f"n_samples: {n_samples}")
-        print(f"n_clusters: {n_clusters}")
-        # Distribute samples among clusters
+
+        # Distribute samples among clusters.
         n_samples_per_cluster = [n_samples // n_clusters] * n_clusters
         for i in range(n_samples - sum(n_samples_per_cluster)):
             n_samples_per_cluster[i % n_clusters] += 1
         print(f"n_samples_per_cluster: {n_samples_per_cluster}")
 
         # Distribute cluster samples among partitions.
-        # Generates list of num_partitions lists, each containing samples to generate per cluster for that partition.
-        def distribute_samples(samples_per_cluster, num_partitions):
+        def distribute_samples(
+            samples_per_cluster: int, num_partitions: int
+        ) -> List[List[int]]:
+            # Generates a list of num_partitions lists, each containing the samples to generate per cluster for that partition.
             num_clusters = len(samples_per_cluster)
             samples_per_partition = [[0] * num_clusters for _ in range(num_partitions)]
             for i, samples in enumerate(samples_per_cluster):
@@ -476,7 +480,7 @@ class ClassificationDataGen(DataGenBase):
         n_samples_per_cluster_partition = distribute_samples(
             n_samples_per_cluster, num_partitions
         )
-        print(f"n_samples_per_cluster_partition: {n_samples_per_cluster_partition}")
+
         # Build the polytope whose vertices become cluster centroids
         centroids = _generate_hypercube(n_clusters, n_informative, generator).astype(
             float, copy=False
@@ -487,12 +491,10 @@ class ClassificationDataGen(DataGenBase):
             centroids *= generator.uniform(size=(n_clusters, 1))
             centroids *= generator.uniform(size=(1, n_informative))
 
-        # Precompute global intermediates / noise params
+        # Precompute global noise coeffs / parameters
         A = []
-        print(f"n_centroids: {len(centroids)}")
         for _ in range(n_clusters):
             A.append(2 * generator.uniform(size=(n_informative, n_informative)) - 1)
-        print(f"len A: {len(A)}")
         if n_redundant > 0:
             B = 2 * generator.uniform(size=(n_informative, n_redundant)) - 1
         if n_repeated > 0:
@@ -508,7 +510,7 @@ class ClassificationDataGen(DataGenBase):
             shuffle_indices = np.arange(n_features)
             generator.shuffle(shuffle_indices)
 
-        # Create different seed for sample generation
+        # Create different partition seeds for sample generation
         random.seed(params["random_state"])
         seed_maxval = 100 * num_partitions
         partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
@@ -536,7 +538,7 @@ class ClassificationDataGen(DataGenBase):
                     y[start:stop] = k % n_classes  # assign labels
                     X_k = X_p[start:stop, :n_informative]  # slice a view of the cluster
                     X_k[...] = np.dot(X_k, A[k])  # introduce random covariance
-                    X_k += centroid  # shift the cluster to a vertex
+                    X_k += centroid  # shift the cluster to vertex
 
                 # Create redundant features
                 if n_redundant > 0:
