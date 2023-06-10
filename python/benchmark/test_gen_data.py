@@ -105,7 +105,10 @@ def test_make_low_rank_matrix(dtype: str) -> None:
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
 
 
-@pytest.mark.parametrize("dtype, low_rank", [("float32", True), ("float32", False), ("float64", True), ("float64", False)])
+@pytest.mark.parametrize(
+    "dtype, low_rank",
+    [("float32", True), ("float32", False), ("float64", True), ("float64", False)],
+)
 def test_make_regression(dtype: str, low_rank: bool) -> None:
     input_args = [
         "--num_rows",
