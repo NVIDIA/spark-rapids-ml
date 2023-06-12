@@ -461,7 +461,6 @@ class ClassificationDataGen(DataGenBase):
         n_samples_per_cluster = [n_samples // n_clusters] * n_clusters
         for i in range(n_samples - sum(n_samples_per_cluster)):
             n_samples_per_cluster[i % n_clusters] += 1
-        print(f"n_samples_per_cluster: {n_samples_per_cluster}")
 
         # Distribute cluster samples among partitions.
         def distribute_samples(
