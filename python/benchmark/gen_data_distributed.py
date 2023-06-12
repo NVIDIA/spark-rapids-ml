@@ -419,9 +419,10 @@ class ClassificationDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
+        # For detailed parameter descriptions, see below:
+        # https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html
+
         # Retrieve input params or set to defaults.
-        # For detalied parameter descriptions, see below:
-        # https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification
         n_informative = params.get("n_informative", 2)
         n_redundant = params.get("n_redundant", 2)
         n_repeated = params.get("n_repeated", 0)
