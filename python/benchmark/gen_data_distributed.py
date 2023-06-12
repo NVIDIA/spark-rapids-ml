@@ -494,7 +494,10 @@ class ClassificationDataGen(DataGenBase):
             centroids *= generator.uniform(size=(1, n_informative))
 
         # Precompute covariance coefficients / noise parameters
-        A = [2 * generator.uniform(size=(n_informative, n_informative)) - 1 for _ in range(n_clusters)]
+        A = [
+            2 * generator.uniform(size=(n_informative, n_informative)) - 1
+            for _ in range(n_clusters)
+        ]
         if n_redundant > 0:
             B = 2 * generator.uniform(size=(n_informative, n_redundant)) - 1
         if n_repeated > 0:
