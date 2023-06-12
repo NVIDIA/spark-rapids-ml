@@ -432,10 +432,10 @@ class ClassificationDataGen(DataGenBase):
         scale = params.get("scale", 1.0)
         shuffle = params.get("shuffle", True)
         generator = np.random.RandomState(params["random_state"])
-        
-        # Generate a random n-class classification problem. 
+
+        # Generate a random n-class classification problem.
         # Code adapted from sklearn.datasets.make_classification.
-        
+
         # Check feature and cluster counts.
         if n_informative + n_redundant + n_repeated > n_features:
             raise ValueError(
