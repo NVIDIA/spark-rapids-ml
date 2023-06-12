@@ -3,7 +3,7 @@ cat <<EOF
 {
     "num_workers": $(( $num_cpus / 8)),
     "cluster_name": "$cluster_name",
-    "spark_version": "10.4.x-cpu-ml-scala2.12",
+    "spark_version": "11.3.x-cpu-ml-scala2.12",
     "spark_conf": {},
     "aws_attributes": {
         "first_on_demand": 1,
