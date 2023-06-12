@@ -420,6 +420,8 @@ class ClassificationDataGen(DataGenBase):
             num_partitions = spark.sparkContext.defaultParallelism
 
         # Retrieve input params or set to defaults.
+        # For detalied parameter descriptions, see below:
+        # https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html#sklearn.datasets.make_classification
         n_informative = params.get("n_informative", 2)
         n_redundant = params.get("n_redundant", 2)
         n_repeated = params.get("n_repeated", 0)
@@ -491,10 +493,8 @@ class ClassificationDataGen(DataGenBase):
             centroids *= generator.uniform(size=(n_clusters, 1))
             centroids *= generator.uniform(size=(1, n_informative))
 
-        # Precompute global noise coeffs / parameters
-        A = []
-        for _ in range(n_clusters):
-            A.append(2 * generator.uniform(size=(n_informative, n_informative)) - 1)
+        # Precompute covariance coefficients / noise parameters
+        A = [2 * generator.uniform(size=(n_informative, n_informative)) - 1 for _ in range(n_clusters)]
         if n_redundant > 0:
             B = 2 * generator.uniform(size=(n_informative, n_redundant)) - 1
         if n_repeated > 0:
