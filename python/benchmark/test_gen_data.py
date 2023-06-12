@@ -160,7 +160,7 @@ def test_make_regression(dtype: str, low_rank: bool) -> None:
 @pytest.mark.parametrize("n_informative, n_repeated", [(31, 0), (28, 3)])
 def test_make_classification(
     dtype: str, num_rows: int, n_informative: int, n_repeated: int
-):
+) -> None:
     input_args = [
         "--num_rows",
         str(num_rows),

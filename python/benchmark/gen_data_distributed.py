@@ -464,7 +464,7 @@ class ClassificationDataGen(DataGenBase):
 
         # Distribute cluster samples among partitions.
         def distribute_samples(
-            samples_per_cluster: int, num_partitions: int
+            samples_per_cluster: List[int], num_partitions: int
         ) -> List[List[int]]:
             # Generates a list of num_partitions lists, each containing the samples to generate per cluster for that partition.
             num_clusters = len(samples_per_cluster)
