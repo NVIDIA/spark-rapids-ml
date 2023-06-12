@@ -156,7 +156,7 @@ def test_make_regression(dtype: str, low_rank: bool) -> None:
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("num_rows", [2000, 2001]) # test uneven samples per cluster
+@pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
 @pytest.mark.parametrize("n_informative, n_repeated", [(31, 0), (28, 3)])
 def test_make_classification(
     dtype: str, num_rows: int, n_informative: int, n_repeated: int
