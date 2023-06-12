@@ -431,8 +431,9 @@ class ClassificationDataGen(DataGenBase):
         shift = params.get("shift", 0.0)
         scale = params.get("scale", 1.0)
         shuffle = params.get("shuffle", True)
-
-        # Code adapted from sklearn.datasets.make_classification.
+        
+        # Generate a random n-class classification problem. 
+        # Code below adapted from sklearn.datasets.make_classification.
         generator = np.random.RandomState(params["random_state"])
 
         # Check feature and cluster counts.
