@@ -155,15 +155,9 @@ def test_make_regression(dtype: str, low_rank: bool) -> None:
         assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
 
 
-@pytest.mark.parametrize(
-    "dtype, num_rows, n_informative, n_repeated",
-    [
-        ("float32", 2000, 31, 0),
-        ("float64", 2000, 31, 0),
-        ("float32", 2001, 31, 0),
-        ("float32", 2001, 28, 3),
-    ],
-)
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("num_rows", [2000, 2001]) # test uneven samples per cluster
+@pytest.mark.parametrize("n_informative, n_repeated", [(31, 0), (28, 3)])
 def test_make_classification(
     dtype: str, num_rows: int, n_informative: int, n_repeated: int
 ):
@@ -207,7 +201,7 @@ def test_make_classification(
         assert X.shape == (num_rows, 31), "X shape mismatch"
         assert y.shape == (num_rows,), "y shape mismatch"
         assert np.unique(y).shape == (2,), "Unexpected number of classes"
-        if num_rows == 200:
+        if num_rows == 2000:
             assert sum(y == 0) == 1000, "Unexpected number of samples in class 0"
             assert sum(y == 1) == 1000, "Unexpected number of samples in class 1"
         assert (
