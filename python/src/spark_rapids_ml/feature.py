@@ -139,7 +139,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     >>> print(gpu_model.pc)
     DenseMatrix([[0.70710678],
                  [0.70710678]])
-    >>> print(gpu_model.explainedVariance)
+    >>> print(gpu_model.explained_variance)
     [1.0]
     >>> gpu_pca.save("/tmp/pca")
 

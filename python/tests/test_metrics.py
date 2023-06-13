@@ -18,9 +18,10 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
 
 from spark_rapids_ml.metrics.MulticlassMetrics import MulticlassMetrics
+from spark_rapids_ml.metrics.RegressionMetrics import RegressionMetrics
 
 from .sparksession import CleanSparkSession
 
@@ -65,6 +66,7 @@ def test_multi_class_metrics(
     metric_name: str,
 ) -> None:
     columns = ["prediction", "label"]
+    np.random.seed(10)
     pdf = pd.DataFrame(
         np.random.randint(0, num_classes, size=(1000, 2)), columns=columns
     ).astype(np.float64)
@@ -80,5 +82,42 @@ def test_multi_class_metrics(
             labelCol="label",
         )
 
+        evaluator.setMetricName(metric_name)  # type: ignore
+        assert math.fabs(evaluator.evaluate(sdf) - metrics.evaluate((evaluator))) < 1e-6
+
+
+def get_regression_metrics(
+    pdf: pd.DataFrame, label_name: str, prediction_name: str
+) -> RegressionMetrics:
+    pdf = pdf.copy(True)
+    pdf.insert(1, "gap", pdf[label_name] - pdf[prediction_name])
+    mean = pdf.mean()
+    m2 = pdf.pow(2).sum()
+    l1 = pdf.abs().sum()
+    sum = pdf.sum()
+    total_cnt = pdf.shape[0]
+    m2n = m2 - sum * sum / pdf.shape[0]
+
+    return RegressionMetrics.create(mean, m2n, m2, l1, total_cnt)
+
+
+@pytest.mark.parametrize("metric_name", ["rmse", "mse", "r2", "mae", "var"])
+def test_regression_metrics(metric_name: str) -> None:
+    columns = ["label", "prediction"]
+    np.random.seed(10)
+    pdf = pd.DataFrame(
+        np.random.uniform(low=-20, high=20, size=(1000, 2)), columns=columns
+    ).astype(np.float64)
+
+    metrics = get_regression_metrics(pdf, columns[0], columns[1])
+
+    with CleanSparkSession() as spark:
+        sdf = spark.createDataFrame(
+            pdf.to_numpy().tolist(), ", ".join([f"{n} double" for n in columns])
+        )
+        evaluator = RegressionEvaluator(
+            predictionCol="prediction",
+            labelCol="label",
+        )
         evaluator.setMetricName(metric_name)  # type: ignore
         assert math.fabs(evaluator.evaluate(sdf) - metrics.evaluate((evaluator))) < 1e-6
