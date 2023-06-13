@@ -157,9 +157,11 @@ def test_make_regression(dtype: str, low_rank: bool) -> None:
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
-@pytest.mark.parametrize("n_informative, n_repeated", [(31, 0), (28, 3)])
+@pytest.mark.parametrize(
+    "n_informative, n_repeated, n_redundant", [(31, 0, 0), (28, 3, 0), (23, 3, 4)]
+)
 def test_make_classification(
-    dtype: str, num_rows: int, n_informative: int, n_repeated: int
+    dtype: str, num_rows: int, n_informative: int, n_repeated: int, n_redundant: int
 ) -> None:
     input_args = [
         "--num_rows",
@@ -175,7 +177,7 @@ def test_make_classification(
         "--n_informative",
         str(n_informative),
         "--n_redundant",
-        "0",
+        str(n_redundant),
         "--n_repeated",
         str(n_repeated),
         "--hypercube",
@@ -204,9 +206,16 @@ def test_make_classification(
         if num_rows == 2000:
             assert sum(y == 0) == 1000, "Unexpected number of samples in class 0"
             assert sum(y == 1) == 1000, "Unexpected number of samples in class 1"
+        else:
+            assert (
+                abs(sum(y == 0) - sum(y == 1)) == 1
+            ), "Unexpected number of samples per class"
         assert (
             np.unique(X, axis=0).shape[0] == num_rows
         ), "Unexpected number of unique rows"
         assert (
             np.unique(X, axis=1).shape[1] == 31 - n_repeated
         ), "Unexpected number of unique columns"
+        assert (
+            np.linalg.matrix_rank(X) == 31 - n_repeated - n_redundant
+        ), "Unexpected matrix rank"
