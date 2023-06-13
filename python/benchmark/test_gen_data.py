@@ -16,7 +16,12 @@
 
 import numpy as np
 import pytest
-from gen_data_distributed import BlobsDataGen, LowRankMatrixDataGen, RegressionDataGen
+from gen_data_distributed import (
+    BlobsDataGen,
+    ClassificationDataGen,
+    LowRankMatrixDataGen,
+    RegressionDataGen,
+)
 from pandas import DataFrame
 from sklearn.utils._testing import (
     assert_allclose,
@@ -148,3 +153,69 @@ def test_make_regression(dtype: str, low_rank: bool) -> None:
 
         # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
         assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
+@pytest.mark.parametrize(
+    "n_informative, n_repeated, n_redundant", [(31, 0, 0), (28, 3, 0), (23, 3, 4)]
+)
+def test_make_classification(
+    dtype: str, num_rows: int, n_informative: int, n_repeated: int, n_redundant: int
+) -> None:
+    input_args = [
+        "--num_rows",
+        str(num_rows),
+        "--num_cols",
+        "31",
+        "--dtype",
+        dtype,
+        "--output_dir",
+        "temp",
+        "--output_num_files",
+        "3",
+        "--n_informative",
+        str(n_informative),
+        "--n_redundant",
+        str(n_redundant),
+        "--n_repeated",
+        str(n_repeated),
+        "--hypercube",
+        "True",
+        "--scale",
+        "0.5",
+        "--flip_y",
+        "0",
+        "--random_state",
+        "0",
+    ]
+    data_gen = ClassificationDataGen(input_args)
+    args = data_gen.args
+    assert args is not None
+    with WithSparkSession(args.spark_confs, shutdown=(not args.no_shutdown)) as spark:
+        df, _ = data_gen.gen_dataframe(spark)
+        assert df.rdd.getNumPartitions() == 3, "Unexpected number of partitions"
+        pdf: DataFrame = df.toPandas()
+        X = pdf.iloc[:, :-1].to_numpy()
+        y = pdf.iloc[:, -1].to_numpy()
+
+        assert X.dtype == np.dtype(dtype), "Unexpected dtype"
+        assert X.shape == (num_rows, 31), "X shape mismatch"
+        assert y.shape == (num_rows,), "y shape mismatch"
+        assert np.unique(y).shape == (2,), "Unexpected number of classes"
+        if num_rows == 2000:
+            assert sum(y == 0) == 1000, "Unexpected number of samples in class 0"
+            assert sum(y == 1) == 1000, "Unexpected number of samples in class 1"
+        else:
+            assert (
+                abs(sum(y == 0) - sum(y == 1)) == 1
+            ), "Unexpected number of samples per class"
+        assert (
+            np.unique(X, axis=0).shape[0] == num_rows
+        ), "Unexpected number of unique rows"
+        assert (
+            np.unique(X, axis=1).shape[1] == 31 - n_repeated
+        ), "Unexpected number of unique columns"
+        assert (
+            np.linalg.matrix_rank(X) == 31 - n_repeated - n_redundant
+        ), "Unexpected matrix rank"
