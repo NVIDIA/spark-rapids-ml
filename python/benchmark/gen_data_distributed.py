@@ -216,6 +216,9 @@ class LowRankMatrixDataGen(DataGenBase):
         del s
         del v
 
+        maxRecordsPerBatch = spark.sparkContext.getConf().get("spark.sql.execution.arrow.maxRecordsPerBatch")
+        if maxRecordsPerBatch is None:
+            maxRecordsPerBatch = 10000
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
@@ -227,7 +230,9 @@ class LowRankMatrixDataGen(DataGenBase):
                 )
                 data = cp.dot(u, sv_normed)
                 del u
-                yield pd.DataFrame(data=data.get())
+                for i in range(0, n_partition_rows, maxRecordsPerBatch):
+                    end_idx = i + maxRecordsPerBatch if i + maxRecordsPerBatch < n_partition_rows else n_partition_rows
+                    yield pd.DataFrame(data=data[i:end_idx].get())
 
         return (
             (
