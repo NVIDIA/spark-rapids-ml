@@ -44,6 +44,47 @@ class _SummarizerBuffer:
         self._weight_square_sum = total_cnt
         self._curr_weight_sum = [total_cnt] * self._num_cols
 
+    def merge(self, other: "_SummarizerBuffer") -> "_SummarizerBuffer":
+        """Merge the other into self and return a new SummarizerBuffer"""
+        self._total_cnt += other._total_cnt
+        self._total_weight_sum += other._total_weight_sum
+        self._weight_square_sum += other._weight_square_sum
+
+        for i in range(self._num_cols):
+            thisWeightSum = self._curr_weight_sum[i]
+            otherWeightSum = other._curr_weight_sum[i]
+            totalWeightSum = thisWeightSum + otherWeightSum
+
+            if totalWeightSum != 0.0:
+                deltaMean = other._curr_mean[i] - self._curr_mean[i]
+                # merge mean together
+                self._curr_mean[i] += deltaMean * otherWeightSum / totalWeightSum
+                # merge m2n together
+                self._curr_m2n[i] += (
+                    other._curr_m2n[i]
+                    + deltaMean
+                    * deltaMean
+                    * thisWeightSum
+                    * otherWeightSum
+                    / totalWeightSum
+                )
+
+            self._curr_weight_sum[i] = totalWeightSum
+            self._curr_m2[i] += other._curr_m2[i]
+            self._curr_l1[i] += other._curr_l1[i]
+
+        return _SummarizerBuffer(
+            self._curr_mean,
+            self._curr_m2n,
+            self._curr_m2,
+            self._curr_l1,
+            self._total_cnt,
+        )
+
+    @property
+    def total_count(self) -> int:
+        return self._total_cnt
+
     @property
     def norm_l2(self) -> DenseVector:
         """L2 (Euclidean) norm of each dimension."""
@@ -104,9 +145,8 @@ class _SummarizerBuffer:
 class RegressionMetrics:
     """Metrics for regression case."""
 
-    def __init__(self, summary: _SummarizerBuffer, throughOrigin: bool = False):
+    def __init__(self, summary: _SummarizerBuffer):
         self._summary = summary
-        self._throughOrigin = throughOrigin
 
     @staticmethod
     def create(
@@ -117,6 +157,11 @@ class RegressionMetrics:
         total_cnt: int,
     ) -> "RegressionMetrics":
         return RegressionMetrics(_SummarizerBuffer(mean, m2n, m2, l1, total_cnt))
+
+    def merge(self, other: "RegressionMetrics") -> "RegressionMetrics":
+        """Merge other to self and return a new RegressionMetrics"""
+        summary = self._summary.merge(other._summary)
+        return RegressionMetrics(summary)
 
     @property
     def _ss_y(self) -> float:

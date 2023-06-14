@@ -105,11 +105,19 @@ def get_regression_metrics(
 def test_regression_metrics(metric_name: str) -> None:
     columns = ["label", "prediction"]
     np.random.seed(10)
-    pdf = pd.DataFrame(
+    pdf1 = pd.DataFrame(
+        np.random.uniform(low=-20, high=20, size=(1000, 2)), columns=columns
+    ).astype(np.float64)
+    np.random.seed(100)
+    pdf2 = pd.DataFrame(
         np.random.uniform(low=-20, high=20, size=(1000, 2)), columns=columns
     ).astype(np.float64)
 
-    metrics = get_regression_metrics(pdf, columns[0], columns[1])
+    metrics1 = get_regression_metrics(pdf1, columns[0], columns[1])
+    metrics2 = get_regression_metrics(pdf2, columns[0], columns[1])
+
+    metrics = metrics1.merge(metrics2)
+    pdf = pd.concat([pdf1, pdf2])
 
     with CleanSparkSession() as spark:
         sdf = spark.createDataFrame(
