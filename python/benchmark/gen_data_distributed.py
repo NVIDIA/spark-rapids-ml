@@ -221,6 +221,7 @@ class LowRankMatrixDataGen(DataGenBase):
         )
         if maxRecordsPerBatch is None:
             maxRecordsPerBatch = 10000
+
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
