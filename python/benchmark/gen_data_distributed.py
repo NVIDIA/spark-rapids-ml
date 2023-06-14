@@ -18,8 +18,8 @@ import random
 from abc import abstractmethod
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
-import numpy as np
 import cupy as cp
+import numpy as np
 import pandas as pd
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.mllib.random import RandomRDDs
@@ -216,7 +216,9 @@ class LowRankMatrixDataGen(DataGenBase):
         del s
         del v
 
-        maxRecordsPerBatch = spark.sparkContext.getConf().get("spark.sql.execution.arrow.maxRecordsPerBatch")
+        maxRecordsPerBatch = spark.sparkContext.getConf().get(
+            "spark.sql.execution.arrow.maxRecordsPerBatch"
+        )
         if maxRecordsPerBatch is None:
             maxRecordsPerBatch = 10000
         # UDF for distributed generation of U and the resultant product U*S*V.T
@@ -231,7 +233,11 @@ class LowRankMatrixDataGen(DataGenBase):
                 data = cp.dot(u, sv_normed)
                 del u
                 for i in range(0, n_partition_rows, maxRecordsPerBatch):
-                    end_idx = i + maxRecordsPerBatch if i + maxRecordsPerBatch < n_partition_rows else n_partition_rows
+                    end_idx = (
+                        i + maxRecordsPerBatch
+                        if i + maxRecordsPerBatch < n_partition_rows
+                        else n_partition_rows
+                    )
                     yield pd.DataFrame(data=data[i:end_idx].get())
 
         return (
