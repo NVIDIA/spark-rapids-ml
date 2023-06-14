@@ -19,6 +19,7 @@ from abc import abstractmethod
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import numpy as np
+import cupy as cp
 import pandas as pd
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.mllib.random import RandomRDDs
@@ -171,6 +172,7 @@ class LowRankMatrixDataGen(DataGenBase):
             params["random_state"] = 1
 
         print(f"Passing {params} to make_low_rank_matrix")
+        print(f"Using device {cp.cuda.runtime.getDevice()}")
 
         rows = self.num_rows
         cols = self.num_cols
@@ -181,7 +183,7 @@ class LowRankMatrixDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
-        generator = np.random.RandomState(params["random_state"])
+        cp.random.seed(params["random_state"])
         n = min(rows, cols)
         # If params not provided, set to defaults.
         effective_rank = params.get("effective_rank", 10)
@@ -197,33 +199,35 @@ class LowRankMatrixDataGen(DataGenBase):
 
         # Generate U, S, V, the SVD decomposition of the output matrix.
         # Code adapted from sklearn.datasets.make_low_rank_matrix().
-        singular_ind = np.arange(n, dtype=dtype)
-        low_rank = (1 - tail_strength) * np.exp(
+        singular_ind = cp.arange(n, dtype=dtype)
+        low_rank = (1 - tail_strength) * cp.exp(
             -1.0 * (singular_ind / effective_rank) ** 2
         )
-        tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
+        tail = tail_strength * cp.exp(-0.1 * singular_ind / effective_rank)
         # S and V are generated upfront, U is generated across partitions.
-        s = np.identity(n) * (low_rank + tail)
-        v, _ = linalg.qr(
-            generator.standard_normal(size=(cols, n)),
-            mode="economic",
-            check_finite=False,
+        s = cp.identity(n) * (low_rank + tail)
+        v, _ = cp.linalg.qr(
+            cp.random.standard_normal(size=(cols, n)),
+            mode="reduced",
         )
 
         # Precompute the S*V.T multiplicland with partition-wise normalization.
-        sv_normed = np.dot(s, v.T) * np.sqrt(1 / num_partitions)
+        sv_normed = cp.dot(s, v.T) * cp.sqrt(1 / num_partitions)
+        del s
+        del v
 
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
-                u, _ = linalg.qr(
-                    generator.standard_normal(size=(n_partition_rows, n)),
-                    mode="economic",
-                    check_finite=False,
+                u, _ = cp.linalg.qr(
+                    cp.random.standard_normal(size=(n_partition_rows, n)),
+                    mode="reduced",
                 )
-                yield pd.DataFrame(data=np.dot(u, sv_normed))
+                data = cp.dot(u, sv_normed)
+                del u
+                yield pd.DataFrame(data=data.get())
 
         return (
             (
