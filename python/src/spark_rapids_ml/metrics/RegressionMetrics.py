@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 import math
-from typing import List, cast
+from typing import List
 
 from pyspark.ml.evaluation import RegressionEvaluator
-from pyspark.ml.linalg import DenseVector, Vectors
 
 
 # This class is aligning with Spark SummarizerBuffer scala version
@@ -32,16 +31,26 @@ class _SummarizerBuffer:
     ):
         """All of the mean/m2n/m2/l1 have the same length which must be equal to 3,
         and the order of their values is [label, label-prediction, prediction]
+
+        mean = 1/N * \sum_{i=1}^{N}(x_i)
+        m2n = variance * N
+        m2 = \sum_{i=1}^{N}(x_i)^{2}
+        l1 (norm) = \sum_{i=1}^{N}|x_i|
         """
         self._curr_mean = mean
         self._curr_m2n = m2n
         self._curr_m2 = m2
         self._curr_l1 = l1
         self._num_cols = len(mean)
-        # spark-rapids-ml doesn't support weight col, so default to 1 for each sample.
         self._total_cnt = total_cnt
+        # spark-rapids-ml doesn't support weight col, so default to 1 for each sample.
         self._total_weight_sum = total_cnt
+        # weight_square = weight * weight (weight defaults to 1)
         self._weight_square_sum = total_cnt
+        # scala version uses _curr_weight_sum to represent the accumulated weight sum for
+        # the values which has been calculated. Spark-rapids-ml doesn't need
+        # to iterate over row by row, Instead, it calculates the metrics in the columnar way.
+        # So default it the total count, which is align with scala version
         self._curr_weight_sum = [total_cnt] * self._num_cols
 
     def merge(self, other: "_SummarizerBuffer") -> "_SummarizerBuffer":
@@ -51,25 +60,25 @@ class _SummarizerBuffer:
         self._weight_square_sum += other._weight_square_sum
 
         for i in range(self._num_cols):
-            thisWeightSum = self._curr_weight_sum[i]
-            otherWeightSum = other._curr_weight_sum[i]
-            totalWeightSum = thisWeightSum + otherWeightSum
+            this_weight_sum = self._curr_weight_sum[i]
+            other_weight_sum = other._curr_weight_sum[i]
+            total_weight_sum = this_weight_sum + other_weight_sum
 
-            if totalWeightSum != 0.0:
-                deltaMean = other._curr_mean[i] - self._curr_mean[i]
+            if total_weight_sum != 0.0:
+                delta_mean = other._curr_mean[i] - self._curr_mean[i]
                 # merge mean together
-                self._curr_mean[i] += deltaMean * otherWeightSum / totalWeightSum
+                self._curr_mean[i] += delta_mean * other_weight_sum / total_weight_sum
                 # merge m2n together
                 self._curr_m2n[i] += (
                     other._curr_m2n[i]
-                    + deltaMean
-                    * deltaMean
-                    * thisWeightSum
-                    * otherWeightSum
-                    / totalWeightSum
+                    + delta_mean
+                    * delta_mean
+                    * this_weight_sum
+                    * other_weight_sum
+                    / total_weight_sum
                 )
 
-            self._curr_weight_sum[i] = totalWeightSum
+            self._curr_weight_sum[i] = total_weight_sum
             self._curr_m2[i] += other._curr_m2[i]
             self._curr_l1[i] += other._curr_l1[i]
 
@@ -86,24 +95,29 @@ class _SummarizerBuffer:
         return self._total_cnt
 
     @property
-    def norm_l2(self) -> DenseVector:
+    def m2(self) -> List[float]:
+        """\sum_{i=1}^{N}(x_i)^{2} of each dimension"""
+        return self._curr_m2
+
+    @property
+    def norm_l2(self) -> List[float]:
         """L2 (Euclidean) norm of each dimension."""
         real_magnitude = [math.sqrt(m2) for m2 in self._curr_m2]
-        return Vectors.dense(real_magnitude)
+        return real_magnitude
 
     @property
-    def norm_l1(self) -> DenseVector:
+    def norm_l1(self) -> List[float]:
         """L1 norm of each dimension."""
-        return Vectors.dense(self._curr_l1)
+        return self._curr_l1
 
     @property
-    def mean(self) -> DenseVector:
+    def mean(self) -> List[float]:
         """mean of each dimension."""
         real_mean = [
             self._curr_mean[i] * (self._curr_weight_sum[i] / self._total_weight_sum)
             for i in range(self._num_cols)
         ]
-        return Vectors.dense(real_mean)
+        return real_mean
 
     def _compute_variance(self) -> List[float]:
         denominator = self._total_weight_sum - (
@@ -115,11 +129,11 @@ class _SummarizerBuffer:
                 max(
                     (
                         self._curr_m2n[i]
-                        + delta_mean[i]
-                        * delta_mean[i]
-                        * self._curr_weight_sum[i]
-                        * (self._total_weight_sum - self._curr_weight_sum[i])
-                        / self._total_weight_sum
+                        # + delta_mean[i]
+                        # * delta_mean[i]
+                        # * self._curr_weight_sum[i]
+                        # * (self._total_weight_sum - self._curr_weight_sum[i])
+                        # / self._total_weight_sum
                     )
                     / denominator,
                     0.0,
@@ -136,9 +150,9 @@ class _SummarizerBuffer:
         return self._total_weight_sum
 
     @property
-    def variance(self) -> DenseVector:
+    def variance(self) -> List[float]:
         """Unbiased estimate of sample variance of each dimension."""
-        return Vectors.dense(self._compute_variance())
+        return self._compute_variance()
 
 
 # This class is aligning with Spark RegressionMetrics scala version.
@@ -166,23 +180,22 @@ class RegressionMetrics:
     @property
     def _ss_y(self) -> float:
         """sum of squares for label"""
-        return math.pow(self._summary.norm_l2[0], 2)
+        return self._summary.m2[0]
 
     @property
     def _ss_err(self) -> float:
         """sum of squares for 'label-prediction'"""
-        return math.pow(self._summary.norm_l2[1], 2)
+        return self._summary.m2[1]
 
     @property
     def _ss_tot(self) -> float:
         """total sum of squares"""
-        variance = cast(float, self._summary.variance[0])
-        return variance * (self._summary.weight_sum - 1)
+        return self._summary.variance[0] * (self._summary.weight_sum - 1)
 
     @property
     def _ss_reg(self) -> float:
         return (
-            math.pow(self._summary.norm_l2[2], 2)  # type: ignore
+            self._summary.m2[2]
             + math.pow(self._summary.mean[0], 2) * self._summary.weight_sum
             - 2
             * self._summary.mean[0]
@@ -214,8 +227,7 @@ class RegressionMetrics:
     def mean_absolute_error(self) -> float:
         """Returns the mean absolute error, which is a risk function corresponding to the
         expected value of the absolute error loss or l1-norm loss."""
-        norm_l1 = cast(float, self._summary.norm_l1[1])
-        return norm_l1 / self._summary.weight_sum
+        return self._summary.norm_l1[1] / self._summary.weight_sum
 
     @property
     def explained_variance(self) -> float:

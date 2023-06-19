@@ -94,9 +94,8 @@ def get_regression_metrics(
     mean = pdf.mean()
     m2 = pdf.pow(2).sum()
     l1 = pdf.abs().sum()
-    sum = pdf.sum()
     total_cnt = pdf.shape[0]
-    m2n = m2 - sum * sum / pdf.shape[0]
+    m2n = pdf.var(ddof=0) * pdf.shape[0]
 
     return RegressionMetrics.create(mean, m2n, m2, l1, total_cnt)
 
