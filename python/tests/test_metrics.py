@@ -101,11 +101,12 @@ def get_regression_metrics(
 
 
 @pytest.mark.parametrize("metric_name", ["rmse", "mse", "r2", "mae", "var"])
-def test_regression_metrics(metric_name: str) -> None:
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
+def test_regression_metrics(metric_name: str, max_record_batch: int) -> None:
     columns = ["label", "prediction"]
     np.random.seed(10)
     pdf1 = pd.DataFrame(
-        np.random.uniform(low=-20, high=20, size=(1000, 2)), columns=columns
+        np.random.uniform(low=-20, high=20, size=(1010, 2)), columns=columns
     ).astype(np.float64)
     np.random.seed(100)
     pdf2 = pd.DataFrame(
@@ -118,7 +119,8 @@ def test_regression_metrics(metric_name: str) -> None:
     metrics = metrics1.merge(metrics2)
     pdf = pd.concat([pdf1, pdf2])
 
-    with CleanSparkSession() as spark:
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    with CleanSparkSession(conf) as spark:
         sdf = spark.createDataFrame(
             pdf.to_numpy().tolist(), ", ".join([f"{n} double" for n in columns])
         )
