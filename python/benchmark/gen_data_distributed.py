@@ -234,11 +234,7 @@ class LowRankMatrixDataGen(DataGenBase):
                 data = cp.dot(u, cp.asarray(sv_normed))
                 del u
                 for i in range(0, n_partition_rows, maxRecordsPerBatch):
-                    end_idx = (
-                        i + maxRecordsPerBatch
-                        if i + maxRecordsPerBatch < n_partition_rows
-                        else n_partition_rows
-                    )
+                    end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
                     yield pd.DataFrame(data=data[i:end_idx].get())
 
         return (
