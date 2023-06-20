@@ -29,6 +29,7 @@ import numpy as np
 import pandas as pd
 from pyspark import Row, keyword_only
 from pyspark.ml.common import _py2java
+from pyspark.ml.evaluation import Evaluator, RegressionEvaluator
 from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
 from pyspark.ml.regression import LinearRegressionSummary
@@ -56,9 +57,12 @@ from .core import (
     _CumlModelWithPredictionCol,
     _EvaluateFunc,
     _TransformFunc,
+    alias,
     param_alias,
+    pred,
     transform_evaluate,
 )
+from .metrics.RegressionMetrics import RegressionMetrics, reg_metrics
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .tree import (
     _RandomForestClass,
@@ -67,6 +71,9 @@ from .tree import (
     _RandomForestModel,
 )
 from .utils import PartitionDescriptor, _get_spark_session, cudf_to_cuml_array, java_uid
+
+if TYPE_CHECKING:
+    from pyspark.ml._typing import ParamMap
 
 T = TypeVar("T")
 
@@ -784,6 +791,9 @@ class RandomForestRegressor(
     def _create_pyspark_model(self, result: Row) -> "RandomForestRegressionModel":
         return RandomForestRegressionModel.from_row(result)
 
+    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
+        return True if isinstance(evaluator, RegressionEvaluator) else False
+
 
 class RandomForestRegressionModel(
     _RandomForestRegressorClass,
@@ -833,3 +843,84 @@ class RandomForestRegressionModel(
 
     def _is_classification(self) -> bool:
         return False
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+        _construct_rf, _predict, _ = super()._get_cuml_transform_func(dataset, category)
+
+        def _evaluate(
+            input: TransformInputType,
+            transformed: TransformInputType,
+        ) -> pd.DataFrame:
+            # calculate the count of (label, prediction)
+            comb = pd.DataFrame(
+                {
+                    "label": input[alias.label],
+                    "prediction": transformed,
+                }
+            )
+            comb.insert(1, "label-prediction", comb["label"] - comb["prediction"])
+            total_cnt = comb.shape[0]
+            return pd.DataFrame(
+                data={
+                    reg_metrics.mean: [comb.mean().to_list()],
+                    reg_metrics.m2n: [(comb.var(ddof=0) * total_cnt).to_list()],
+                    reg_metrics.m2: [comb.pow(2).sum().to_list()],
+                    reg_metrics.l1: [comb.abs().sum().to_list()],
+                    reg_metrics.total_count: total_cnt,
+                }
+            )
+
+        return _construct_rf, _predict, _evaluate
+
+    def _transformEvaluate(
+        self,
+        dataset: DataFrame,
+        evaluator: Evaluator,
+        params: Optional["ParamMap"] = None,
+    ) -> List[float]:
+        """
+        Transforms and evaluates the input dataset with optional parameters in a single pass.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            a dataset that contains labels/observations and predictions
+        evaluator: :py:class:`pyspark.ml.evaluation.Evaluator`
+            an evaluator user intends to use
+        params : dict, optional
+            an optional param map that overrides embedded params
+
+        Returns
+        -------
+        float
+            metric
+        """
+
+        if not isinstance(evaluator, RegressionEvaluator):
+            raise NotImplementedError(f"{evaluator} is unsupported yet.")
+
+        if self.getLabelCol() not in dataset.schema.names:
+            raise RuntimeError("Label column is not existing.")
+
+        dataset = dataset.withColumnRenamed(self.getLabelCol(), alias.label)
+
+        schema = StructType(
+            [
+                StructField(pred.model_index, IntegerType()),
+                StructField(reg_metrics.mean, ArrayType(FloatType())),
+                StructField(reg_metrics.m2n, ArrayType(FloatType())),
+                StructField(reg_metrics.m2, ArrayType(FloatType())),
+                StructField(reg_metrics.l1, ArrayType(FloatType())),
+                StructField(reg_metrics.total_count, IntegerType()),
+            ]
+        )
+
+        rows = super()._transform_evaluate_internal(dataset, schema).collect()
+        num_models = (
+            len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
+        )
+
+        metrics = RegressionMetrics.from_rows(num_models, rows)
+        return [metric.evaluate(evaluator) for metric in metrics]

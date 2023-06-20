@@ -18,17 +18,7 @@ import json
 import math
 import pickle
 from abc import abstractmethod
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -598,3 +588,20 @@ class _RandomForestModel(
         return df.withColumn(
             self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
         )
+
+    @classmethod
+    def _combine(
+        cls: Type["_RandomForestModel"], models: List["_RandomForestModel"]  # type: ignore
+    ) -> "_RandomForestModel":
+        assert len(models) > 0 and all(isinstance(model, cls) for model in models)
+        first_model = models[0]
+        treelite_models = [model._treelite_model for model in models]
+        model_jsons = [model._model_json for model in models]
+        attrs = first_model.get_model_attributes()
+        assert attrs is not None
+        attrs["treelite_model"] = treelite_models
+        attrs["model_json"] = model_jsons
+        rf_model = cls(**attrs)
+        first_model._copyValues(rf_model)
+        first_model._copy_cuml_params(rf_model)
+        return rf_model
