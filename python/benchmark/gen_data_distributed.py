@@ -160,6 +160,8 @@ class LowRankMatrixDataGen(DataGenBase):
         )
         # must replace the None to the correct type
         params["random_state"] = int
+        params["use_gpu"] = bool
+
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
@@ -186,6 +188,7 @@ class LowRankMatrixDataGen(DataGenBase):
         # If params not provided, set to defaults.
         effective_rank = params.get("effective_rank", 10)
         tail_strength = params.get("tail_strength", 0.5)
+        use_gpu = params.get("use_gpu", False)
 
         partition_sizes = [rows // num_partitions] * num_partitions
         partition_sizes[-1] += rows % num_partitions
@@ -223,13 +226,13 @@ class LowRankMatrixDataGen(DataGenBase):
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
-                try:
-                    import cupy as cp
-
-                    use_cupy = True
-                except ImportError:
-                    use_cupy = False
-                    logging.warning("cupy import failed; falling back to numpy.")
+                if use_gpu:
+                    try:
+                        import cupy as cp
+                        use_cupy = True
+                    except ImportError:
+                        use_cupy = False
+                        logging.warning("cupy import failed; falling back to numpy.")
 
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
