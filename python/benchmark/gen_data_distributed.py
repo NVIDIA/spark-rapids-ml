@@ -228,7 +228,7 @@ class LowRankMatrixDataGen(DataGenBase):
                 n_partition_rows = partition_sizes[partition_index]
                 # Additional batch-wise normalization.
                 batch_norm = cp.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
-                sv_normed = cp.dot(cp.asarray(sv_normed), batch_norm)
+                sv_batch_normed = cp.dot(cp.asarray(sv_normed), batch_norm)
                 del batch_norm
                 for i in range(0, n_partition_rows, maxRecordsPerBatch):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
@@ -236,7 +236,7 @@ class LowRankMatrixDataGen(DataGenBase):
                         cp.random.standard_normal(size=(end_idx - i, n)),
                         mode="reduced",
                     )
-                    data = cp.dot(u, sv_normed).get()
+                    data = cp.dot(u, sv_batch_normed).get()
                     del u
                     yield pd.DataFrame(data=data)
 
