@@ -226,15 +226,19 @@ class LowRankMatrixDataGen(DataGenBase):
 
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
+                # Additional batch-wise normalization.
+                batch_norm = cp.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
+                sv_normed = cp.dot(cp.asarray(sv_normed), batch_norm)
+                del batch_norm
                 for i in range(0, n_partition_rows, maxRecordsPerBatch):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
                     u, _ = cp.linalg.qr(
                         cp.random.standard_normal(size=(end_idx - i, n)),
                         mode="reduced",
                     )
-                    data = cp.dot(u, cp.asarray(sv_normed))
+                    data = cp.dot(u, sv_normed).get()
                     del u
-                    yield pd.DataFrame(data=data.get())
+                    yield pd.DataFrame(data=data)
 
         return (
             (
