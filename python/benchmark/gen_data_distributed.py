@@ -226,10 +226,10 @@ class LowRankMatrixDataGen(DataGenBase):
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
-                if use_gpu:
+                use_cupy = use_gpu
+                if use_cupy:
                     try:
                         import cupy as cp
-                        use_cupy = True
                     except ImportError:
                         use_cupy = False
                         logging.warning("cupy import failed; falling back to numpy.")
