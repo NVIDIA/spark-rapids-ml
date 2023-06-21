@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import logging
 import random
 from abc import abstractmethod
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
@@ -222,21 +223,38 @@ class LowRankMatrixDataGen(DataGenBase):
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
-                import cupy as cp
+                try:
+                    import cupy as cp
+
+                    use_cupy = True
+                except ImportError:
+                    use_cupy = False
+                    logging.warning("cupy import failed; falling back to numpy.")
 
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
                 # Additional batch-wise normalization.
-                batch_norm = cp.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
-                sv_batch_normed = cp.dot(cp.asarray(sv_normed), batch_norm)
+                if use_cupy:
+                    batch_norm = cp.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
+                    sv_batch_normed = cp.asarray(sv_normed) * batch_norm
+                else:
+                    batch_norm = np.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
+                    sv_batch_normed = sv_normed * batch_norm
                 del batch_norm
                 for i in range(0, n_partition_rows, maxRecordsPerBatch):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
-                    u, _ = cp.linalg.qr(
-                        cp.random.standard_normal(size=(end_idx - i, n)),
-                        mode="reduced",
-                    )
-                    data = cp.dot(u, sv_batch_normed).get()
+                    if use_cupy:
+                        u, _ = cp.linalg.qr(
+                            cp.random.standard_normal(size=(end_idx - i, n)),
+                            mode="reduced",
+                        )
+                        data = cp.dot(u, sv_batch_normed).get()
+                    else:
+                        u, _ = np.linalg.qr(
+                            np.random.standard_normal(size=(end_idx - i, n)),
+                            mode="reduced",
+                        )
+                        data = np.dot(u, sv_batch_normed)
                     del u
                     yield pd.DataFrame(data=data)
 
