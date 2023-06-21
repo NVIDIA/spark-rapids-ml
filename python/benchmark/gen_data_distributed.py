@@ -23,7 +23,6 @@ import pandas as pd
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
-from scipy import linalg
 from sklearn.datasets import (
     make_blobs,
     make_classification,
