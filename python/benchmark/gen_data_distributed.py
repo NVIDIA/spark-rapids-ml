@@ -392,12 +392,6 @@ class RegressionDataGen(DataGenBaseMeta):
         seed_maxval = 100 * num_partitions
         partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
 
-        maxRecordsPerBatch = int(
-            spark.sparkContext.getConf().get(
-                "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
-            )
-        )
-
         # UDF for distributed generation of X and y.
         def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
@@ -413,19 +407,22 @@ class RegressionDataGen(DataGenBaseMeta):
 
                 if use_cupy:
                     X_p = cp.asarray(pdf.to_numpy())
-                    generator = np.random.RandomState(partition_seeds[partition_index])
+                    generator = cp.random.RandomState(partition_seeds[partition_index])
                 else:
                     X_p = pdf.to_numpy()
-                    generator = cp.random.RandomState(partition_seeds[partition_index])
+                    generator = np.random.RandomState(partition_seeds[partition_index])
 
                 n_partition_rows = X_p.shape[0]
 
                 if shuffle:
                     # Column-wise shuffle (global)
-                    X_p[:, :] = X_p[:, col_indices]
+                    if use_cupy:
+                        X_p[:, :] = X_p[:, cp.asarray(col_indices)]
+                    else:
+                        X_p[:, :] = X_p[:, col_indices]
 
                 if use_cupy:
-                    y = cp.dot(X_p, ground_truth) + bias
+                    y = cp.dot(X_p, cp.asarray(ground_truth)) + bias
                 else:
                     y = np.dot(X_p, ground_truth) + bias
                 if noise > 0.0:
