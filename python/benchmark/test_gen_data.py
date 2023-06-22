@@ -74,7 +74,8 @@ def test_make_blobs(dtype: str) -> None:
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_make_low_rank_matrix(dtype: str) -> None:
+@pytest.mark.parametrize("use_gpu", ["True", "False"])
+def test_make_low_rank_matrix(dtype: str, use_gpu: str) -> None:
     input_args = [
         "--num_rows",
         "50",
@@ -92,6 +93,8 @@ def test_make_low_rank_matrix(dtype: str) -> None:
         "0.01",
         "--random_state",
         "0",
+        "--use_gpu",
+        use_gpu,
     ]
     data_gen = LowRankMatrixDataGen(input_args)
     args = data_gen.args
@@ -112,7 +115,8 @@ def test_make_low_rank_matrix(dtype: str) -> None:
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("low_rank", [True, False])
-def test_make_regression(dtype: str, low_rank: bool) -> None:
+@pytest.mark.parametrize("use_gpu", ["True", "False"])
+def test_make_regression(dtype: str, low_rank: bool, use_gpu: str) -> None:
     input_args = [
         "--num_rows",
         "100",
@@ -132,6 +136,8 @@ def test_make_regression(dtype: str, low_rank: bool) -> None:
         "1.0",
         "--random_state",
         "0",
+        "--use_gpu",
+        use_gpu,
     ]
     if low_rank:
         input_args.extend(("--effective_rank", "5"))
