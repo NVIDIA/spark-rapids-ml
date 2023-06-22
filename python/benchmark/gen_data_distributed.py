@@ -70,7 +70,6 @@ class BlobsDataGen(DataGenBaseMeta):
         # must replace the None to the correct type
         params["centers"] = int
         params["random_state"] = int
-
         return params
 
     def gen_dataframe_and_meta(
