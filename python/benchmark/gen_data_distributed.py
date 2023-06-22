@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import logging
 import random
 from abc import abstractmethod
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
@@ -23,7 +24,6 @@ import pandas as pd
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
-from scipy import linalg
 from sklearn.datasets import (
     make_blobs,
     make_classification,
@@ -160,6 +160,8 @@ class LowRankMatrixDataGen(DataGenBase):
         )
         # must replace the None to the correct type
         params["random_state"] = int
+        params["use_gpu"] = bool
+
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
@@ -181,11 +183,12 @@ class LowRankMatrixDataGen(DataGenBase):
         if num_partitions is None:
             num_partitions = spark.sparkContext.defaultParallelism
 
-        generator = np.random.RandomState(params["random_state"])
         n = min(rows, cols)
+        np.random.seed(params["random_state"])
         # If params not provided, set to defaults.
         effective_rank = params.get("effective_rank", 10)
         tail_strength = params.get("tail_strength", 0.5)
+        use_gpu = params.get("use_gpu", False)
 
         partition_sizes = [rows // num_partitions] * num_partitions
         partition_sizes[-1] += rows % num_partitions
@@ -204,26 +207,59 @@ class LowRankMatrixDataGen(DataGenBase):
         tail = tail_strength * np.exp(-0.1 * singular_ind / effective_rank)
         # S and V are generated upfront, U is generated across partitions.
         s = np.identity(n) * (low_rank + tail)
-        v, _ = linalg.qr(
-            generator.standard_normal(size=(cols, n)),
-            mode="economic",
-            check_finite=False,
+        v, _ = np.linalg.qr(
+            np.random.standard_normal(size=(cols, n)),
+            mode="reduced",
         )
 
         # Precompute the S*V.T multiplicland with partition-wise normalization.
         sv_normed = np.dot(s, v.T) * np.sqrt(1 / num_partitions)
+        del s
+        del v
+
+        maxRecordsPerBatch = int(
+            spark.sparkContext.getConf().get(
+                "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+            )
+        )
 
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
+                use_cupy = use_gpu
+                if use_cupy:
+                    try:
+                        import cupy as cp
+                    except ImportError:
+                        use_cupy = False
+                        logging.warning("cupy import failed; falling back to numpy.")
+
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
-                u, _ = linalg.qr(
-                    generator.standard_normal(size=(n_partition_rows, n)),
-                    mode="economic",
-                    check_finite=False,
-                )
-                yield pd.DataFrame(data=np.dot(u, sv_normed))
+                # Additional batch-wise normalization.
+                if use_cupy:
+                    batch_norm = cp.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
+                    sv_batch_normed = cp.asarray(sv_normed) * batch_norm
+                else:
+                    batch_norm = np.sqrt(-(-n_partition_rows // maxRecordsPerBatch))
+                    sv_batch_normed = sv_normed * batch_norm
+                del batch_norm
+                for i in range(0, n_partition_rows, maxRecordsPerBatch):
+                    end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
+                    if use_cupy:
+                        u, _ = cp.linalg.qr(
+                            cp.random.standard_normal(size=(end_idx - i, n)),
+                            mode="reduced",
+                        )
+                        data = cp.dot(u, sv_batch_normed).get()
+                    else:
+                        u, _ = np.linalg.qr(
+                            np.random.standard_normal(size=(end_idx - i, n)),
+                            mode="reduced",
+                        )
+                        data = np.dot(u, sv_batch_normed)
+                    del u
+                    yield pd.DataFrame(data=data)
 
         return (
             (
