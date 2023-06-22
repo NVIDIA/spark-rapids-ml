@@ -111,13 +111,19 @@ class BlobsDataGen(DataGenBaseMeta):
         params["centers"] = centers
         del params["random_state"]
 
+        maxRecordsPerBatch = int(
+            spark.sparkContext.getConf().get(
+                "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+            )
+        )
+
         # UDF to distribute make_blobs() calls across partitions. Each partition
         # produces an equal fraction of the total samples around the predefined centers.
         def make_blobs_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_samples = partition_sizes[partition_index]
-                data, labels = make_blobs(
+                X, y = make_blobs(
                     n_samples=n_partition_samples,
                     n_features=cols,
                     **params,
@@ -125,12 +131,16 @@ class BlobsDataGen(DataGenBaseMeta):
                 )
                 data = np.concatenate(
                     (
-                        data.astype(dtype),
-                        labels.reshape(n_partition_samples, 1).astype(dtype),
+                        X.astype(dtype),
+                        y.reshape(n_partition_samples, 1).astype(dtype),
                     ),
                     axis=1,
                 )
-                yield pd.DataFrame(data=data)
+                del X
+                del y
+                for i in range(0, n_partition_samples, maxRecordsPerBatch):
+                    end_idx = min(i + maxRecordsPerBatch, n_partition_samples)
+                    yield pd.DataFrame(data=data[i:end_idx])
 
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
@@ -603,6 +613,12 @@ class ClassificationDataGen(DataGenBase):
         seed_maxval = 100 * num_partitions
         partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
 
+        maxRecordsPerBatch = int(
+            spark.sparkContext.getConf().get(
+                "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+            )
+        )
+
         def make_classification_udf(
             iter: Iterable[pd.DataFrame],
         ) -> Iterable[pd.DataFrame]:
@@ -664,7 +680,9 @@ class ClassificationDataGen(DataGenBase):
 
                 del X_p
                 del y
-                yield pd.DataFrame(data=data)
+                for i in range(0, n_partition_samples, maxRecordsPerBatch):
+                    end_idx = min(i + maxRecordsPerBatch, n_partition_samples)
+                    yield pd.DataFrame(data=data[i:end_idx])
 
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
