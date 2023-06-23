@@ -88,7 +88,7 @@ RUN wget --quiet \
 # install cuDF dependency, Fall back to use cudf 22.04 due to issue:
 # https://github.com/NVIDIA/spark-rapids-ml/issues/73
 ARG CONDA_CUDF_VER=22.04
-RUN conda install -c rapidsai -c conda-forge cudf=$CONDA_CUDF_VER python=3.8 -y
+RUN conda install -c rapidsai -c conda-forge cudf=$CONDA_CUDF_VER python=3.9 -y
 
 # Note: the raft verion is fixed to 22.12, do not modify it when updating the spark-rapids-ml version.
 #       newer versions may fail the build process due to API incompatibility.
@@ -98,7 +98,7 @@ ENV RAFT_PATH=/raft
 
 ### END OF CACHE ###
 
-#ARG RAPIDS_ML_VER=23.04
+#ARG RAPIDS_ML_VER=23.06
 #RUN git clone -b branch-$RAPIDS_ML_VER https://github.com/NVIDIA/spark-rapids-ml.git
 COPY . /spark-rapids-ml
 WORKDIR /spark-rapids-ml/jvm

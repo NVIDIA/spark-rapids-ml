@@ -14,7 +14,7 @@ fi
 
 BENCHMARK_HOME=${BENCHMARK_HOME:-${GCS_BUCKET}/benchmark}
 CUDA_VERSION=${CUDA_VERSION:-11.8}
-RAPIDS_VERSION=${RAPIDS_VERSION:-23.4.0}
+RAPIDS_VERSION=${RAPIDS_VERSION:-23.6.0}
 
 gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
@@ -51,7 +51,7 @@ if [[ $? == 0 ]]; then
 else
     set -x
     gcloud dataproc clusters create ${cluster_name} \
-    --image-version=2.0.29-ubuntu18 \
+    --image-version=2.1-ubuntu18 \
     --region ${COMPUTE_REGION} \
     --master-machine-type n1-standard-16 \
     --num-workers 2 \
