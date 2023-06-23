@@ -415,6 +415,7 @@ class RegressionDataGen(DataGenBaseMeta):
             if use_cupy:
                 generator_p = cp.random.RandomState(partition_seeds[partition_index])
                 ground_truth_cp = cp.asarray(ground_truth)
+                col_indices_cp = cp.asarray(col_indices)
             else:
                 generator_p = np.random.RandomState(partition_seeds[partition_index])
 
@@ -427,7 +428,7 @@ class RegressionDataGen(DataGenBaseMeta):
                 if shuffle:
                     # Column-wise shuffle (global)
                     if use_cupy:
-                        X_p[:, :] = X_p[:, cp.asarray(col_indices)]
+                        X_p[:, :] = X_p[:, col_indices_cp]
                     else:
                         X_p[:, :] = X_p[:, col_indices]
 
