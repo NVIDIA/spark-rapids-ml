@@ -403,25 +403,26 @@ class RegressionDataGen(DataGenBaseMeta):
 
         # UDF for distributed generation of X and y.
         def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            use_cupy = use_gpu
+            if use_cupy:
+                try:
+                    import cupy as cp
+                except ImportError:
+                    use_cupy = False
+                    logging.warning("cupy import failed; falling back to numpy.")
+
+            partition_index = pyspark.TaskContext().partitionId()
+            if use_cupy:
+                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                ground_truth_cp = cp.asarray(ground_truth)
+            else:
+                generator_p = np.random.RandomState(partition_seeds[partition_index])
+
             for pdf in iter:
-                use_cupy = use_gpu
-                if use_cupy:
-                    try:
-                        import cupy as cp
-                    except ImportError:
-                        use_cupy = False
-                        logging.warning("cupy import failed; falling back to numpy.")
-
-                partition_index = pyspark.TaskContext().partitionId()
-
                 if use_cupy:
                     X_p = cp.asarray(pdf.to_numpy())
-                    generator_p = cp.random.RandomState(partition_seeds[partition_index])
                 else:
                     X_p = pdf.to_numpy()
-                    generator_p = np.random.RandomState(partition_seeds[partition_index])
-
-                n_partition_rows = X_p.shape[0]
 
                 if shuffle:
                     # Column-wise shuffle (global)
@@ -431,12 +432,13 @@ class RegressionDataGen(DataGenBaseMeta):
                         X_p[:, :] = X_p[:, col_indices]
 
                 if use_cupy:
-                    y = cp.dot(X_p, cp.asarray(ground_truth)) + bias
+                    y = cp.dot(X_p, ground_truth_cp) + bias
                 else:
                     y = np.dot(X_p, ground_truth) + bias
                 if noise > 0.0:
                     y += generator_p.normal(scale=noise, size=y.shape)
 
+                n_partition_rows = X_p.shape[0]
                 if shuffle:
                     # Row-wise shuffle (partition)
                     if use_cupy:
@@ -445,6 +447,7 @@ class RegressionDataGen(DataGenBaseMeta):
                         y = y[row_indices]
                     else:
                         X_p, y = util_shuffle(X_p, y, random_state=generator_p)
+
                 if use_cupy:
                     y = cp.squeeze(y)
                     data = cp.concatenate(
