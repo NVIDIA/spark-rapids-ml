@@ -416,10 +416,10 @@ class RegressionDataGen(DataGenBaseMeta):
 
                 if use_cupy:
                     X_p = cp.asarray(pdf.to_numpy())
-                    generator = cp.random.RandomState(partition_seeds[partition_index])
+                    generator_p = cp.random.RandomState(partition_seeds[partition_index])
                 else:
                     X_p = pdf.to_numpy()
-                    generator = np.random.RandomState(partition_seeds[partition_index])
+                    generator_p = np.random.RandomState(partition_seeds[partition_index])
 
                 n_partition_rows = X_p.shape[0]
 
@@ -435,7 +435,7 @@ class RegressionDataGen(DataGenBaseMeta):
                 else:
                     y = np.dot(X_p, ground_truth) + bias
                 if noise > 0.0:
-                    y += generator.normal(scale=noise, size=y.shape)
+                    y += generator_p.normal(scale=noise, size=y.shape)
 
                 if shuffle:
                     # Row-wise shuffle (partition)
@@ -444,7 +444,7 @@ class RegressionDataGen(DataGenBaseMeta):
                         X_p = X_p[row_indices]
                         y = y[row_indices]
                     else:
-                        X_p, y = util_shuffle(X_p, y, random_state=generator)
+                        X_p, y = util_shuffle(X_p, y, random_state=generator_p)
                 if use_cupy:
                     y = cp.squeeze(y)
                     data = cp.concatenate(
