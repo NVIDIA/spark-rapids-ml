@@ -509,3 +509,214 @@ class RandomForestClassificationModel(
             )
             scores.append(metrics.evaluate(evaluator))
         return scores
+
+
+from .params import _CumlClass, _CumlParams, HasFeaturesCols
+from typing import Callable
+from .core import _CumlEstimatorSupervised, _CumlModelWithPredictionCol, FitInputType, param_alias
+from pyspark.ml.param.shared import (
+    HasFeaturesCol,
+    HasLabelCol,
+    HasPredictionCol 
+)
+from .utils import PartitionDescriptor, _concat_and_free, _ArrayOrder
+from pyspark.sql.types import (
+    ArrayType,
+    DoubleType,
+    FloatType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
+
+class LogisticRegressionClass(_CumlClass):
+    @classmethod
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
+        return {
+        }
+
+    @classmethod
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+        return {
+        }
+
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {
+        }
+
+class _LogisticRegressionCumlParams(
+    _CumlParams, HasFeaturesCol, HasLabelCol, HasFeaturesCols, HasPredictionCol
+):
+
+    def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
+        """
+        if self.isDefined(self.featuresCols):
+            return self.getFeaturesCols()
+        elif self.isDefined(self.featuresCol):
+            return self.getOrDefault("featuresCol")
+        else:
+            raise RuntimeError("featuresCol is not set")
+
+    def setFeaturesCol(self: "_LogisticRegressionCumlParams", value: Union[str, List[str]]) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
+        """
+        if isinstance(value, str):
+            self.set_params(featuresCol=value)
+        else:
+            self.set_params(featuresCols=value)
+        return self
+
+    def setFeaturesCols(self: "_LogisticRegressionCumlParams", value: List[str]) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`featuresCols`.
+        """
+        return self.set_params(featuresCols=value)
+
+    def setLabelCol(self: "_LogisticRegressionCumlParams", value: str) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`labelCol`.
+        """
+        return self.set_params(labelCol=value)
+
+    def setPredictionCol(self: "_LogisticRegressionCumlParams", value: str) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        return self.set_params(predictionCol=value)
+
+class LogisticRegression(
+    LogisticRegressionClass,
+    _CumlEstimatorSupervised,
+    _LogisticRegressionCumlParams,
+):
+    def __init__(
+        self, 
+        *, 
+        num_workers: Optional[int] = None) :
+        super().__init__()
+
+    def _fit_array_order(self) -> _ArrayOrder:
+        return "C"
+
+    def _get_cuml_fit_func(
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+
+        num_workers = self.num_workers
+        array_order = self._fit_array_order()
+        num_classes = dataset.select(alias.label).distinct().count()
+
+        def _linear_regression_fit(
+            dfs: FitInputType,
+            params: Dict[str, Any],
+        ) -> Dict[str, Any]:
+            init_parameters = params[param_alias.cuml_init]
+
+            pdesc = PartitionDescriptor.build(
+                params[param_alias.part_sizes], params[param_alias.num_cols]
+            )
+
+            from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
+            supported_params = [
+            ]
+
+            # filter only supported params
+            init_parameters = {
+                k: v for k, v in init_parameters.items() if k in supported_params
+            }
+
+            logistic_regression = LogisticRegressionMG(
+                handle=params[param_alias.handle],
+                **init_parameters,
+            )
+
+            X_list = [x for (x, _, _) in dfs]
+            y_list = [y for (_, y, _) in dfs]
+            if isinstance(X_list[0], pd.DataFrame):
+                concated = pd.concat(X_list)
+                concated_y = pd.concat(y_list)
+            else:
+                # features are either cp or np arrays here
+                concated = _concat_and_free(X_list, order=array_order)
+                concated_y = _concat_and_free(y_list, order=array_order)
+
+
+            print(f"DEBUG: pdesc.rank: {pdesc.rank}, num_workers: {num_workers}, pdesc.m: {pdesc.m}, num_classes: {num_classes}")
+            logistic_regression.fit(
+                concated,
+                concated_y,
+                pdesc.rank,
+                num_workers,
+                pdesc.m,
+                num_classes,
+            )
+
+            print("DEBUG: showing logistic_regression.coef_: ")
+
+            print(logistic_regression.coef_)
+            print(type(logistic_regression.coef_))
+            print(logistic_regression.coef_.shape)
+            print(type(logistic_regression.coef_[0]))
+
+            print("DEBUG: showing logistic_regression.intercept_: ")
+            print(logistic_regression.intercept_)
+            print(logistic_regression.intercept_.shape)
+
+            print(f"DEBUG: dtype: {logistic_regression.dtype}")
+            print(f"DEBUG: dtype.name: {logistic_regression.dtype.name}")
+
+            return {
+                "coef_": [logistic_regression.coef_.tolist()],
+                "intercept_": [logistic_regression.intercept_.tolist()],
+                "n_cols": [logistic_regression.n_cols],
+                "dtype": [logistic_regression.dtype.name],
+            }
+
+        return _linear_regression_fit
+
+    def _out_schema(self) -> Union[StructType, str]:
+        return StructType(
+            [
+                StructField("coef_", ArrayType(ArrayType(DoubleType()), False), False),
+                StructField("intercept_", ArrayType(DoubleType()), False),
+                StructField("n_cols", IntegerType(), False),
+                StructField("dtype", StringType(), False),
+            ]
+        )
+
+    def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
+        return LogisticRegressionModel.from_row(result)
+
+class LogisticRegressionModel(
+    LogisticRegressionClass,
+    _CumlModelWithPredictionCol,
+    _LogisticRegressionCumlParams,
+):
+    """Model fitted by :class:`LogisticRegression`."""
+
+    def __init__(
+        self,
+        coef_: List[List[float]],
+        intercept_: List[float],
+        n_cols: int,
+        dtype: str,
+    ) -> None:
+        super().__init__(dtype=dtype, n_cols=n_cols, coef_=coef_, intercept_=intercept_)
+        self.coef_ = coef_
+        self.intercept_ = intercept_
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+        pass
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        pass
