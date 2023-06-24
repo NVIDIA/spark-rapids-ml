@@ -21,6 +21,7 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+import pyspark
 from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
@@ -69,7 +70,6 @@ class BlobsDataGen(DataGenBaseMeta):
         # must replace the None to the correct type
         params["centers"] = int
         params["random_state"] = int
-
         return params
 
     def gen_dataframe_and_meta(
@@ -110,13 +110,19 @@ class BlobsDataGen(DataGenBaseMeta):
         params["centers"] = centers
         del params["random_state"]
 
+        maxRecordsPerBatch = int(
+            spark.sparkContext.getConf().get(
+                "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+            )
+        )
+
         # UDF to distribute make_blobs() calls across partitions. Each partition
         # produces an equal fraction of the total samples around the predefined centers.
         def make_blobs_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             for pdf in iter:
                 partition_index = pdf.iloc[0][0]
                 n_partition_samples = partition_sizes[partition_index]
-                data, labels = make_blobs(
+                X, y = make_blobs(
                     n_samples=n_partition_samples,
                     n_features=cols,
                     **params,
@@ -124,12 +130,16 @@ class BlobsDataGen(DataGenBaseMeta):
                 )
                 data = np.concatenate(
                     (
-                        data.astype(dtype),
-                        labels.reshape(n_partition_samples, 1).astype(dtype),
+                        X.astype(dtype),
+                        y.reshape(n_partition_samples, 1).astype(dtype),
                     ),
                     axis=1,
                 )
-                yield pd.DataFrame(data=data)
+                del X
+                del y
+                for i in range(0, n_partition_samples, maxRecordsPerBatch):
+                    end_idx = min(i + maxRecordsPerBatch, n_partition_samples)
+                    yield pd.DataFrame(data=data[i:end_idx])
 
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
@@ -161,7 +171,6 @@ class LowRankMatrixDataGen(DataGenBase):
         # must replace the None to the correct type
         params["random_state"] = int
         params["use_gpu"] = bool
-
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
@@ -287,6 +296,7 @@ class RegressionDataGen(DataGenBaseMeta):
         # must replace the None to the correct type
         params["effective_rank"] = int
         params["random_state"] = int
+        params["use_gpu"] = bool
         return params
 
     def gen_dataframe_and_meta(
@@ -319,6 +329,7 @@ class RegressionDataGen(DataGenBaseMeta):
         effective_rank = params.get("effective_rank", None)
         n_informative = params.get("n_informative", 10)
         n_targets = params.get("n_targets", 1)
+        use_gpu = params.get("use_gpu", False)
 
         # Description (from sklearn):
         #
@@ -346,6 +357,8 @@ class RegressionDataGen(DataGenBaseMeta):
                 str(tail_strength),
                 "--random_state",
                 str(seed),
+                "--use_gpu",
+                str(use_gpu),
             ]
             # Generate a low-rank, fat tail input set.
             X, _ = LowRankMatrixDataGen(lrm_input_args).gen_dataframe(spark)
@@ -379,33 +392,81 @@ class RegressionDataGen(DataGenBaseMeta):
 
         if shuffle:
             # Shuffle feature indices upfront.
-            indices = np.arange(cols)
-            generator.shuffle(indices)
-            ground_truth = ground_truth[indices]
+            col_indices = np.arange(cols)
+            generator.shuffle(col_indices)
+            ground_truth = ground_truth[col_indices]
+
+        # Create different partition seeds for sample generation.
+        random.seed(params["random_state"])
+        seed_maxval = 100 * num_partitions
+        partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
 
         # UDF for distributed generation of X and y.
         def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            use_cupy = use_gpu
+            if use_cupy:
+                try:
+                    import cupy as cp
+                except ImportError:
+                    use_cupy = False
+                    logging.warning("cupy import failed; falling back to numpy.")
+
+            partition_index = pyspark.TaskContext().partitionId()
+            if use_cupy:
+                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                ground_truth_cp = cp.asarray(ground_truth)
+                col_indices_cp = cp.asarray(col_indices)
+            else:
+                generator_p = np.random.RandomState(partition_seeds[partition_index])
+
             for pdf in iter:
-                X_p = pdf.to_numpy()
-                n_partition_rows = X_p.shape[0]
+                if use_cupy:
+                    X_p = cp.asarray(pdf.to_numpy())
+                else:
+                    X_p = pdf.to_numpy()
 
                 if shuffle:
                     # Column-wise shuffle (global)
-                    X_p[:, :] = X_p[:, indices]
+                    if use_cupy:
+                        X_p[:, :] = X_p[:, col_indices_cp]
+                    else:
+                        X_p[:, :] = X_p[:, col_indices]
 
-                y = np.dot(X_p, ground_truth) + bias
+                if use_cupy:
+                    y = cp.dot(X_p, ground_truth_cp) + bias
+                else:
+                    y = np.dot(X_p, ground_truth) + bias
                 if noise > 0.0:
-                    y += generator.normal(scale=noise, size=y.shape)
+                    y += generator_p.normal(scale=noise, size=y.shape)
 
+                n_partition_rows = X_p.shape[0]
                 if shuffle:
                     # Row-wise shuffle (partition)
-                    X_p, y = util_shuffle(X_p, y, random_state=generator)
+                    if use_cupy:
+                        row_indices = cp.random.permutation(n_partition_rows)
+                        X_p = X_p[row_indices]
+                        y = y[row_indices]
+                    else:
+                        X_p, y = util_shuffle(X_p, y, random_state=generator_p)
 
-                y = np.squeeze(y)
-                data = np.concatenate(
-                    (X_p.astype(dtype), y.reshape(n_partition_rows, 1).astype(dtype)),
-                    axis=1,
-                )
+                if use_cupy:
+                    y = cp.squeeze(y)
+                    data = cp.concatenate(
+                        (
+                            X_p.astype(dtype),
+                            y.reshape(n_partition_rows, 1).astype(dtype),
+                        ),
+                        axis=1,
+                    ).get()
+                else:
+                    y = np.squeeze(y)
+                    data = np.concatenate(
+                        (
+                            X_p.astype(dtype),
+                            y.reshape(n_partition_rows, 1).astype(dtype),
+                        ),
+                        axis=1,
+                    )
                 del X_p
                 del y
                 yield pd.DataFrame(data=data)
@@ -555,6 +616,12 @@ class ClassificationDataGen(DataGenBase):
         seed_maxval = 100 * num_partitions
         partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
 
+        maxRecordsPerBatch = int(
+            spark.sparkContext.getConf().get(
+                "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+            )
+        )
+
         def make_classification_udf(
             iter: Iterable[pd.DataFrame],
         ) -> Iterable[pd.DataFrame]:
@@ -616,7 +683,9 @@ class ClassificationDataGen(DataGenBase):
 
                 del X_p
                 del y
-                yield pd.DataFrame(data=data)
+                for i in range(0, n_partition_samples, maxRecordsPerBatch):
+                    end_idx = min(i + maxRecordsPerBatch, n_partition_samples)
+                    yield pd.DataFrame(data=data[i:end_idx])
 
         label_col = "label"
         self.schema.append(f"{label_col} {self.pyspark_type}")
