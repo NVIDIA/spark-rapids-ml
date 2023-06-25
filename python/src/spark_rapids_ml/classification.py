@@ -287,7 +287,8 @@ class RandomForestClassifier(
     def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
         if (
             isinstance(evaluator, MulticlassClassificationEvaluator)
-            and evaluator.getMetricName() == "f1"
+            and evaluator.getMetricName()
+            in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
         ):
             return True
 
@@ -443,8 +444,8 @@ class RandomForestClassificationModel(
 
         Returns
         -------
-        float
-            metric
+        list of float
+            metrics
         """
 
         if not isinstance(evaluator, MulticlassClassificationEvaluator):

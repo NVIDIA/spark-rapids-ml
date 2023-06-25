@@ -968,8 +968,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         Returns
         -------
-        float
-            metric
+        list of float
+            metrics
         """
         raise NotImplementedError()
 

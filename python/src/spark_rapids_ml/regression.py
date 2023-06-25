@@ -853,7 +853,7 @@ class RandomForestRegressionModel(
             input: TransformInputType,
             transformed: TransformInputType,
         ) -> pd.DataFrame:
-            # calculate the count of (label, prediction)
+            # calculate the metrics: mean/m2n/m2/l1 ...
             comb = pd.DataFrame(
                 {
                     "label": input[alias.label],
@@ -894,8 +894,8 @@ class RandomForestRegressionModel(
 
         Returns
         -------
-        float
-            metric
+        list of float
+            metrics
         """
 
         if not isinstance(evaluator, RegressionEvaluator):
