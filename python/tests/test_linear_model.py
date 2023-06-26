@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Dict, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors
+from pyspark.ml.param import Param
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
 from pyspark.sql.functions import array, col
@@ -479,3 +480,87 @@ def test_fail_run_on_1_col(
                 lr.fit(df)
         else:
             lr.fit(df)
+
+
+@pytest.mark.parametrize("feature_type", [feature_types.vector])
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_lr_fit_multiple_in_single_pass(
+    feature_type: str,
+    data_type: np.dtype,
+) -> None:
+    X_train, _, y_train, _ = make_regression_dataset(
+        datatype=data_type,
+        nrows=100,
+        ncols=5,
+    )
+
+    with CleanSparkSession() as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+
+        assert label_col is not None
+        lr = LinearRegression()
+        lr.setFeaturesCol(features_col)
+        lr.setLabelCol(label_col)
+
+        initial_lr = lr.copy()
+
+        param_maps: List[Dict[Param, Any]] = [
+            # alpha = 0, LinearRegression
+            {
+                lr.tol: 0.00001,
+                lr.standardization: False,
+                lr.loss: "squared_loss",
+                lr.regParam: 0,
+                lr.elasticNetParam: 0,
+                lr.fitIntercept: True,
+                lr.maxIter: 39,
+                lr.solver: "auto",
+            },
+            # Ridge
+            {
+                lr.tol: 0.00002,
+                lr.standardization: True,
+                lr.loss: "squared_loss",
+                lr.regParam: 0.2,
+                lr.elasticNetParam: 0,
+                lr.fitIntercept: True,
+                lr.maxIter: 29,
+                lr.solver: "auto",
+            },
+            # Lasso
+            {
+                lr.tol: 0.00003,
+                lr.standardization: False,
+                lr.loss: "squared_loss",
+                lr.regParam: 0.3,
+                lr.elasticNetParam: 1,
+                lr.fitIntercept: True,
+                lr.maxIter: 59,
+                lr.solver: "auto",
+            },
+            # ElasticNet
+            {
+                lr.tol: 0.00004,
+                lr.standardization: False,
+                lr.loss: "squared_loss",
+                lr.regParam: 0.5,
+                lr.elasticNetParam: 0.6,
+                lr.fitIntercept: False,
+                lr.maxIter: 69,
+                lr.solver: "auto",
+            },
+        ]
+        models = lr.fit(train_df, param_maps)
+
+        for i, param_map in enumerate(param_maps):
+            rf = initial_lr.copy()
+            single_model = rf.fit(train_df, param_map)
+
+            assert single_model.coefficients == models[i].coefficients
+            assert single_model.intercept == models[i].intercept
+
+            for k, v in param_map.items():
+                assert models[i].getOrDefault(k.name) == v
+                assert single_model.getOrDefault(k.name) == v
