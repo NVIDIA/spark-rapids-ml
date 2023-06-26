@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
@@ -49,7 +49,6 @@ from .core import (
     CumlT,
     TransformInputType,
     _ConstructFunc,
-    _CumlModel,
     _EvaluateFunc,
     _TransformFunc,
     alias,
@@ -288,7 +287,8 @@ class RandomForestClassifier(
     def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
         if (
             isinstance(evaluator, MulticlassClassificationEvaluator)
-            and evaluator.getMetricName() == "f1"
+            and evaluator.getMetricName()
+            in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
         ):
             return True
 
@@ -323,26 +323,6 @@ class RandomForestClassificationModel(
         self._num_classes = num_classes
         self._model_json = model_json
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
-
-    @staticmethod
-    def _combine(models: List[_CumlModel]) -> "RandomForestClassificationModel":
-        assert len(models) > 0 and all(
-            isinstance(model, RandomForestClassificationModel) for model in models
-        )
-
-        casted_models = cast(List[RandomForestClassificationModel], models)
-        first_model = casted_models[0]
-
-        treelite_models = [model._treelite_model for model in casted_models]
-        model_jsons = [model._model_json for model in casted_models]
-        attrs = first_model.get_model_attributes()
-        assert attrs is not None
-        attrs["treelite_model"] = treelite_models
-        attrs["model_json"] = model_jsons
-        rf_model = RandomForestClassificationModel(**attrs)
-        first_model._copyValues(rf_model)
-        first_model._copy_cuml_params(rf_model)
-        return rf_model
 
     def cpu(self) -> SparkRandomForestClassificationModel:
         """Return the PySpark ML RandomForestClassificationModel"""
@@ -464,8 +444,8 @@ class RandomForestClassificationModel(
 
         Returns
         -------
-        float
-            metric
+        list of float
+            metrics
         """
 
         if not isinstance(evaluator, MulticlassClassificationEvaluator):
