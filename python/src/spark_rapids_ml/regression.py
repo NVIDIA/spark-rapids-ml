@@ -27,7 +27,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pyspark import Row, keyword_only
+from pyspark import Row, TaskContext, keyword_only
 from pyspark.ml.common import _py2java
 from pyspark.ml.evaluation import Evaluator, RegressionEvaluator
 from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
@@ -397,95 +397,114 @@ class LinearRegression(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            init_parameters = params[param_alias.cuml_init]
-
+            # Step 1, get the PartitionDescriptor
             pdesc = PartitionDescriptor.build(
                 params[param_alias.part_sizes], params[param_alias.num_cols]
             )
 
-            if init_parameters["alpha"] == 0:
-                # LR
-                from cuml.linear_model.linear_regression_mg import (
-                    LinearRegressionMG as CumlLinearRegression,
-                )
-
-                supported_params = [
-                    "algorithm",
-                    "fit_intercept",
-                    "normalize",
-                    "verbose",
-                ]
-            else:
-                if init_parameters["l1_ratio"] == 0:
-                    # LR + L2
-                    from cuml.linear_model.ridge_mg import (
-                        RidgeMG as CumlLinearRegression,
+            def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
+                if init_parameters["alpha"] == 0:
+                    # LR
+                    from cuml.linear_model.linear_regression_mg import (
+                        LinearRegressionMG as CumlLinearRegression,
                     )
 
                     supported_params = [
-                        "alpha",
-                        "solver",
+                        "algorithm",
                         "fit_intercept",
                         "normalize",
                         "verbose",
                     ]
-                    # spark ML normalizes sample portion of objective by the number of examples
-                    # but cuml does not for RidgeRegression (l1_ratio=0).   Induce similar behavior
-                    # to spark ml by scaling up the reg parameter by the number of examples.
-                    # With this, spark ML and spark rapids ML results match closely when features
-                    # and label columns are all standardized.
-                    init_parameters = init_parameters.copy()
-                    if "alpha" in init_parameters.keys():
-                        print(f"pdesc.m {pdesc.m}")
-                        init_parameters["alpha"] *= (float)(pdesc.m)
-
                 else:
-                    # LR + L1, or LR + L1 + L2
-                    # Cuml uses Coordinate Descent algorithm to implement Lasso and ElasticNet
-                    # So combine Lasso and ElasticNet here.
-                    from cuml.solvers.cd_mg import CDMG as CumlLinearRegression
+                    if init_parameters["l1_ratio"] == 0:
+                        # LR + L2
+                        from cuml.linear_model.ridge_mg import (
+                            RidgeMG as CumlLinearRegression,
+                        )
 
-                    # in this case, both spark ML and cuml CD normalize sample portion of
-                    # objective by the number of training examples, so no need to adjust
-                    # reg params
+                        supported_params = [
+                            "alpha",
+                            "solver",
+                            "fit_intercept",
+                            "normalize",
+                            "verbose",
+                        ]
+                        # spark ML normalizes sample portion of objective by the number of examples
+                        # but cuml does not for RidgeRegression (l1_ratio=0).   Induce similar behavior
+                        # to spark ml by scaling up the reg parameter by the number of examples.
+                        # With this, spark ML and spark rapids ML results match closely when features
+                        # and label columns are all standardized.
+                        init_parameters = init_parameters.copy()
+                        if "alpha" in init_parameters.keys():
+                            print(f"pdesc.m {pdesc.m}")
+                            init_parameters["alpha"] *= (float)(pdesc.m)
 
-                    supported_params = [
-                        "loss",
-                        "alpha",
-                        "l1_ratio",
-                        "fit_intercept",
-                        "max_iter",
-                        "normalize",
-                        "tol",
-                        "shuffle",
-                        "verbose",
-                    ]
+                    else:
+                        # LR + L1, or LR + L1 + L2
+                        # Cuml uses Coordinate Descent algorithm to implement Lasso and ElasticNet
+                        # So combine Lasso and ElasticNet here.
+                        from cuml.solvers.cd_mg import CDMG as CumlLinearRegression
 
-            # filter only supported params
-            init_parameters = {
-                k: v for k, v in init_parameters.items() if k in supported_params
-            }
+                        # in this case, both spark ML and cuml CD normalize sample portion of
+                        # objective by the number of training examples, so no need to adjust
+                        # reg params
 
-            linear_regression = CumlLinearRegression(
-                handle=params[param_alias.handle],
-                output_type="cudf",
-                **init_parameters,
-            )
+                        supported_params = [
+                            "loss",
+                            "alpha",
+                            "l1_ratio",
+                            "fit_intercept",
+                            "max_iter",
+                            "normalize",
+                            "tol",
+                            "shuffle",
+                            "verbose",
+                        ]
 
-            linear_regression.fit(
-                dfs,
-                pdesc.m,
-                pdesc.n,
-                pdesc.parts_rank_size,
-                pdesc.rank,
-            )
+                # filter only supported params
+                final_init_parameters = {
+                    k: v for k, v in init_parameters.items() if k in supported_params
+                }
 
-            return {
-                "coef_": [linear_regression.coef_.to_numpy().tolist()],
-                "intercept_": linear_regression.intercept_,
-                "dtype": linear_regression.dtype.name,
-                "n_cols": linear_regression.n_cols,
-            }
+                linear_regression = CumlLinearRegression(
+                    handle=params[param_alias.handle],
+                    output_type="cudf",
+                    **final_init_parameters,
+                )
+
+                linear_regression.fit(
+                    dfs,
+                    pdesc.m,
+                    pdesc.n,
+                    pdesc.parts_rank_size,
+                    pdesc.rank,
+                )
+
+                return {
+                    "coef_": linear_regression.coef_.to_numpy().tolist(),
+                    "intercept_": linear_regression.intercept_,
+                    "dtype": linear_regression.dtype.name,
+                    "n_cols": linear_regression.n_cols,
+                }
+
+            init_parameters = params[param_alias.cuml_init]
+            fit_multiple_params = params[param_alias.fit_multiple_params]
+            if len(fit_multiple_params) == 0:
+                fit_multiple_params.append({})
+
+            models = []
+            for i in range(len(fit_multiple_params)):
+                tmp_params = init_parameters.copy()
+                tmp_params.update(fit_multiple_params[i])
+                models.append(_single_fit(tmp_params))
+
+            models_dict = {}
+            tc = TaskContext.get()
+            assert tc is not None
+            if tc.partitionId() == 0:
+                for k in models[0].keys():
+                    models_dict[k] = [m[k] for m in models]
+            return models_dict
 
         return _linear_regression_fit
 
@@ -501,6 +520,9 @@ class LinearRegression(
 
     def _create_pyspark_model(self, result: Row) -> "LinearRegressionModel":
         return LinearRegressionModel.from_row(result)
+
+    def _enable_fit_multiple_in_single_pass(self) -> bool:
+        return True
 
 
 class LinearRegressionModel(
