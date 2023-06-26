@@ -14,9 +14,16 @@
 # limitations under the License.
 #
 import math
-from typing import List
+from collections import namedtuple
+from typing import List, Optional, cast
 
+from pyspark import Row
 from pyspark.ml.evaluation import RegressionEvaluator
+
+from spark_rapids_ml.core import pred
+
+RegMetrics = namedtuple("RegMetrics", ("m2n", "m2", "l1", "mean", "total_count"))
+reg_metrics = RegMetrics("m2n", "m2", "l1", "mean", "total_count")
 
 
 # This class is aligning with Spark SummarizerBuffer scala version
@@ -124,21 +131,8 @@ class _SummarizerBuffer:
             self._weight_square_sum / self._total_weight_sum
         )
         if denominator > 0.0:
-            delta_mean = self._curr_mean
             real_variance = [
-                max(
-                    (
-                        self._curr_m2n[i]
-                        # + delta_mean[i]
-                        # * delta_mean[i]
-                        # * self._curr_weight_sum[i]
-                        # * (self._total_weight_sum - self._curr_weight_sum[i])
-                        # / self._total_weight_sum
-                    )
-                    / denominator,
-                    0.0,
-                )
-                for i in range(self._num_cols)
+                max(self._curr_m2n[i] / denominator, 0.0) for i in range(self._num_cols)
             ]
         else:
             real_variance = [0] * self._num_cols
@@ -171,6 +165,27 @@ class RegressionMetrics:
         total_cnt: int,
     ) -> "RegressionMetrics":
         return RegressionMetrics(_SummarizerBuffer(mean, m2n, m2, l1, total_cnt))
+
+    @classmethod
+    def from_rows(cls, num_models: int, rows: List[Row]) -> List["RegressionMetrics"]:
+        """The rows must contain pred.model_index, and mean/m2n/m2/l1/total_count"""
+        metrics: List[Optional["RegressionMetrics"]] = [None] * num_models
+
+        for row in rows:
+            index = row[pred.model_index]
+            metric = RegressionMetrics.create(
+                mean=row[reg_metrics.mean],
+                m2n=row[reg_metrics.m2n],
+                m2=row[reg_metrics.m2],
+                l1=row[reg_metrics.l1],
+                total_cnt=row[reg_metrics.total_count],
+            )
+            old_metric = metrics[index]
+            metrics[index] = (
+                old_metric.merge(metric) if old_metric is not None else metric
+            )
+
+        return cast(List["RegressionMetrics"], metrics)
 
     def merge(self, other: "RegressionMetrics") -> "RegressionMetrics":
         """Merge other to self and return a new RegressionMetrics"""

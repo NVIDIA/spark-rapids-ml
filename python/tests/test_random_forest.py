@@ -24,7 +24,7 @@ from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
 )
 from pyspark.ml.classification import RandomForestClassifier as SparkRFClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.param import Param
 from pyspark.ml.regression import RandomForestRegressionModel as SparkRFRegressionModel
@@ -61,6 +61,13 @@ from .utils import (
 RandomForest = TypeVar(
     "RandomForest", Type[RandomForestClassifier], Type[RandomForestRegressor]
 )
+
+RandomForestEvaluator = TypeVar(
+    "RandomForestEvaluator",
+    Type[MulticlassClassificationEvaluator],
+    Type[RegressionEvaluator],
+)
+
 RandomForestModel = TypeVar(
     "RandomForestModel",
     Type[RandomForestClassificationModel],
@@ -797,25 +804,43 @@ def test_fit_multiple_in_single_pass(
             )
 
 
+@pytest.mark.parametrize(
+    "estimator_evaluator",
+    [
+        (RandomForestClassifier, MulticlassClassificationEvaluator),
+        (RandomForestRegressor, RegressionEvaluator),
+    ],
+)
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
-def test_crossvalidator_random_forest_classifier(
+def test_crossvalidator_random_forest(
+    estimator_evaluator: Tuple[RandomForest, RandomForestEvaluator],
     tmp_path: str,
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
 ) -> None:
+    RF, Evaluator = estimator_evaluator
+
     # Train a toy model
-    X, _, y, _ = make_classification_dataset(
-        datatype=data_type,
-        nrows=data_shape[0],
-        ncols=data_shape[1],
-        n_classes=4,
-        n_informative=data_shape[1],
-        n_redundant=0,
-        n_repeated=0,
-    )
+
+    if RF == RandomForestClassifier:
+        X, _, y, _ = make_classification_dataset(
+            datatype=data_type,
+            nrows=data_shape[0],
+            ncols=data_shape[1],
+            n_classes=4,
+            n_informative=data_shape[1],
+            n_redundant=0,
+            n_repeated=0,
+        )
+    else:
+        X, _, y, _ = make_regression_dataset(
+            datatype=data_type,
+            nrows=data_shape[0],
+            ncols=data_shape[1],
+        )
 
     with CleanSparkSession() as spark:
         df, features_col, label_col = create_pyspark_dataframe(
@@ -823,11 +848,11 @@ def test_crossvalidator_random_forest_classifier(
         )
         assert label_col is not None
 
-        rfc = RandomForestClassifier()
+        rfc = RF()
         rfc.setFeaturesCol(features_col)
         rfc.setLabelCol(label_col)
 
-        evaluator = MulticlassClassificationEvaluator()
+        evaluator = Evaluator()
         evaluator.setLabelCol(label_col)
 
         grid = (

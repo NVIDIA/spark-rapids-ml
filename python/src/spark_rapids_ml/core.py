@@ -968,13 +968,13 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         Returns
         -------
-        float
-            metric
+        list of float
+            metrics
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def _combine(models: List["_CumlModel"]) -> "_CumlModel":
+    @classmethod
+    def _combine(cls: Type["_CumlModel"], models: List["_CumlModel"]) -> "_CumlModel":
         """Combine a list of same type models into a model"""
         raise NotImplementedError()
 
