@@ -86,3 +86,14 @@ Nearest Neighbors
     NearestNeighbors
     NearestNeighborsModel
 
+
+Tuning
+------
+
+.. currentmodule:: spark_rapids_ml.tuning
+
+.. autosummary::
+    :template: autosummary/class_with_docs.rst
+    :toctree: api
+
+    CrossValidator

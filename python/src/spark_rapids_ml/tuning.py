@@ -44,6 +44,36 @@ class CrossValidator(SparkCrossValidator):
 
     It is the gpu version CrossValidator which fits multiple models in a single pass for a single
     training dataset and transforms/evaluates in a single pass for multiple models.
+
+    Examples
+    --------
+
+    >>> from pyspark.ml.linalg import Vectors
+    >>> from pyspark.ml.tuning import ParamGridBuilder, CrossValidatorModel
+    >>> from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+    >>> from spark_rapids_ml.tuning import CrossValidator
+    >>> from spark_rapids_ml.classification import RandomForestClassifier
+    >>> dataset = spark.createDataFrame(
+    ...     [(Vectors.dense([0.0]), 0.0),
+    ...      (Vectors.dense([0.4]), 1.0),
+    ...      (Vectors.dense([0.5]), 0.0),
+    ...      (Vectors.dense([0.6]), 2.0),
+    ...      (Vectors.dense([1.0]), 1.0)] * 10,
+    ...     ["features", "label"])
+    >>> rfc = RandomForestClassifier()
+    >>> grid = ParamGridBuilder().addGrid(rfc.maxBins, [8, 16]).build()
+    >>> evaluator = MulticlassClassificationEvaluator()
+    >>> cv = CrossValidator(estimator=rfc, estimatorParamMaps=grid, evaluator=evaluator,
+    ...                     parallelism=2)
+    >>> cvModel = cv.fit(dataset)
+    ...
+    >>> cvModel.getNumFolds()
+    3
+    >>> cvModel.avgMetrics[0]
+    1.0
+    >>> evaluator.evaluate(cvModel.transform(dataset))
+    1.0
+
     """
 
     def _fit(self, dataset: DataFrame) -> "CrossValidatorModel":
