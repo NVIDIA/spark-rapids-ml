@@ -20,15 +20,16 @@ import pytest
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 
-from python.tests.sparksession import CleanSparkSession
-from python.tests.utils import (
+from spark_rapids_ml.regression import RandomForestRegressor
+from spark_rapids_ml.tuning import CrossValidator
+
+from .sparksession import CleanSparkSession
+from .utils import (
     create_pyspark_dataframe,
     feature_types,
     idfn,
     make_regression_dataset,
 )
-from spark_rapids_ml.regression import RandomForestRegressor
-from spark_rapids_ml.tuning import CrossValidator
 
 
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
