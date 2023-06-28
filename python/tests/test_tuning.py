@@ -95,3 +95,6 @@ def test_crossvalidator(
         cv_model_loaded = CrossValidatorModel.load(cv_model_path)
 
         check_cv(cv_model_loaded)
+        assert evaluator.evaluate(cv_model.transform(df)) == evaluator.evaluate(
+            cv_model_loaded.transform(df)
+        )

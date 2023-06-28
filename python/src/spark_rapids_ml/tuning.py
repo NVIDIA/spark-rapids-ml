@@ -54,6 +54,7 @@ class CrossValidator(SparkCrossValidator):
     >>> from pyspark.ml.evaluation import MulticlassClassificationEvaluator
     >>> from spark_rapids_ml.tuning import CrossValidator
     >>> from spark_rapids_ml.classification import RandomForestClassifier
+    >>> import tempfile
     >>> dataset = spark.createDataFrame(
     ...     [(Vectors.dense([0.0]), 0.0),
     ...      (Vectors.dense([0.4]), 1.0),
@@ -73,6 +74,16 @@ class CrossValidator(SparkCrossValidator):
     >>> cvModel.avgMetrics[0]
     1.0
     >>> evaluator.evaluate(cvModel.transform(dataset))
+    1.0
+    >>> path = tempfile.mkdtemp()
+    >>> model_path = path + "/model"
+    >>> cvModel.write().save(model_path)
+    >>> cvModelRead = CrossValidatorModel.read().load(model_path)
+    >>> cvModelRead.avgMetrics
+    [1.0, 1.0]
+    >>> evaluator.evaluate(cvModel.transform(dataset))
+    1.0
+    >>> evaluator.evaluate(cvModelRead.transform(dataset))
     1.0
 
     """
