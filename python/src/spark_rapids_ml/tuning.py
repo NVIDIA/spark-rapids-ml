@@ -138,6 +138,8 @@ class CrossValidator(SparkCrossValidator):
 
     @staticmethod
     def _is_python_params_instance(metadata: Dict[str, Any]) -> bool:
+        # If it's not python module, pyspark will load spark_rapids_ml.tuning.CrossValidator
+        # from JVM package. So we need to hack here
         return metadata["class"].startswith(("pyspark.ml.", "spark_rapids_ml."))
 
     @classmethod
