@@ -167,6 +167,7 @@ class _CumlEstimatorReader(MLReader):
     def load(self, path: str) -> "_CumlEstimator":
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         cuml_estimator = self.estimator_cls()
+        cuml_estimator._resetUid(metadata["uid"])
         DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
         cuml_estimator._cuml_params = metadata["_cuml_params"]
         cuml_estimator._num_workers = metadata["_num_workers"]
