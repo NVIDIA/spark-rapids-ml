@@ -23,6 +23,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import numpy as np
@@ -54,6 +55,7 @@ from .core import (
     TransformInputType,
     _ConstructFunc,
     _CumlEstimatorSupervised,
+    _CumlModel,
     _CumlModelWithPredictionCol,
     _EvaluateFunc,
     _TransformFunc,
@@ -79,6 +81,9 @@ T = TypeVar("T")
 
 
 class _RegressionModelEvaluationMixIn:
+    # https://github.com/python/mypy/issues/5868#issuecomment-437690894 to bypass mypy checking
+    _this_model: Union["RandomForestRegressionModel", "LinearRegressionModel"]
+
     def _transform_evaluate(
         self,
         dataset: DataFrame,
@@ -108,10 +113,10 @@ class _RegressionModelEvaluationMixIn:
         if not isinstance(evaluator, RegressionEvaluator):
             raise NotImplementedError(f"{evaluator} is unsupported yet.")
 
-        if self.getLabelCol() not in dataset.schema.names:
+        if self._this_model.getLabelCol() not in dataset.schema.names:
             raise RuntimeError("Label column is not existing.")
 
-        dataset = dataset.withColumnRenamed(self.getLabelCol(), alias.label)
+        dataset = dataset.withColumnRenamed(self._this_model.getLabelCol(), alias.label)
 
         schema = StructType(
             [
@@ -124,7 +129,7 @@ class _RegressionModelEvaluationMixIn:
             ]
         )
 
-        rows = super()._transform_evaluate_internal(dataset, schema).collect()
+        rows = self._this_model._transform_evaluate_internal(dataset, schema).collect()
 
         metrics = RegressionMetrics.from_rows(num_models, rows)
         return [metric.evaluate(evaluator) for metric in metrics]
@@ -626,6 +631,7 @@ class LinearRegressionModel(
         self.coef_ = coef_
         self.intercept_ = intercept_
         self._lr_ml_model: Optional[SparkLinearRegressionModel] = None
+        self._this_model = self
 
     def cpu(self) -> SparkLinearRegressionModel:
         """Return the PySpark ML LinearRegressionModel"""
@@ -649,7 +655,8 @@ class LinearRegressionModel(
         Model coefficients.
         """
         # TBD: for large enough dimension, SparseVector is returned. Need to find out how to match
-        return Vectors.dense(self.coef_)
+        assert not isinstance(self.coef_[0], list)
+        return Vectors.dense(cast(list, self.coef_))
 
     @property
     def hasSummary(self) -> bool:
@@ -663,6 +670,7 @@ class LinearRegressionModel(
         """
         Model intercept.
         """
+        assert not isinstance(self.intercept_, list)
         return self.intercept_
 
     @property
@@ -694,11 +702,13 @@ class LinearRegressionModel(
             from cuml.linear_model.linear_regression_mg import LinearRegressionMG
 
             lrs = []
-            coefs = coef_ if isinstance(coef_, list) else [coef_]
+
+            coefs = coef_ if isinstance(intercept_, list) else [coef_]
             intercepts = intercept_ if isinstance(intercept_, list) else [intercept_]
 
             for i in range(len(coefs)):
                 lr = LinearRegressionMG(output_type="numpy")
+                print(f"index: {i}: coef: {coefs[i]}")
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )
@@ -707,7 +717,7 @@ class LinearRegressionModel(
                 lr.dtype = np.dtype(dtype)
                 lrs.append(lr)
 
-            return lr
+            return lrs
 
         def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
             ret = lr.predict(pdf)
@@ -723,14 +733,17 @@ class LinearRegressionModel(
 
     @classmethod
     def _combine(
-        cls: Type["LinearRegressionModel"], models: List["LinearRegressionModel"]
+        cls: Type["LinearRegressionModel"], models: List["LinearRegressionModel"]  # type: ignore
     ) -> "LinearRegressionModel":
         assert len(models) > 0 and all(isinstance(model, cls) for model in models)
         first_model = models[0]
 
         # Combine coef and intercepts
-        coefs = [model.coef_ for model in models]
-        intercepts = [model.intercept_ for model in models]
+        coefs = cast(list, [model.coef_ for model in models])
+        intercepts = cast(list, [model.intercept_ for model in models])
+
+        assert first_model.n_cols is not None
+        assert first_model.dtype is not None
 
         lr_model = cls(
             n_cols=first_model.n_cols,
@@ -749,7 +762,7 @@ class LinearRegressionModel(
         evaluator: Evaluator,
         params: Optional["ParamMap"] = None,
     ) -> List[float]:
-        num_models = len(self.coef_) if isinstance(self.coef_, list) else 1
+        num_models = len(self.intercept_) if isinstance(self.intercept_, list) else 1
         return self._transform_evaluate(
             dataset=dataset, evaluator=evaluator, num_models=num_models, params=params
         )
@@ -967,6 +980,7 @@ class RandomForestRegressionModel(
         )
 
         self._rf_spark_model: Optional[SparkRandomForestRegressionModel] = None
+        self._this_model = self
 
     def cpu(self) -> SparkRandomForestRegressionModel:
         """Return the PySpark ML RandomForestRegressionModel"""
