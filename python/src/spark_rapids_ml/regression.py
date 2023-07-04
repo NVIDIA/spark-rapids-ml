@@ -23,6 +23,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import numpy as np
@@ -54,6 +55,7 @@ from .core import (
     TransformInputType,
     _ConstructFunc,
     _CumlEstimatorSupervised,
+    _CumlModel,
     _CumlModelWithPredictionCol,
     _EvaluateFunc,
     _TransformFunc,
@@ -76,6 +78,88 @@ if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
 
 T = TypeVar("T")
+
+
+class _RegressionModelEvaluationMixIn:
+    # https://github.com/python/mypy/issues/5868#issuecomment-437690894 to bypass mypy checking
+    _this_model: Union["RandomForestRegressionModel", "LinearRegressionModel"]
+
+    def _transform_evaluate(
+        self,
+        dataset: DataFrame,
+        evaluator: Evaluator,
+        num_models: int,
+        params: Optional["ParamMap"] = None,
+    ) -> List[float]:
+        """
+        Transforms and evaluates the input dataset with optional parameters in a single pass.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            a dataset that contains labels/observations and predictions
+        evaluator: :py:class:`pyspark.ml.evaluation.Evaluator`
+            an evaluator user intends to use
+        num_models: how many models are used to perform transform and evaluation in a single pass
+        params : dict, optional
+            an optional param map that overrides embedded params
+
+        Returns
+        -------
+        list of float
+            metrics
+        """
+
+        if not isinstance(evaluator, RegressionEvaluator):
+            raise NotImplementedError(f"{evaluator} is unsupported yet.")
+
+        if self._this_model.getLabelCol() not in dataset.schema.names:
+            raise RuntimeError("Label column is not existing.")
+
+        dataset = dataset.withColumnRenamed(self._this_model.getLabelCol(), alias.label)
+
+        schema = StructType(
+            [
+                StructField(pred.model_index, IntegerType()),
+                StructField(reg_metrics.mean, ArrayType(FloatType())),
+                StructField(reg_metrics.m2n, ArrayType(FloatType())),
+                StructField(reg_metrics.m2, ArrayType(FloatType())),
+                StructField(reg_metrics.l1, ArrayType(FloatType())),
+                StructField(reg_metrics.total_count, IntegerType()),
+            ]
+        )
+
+        rows = self._this_model._transform_evaluate_internal(dataset, schema).collect()
+
+        metrics = RegressionMetrics.from_rows(num_models, rows)
+        return [metric.evaluate(evaluator) for metric in metrics]
+
+    @staticmethod
+    def calculate_regression_metrics(
+        input: TransformInputType,
+        transformed: TransformInputType,
+    ) -> pd.DataFrame:
+        """calculate the metrics: mean/m2n/m2/l1 ...
+
+        input must have `alias.label` column"""
+
+        comb = pd.DataFrame(
+            {
+                "label": input[alias.label],
+                "prediction": transformed,
+            }
+        )
+        comb.insert(1, "label-prediction", comb["label"] - comb["prediction"])
+        total_cnt = comb.shape[0]
+        return pd.DataFrame(
+            data={
+                reg_metrics.mean: [comb.mean().to_list()],
+                reg_metrics.m2n: [(comb.var(ddof=0) * total_cnt).to_list()],
+                reg_metrics.m2: [comb.pow(2).sum().to_list()],
+                reg_metrics.l1: [comb.abs().sum().to_list()],
+                reg_metrics.total_count: total_cnt,
+            }
+        )
 
 
 class LinearRegressionClass(_CumlClass):
@@ -524,18 +608,22 @@ class LinearRegression(
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True
 
+    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
+        return True if isinstance(evaluator, RegressionEvaluator) else False
+
 
 class LinearRegressionModel(
     LinearRegressionClass,
     _CumlModelWithPredictionCol,
     _LinearRegressionCumlParams,
+    _RegressionModelEvaluationMixIn,
 ):
     """Model fitted by :class:`LinearRegression`."""
 
     def __init__(
         self,
-        coef_: List[float],
-        intercept_: float,
+        coef_: Union[List[float], List[List[float]]],
+        intercept_: Union[float, List[float]],
         n_cols: int,
         dtype: str,
     ) -> None:
@@ -543,6 +631,7 @@ class LinearRegressionModel(
         self.coef_ = coef_
         self.intercept_ = intercept_
         self._lr_ml_model: Optional[SparkLinearRegressionModel] = None
+        self._this_model = self
 
     def cpu(self) -> SparkLinearRegressionModel:
         """Return the PySpark ML LinearRegressionModel"""
@@ -566,7 +655,8 @@ class LinearRegressionModel(
         Model coefficients.
         """
         # TBD: for large enough dimension, SparseVector is returned. Need to find out how to match
-        return Vectors.dense(self.coef_)
+        assert not isinstance(self.coef_[0], list)
+        return Vectors.dense(cast(list, self.coef_))
 
     @property
     def hasSummary(self) -> bool:
@@ -580,6 +670,7 @@ class LinearRegressionModel(
         """
         Model intercept.
         """
+        assert not isinstance(self.intercept_, list)
         return self.intercept_
 
     @property
@@ -610,24 +701,70 @@ class LinearRegressionModel(
         def _construct_lr() -> CumlT:
             from cuml.linear_model.linear_regression_mg import LinearRegressionMG
 
-            lr = LinearRegressionMG(output_type="numpy")
-            lr.coef_ = cudf_to_cuml_array(np.array(coef_, order="F").astype(dtype))
-            lr.intercept_ = intercept_
-            lr.n_cols = n_cols
-            lr.dtype = np.dtype(dtype)
+            lrs = []
 
-            return lr
+            coefs = coef_ if isinstance(intercept_, list) else [coef_]
+            intercepts = intercept_ if isinstance(intercept_, list) else [intercept_]
+
+            for i in range(len(coefs)):
+                lr = LinearRegressionMG(output_type="numpy")
+                print(f"index: {i}: coef: {coefs[i]}")
+                lr.coef_ = cudf_to_cuml_array(
+                    np.array(coefs[i], order="F").astype(dtype)
+                )
+                lr.intercept_ = intercepts[i]
+                lr.n_cols = n_cols
+                lr.dtype = np.dtype(dtype)
+                lrs.append(lr)
+
+            return lrs
 
         def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
             ret = lr.predict(pdf)
             return pd.Series(ret)
 
-        return _construct_lr, _predict, None
+        return _construct_lr, _predict, self.calculate_regression_metrics
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         df = super()._transform(dataset)
         return df.withColumn(
             self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+        )
+
+    @classmethod
+    def _combine(
+        cls: Type["LinearRegressionModel"], models: List["LinearRegressionModel"]  # type: ignore
+    ) -> "LinearRegressionModel":
+        assert len(models) > 0 and all(isinstance(model, cls) for model in models)
+        first_model = models[0]
+
+        # Combine coef and intercepts
+        coefs = cast(list, [model.coef_ for model in models])
+        intercepts = cast(list, [model.intercept_ for model in models])
+
+        assert first_model.n_cols is not None
+        assert first_model.dtype is not None
+
+        lr_model = cls(
+            n_cols=first_model.n_cols,
+            dtype=first_model.dtype,
+            coef_=coefs,
+            intercept_=intercepts,
+        )
+        first_model._copyValues(lr_model)
+        first_model._copy_cuml_params(lr_model)
+
+        return lr_model
+
+    def _transformEvaluate(
+        self,
+        dataset: DataFrame,
+        evaluator: Evaluator,
+        params: Optional["ParamMap"] = None,
+    ) -> List[float]:
+        num_models = len(self.intercept_) if isinstance(self.intercept_, list) else 1
+        return self._transform_evaluate(
+            dataset=dataset, evaluator=evaluator, num_models=num_models, params=params
         )
 
 
@@ -822,6 +959,7 @@ class RandomForestRegressionModel(
     _RandomForestModel,
     _RandomForestCumlParams,
     _RandomForestRegressorParams,
+    _RegressionModelEvaluationMixIn,
 ):
     """
     Model fitted by :class:`RandomForestRegressor`.
@@ -842,6 +980,7 @@ class RandomForestRegressionModel(
         )
 
         self._rf_spark_model: Optional[SparkRandomForestRegressionModel] = None
+        self._this_model = self
 
     def cpu(self) -> SparkRandomForestRegressionModel:
         """Return the PySpark ML RandomForestRegressionModel"""
@@ -870,31 +1009,7 @@ class RandomForestRegressionModel(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         _construct_rf, _predict, _ = super()._get_cuml_transform_func(dataset, category)
-
-        def _evaluate(
-            input: TransformInputType,
-            transformed: TransformInputType,
-        ) -> pd.DataFrame:
-            # calculate the metrics: mean/m2n/m2/l1 ...
-            comb = pd.DataFrame(
-                {
-                    "label": input[alias.label],
-                    "prediction": transformed,
-                }
-            )
-            comb.insert(1, "label-prediction", comb["label"] - comb["prediction"])
-            total_cnt = comb.shape[0]
-            return pd.DataFrame(
-                data={
-                    reg_metrics.mean: [comb.mean().to_list()],
-                    reg_metrics.m2n: [(comb.var(ddof=0) * total_cnt).to_list()],
-                    reg_metrics.m2: [comb.pow(2).sum().to_list()],
-                    reg_metrics.l1: [comb.abs().sum().to_list()],
-                    reg_metrics.total_count: total_cnt,
-                }
-            )
-
-        return _construct_rf, _predict, _evaluate
+        return _construct_rf, _predict, self.calculate_regression_metrics
 
     def _transformEvaluate(
         self,
@@ -920,29 +1035,9 @@ class RandomForestRegressionModel(
             metrics
         """
 
-        if not isinstance(evaluator, RegressionEvaluator):
-            raise NotImplementedError(f"{evaluator} is unsupported yet.")
-
-        if self.getLabelCol() not in dataset.schema.names:
-            raise RuntimeError("Label column is not existing.")
-
-        dataset = dataset.withColumnRenamed(self.getLabelCol(), alias.label)
-
-        schema = StructType(
-            [
-                StructField(pred.model_index, IntegerType()),
-                StructField(reg_metrics.mean, ArrayType(FloatType())),
-                StructField(reg_metrics.m2n, ArrayType(FloatType())),
-                StructField(reg_metrics.m2, ArrayType(FloatType())),
-                StructField(reg_metrics.l1, ArrayType(FloatType())),
-                StructField(reg_metrics.total_count, IntegerType()),
-            ]
-        )
-
-        rows = super()._transform_evaluate_internal(dataset, schema).collect()
         num_models = (
             len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
         )
-
-        metrics = RegressionMetrics.from_rows(num_models, rows)
-        return [metric.evaluate(evaluator) for metric in metrics]
+        return self._transform_evaluate(
+            dataset=dataset, evaluator=evaluator, num_models=num_models, params=params
+        )
