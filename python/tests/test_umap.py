@@ -69,9 +69,6 @@ def _local_umap_trustworthiness(local_X, local_y, n_neighbors, supervised):
 
     #embedding = local_model.transform(local_X)
     embedding = local_model.embedding_
-    print("local embedding type: ", type(embedding))
-    print("local embedding shape: ", embedding.shape)
-    print("local embedding dtype: ", embedding.dtype)
     return trustworthiness(
         local_X, embedding, n_neighbors=n_neighbors, batch_size=5000
     )
@@ -86,7 +83,7 @@ def _spark_umap_trustworthiness(
     """
     from spark_rapids_ml.umap import UMAP
 
-    local_model = UMAP(n_neighbors=n_neighbors, sample_fraction=sampling_ratio, random_state=42, init="random")
+    local_model = UMAP(n_neighbors=n_neighbors, sample_fraction=sampling_ratio, random_state=42, init="random", num_workers=n_parts)
 
     with CleanSparkSession() as spark:
         
@@ -103,12 +100,7 @@ def _spark_umap_trustworthiness(
         local_model.setFeaturesCol(features_col)
         distributed_model = local_model.fit(data_df)
         #embedding = distributed_model.transform(data_df)
-        print("spark list dtype: ", type(distributed_model.embedding_[0][0]))
         embedding = cp.array(distributed_model.embedding_)
-        print("spark embedding type: ", type(embedding))
-        print("spark embedding shape: ", embedding.shape)
-        print("spark embedding dtype: ", embedding.dtype)
-        print("\nlocal X shape: ", local_X.shape, "\n")
 
     return trustworthiness(
         local_X, embedding, n_neighbors=n_neighbors, batch_size=5000
@@ -170,7 +162,7 @@ def test_spark_umap(
     assert result
 
 
-def _test() -> None:
+def test() -> None:
     from spark_rapids_ml.umap import UMAP
     X, _ = make_blobs(
         1000, 10, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10
@@ -185,4 +177,4 @@ def _test() -> None:
         print("model params:", local_model.cuml_params)
         gpu_model = local_model.fit(data_df)
         print("embedding shape:", len(gpu_model.embedding_), ",", len(gpu_model.embedding_[0]))
-        # gpu_model.transform(data_df).show()
+        gpu_model.transform(data_df).show()

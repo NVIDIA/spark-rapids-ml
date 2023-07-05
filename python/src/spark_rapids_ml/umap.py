@@ -142,14 +142,13 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
-        self.num_workers = 1
 
     def _create_pyspark_model(self, result: Row) -> "UMAPModel":
         return UMAPModel.from_row(result)
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
-        
-        def _estimate_dataset_memory(dataset: DataFrame):
+
+        def estimate_dataset_memory(dataset: DataFrame):
             num_rows = dataset.count()
             num_columns = len(dataset.columns)
             dtype = dataset.schema[0].dataType
@@ -160,7 +159,7 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
             memory_usage_bytes = num_rows * num_columns * size_per_element
             return memory_usage_bytes
         
-        def _get_gpu_memory_usage():
+        def get_gpu_memory_usage():
             import pynvml
             pynvml.nvmlInit()
             handle = pynvml.nvmlDeviceGetHandleByIndex(0)  # Assuming a single GPU is available
@@ -178,13 +177,16 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
         else:
             data_subset = dataset
 
-        data_subset_memory = _estimate_dataset_memory(data_subset)
-        gpu_memory = _get_gpu_memory_usage()
+        data_subset_memory = estimate_dataset_memory(data_subset)
+        gpu_memory = get_gpu_memory_usage()
         if data_subset_memory > gpu_memory:
             raise RuntimeError(
-                f"Dataset size ({data_subset_memory}) is larger than available GPU memory ({gpu_memory})."
+                f"Data subset size ({data_subset_memory}) is larger than available GPU memory ({gpu_memory}). " 
+                f"Please reduce the sample_fraction parameter."
             )
-
+        
+        input_num_workers = self.num_workers
+        self._num_workers = 1
         # force to single partition, single worker
         if data_subset.rdd.getNumPartitions() != 1:
             data_subset = data_subset.coalesce(1)
@@ -197,9 +199,7 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
         )
         rows = pipelined_rdd.collect()
         model = self._create_pyspark_model(rows[0])
-        model._num_workers = (
-            self._num_workers
-        )  # TODO: Change num_workers for outgoing model
+        model._num_workers = input_num_workers
 
         self._copyValues(model)
         self._copy_cuml_params(model)  # type: ignore
@@ -274,7 +274,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         driver_embedding = self.embedding
 
-        def _cuml_transform(
+        def _construct_umap(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
@@ -287,8 +287,13 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             internal_model.embedding_ = driver_embedding
 
             return internal_model.transform(dfs)
+        
+        def _transform_internal(
+            umap: CumlT, df: Union[pd.DataFrame, np.ndarray],
+        ) -> pd.Series:
+            pass
 
-        return _cuml_transform
+        return _construct_umap, _transform_internal, None
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return (False, False)
