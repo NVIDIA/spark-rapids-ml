@@ -15,13 +15,14 @@
 #
 
 from multiprocessing.pool import ThreadPool
-from typing import List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 from pyspark import inheritable_thread_target
 from pyspark.ml import Model
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel
+from pyspark.ml.util import DefaultParamsReader
 from pyspark.sql import DataFrame
 
 from .core import _CumlEstimator, _CumlModel
@@ -44,6 +45,47 @@ class CrossValidator(SparkCrossValidator):
 
     It is the gpu version CrossValidator which fits multiple models in a single pass for a single
     training dataset and transforms/evaluates in a single pass for multiple models.
+
+    Examples
+    --------
+
+    >>> from pyspark.ml.linalg import Vectors
+    >>> from pyspark.ml.tuning import ParamGridBuilder, CrossValidatorModel
+    >>> from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+    >>> from spark_rapids_ml.tuning import CrossValidator
+    >>> from spark_rapids_ml.classification import RandomForestClassifier
+    >>> import tempfile
+    >>> dataset = spark.createDataFrame(
+    ...     [(Vectors.dense([0.0]), 0.0),
+    ...      (Vectors.dense([0.4]), 1.0),
+    ...      (Vectors.dense([0.5]), 0.0),
+    ...      (Vectors.dense([0.6]), 2.0),
+    ...      (Vectors.dense([1.0]), 1.0)] * 10,
+    ...     ["features", "label"])
+    >>> rfc = RandomForestClassifier()
+    >>> grid = ParamGridBuilder().addGrid(rfc.maxBins, [8, 16]).build()
+    >>> evaluator = MulticlassClassificationEvaluator()
+    >>> cv = CrossValidator(estimator=rfc, estimatorParamMaps=grid, evaluator=evaluator,
+    ...                     parallelism=2)
+    >>> cvModel = cv.fit(dataset)
+    ...
+    >>> cvModel.getNumFolds()
+    3
+    >>> cvModel.avgMetrics[0]
+    1.0
+    >>> evaluator.evaluate(cvModel.transform(dataset))
+    1.0
+    >>> path = tempfile.mkdtemp()
+    >>> model_path = path + "/model"
+    >>> cvModel.write().save(model_path)
+    >>> cvModelRead = CrossValidatorModel.read().load(model_path)
+    >>> cvModelRead.avgMetrics
+    [1.0, 1.0]
+    >>> evaluator.evaluate(cvModel.transform(dataset))
+    1.0
+    >>> evaluator.evaluate(cvModelRead.transform(dataset))
+    1.0
+
     """
 
     def _fit(self, dataset: DataFrame) -> "CrossValidatorModel":
@@ -104,3 +146,32 @@ class CrossValidator(SparkCrossValidator):
             )
 
         return self._copyValues(model)
+
+    @staticmethod
+    def _is_python_params_instance(metadata: Dict[str, Any]) -> bool:
+        # If it's not python module, pyspark will load spark_rapids_ml.tuning.CrossValidator
+        # from JVM package. So we need to hack here
+        return metadata["class"].startswith(("pyspark.ml.", "spark_rapids_ml."))
+
+    @classmethod
+    def load(cls, path: str) -> "CrossValidator":
+        orig_is_python_params_instance = DefaultParamsReader.isPythonParamsInstance
+        try:
+            # Replace isPythonParamsInstance
+            setattr(
+                DefaultParamsReader,
+                "isPythonParamsInstance",
+                CrossValidator._is_python_params_instance,
+            )
+            cv_pyspark = super().load(path)
+            cv = cls()
+            cv_pyspark._copyValues(cv)
+        finally:
+            # Must restore to the original isPythonParamsInstance
+            setattr(
+                DefaultParamsReader,
+                "isPythonParamsInstance",
+                orig_is_python_params_instance,
+            )
+
+        return cv
