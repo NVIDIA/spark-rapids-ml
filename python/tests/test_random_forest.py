@@ -816,7 +816,6 @@ def test_fit_multiple_in_single_pass(
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 def test_crossvalidator_random_forest(
     estimator_evaluator: Tuple[RandomForest, RandomForestEvaluator],
-    tmp_path: str,
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
