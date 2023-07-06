@@ -125,12 +125,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     """
     >>> from spark_rapids_ml.umap import UMAP
-    >>> X, y = (1000, 10, centers=42, cluster_std=0.1,
+    >>> X, _ = (1000, 10, centers=42, cluster_std=0.1,
                 dtype=np.float32, random_state=10)
-    >>> data_df = spark.createDataFrame(pd.DataFrame(X))
-    >>> gpu_umap = UMAP(n_neighbors=15, n_components=2, ...) # Create UMAP() instance with params
-    >>> gpu_model = umap.fit(data_df)
-    >>> gpu_model.transform(data_df).show()
+    >>> df = spark.createDataFrame(X, ["features"])
+    >>> local_model = UMAP().setFeaturesCol("features")
+    >>> distributed_model = umap.fit(df)
+    >>> distributed_model.transform(df).show()
     """
 
     def __init__(self, sample_fraction: float = 1.0, **kwargs: Any) -> None:
