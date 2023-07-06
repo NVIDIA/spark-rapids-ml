@@ -614,15 +614,11 @@ class LogisticRegression(
         array_order = self._fit_array_order()
         num_classes = dataset.select(alias.label).distinct().count()
 
-        def _linear_regression_fit(
+        def _logistic_regression_fit(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             init_parameters = params[param_alias.cuml_init]
-
-            pdesc = PartitionDescriptor.build(
-                params[param_alias.part_sizes], params[param_alias.num_cols]
-            )
 
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
             supported_params = [
@@ -648,30 +644,18 @@ class LogisticRegression(
                 concated = _concat_and_free(X_list, order=array_order)
                 concated_y = _concat_and_free(y_list, order=array_order)
 
-
-            print(f"DEBUG: pdesc.rank: {pdesc.rank}, num_workers: {num_workers}, pdesc.m: {pdesc.m}, num_classes: {num_classes}")
-            logistic_regression.fit(
-                concated,
-                concated_y,
-                pdesc.rank,
-                num_workers,
-                pdesc.m,
-                num_classes,
+            pdesc = PartitionDescriptor.build(
+                [concated.shape[0]], params[param_alias.num_cols]
             )
 
-            print("DEBUG: showing logistic_regression.coef_: ")
 
-            print(logistic_regression.coef_)
-            print(type(logistic_regression.coef_))
-            print(logistic_regression.coef_.shape)
-            print(type(logistic_regression.coef_[0]))
-
-            print("DEBUG: showing logistic_regression.intercept_: ")
-            print(logistic_regression.intercept_)
-            print(logistic_regression.intercept_.shape)
-
-            print(f"DEBUG: dtype: {logistic_regression.dtype}")
-            print(f"DEBUG: dtype.name: {logistic_regression.dtype.name}")
+            logistic_regression.fit(
+                [(concated, concated_y)],
+                pdesc.m,
+                pdesc.n, 
+                pdesc.parts_rank_size,
+                pdesc.rank,
+            )
 
             return {
                 "coef_": [logistic_regression.coef_.tolist()],
@@ -680,7 +664,7 @@ class LogisticRegression(
                 "dtype": [logistic_regression.dtype.name],
             }
 
-        return _linear_regression_fit
+        return _logistic_regression_fit
 
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
