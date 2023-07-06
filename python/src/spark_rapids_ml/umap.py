@@ -130,7 +130,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     >>> df = spark.createDataFrame(X, ["features"])
     >>> local_model = UMAP().setFeaturesCol("features")
     >>> distributed_model = umap.fit(df)
-    >>> distributed_model.transform(df).show()
+    >>> embeddings = distributed_model.transform(df)
+    >>> embeddings.show()
     """
 
     def __init__(self, sample_fraction: float = 1.0, **kwargs: Any) -> None:
