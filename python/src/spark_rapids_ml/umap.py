@@ -42,10 +42,8 @@ from .core import (
     CumlT,
     FitInputType,
     _ConstructFunc,
-    _CumlCaller,
-    _CumlEstimator,
+    _CumlEstimatorSupervised,
     _CumlModel,
-    _CumlModelWithPredictionCol,
     _EvaluateFunc,
     _TransformFunc,
     alias,
@@ -87,7 +85,7 @@ class UMAPClass(_CumlClass):
         }
 
 
-class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols):
+class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol):
     def __init__(self) -> None:
         super().__init__()
         self._setDefault()
@@ -126,7 +124,7 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols):
         return self.set_params(labelCol=value)
 
 
-class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
+class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     """
     >>> from spark_rapids_ml.umap import UMAP
@@ -147,6 +145,7 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
         return UMAPModel.from_row(result)
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
+
         def estimate_dataset_memory(dataset: DataFrame) -> int:
             num_rows = dataset.count()
             num_columns = len(dataset.columns)
@@ -235,9 +234,19 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
                 concated = pd.concat(df_list)
             else:
                 concated = _concat_and_free(df_list, order=array_order)
-            local_model = umap_object.fit(concated)
+
+            if dfs[0][1] is not None:
+                # If labels are provided, call supervised fit
+                label_list = [x for (_, x, _) in dfs]
+                if isinstance(label_list[0], pd.DataFrame):
+                    labels = pd.concat(label_list)
+                else:
+                    labels = _concat_and_free(label_list, order=array_order)
+                local_model = umap_object.fit(concated, labels)
+            else:
+                local_model = umap_object.fit(concated)
             dtype = str(local_model.embedding_.dtype)
-            print("embedding dtype:", dtype)
+
             return {
                 "embedding_": [local_model.embedding_.tolist()],
                 "n_cols": len(local_model.embedding_[0]),
@@ -254,13 +263,30 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
             [
                 StructField(
                     "embedding_",
-                    ArrayType(ArrayType(DoubleType()), False),
+                    ArrayType(ArrayType(FloatType()), False),
                     False,
                 ),
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
             ]
         )
+    
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super(_CumlEstimatorSupervised, self)._pre_process_data(dataset)
+
+        if self.getLabelCol() in dataset.schema.names:
+            select_cols.append(self._pre_process_label(dataset, feature_type))
+
+        return select_cols, multi_col_names, dimension, feature_type
 
 
 class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):

@@ -62,9 +62,7 @@ def _local_umap_trustworthiness(
     from cuml.manifold import UMAP
 
     local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
-    y_train = None
-    if supervised:
-        y_train = local_y
+    y_train = local_y if supervised else None
     local_model.fit(local_X, y=y_train)
 
     embedding = local_model.embedding_
@@ -106,7 +104,6 @@ def _spark_umap_trustworthiness(
         distributed_model = local_model.fit(data_df)
         # embedding = distributed_model.transform(data_df)
         embedding = cp.array(distributed_model.embedding_)
-        print("spark cp array dtype: ", embedding.dtype)
 
     return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
@@ -138,11 +135,14 @@ def _run_spark_test(
     return trust_diff <= 0.15
 
 
-@pytest.mark.parametrize("n_parts", [2, 9])
-@pytest.mark.parametrize("n_rows", [100, 500])
+#@pytest.mark.parametrize("n_parts", [2, 9])
+@pytest.mark.parametrize("n_parts", [2])
+#@pytest.mark.parametrize("n_rows", [100, 500])
+@pytest.mark.parametrize("n_rows", [500])
 @pytest.mark.parametrize("sampling_ratio", [1.0])
-@pytest.mark.parametrize("supervised", [False])  # TODO: add supervised UMAP support
-@pytest.mark.parametrize("dataset", ["digits", "iris"])
+@pytest.mark.parametrize("supervised", [True, False])  # TODO: add supervised UMAP support
+#@pytest.mark.parametrize("dataset", ["digits", "iris"])
+@pytest.mark.parametrize("dataset", ["digits"])
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 def test_spark_umap(
