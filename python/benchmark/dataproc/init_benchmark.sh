@@ -32,5 +32,6 @@ gsutil cp gs://${BENCHMARK_HOME}/benchmark_runner.py .
 gsutil cp gs://${BENCHMARK_HOME}/spark_rapids_ml.zip .
 gsutil cp gs://${BENCHMARK_HOME}/benchmark.zip .
 
-unzip spark_rapids_ml.zip -d /opt/conda/miniconda3/lib/python3.8/site-packages
-unzip benchmark.zip -d /opt/conda/miniconda3/lib/python3.8/site-packages
+python_ver=`python --version | grep -oP '3\.[0-9]+'`
+unzip spark_rapids_ml.zip -d /opt/conda/miniconda3/lib/python${python_ver}/site-packages
+unzip benchmark.zip -d /opt/conda/miniconda3/lib/python${python_ver}/site-packages
