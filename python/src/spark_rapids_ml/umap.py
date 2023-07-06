@@ -18,10 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
-from pyspark.ml.functions import vector_to_array
-from pyspark.ml.linalg import Vector, Vectors, VectorUDT, _convert_to_vector
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
-from pyspark.ml.util import MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
@@ -145,33 +142,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         return UMAPModel.from_row(result)
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
-
-        def estimate_dataset_memory(dataset: DataFrame) -> int:
-            num_rows = dataset.count()
-            num_columns = len(dataset.columns)
-            dtype = dataset.schema[0].dataType
-            if isinstance(dtype, (DoubleType, LongType)):
-                size_per_element = 8
-            else:
-                size_per_element = 4
-            memory_usage_bytes = num_rows * num_columns * size_per_element
-            return memory_usage_bytes
-
-        def get_gpu_memory_usage() -> int:
-            import pynvml
-
-            try:
-                pynvml.nvmlInit()
-                handle = pynvml.nvmlDeviceGetHandleByIndex(
-                    0
-                )  # Assuming a single GPU is available
-                info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                used_memory = info.used
-                pynvml.nvmlShutdown()
-                return used_memory
-            except pynvml.NVMLError as e:
-                raise RuntimeError("Error querying GPU memory", e)
-
         if self.sample_fraction < 1.0:
             data_subset = dataset.sample(
                 withReplacement=False,
@@ -180,14 +150,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             )
         else:
             data_subset = dataset
-
-        data_subset_memory = estimate_dataset_memory(data_subset)
-        gpu_memory = get_gpu_memory_usage()
-        if data_subset_memory > gpu_memory:
-            raise RuntimeError(
-                f"Data subset size ({data_subset_memory}) is larger than available GPU memory ({gpu_memory}). "
-                f"Please reduce the sample_fraction parameter."
-            )
 
         input_num_workers = self.num_workers
         # Force to single partition, single worker
@@ -229,6 +191,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             umap_object = CumlUMAP(
                 **params[param_alias.cuml_init],
             )
+
             df_list = [x for (x, _, _) in dfs]
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
@@ -244,7 +207,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     labels = _concat_and_free(label_list, order=array_order)
                 local_model = umap_object.fit(concated, labels)
             else:
+                # Call unsupervised fit
                 local_model = umap_object.fit(concated)
+
             dtype = str(local_model.embedding_.dtype)
 
             return {
@@ -270,7 +235,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 StructField("dtype", StringType(), False),
             ]
         )
-    
+
     def _pre_process_data(
         self, dataset: DataFrame
     ) -> Tuple[
@@ -281,7 +246,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             multi_col_names,
             dimension,
             feature_type,
-        ) = super(_CumlEstimatorSupervised, self)._pre_process_data(dataset)
+        ) = super(
+            _CumlEstimatorSupervised, self
+        )._pre_process_data(dataset)
 
         if self.getLabelCol() in dataset.schema.names:
             select_cols.append(self._pre_process_label(dataset, feature_type))
@@ -291,7 +258,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
 class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def __init__(self, embedding_: List[List[float]], n_cols: int, dtype: str) -> None:
-        super(UMAPModel, self).__init__(embedding_=embedding_, n_cols=n_cols, dtype=dtype)
+        super(UMAPModel, self).__init__(
+            embedding_=embedding_, n_cols=n_cols, dtype=dtype
+        )
         self.embedding_ = embedding_
 
     @property
