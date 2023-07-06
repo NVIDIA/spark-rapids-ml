@@ -14,30 +14,26 @@
 # limitations under the License.
 #
 
+import math
 from typing import List, Tuple, Type, TypeVar
 
+import cupy as cp
 import numpy as np
 import pandas as pd
 import pytest
-import math
-import cupy as cp
 from cuml.datasets import make_blobs
-from cuml.metrics import trustworthiness
 from cuml.internals import logger
+from cuml.metrics import trustworthiness
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors
 from pyspark.sql.functions import col
 from sklearn.datasets import load_digits, load_iris
 
 from .sparksession import CleanSparkSession
-from .utils import (
-    assert_params,
-    create_pyspark_dataframe,
-)
+from .utils import assert_params, create_pyspark_dataframe, cuml_supported_data_types
 
 
-def _load_dataset(dataset, n_rows):
-
+def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
     if dataset == "digits":
         local_X, local_y = load_digits(return_X_y=True)
 
@@ -55,10 +51,14 @@ def _load_dataset(dataset, n_rows):
 
     return local_X, local_y
 
-def _local_umap_trustworthiness(local_X, local_y, n_neighbors, supervised):
-    """
-    Train model on all data, report trustworthiness
-    """
+
+def _local_umap_trustworthiness(
+    local_X: np.ndarray,
+    local_y: np.ndarray,
+    n_neighbors: int,
+    supervised: bool,
+    dtype: np.dtype,
+) -> float:
     from cuml.manifold import UMAP
 
     local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
@@ -67,56 +67,67 @@ def _local_umap_trustworthiness(local_X, local_y, n_neighbors, supervised):
         y_train = local_y
     local_model.fit(local_X, y=y_train)
 
-    #embedding = local_model.transform(local_X)
     embedding = local_model.embedding_
-    return trustworthiness(
-        local_X, embedding, n_neighbors=n_neighbors, batch_size=5000
-    )
-    
+    return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
+
 
 def _spark_umap_trustworthiness(
-    local_X, local_y, n_neighbors, supervised, n_parts, sampling_ratio
-):
-    """
-    Train model on random sample of data, transform in
-    parallel, report trustworthiness
-    """
+    local_X: np.ndarray,
+    local_y: np.ndarray,
+    n_neighbors: int,
+    supervised: bool,
+    n_parts: int,
+    sampling_ratio: float,
+    dtype: np.dtype,
+) -> float:
     from spark_rapids_ml.umap import UMAP
 
-    local_model = UMAP(n_neighbors=n_neighbors, sample_fraction=sampling_ratio, random_state=42, init="random", num_workers=n_parts)
+    local_model = UMAP(
+        n_neighbors=n_neighbors,
+        sample_fraction=sampling_ratio,
+        random_state=42,
+        init="random",
+        num_workers=n_parts,
+    )
 
     with CleanSparkSession() as spark:
-        
         if supervised:
             data_df, features_col, label_col = create_pyspark_dataframe(
-                spark, "array", np.float32, local_X, local_y
+                spark, "array", dtype, local_X, local_y
             )
+            assert label_col is not None
             local_model.setLabelCol(label_col)
         else:
             data_df, features_col, _ = create_pyspark_dataframe(
-                spark, "array", np.float32, local_X, None
+                spark, "array", dtype, local_X, None
             )
 
         local_model.setFeaturesCol(features_col)
         distributed_model = local_model.fit(data_df)
-        #embedding = distributed_model.transform(data_df)
+        # embedding = distributed_model.transform(data_df)
         embedding = cp.array(distributed_model.embedding_)
+        print("spark cp array dtype: ", embedding.dtype)
 
-    return trustworthiness(
-        local_X, embedding, n_neighbors=n_neighbors, batch_size=5000
-    )
+    return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
+
 
 def _run_spark_test(
-    n_parts, n_rows, sampling_ratio, supervised, dataset, n_neighbors,
-):
+    n_parts: int,
+    n_rows: int,
+    sampling_ratio: float,
+    supervised: bool,
+    dataset: str,
+    n_neighbors: int,
+    dtype: np.dtype,
+) -> bool:
     local_X, local_y = _load_dataset(dataset, n_rows)
 
     dist_umap = _spark_umap_trustworthiness(
-        local_X, local_y, n_neighbors, supervised, n_parts, sampling_ratio
+        local_X, local_y, n_neighbors, supervised, n_parts, sampling_ratio, dtype
     )
 
     loc_umap = _local_umap_trustworthiness(
-        local_X, local_y, n_neighbors, supervised
+        local_X, local_y, n_neighbors, supervised, dtype
     )
 
     print("Local UMAP trustworthiness score : {:.2f}".format(loc_umap))
@@ -127,19 +138,22 @@ def _run_spark_test(
     return trust_diff <= 0.15
 
 
-#@pytest.mark.parametrize("n_parts", [2, 9])
-@pytest.mark.parametrize("n_parts", [2])
-#@pytest.mark.parametrize("n_rows", [100, 500])
-@pytest.mark.parametrize("n_rows", [500])
-#@pytest.mark.parametrize("sampling_ratio", [0.55, 0.9])
+@pytest.mark.parametrize("n_parts", [2, 9])
+@pytest.mark.parametrize("n_rows", [100, 500])
 @pytest.mark.parametrize("sampling_ratio", [1.0])
-@pytest.mark.parametrize("supervised", [False]) #TODO: add supervised UMAP support
-#@pytest.mark.parametrize("dataset", ["digits", "iris"])
-@pytest.mark.parametrize("dataset", ["digits"])
+@pytest.mark.parametrize("supervised", [False])  # TODO: add supervised UMAP support
+@pytest.mark.parametrize("dataset", ["digits", "iris"])
 @pytest.mark.parametrize("n_neighbors", [10])
+@pytest.mark.parametrize("dtype", cuml_supported_data_types)
 def test_spark_umap(
-    n_parts, n_rows, sampling_ratio, supervised, dataset, n_neighbors
-):
+    n_parts: int,
+    n_rows: int,
+    sampling_ratio: float,
+    supervised: bool,
+    dataset: str,
+    n_neighbors: int,
+    dtype: np.dtype,
+) -> None:
     result = _run_spark_test(
         n_parts,
         n_rows,
@@ -147,6 +161,7 @@ def test_spark_umap(
         supervised,
         dataset,
         n_neighbors,
+        dtype,
     )
 
     if not result:
@@ -157,13 +172,15 @@ def test_spark_umap(
             supervised,
             dataset,
             n_neighbors,
+            dtype,
         )
 
     assert result
 
 
-def test() -> None:
+def _test() -> None:
     from spark_rapids_ml.umap import UMAP
+
     X, _ = make_blobs(
         1000, 10, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10
     )
@@ -171,10 +188,15 @@ def test() -> None:
     with CleanSparkSession() as spark:
         print("input shape:", X.shape)
         data_df, features_col, _ = create_pyspark_dataframe(
-            spark, "array", np.float32, X, None
+            spark, "array", cuml_supported_data_types[0], X, None
         )
         local_model = UMAP(sample_fraction=0.25).setFeaturesCol(features_col)
         print("model params:", local_model.cuml_params)
         gpu_model = local_model.fit(data_df)
-        print("embedding shape:", len(gpu_model.embedding_), ",", len(gpu_model.embedding_[0]))
+        print(
+            "embedding shape:",
+            len(gpu_model.embedding_),
+            ",",
+            len(gpu_model.embedding_[0]),
+        )
         gpu_model.transform(data_df).show()

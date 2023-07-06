@@ -28,8 +28,8 @@ from pyspark.sql.types import (
     ArrayType,
     DoubleType,
     FloatType,
-    LongType,
     IntegerType,
+    LongType,
     Row,
     StringType,
     StructField,
@@ -84,7 +84,6 @@ class UMAPClass(_CumlClass):
             "verbose": False,
             "output_type": None,
             "handle": None,
-            "sample_fraction": 1.0,
         }
 
 
@@ -119,7 +118,7 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols):
         Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns.
         """
         return self.set_params(featuresCols=value)
-    
+
     def setLabelCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`labelCol`.
@@ -139,16 +138,16 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
     >>> gpu_model.transform(data_df).show()
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, sample_fraction: float = 1.0, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
+        self.sample_fraction = sample_fraction
 
     def _create_pyspark_model(self, result: Row) -> "UMAPModel":
         return UMAPModel.from_row(result)
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
-
-        def estimate_dataset_memory(dataset: DataFrame):
+        def estimate_dataset_memory(dataset: DataFrame) -> int:
             num_rows = dataset.count()
             num_columns = len(dataset.columns)
             dtype = dataset.schema[0].dataType
@@ -158,20 +157,26 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
                 size_per_element = 4
             memory_usage_bytes = num_rows * num_columns * size_per_element
             return memory_usage_bytes
-        
-        def get_gpu_memory_usage():
+
+        def get_gpu_memory_usage() -> int:
             import pynvml
-            pynvml.nvmlInit()
-            handle = pynvml.nvmlDeviceGetHandleByIndex(0)  # Assuming a single GPU is available
-            info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            used_memory = info.used
-            pynvml.nvmlShutdown()
-            return used_memory
-    
-        if self.cuml_params["sample_fraction"] < 1.0:
+
+            try:
+                pynvml.nvmlInit()
+                handle = pynvml.nvmlDeviceGetHandleByIndex(
+                    0
+                )  # Assuming a single GPU is available
+                info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                used_memory = info.used
+                pynvml.nvmlShutdown()
+                return used_memory
+            except pynvml.NVMLError as e:
+                raise RuntimeError("Error querying GPU memory", e)
+
+        if self.sample_fraction < 1.0:
             data_subset = dataset.sample(
                 withReplacement=False,
-                fraction=self.cuml_params["sample_fraction"],
+                fraction=self.sample_fraction,
                 seed=self.cuml_params["random_state"],
             )
         else:
@@ -181,17 +186,16 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
         gpu_memory = get_gpu_memory_usage()
         if data_subset_memory > gpu_memory:
             raise RuntimeError(
-                f"Data subset size ({data_subset_memory}) is larger than available GPU memory ({gpu_memory}). " 
+                f"Data subset size ({data_subset_memory}) is larger than available GPU memory ({gpu_memory}). "
                 f"Please reduce the sample_fraction parameter."
             )
-        
+
         input_num_workers = self.num_workers
+        # Force to single partition, single worker
         self._num_workers = 1
-        # force to single partition, single worker
         if data_subset.rdd.getNumPartitions() != 1:
             data_subset = data_subset.coalesce(1)
 
-        # Operate on single node
         pipelined_rdd = self._call_cuml_fit_func(
             dataset=data_subset,
             partially_collect=False,
@@ -221,22 +225,23 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-
             from cuml.manifold import UMAP as CumlUMAP
 
             umap_object = CumlUMAP(
-                # alias params to cuml names
                 **params[param_alias.cuml_init],
             )
             df_list = [x for (x, _, _) in dfs]
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
             else:
-                # features are either cp or np arrays here
                 concated = _concat_and_free(df_list, order=array_order)
             local_model = umap_object.fit(concated)
+            dtype = str(local_model.embedding_.dtype)
+            print("embedding dtype:", dtype)
             return {
                 "embedding_": [local_model.embedding_.tolist()],
+                "n_cols": len(local_model.embedding_[0]),
+                "dtype": dtype,
             }
 
         return _cuml_fit
@@ -252,56 +257,28 @@ class UMAP(UMAPClass, _CumlEstimator, _UMAPCumlParams):
                     ArrayType(ArrayType(DoubleType()), False),
                     False,
                 ),
+                StructField("n_cols", IntegerType(), False),
+                StructField("dtype", StringType(), False),
             ]
         )
 
 
 class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
-    def __init__(self, embedding_) -> None:
-        super().__init__()
+    def __init__(self, embedding_: List[List[float]], n_cols: int, dtype: str) -> None:
+        super(UMAPModel, self).__init__(embedding_=embedding_, n_cols=n_cols, dtype=dtype)
         self.embedding_ = embedding_
 
     @property
-    def embedding(self) -> Vector:
-        """
-        Model coefficients.
-        """
-        # TBD: for large enough dimension, SparseVector is returned. Need to find out how to match
-        return Vectors.dense(self.embedding_)
+    def embedding(self) -> List[List[float]]:
+        return self.embedding_
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
-        driver_embedding = self.embedding
-
-        def _construct_umap(
-            dfs: FitInputType,
-            params: Dict[str, Any],
-        ) -> Dict[str, Any]:
-            from cuml.manifold import UMAP as CumlUMAP
-
-            # set umap object to internal fitted model
-            internal_model = CumlUMAP(
-                **params[param_alias.cuml_init],
-            )
-            internal_model.embedding_ = driver_embedding
-
-            return internal_model.transform(dfs)
-        
-        def _transform_internal(
-            umap: CumlT, df: Union[pd.DataFrame, np.ndarray],
-        ) -> pd.Series:
-            pass
-
-        return _construct_umap, _transform_internal, None
+        raise NotImplementedError("TODO")
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return (False, False)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        """
-        The output schema of the model, which will be used to
-        construct the returning pandas dataframe
-        """
-        ret_schema = "array<array<double>>"
-        return ret_schema
+        raise NotImplementedError("TODO")
