@@ -24,7 +24,11 @@ from cuml.metrics import trustworthiness
 from sklearn.datasets import load_digits, load_iris
 
 from .sparksession import CleanSparkSession
-from .utils import create_pyspark_dataframe, cuml_supported_data_types
+from .utils import (
+    create_pyspark_dataframe,
+    cuml_supported_data_types,
+    pyspark_supported_feature_types,
+)
 
 
 def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -68,8 +72,10 @@ def _spark_umap_trustworthiness(
     n_neighbors: int,
     supervised: bool,
     n_parts: int,
+    n_workers: int,
     sampling_ratio: float,
     dtype: np.dtype,
+    feature_type: str,
 ) -> float:
     from spark_rapids_ml.umap import UMAP
 
@@ -78,19 +84,19 @@ def _spark_umap_trustworthiness(
         sample_fraction=sampling_ratio,
         random_state=42,
         init="random",
-        num_workers=n_parts,
+        num_workers=n_workers,
     )
 
     with CleanSparkSession() as spark:
         if supervised:
             data_df, features_col, label_col = create_pyspark_dataframe(
-                spark, "array", dtype, local_X, local_y
+                spark, feature_type, dtype, local_X, local_y
             )
             assert label_col is not None
             local_model.setLabelCol(label_col)
         else:
             data_df, features_col, _ = create_pyspark_dataframe(
-                spark, "array", dtype, local_X, None
+                spark, feature_type, dtype, local_X, None
             )
 
         data_df = data_df.repartition(n_parts)
@@ -103,17 +109,27 @@ def _spark_umap_trustworthiness(
 
 def _run_spark_test(
     n_parts: int,
+    n_workers: int,
     n_rows: int,
     sampling_ratio: float,
     supervised: bool,
     dataset: str,
     n_neighbors: int,
     dtype: np.dtype,
+    feature_type: str,
 ) -> bool:
     local_X, local_y = _load_dataset(dataset, n_rows)
 
     dist_umap = _spark_umap_trustworthiness(
-        local_X, local_y, n_neighbors, supervised, n_parts, sampling_ratio, dtype
+        local_X,
+        local_y,
+        n_neighbors,
+        supervised,
+        n_parts,
+        n_workers,
+        sampling_ratio,
+        dtype,
+        feature_type,
     )
 
     loc_umap = _local_umap_trustworthiness(local_X, local_y, n_neighbors, supervised)
@@ -127,40 +143,50 @@ def _run_spark_test(
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
+@pytest.mark.parametrize("n_workers", [8])
 @pytest.mark.parametrize("n_rows", [100, 500])
-@pytest.mark.parametrize("sampling_ratio", [1.0])
+@pytest.mark.parametrize(
+    "sampling_ratio", [1.0]
+)  # Temporarily set to full dataset for fit() testing
 @pytest.mark.parametrize("supervised", [True, False])
 @pytest.mark.parametrize("dataset", ["digits", "iris"])
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
+@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 def test_spark_umap(
     n_parts: int,
+    n_workers: int,
     n_rows: int,
     sampling_ratio: float,
     supervised: bool,
     dataset: str,
     n_neighbors: int,
     dtype: np.dtype,
+    feature_type: str,
 ) -> None:
     result = _run_spark_test(
         n_parts,
+        n_workers,
         n_rows,
         sampling_ratio,
         supervised,
         dataset,
         n_neighbors,
         dtype,
+        feature_type,
     )
 
     if not result:
         result = _run_spark_test(
             n_parts,
+            n_workers,
             n_rows,
             sampling_ratio,
             supervised,
             dataset,
             n_neighbors,
             dtype,
+            feature_type,
         )
 
     assert result
