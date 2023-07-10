@@ -132,7 +132,7 @@ pipeline {
 
                     stash(name: "source_tree", includes: "**")
 
-                    container('docker-build') {
+                    container('cpu') {
                         // check if pre-merge dockerfile modified
                         def dockerfileModified = sh(returnStdout: true,
                             script: 'BASE=$(git --no-pager log --oneline -1 | awk \'{ print $NF }\'); ' +
