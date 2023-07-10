@@ -152,7 +152,7 @@ While the Spark Rapids ML API attempts to mirror the PySpark ML API to minimize 
 ```python
 # from pyspark.ml.clustering import KMeans
 from spark_rapids_ml.clustering import KMeans
-form pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors
 
 data = [(Vectors.dense([0.0, 0.0]), 2.0), (Vectors.dense([1.0, 1.0]), 2.0),
         (Vectors.dense([9.0, 8.0]), 2.0), (Vectors.dense([8.0, 9.0]), 2.0)]
