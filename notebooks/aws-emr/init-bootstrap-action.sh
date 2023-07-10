@@ -8,7 +8,7 @@ sudo chmod a+rwx -R /sys/fs/cgroup/devices
 sudo yum install -y gcc openssl-devel bzip2-devel libffi-devel tar gzip wget make mysql-devel
 sudo bash -c "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz && tar xzf Python-3.9.9.tgz && cd Python-3.9.9 && ./configure --enable-optimizations && make altinstall"
 
-RAPIDS_VERSION=23.4.0
+RAPIDS_VERSION=23.6.0
 
 # install scikit-learn 
 sudo /usr/local/bin/pip3.9 install scikit-learn

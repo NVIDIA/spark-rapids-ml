@@ -12,6 +12,8 @@ SPARK_RAPIDS_ML_HOME='../..'
 echo "**** copying benchmarking related files to ${BENCHMARK_HOME} ****"
 
 gsutil cp init_benchmark.sh gs://${BENCHMARK_HOME}/init_benchmark.sh
+curl -LO https://raw.githubusercontent.com/GoogleCloudDataproc/initialization-actions/master/spark-rapids/spark-rapids.sh
+gsutil cp spark-rapids.sh gs://${BENCHMARK_HOME}/spark-rapids.sh
 
 pushd ${SPARK_RAPIDS_ML_HOME}/benchmark
 zip -r - benchmark >benchmark.zip
