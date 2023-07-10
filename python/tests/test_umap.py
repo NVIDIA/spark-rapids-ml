@@ -93,6 +93,7 @@ def _spark_umap_trustworthiness(
                 spark, "array", dtype, local_X, None
             )
 
+        data_df = data_df.repartition(n_parts)
         local_model.setFeaturesCol(features_col)
         distributed_model = local_model.fit(data_df)
         embedding = cp.array(distributed_model.embedding_)
