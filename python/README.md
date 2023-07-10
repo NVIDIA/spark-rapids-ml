@@ -8,9 +8,9 @@ For simplicity, the following instructions just use Spark local mode, assuming a
 
 First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).
 ```bash
-conda create -n rapids-23.04 \
+conda create -n rapids-23.06 \
     -c rapidsai -c nvidia -c conda-forge \
-    cuml=23.04 python=3.8 cudatoolkit=11.5
+    cuml=23.06 python=3.9 cudatoolkit=11.5
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -19,7 +19,7 @@ conda create -n rapids-23.04 \
 
 Once you have the conda environment, activate it and install the required packages.
 ```bash
-conda activate rapids-23.04
+conda activate rapids-23.06
 
 # for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
@@ -152,7 +152,7 @@ While the Spark Rapids ML API attempts to mirror the PySpark ML API to minimize 
 ```python
 # from pyspark.ml.clustering import KMeans
 from spark_rapids_ml.clustering import KMeans
-form pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors
 
 data = [(Vectors.dense([0.0, 0.0]), 2.0), (Vectors.dense([1.0, 1.0]), 2.0),
         (Vectors.dense([9.0, 8.0]), 2.0), (Vectors.dense([8.0, 9.0]), 2.0)]

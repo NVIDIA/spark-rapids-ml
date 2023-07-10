@@ -1,4 +1,4 @@
-# Benchmarking on Dataproc
+# Benchmarking on AWS EMR
 
 This directory contains shell scripts for running larger-scale benchmarks on an AWS EMR cluster. You will need an AWS account to run them.  The benchmarks use datasets synthetically generated using [gen_data.py](../gen_data.py). For convenience, these have been precomputed and are available in the public S3 bucket `spark-rapids-ml-bm-datasets-public`.  The benchmark scripts are currently configured to read the data from there.
 
