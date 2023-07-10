@@ -207,7 +207,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         This function should match the metric used to train the UMAP embeedings.
 
     random_state : int, RandomState instance (optional, default=None)
-        If set to a non-zero value, this will ensure reproducible results.
+        If set to a non-zero value, this will ensure reproducible results during fit(). Note that transform() is
+        inherently stochastic and may yield slightly varied embedding results.
 
     verbose :
         Logging level.
@@ -221,7 +222,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     sample_fraction : float (optional, default=1.0)
         The fraction of the dataset to be used for fitting the model. Since fitting is done locally, very large datasets
-        must be subsampled to fit within local memory and execute in a reasonable time. Smaller fractions will result in 
+        must be subsampled to fit within local memory and execute in a reasonable time. Smaller fractions will result in
         faster training, but may result in sub-optimal embeddings.
 
     featuresCol: str
