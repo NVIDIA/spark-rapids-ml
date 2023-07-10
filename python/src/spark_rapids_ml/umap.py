@@ -122,7 +122,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     """
     Uniform Manifold Approximation and Projection (UMAP) is a dimension reduction technique
-    used for low-dimensional data visualisation and general non-linear dimension reduction.
+    used for low-dimensional data visualization and general non-linear dimension reduction.
     The algorithm finds a low dimensional embedding of the data that approximates an underlying manifold.
     The fit() method constructs a KNN-graph representation of an input dataset and then optimizes a
     low dimensional embedding, and is performed locally. The transform() method transforms an input dataset
@@ -220,8 +220,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             * ``6`` - Enables all messages up to and including trace messages.
 
     sample_fraction : float (optional, default=1.0)
-        The fraction of the dataset to be used for fitting the model. Since fitting is done locally, a smaller fraction
-        will result in a faster fit for large datasets, but may result in sub-optimal embeddings.
+        The fraction of the dataset to be used for fitting the model. Since fitting is done locally, very large datasets
+        must be subsampled to fit within local memory and execute in a reasonable time. Smaller fractions will result in 
+        faster training, but may result in sub-optimal embeddings.
 
     featuresCol: str
         The name of the column that contains input vectors. featuresCol should be set when input vectors are stored
@@ -232,20 +233,23 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         in multiple columns of a dataframe.
 
     labelCol: str (optional)
-        The name of the column that contains labels if supervised fitting is desired.
+        The name of the column that contains labels. If provided, supervised fitting will be performed, where labels
+        will be taken into account when optimizing the embedding.
 
     Examples
     --------
     >>> from spark_rapids_ml.umap import UMAP
     >>> from cuml.datasets import make_blobs
-    >>>
     >>> X, _ = make_blobs(1000, 10, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10)
     >>> df = spark.createDataFrame(X, ["features"])
-    >>> local_model = UMAP().setFeaturesCol("features")
-    >>> distributed_model = umap.fit(df)
+    >>> df.show()
+    # TODO: show DF
+    >>> local_model = UMAP(sample_fraction=0.5)
+    >>> local_model.setFeaturesCol("features")
+    >>> distributed_model = local_model.fit(df)
     >>> embeddings = distributed_model.transform(df)
     >>> embeddings.show()
-    # TODO: show DF output.
+    # TODO: show output DF
 
     """
 
@@ -321,7 +325,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     labels = pd.concat(label_list)
                 else:
                     labels = _concat_and_free(label_list, order=array_order)
-                local_model = umap_object.fit(concated, labels)
+                local_model = umap_object.fit(concated, y=labels)
             else:
                 # Call unsupervised fit
                 local_model = umap_object.fit(concated)
