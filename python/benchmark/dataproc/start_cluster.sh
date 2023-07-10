@@ -18,7 +18,7 @@ CUDA_VERSION=${CUDA_VERSION:-11.8}
 gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
 --worker-accelerator type=nvidia-tesla-t4,count=1
---initialization-actions gs://goog-dataproc-initialization-actions-us-central1/gpu/install_gpu_driver.sh,gs://${BENCHMARK_HOME}/spark-rapids.sh,gs://${BENCHMARK_HOME}/init_benchmark.sh
+--initialization-actions gs://${BENCHMARK_HOME}/spark-rapids.sh,gs://${BENCHMARK_HOME}/init_benchmark.sh
 --metadata gpu-driver-provider="NVIDIA"
 --metadata rapids-runtime=SPARK
 --metadata cuda-version=${CUDA_VERSION}
