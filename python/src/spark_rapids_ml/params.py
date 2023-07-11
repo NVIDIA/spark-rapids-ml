@@ -15,12 +15,25 @@
 #
 
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
 from .utils import _is_local
+
+if TYPE_CHECKING:
+    from pyspark.ml._typing import ParamMap
 
 P = TypeVar("P", bound="_CumlParams")
 
@@ -162,6 +175,28 @@ class _CumlParams(_CumlClass, Params):
     @num_workers.setter
     def num_workers(self, value: int) -> None:
         self._num_workers = value
+
+    def copy(self: P, extra: Optional["ParamMap"] = None) -> P:
+        # override this function to update cuml_params if possible
+        instance: P = super().copy(extra)
+        cuml_params = instance.cuml_params.copy()
+
+        if isinstance(extra, dict):
+            for param, value in extra.items():
+                if isinstance(param, Param):
+                    name = instance._get_cuml_param(param.name, silent=False)
+                    if name is not None:
+                        cuml_params[name] = instance._get_cuml_mapping_value(
+                            name, value
+                        )
+                else:
+                    raise TypeError(
+                        "Expecting a valid instance of Param, but received: {}".format(
+                            param
+                        )
+                    )
+        instance._cuml_params = cuml_params
+        return instance
 
     def initialize_cuml_params(self) -> None:
         """
@@ -338,6 +373,27 @@ class _CumlParams(_CumlClass, Params):
 
         return num_workers
 
+    def _get_cuml_param(self, spark_param: str, silent: bool = True) -> Optional[str]:
+        param_map = self._param_mapping()
+
+        if spark_param in param_map:
+            cuml_param = param_map[spark_param]
+            if cuml_param is None:
+                if not silent:
+                    # if Spark Param is mapped to None, raise error
+                    raise ValueError(
+                        f"Spark Param '{spark_param}' is not supported by cuML."
+                    )
+            elif cuml_param == "":
+                # if Spark Param is mapped to empty string, warn and continue
+                if not silent:
+                    print(f"WARNING: Spark Param '{spark_param}' is not used by cuML.")
+                cuml_param = None
+
+            return cuml_param
+        else:
+            return None
+
     def _set_cuml_param(
         self, spark_param: str, spark_value: Any, silent: bool = True
     ) -> None:
@@ -357,22 +413,25 @@ class _CumlParams(_CumlClass, Params):
         ValueError
             If the Spark Param is explictly not supported.
         """
-        param_map = self._param_mapping()
-        if spark_param in param_map:
-            cuml_param = param_map[spark_param]
-            if cuml_param is None:
-                if not silent:
-                    # if Spark Param is mapped to None, raise error
-                    raise ValueError(
-                        f"Spark Param '{spark_param}' is not supported by cuML."
-                    )
-            elif cuml_param == "":
-                # if Spark Param is mapped to empty string, warn and continue
-                if not silent:
-                    print(f"WARNING: Spark Param '{spark_param}' is not used by cuML.")
+
+        cuml_param = self._get_cuml_param(spark_param, silent)
+
+        if cuml_param is not None:
+            # if Spark Param is mapped to cuML parameter, set cuml_params
+            self._set_cuml_value(cuml_param, spark_value)
+
+    def _get_cuml_mapping_value(self, k: str, v: Any) -> Any:
+        value_map = self._param_value_mapping()
+        if k not in value_map:
+            # no value mapping required
+            return v
+        else:
+            # value map exists
+            mapped_v = value_map[k](v)
+            if mapped_v is not None:
+                return mapped_v
             else:
-                # if Spark Param is mapped to cuML parameter, set cuml_params
-                self._set_cuml_value(cuml_param, spark_value)
+                raise ValueError(f"Value '{v}' for '{k}' param is unsupported")
 
     def _set_cuml_value(self, k: str, v: Any) -> None:
         """
@@ -394,14 +453,5 @@ class _CumlParams(_CumlClass, Params):
             If a value mapping exists, but the mapped value is None, this means that there is
             no equivalent value for the cuML side, so an exception is raised.
         """
-        value_map = self._param_value_mapping()
-        if k not in value_map:
-            # no value mapping required
-            self._cuml_params[k] = v
-        else:
-            # value map exists
-            mapped_v = value_map[k](v)
-            if mapped_v:
-                self._cuml_params[k] = mapped_v
-            else:
-                raise ValueError(f"Value '{v}' for '{k}' param is unsupported")
+        value_map = self._get_cuml_mapping_value(k, v)
+        self._cuml_params[k] = value_map

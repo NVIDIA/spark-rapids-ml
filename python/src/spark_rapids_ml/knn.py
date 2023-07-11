@@ -15,20 +15,7 @@
 #
 
 import asyncio
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -56,13 +43,17 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    _ConstructFunc,
     _CumlCaller,
     _CumlEstimatorSupervised,
     _CumlModel,
+    _EvaluateFunc,
+    _TransformFunc,
     alias,
     param_alias,
+    transform_evaluate,
 )
 from .params import P, _CumlClass, _CumlParams
 from .utils import _concat_and_free
@@ -299,7 +290,7 @@ class NearestNeighbors(
 
     def _get_cuml_fit_func(  # type: ignore
         self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         """
         This class overrides _fit and will not call _get_cuml_fit_func.
         """
@@ -440,15 +431,17 @@ class NearestNeighborsModel(
 
         return (self._item_df_withid, query_df_withid, knn_df)
 
-    def _get_cuml_fit_func(  # type: ignore
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+    def _get_cuml_fit_func(
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         label_isdata = self._label_isdata
         label_isquery = self._label_isquery
         id_col_name = self.getIdCol()
 
         def _cuml_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             from pyspark import BarrierTaskContext
@@ -568,11 +561,8 @@ class NearestNeighborsModel(
         )
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         raise NotImplementedError(
             "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
         )

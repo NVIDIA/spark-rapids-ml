@@ -14,9 +14,15 @@
 # limitations under the License.
 #
 
+from typing import Dict, Optional
+
 import numpy as np
 
-from spark_rapids_ml.utils import _concat_and_free, _get_default_params_from_func
+from spark_rapids_ml.utils import (
+    _concat_and_free,
+    _get_default_params_from_func,
+    _unsupported_methods_attributes,
+)
 
 
 def test_get_default_params_from_func() -> None:
@@ -44,6 +50,20 @@ def test_concat_and_free() -> None:
     assert len(arr_list) == 0
     assert not concat.flags["C_CONTIGUOUS"]
     assert concat.flags["F_CONTIGUOUS"]
+
+
+def test_unsupported_methods_attributes() -> None:
+    a = 1
+    assert _unsupported_methods_attributes(a) == set()
+
+    class A:
+        @classmethod
+        def _param_mapping(cls) -> Dict[str, Optional[str]]:
+            return {"param1": "param2", "param3": None, "param4": ""}
+
+    assert _unsupported_methods_attributes(A) == set(
+        ["param3", "getParam3", "setParam3", "param4", "getParam4", "setParam4"]
+    )
 
 
 def test_clean_sparksession() -> None:

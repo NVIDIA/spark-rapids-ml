@@ -18,20 +18,7 @@ import json
 import math
 import pickle
 from abc import abstractmethod
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -55,11 +42,16 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    TransformInputType,
+    _ConstructFunc,
     _CumlEstimatorSupervised,
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
@@ -181,7 +173,65 @@ class _RandomForestCumlParams(
         self._set(labelCol=value)  # type: ignore
         return self
 
+    def setPredictionCol(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`predictionCol`.
+        """
+        self._set(predictionCol=value)  # type: ignore
+        return self
+
+
+class _RandomForestEstimatorParams(_RandomForestCumlParams):
+    def __init__(self) -> None:
+        super().__init__()
+
+    # include setters used only in estimator classes (classifier and regressor) here
+    def setBootstrap(self: P, value: bool) -> P:
+        """
+        Sets the value of :py:attr:`bootstrap`.
+        """
+        return self.set_params(bootstrap=value)
+
+    def setFeatureSubsetStrategy(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`featureSubsetStrategy`.
+        """
+        return self.set_params(featureSubsetStrategy=value)
+
+    def setImpurity(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`impurity`.
+        """
+        return self.set_params(impurity=value)  # type: ignore
+
+    def setMaxBins(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`maxBins`.
+        """
+        return self.set_params(maxBins=value)
+
+    def setMaxDepth(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`maxDepth`.
+        """
+        return self.set_params(maxDepth=value)
+
+    def setMinInstancesPerNode(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`minInstancesPerNode`.
+        """
+        return self.set_params(minInstancesPerNode=value)
+
+    def setNumTrees(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`numTrees`.
+        """
+        return self.set_params(numTrees=value)
+
     def setSeed(self: P, value: int) -> P:
+        """
+        Sets the value of :py:attr:`seed`.
+        """
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
         return self.set_params(seed=value)
@@ -189,7 +239,7 @@ class _RandomForestCumlParams(
 
 class _RandomForestEstimator(
     _CumlEstimatorSupervised,
-    _RandomForestCumlParams,
+    _RandomForestEstimatorParams,
 ):
     def __init__(self, **kwargs: Any):
         super().__init__()
@@ -203,9 +253,8 @@ class _RandomForestEstimator(
         """Indicate if it is regression or classification estimator"""
         raise NotImplementedError()
 
-    def _estimators_per_worker(self) -> List[int]:
+    def _estimators_per_worker(self, n_estimators: int) -> List[int]:
         """Calculate the number of trees each task should train according to n_estimators"""
-        n_estimators = self.cuml_params["n_estimators"]
         n_workers = self.num_workers
         if n_estimators < n_workers:
             raise ValueError("n_estimators cannot be lower than number of spark tasks.")
@@ -218,98 +267,134 @@ class _RandomForestEstimator(
         return n_estimators_per_worker
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
-        n_estimators_per_worker = self._estimators_per_worker()
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+        # Each element of n_estimators_of_all_params is a list value which
+        # is composed of n_estimators per worker.
+        n_estimators_of_all_params: List[List[int]] = []
+        total_trees: List[int] = []
+
+        all_params = [{}] if extra_params is None else extra_params
+
+        for params in all_params:
+            num_trees = (
+                self.cuml_params["n_estimators"]
+                if "n_estimators" not in params
+                else params["n_estimators"]
+            )
+            n_estimators_of_all_params.append(self._estimators_per_worker(num_trees))
+            total_trees.append(num_trees)
 
         is_classification = self._is_classification()
 
-        total_trees = self.cuml_params["n_estimators"]
-
         def _rf_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            from pyspark import BarrierTaskContext
-
-            context = BarrierTaskContext.get()
-            part_id = context.partitionId()
-
-            rf_params = params[param_alias.cuml_init]
-            rf_params.pop("n_estimators")
-
-            if rf_params["max_features"] == "auto":
-                if total_trees == 1:
-                    rf_params["max_features"] = 1.0
-                else:
-                    rf_params["max_features"] = (
-                        "sqrt" if is_classification else (1 / 3.0)
-                    )
-
-            if is_classification:
-                from cuml import RandomForestClassifier as cuRf
-            else:
-                from cuml import RandomForestRegressor as cuRf
-
-            rf = cuRf(
-                n_estimators=n_estimators_per_worker[part_id],
-                output_type="cudf",
-                **rf_params,
-            )
-
             X_list = [item[0] for item in dfs]
             y_list = [item[1] for item in dfs]
             if isinstance(X_list[0], pd.DataFrame):
                 X = pd.concat(X_list)
                 y = pd.concat(y_list)
             else:
-                # should be list of np.ndarrays here
-                X = _concat_and_free(cast(List[np.ndarray], X_list))
-                y = _concat_and_free(cast(List[np.ndarray], y_list))
+                # features are either cp or np arrays here
+                X = _concat_and_free(X_list)
+                y = _concat_and_free(y_list)
 
-            # Fit a random forest model on the dataset (X, y)
-            rf.fit(X, y, convert_dtype=False)
-
-            # serialized_model is Dictionary type
-            serialized_model = rf._get_serialized_model()
-            pickled_model = pickle.dumps(serialized_model)
-            msg = base64.b64encode(pickled_model).decode("utf-8")
-            trees = rf.get_json()
-            data = {"model_bytes": msg, "model_json": trees}
-            messages = context.allGather(json.dumps(data))
-
-            # concatenate the random forest in the worker0
-            if part_id == 0:
-                mod_bytes = []
-                mod_jsons = []
-                for msg in messages:
-                    data = json.loads(msg)
-                    mod_bytes.append(
-                        pickle.loads(base64.b64decode(data["model_bytes"]))
-                    )
-                    mod_jsons.append(data["model_json"])
-
-                all_tl_mod_handles = [rf._tl_handle_from_bytes(i) for i in mod_bytes]
-                rf._concatenate_treelite_handle(all_tl_mod_handles)
-
-                from cuml.fil.fil import TreeliteModel
-
-                for tl_handle in all_tl_mod_handles:
-                    TreeliteModel.free_treelite_model(tl_handle)
-
-                final_model_bytes = pickle.dumps(rf._get_serialized_model())
-                final_model = base64.b64encode(final_model_bytes).decode("utf-8")
-                result = {
-                    "treelite_model": [final_model],
-                    "dtype": rf.dtype.name,
-                    "n_cols": rf.n_cols,
-                    "model_json": [mod_jsons],
-                }
-                if is_classification:
-                    result["num_classes"] = rf.num_classes
-                return result
+            if is_classification:
+                from cuml import RandomForestClassifier as cuRf
             else:
-                return {}
+                from cuml import RandomForestRegressor as cuRf
+
+            from pyspark import BarrierTaskContext
+
+            context = BarrierTaskContext.get()
+            part_id = context.partitionId()
+
+            def _single_fit(rf: cuRf) -> Dict[str, Any]:
+                # Fit a random forest model on the dataset (X, y)
+                rf.fit(X, y, convert_dtype=False)
+
+                # serialized_model is Dictionary type
+                serialized_model = rf._get_serialized_model()
+                pickled_model = pickle.dumps(serialized_model)
+                msg = base64.b64encode(pickled_model).decode("utf-8")
+                trees = rf.get_json()
+                data = {"model_bytes": msg, "model_json": trees}
+                messages = context.allGather(json.dumps(data))
+
+                # concatenate the random forest in the worker0
+                if part_id == 0:
+                    mod_bytes = []
+                    mod_jsons = []
+                    for msg in messages:
+                        data = json.loads(msg)
+                        mod_bytes.append(
+                            pickle.loads(base64.b64decode(data["model_bytes"]))
+                        )
+                        mod_jsons.append(data["model_json"])
+
+                    all_tl_mod_handles = [
+                        rf._tl_handle_from_bytes(i) for i in mod_bytes
+                    ]
+                    rf._concatenate_treelite_handle(all_tl_mod_handles)
+
+                    from cuml.fil.fil import TreeliteModel
+
+                    for tl_handle in all_tl_mod_handles:
+                        TreeliteModel.free_treelite_model(tl_handle)
+
+                    final_model_bytes = pickle.dumps(rf._get_serialized_model())
+                    final_model = base64.b64encode(final_model_bytes).decode("utf-8")
+                    result = {
+                        "treelite_model": final_model,
+                        "dtype": rf.dtype.name,
+                        "n_cols": rf.n_cols,
+                        "model_json": mod_jsons,
+                    }
+
+                    if is_classification:
+                        result["num_classes"] = rf.num_classes
+
+                    return result
+                else:
+                    return {}
+
+            rf_params = params[param_alias.cuml_init]
+            fit_multiple_params = params[param_alias.fit_multiple_params]
+
+            if len(fit_multiple_params) == 0:
+                fit_multiple_params.append({})
+
+            models = []
+            for i in range(len(fit_multiple_params)):
+                tmp_rf_params = rf_params.copy()
+                tmp_rf_params.update(fit_multiple_params[i])
+                tmp_rf_params.pop("n_estimators")
+
+                if tmp_rf_params["max_features"] == "auto":
+                    if total_trees[i] == 1:
+                        tmp_rf_params["max_features"] = 1.0
+                    else:
+                        tmp_rf_params["max_features"] = (
+                            "sqrt" if is_classification else (1 / 3.0)
+                        )
+                rf = cuRf(
+                    n_estimators=n_estimators_of_all_params[i][part_id],
+                    output_type="cudf",
+                    **tmp_rf_params,
+                )
+                models.append(_single_fit(rf))
+                del rf
+
+            models_dict = {}
+
+            if part_id == 0:
+                for k in models[0].keys():
+                    models_dict[k] = [m[k] for m in models]
+            return models_dict
 
         return _rf_fit
 
@@ -328,17 +413,20 @@ class _RandomForestEstimator(
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return False, False
 
+    def _enable_fit_multiple_in_single_pass(self) -> bool:
+        return True
+
 
 class _RandomForestModel(
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
     _RandomForestCumlParams,
 ):
     def __init__(
         self,
         n_cols: int,
         dtype: str,
-        treelite_model: str,
-        model_json: List[str] = [],
+        treelite_model: Union[str, List[str]],
+        model_json: Union[List[str], List[List[str]]] = [],  # type: ignore
         num_classes: int = -1,  # only for classification
     ):
         if self._is_classification():
@@ -422,10 +510,13 @@ class _RandomForestModel(
         assert sc._jvm is not None
         assert sc._gateway is not None
 
+        # This function shouldn't be called for the multiple models scenario.
+        model_json = cast(List[str], self._model_json)
+
         # Convert cuml trees to Spark trees
         trees = [
             translate_trees(sc, impurity, trees)
-            for trees_json in self._model_json
+            for trees_json in model_json
             for trees in json.loads(trees_json)
         ]
 
@@ -461,32 +552,56 @@ class _RandomForestModel(
         return uid, java_trees
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         treelite_model = self._treelite_model
-
         is_classification = self._is_classification()
 
         def _construct_rf() -> CumlT:
-            model = pickle.loads(base64.b64decode(treelite_model))
-
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
             else:
                 from cuml import RandomForestRegressor as cuRf
 
-            rf = cuRf()
-            rf._concatenate_treelite_handle([rf._tl_handle_from_bytes(model)])
+            rfs = []
+            treelite_models = (
+                treelite_model if isinstance(treelite_model, list) else [treelite_model]
+            )
+            for m in treelite_models:
+                model = pickle.loads(base64.b64decode(m))
+                rf = cuRf()
+                rf._concatenate_treelite_handle([rf._tl_handle_from_bytes(model)])
+                rfs.append(rf)
 
-            return rf
+            return rfs
 
-        def _predict(rf: CumlT, pdf: Union["cudf.DataFrame", np.ndarray]) -> pd.Series:
+        def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
             rf.update_labels = False
             ret = rf.predict(pdf)
             return pd.Series(ret)
 
         # TBD: figure out why RF algo's warns regardless of what np array order is set
-        return _construct_rf, _predict
+        return _construct_rf, _predict, None
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        df = super()._transform(dataset)
+        return df.withColumn(
+            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+        )
+
+    @classmethod
+    def _combine(
+        cls: Type["_RandomForestModel"], models: List["_RandomForestModel"]  # type: ignore
+    ) -> "_RandomForestModel":
+        assert len(models) > 0 and all(isinstance(model, cls) for model in models)
+        first_model = models[0]
+        treelite_models = [model._treelite_model for model in models]
+        model_jsons = [model._model_json for model in models]
+        attrs = first_model.get_model_attributes()
+        assert attrs is not None
+        attrs["treelite_model"] = treelite_models
+        attrs["model_json"] = model_jsons
+        rf_model = cls(**attrs)
+        first_model._copyValues(rf_model)
+        first_model._copy_cuml_params(rf_model)
+        return rf_model

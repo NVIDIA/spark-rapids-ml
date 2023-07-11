@@ -15,10 +15,7 @@
 #
 
 import itertools
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -39,11 +36,15 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    _ConstructFunc,
     _CumlEstimator,
     _CumlModelWithColumns,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from .params import P, _CumlClass, _CumlParams
 from .utils import (
@@ -138,7 +139,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     >>> print(gpu_model.pc)
     DenseMatrix([[0.70710678],
                  [0.70710678]])
-    >>> print(gpu_model.explainedVariance)
+    >>> print(gpu_model.explained_variance)
     [1.0]
     >>> gpu_pca.save("/tmp/pca")
 
@@ -175,10 +176,12 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         return self.set_params(k=value)
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         def _cuml_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
@@ -192,11 +195,14 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
             pdesc = PartitionDescriptor.build(
                 params[param_alias.part_sizes], params[param_alias.num_cols]
             )
+            data_arrays = [x for x, _, _ in dfs]
+            # reverse list order to compensate for cuda managed memory LRU eviction
+            stride = -1
             pca_object.fit(
-                [x for x, _, _ in dfs],
+                data_arrays[::stride],
                 pdesc.m,
                 pdesc.n,
-                pdesc.parts_rank_size,
+                pdesc.parts_rank_size[::stride],
                 pdesc.rank,
                 _transform=False,
             )
@@ -337,11 +343,8 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         return self._pca_ml_model
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 
         n_cols = self.n_cols
@@ -395,7 +398,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
             return pd.Series(list(res))
 
-        return _construct_pca, _transform_internal
+        return _construct_pca, _transform_internal, None
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None

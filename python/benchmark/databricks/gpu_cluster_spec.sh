@@ -3,13 +3,13 @@ cat <<EOF
 {
     "num_workers": $num_gpus,
     "cluster_name": "$cluster_name",
-    "spark_version": "10.4.x-gpu-ml-scala2.12",
+    "spark_version": "11.3.x-gpu-ml-scala2.12",
     "spark_conf": {
         "spark.task.resource.gpu.amount": "0.25",
         "spark.task.cpus": "1",
         "spark.databricks.delta.preview.enabled": "true",
         "spark.python.worker.reuse": "true",
-        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-23.04.0.jar:/databricks/spark/python",
+        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-23.06.0.jar:/databricks/spark/python",
         "spark.sql.files.minPartitionNum": "2",
         "spark.sql.execution.arrow.maxRecordsPerBatch": "10000",
         "spark.executor.cores": "8",

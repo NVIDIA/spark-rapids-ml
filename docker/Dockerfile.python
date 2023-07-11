@@ -17,7 +17,7 @@
 ARG CUDA_VERSION=11.5.2
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
-ARG CUML_VERSION=23.04
+ARG CUML_VERSION=23.06
 
 # Install packages to build spark-rapids-ml
 RUN apt update -y \
@@ -38,7 +38,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linu
 
 # install cuML
 
-RUN conda install -y -c rapidsai -c nvidia -c conda-forge python=3.8 cuda-toolkit=11.5 cuml=$CUML_VERSION \
+RUN conda install -y -c rapidsai -c nvidia -c conda-forge python=3.9 cuda-toolkit=11.5 cuml=$CUML_VERSION \
     && conda clean --all -f -y
 
 # install python dependencies

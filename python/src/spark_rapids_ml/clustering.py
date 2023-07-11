@@ -14,20 +14,7 @@
 # limitations under the License.
 #
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -46,11 +33,15 @@ from pyspark.sql.types import (
 )
 
 from .core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    _ConstructFunc,
     _CumlEstimator,
-    _CumlModelSupervised,
+    _CumlModelWithPredictionCol,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
@@ -269,16 +260,19 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         return "C"
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         cls = self.__class__
 
         array_order = self._fit_array_order()
 
         def _cuml_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
+            import cupy as cp
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans_object = CumlKMeansMG(
@@ -290,10 +284,8 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
             else:
-                # should be list of np.ndarrays here
-                concated = _concat_and_free(
-                    cast(List[np.ndarray], df_list), order=array_order
-                )
+                # features are either cp or np arrays here
+                concated = _concat_and_free(df_list, order=array_order)
 
             kmeans_object.fit(
                 concated,
@@ -331,7 +323,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         return KMeansModel.from_row(result)
 
 
-class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
+class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
     """
     KMeans gpu model for clustering input vectors to learned k centers.
     Refer to the KMeans class for learning the k centers.
@@ -395,11 +387,8 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
         return "C"
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 
         cluster_centers_ = self.cluster_centers_
@@ -426,4 +415,4 @@ class KMeansModel(KMeansClass, _CumlModelSupervised, _KMeansCumlParams):
             res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
             return pd.Series(res)
 
-        return _construct_kmeans, _transform_internal
+        return _construct_kmeans, _transform_internal, None

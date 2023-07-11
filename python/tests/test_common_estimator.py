@@ -14,20 +14,7 @@
 # limitations under the License.
 #
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
-)
-
-if TYPE_CHECKING:
-    import cudf
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -39,14 +26,18 @@ from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
 from spark_rapids_ml.core import (
-    CumlInputType,
     CumlT,
+    FitInputType,
+    _ConstructFunc,
     _CumlEstimator,
     _CumlModel,
+    _EvaluateFunc,
+    _TransformFunc,
     param_alias,
+    transform_evaluate,
 )
 from spark_rapids_ml.params import _CumlClass, _CumlParams
-from spark_rapids_ml.utils import PartitionDescriptor, _get_default_params_from_func
+from spark_rapids_ml.utils import PartitionDescriptor
 
 from .utils import assert_params, get_default_cuml_parameters
 
@@ -133,7 +124,12 @@ class SparkRapidsMLDummy(
     """
 
     def __init__(
-        self, m: int = 0, n: int = 0, partition_num: int = 0, **kwargs: Any
+        self,
+        m: int = 0,
+        n: int = 0,
+        partition_num: int = 0,
+        runtime_check: bool = True,
+        **kwargs: Any,
     ) -> None:
         #
 
@@ -142,6 +138,11 @@ class SparkRapidsMLDummy(
         self.m = m
         self.n = n
         self.partition_num = partition_num
+        self.runtime_check = runtime_check
+
+    """
+    PySpark estimator of CumlDummy
+    """
 
     def setInputCols(self, value: List[str]) -> "SparkRapidsMLDummy":
         return self._set(inputCols=value)
@@ -162,8 +163,10 @@ class SparkRapidsMLDummy(
         return self.set_params(**{"k": value})
 
     def _get_cuml_fit_func(
-        self, dataset: DataFrame
-    ) -> Callable[[CumlInputType, Dict[str, Any]], Dict[str, Any],]:
+        self,
+        dataset: DataFrame,
+        extra_params: Optional[List[Dict[str, Any]]] = None,
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         num_workers = self.num_workers
         partition_num = self.partition_num
         m = self.m
@@ -173,8 +176,10 @@ class SparkRapidsMLDummy(
         # it will throw exception since dataset is not picklable.
         self.test_pickle_dataframe = dataset
 
+        runtime_check = self.runtime_check
+
         def _cuml_fit(
-            dfs: CumlInputType,
+            dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             context = TaskContext.get()
@@ -187,19 +192,21 @@ class SparkRapidsMLDummy(
                 params[param_alias.part_sizes], params[param_alias.num_cols]
             )
 
-            assert pd.rank == context.partitionId()
-            assert len(pd.parts_rank_size) == partition_num
-            assert pd.m == m
-            assert pd.n == n
-
             assert param_alias.cuml_init in params
             init_params = params[param_alias.cuml_init]
-            assert init_params == {"a": 100, "k": 4, "x": 40.0}
             dummy = CumlDummy(**init_params)
-            assert dummy.a == 100
-            assert dummy.b == 20
-            assert dummy.k == 4
-            assert dummy.x == 40.0
+
+            if runtime_check:
+                assert pd.rank == context.partitionId()
+                assert len(pd.parts_rank_size) == partition_num
+                assert pd.m == m
+                assert pd.n == n
+
+                assert init_params == {"a": 100, "k": 4, "x": 40.0}
+                assert dummy.a == 100
+                assert dummy.b == 20
+                assert dummy.k == 4
+                assert dummy.x == 40.0
 
             import time
 
@@ -265,11 +272,8 @@ class SparkRapidsMLDummyModel(
         return self._set(outputCols=value)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame
-    ) -> Tuple[
-        Callable[..., CumlT],
-        Callable[[CumlT, Union["cudf.DataFrame", np.ndarray]], pd.DataFrame],
-    ]:
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         model_attribute_a = self.model_attribute_a
 
         # if the common framework tries to pickle the whole class,
@@ -294,7 +298,7 @@ class SparkRapidsMLDummyModel(
                 # TODO: implement when adding single column test
                 raise NotImplementedError()
 
-        return _construct_dummy, _dummy_transform
+        return _construct_dummy, _dummy_transform, None
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return input_schema
@@ -325,7 +329,9 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
 
     # Spark constructor (with ignored param "gamma")
     spark_params = {"alpha": 2.0, "gamma": "test", "k": 1}
-    spark_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **spark_params)
+    spark_dummy = SparkRapidsMLDummy(
+        m=0, n=0, partition_num=0, runtime_check=True, **spark_params
+    )
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(spark_params)
     expected_cuml_params = default_cuml_params.copy()
@@ -334,7 +340,9 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
 
     # cuML constructor
     cuml_params = {"a": 1.1, "k": 2, "x": 3.3}
-    cuml_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **cuml_params)
+    cuml_dummy = SparkRapidsMLDummy(
+        m=0, n=0, partition_num=0, runtime_check=True, **cuml_params
+    )
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(
         {
@@ -356,12 +364,24 @@ def test_dummy_params(gpu_number: int, tmp_path: str) -> None:
     # Spark constructor (with error param "beta")
     spark_params = {"alpha": 2.0, "beta": 0, "k": 1}
     with pytest.raises(ValueError, match="Spark Param 'beta' is not supported by cuML"):
-        spark_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **spark_params)
+        spark_dummy = SparkRapidsMLDummy(
+            m=0, n=0, partition_num=0, runtime_check=True, **spark_params
+        )
 
     # cuML constructor (with unsupported param "b")
     cuml_params = {"a": 1.1, "b": 0, "k": 2, "x": 3.3}
     with pytest.raises(ValueError, match="Unsupported param 'b'"):
-        cuml_dummy = SparkRapidsMLDummy(m=0, n=0, partition_num=0, **cuml_params)
+        cuml_dummy = SparkRapidsMLDummy(
+            m=0, n=0, partition_num=0, runtime_check=True, **cuml_params
+        )
+
+    # test the parameter copy
+    dummy = SparkRapidsMLDummy()
+    dummy2 = dummy.copy({dummy.alpha: 1111})
+    assert dummy.getOrDefault(dummy.alpha) == 1
+    assert dummy.cuml_params["a"] == 1
+    assert dummy2.getOrDefault(dummy.alpha) == 1111
+    assert dummy2.cuml_params["a"] == 1111
 
 
 def test_dummy(gpu_number: int, tmp_path: str) -> None:
@@ -424,6 +444,31 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         model.write().overwrite().save(model_path)
         model_loaded = SparkRapidsMLDummyModel.load(model_path)
         assert_model(model_loaded)
+
+        dummy2 = dummy.copy()
+        assert dummy2.cuml_params["a"] == 100
+        with pytest.raises(
+            Exception,
+            match="assert {'a': 9876.0, 'k': 4, 'x': 40.0} == {'a': 100, 'k': 4, 'x': 40.0}",
+        ):
+            dummy2.fit(df, {dummy2.alpha: 9876.0})
+        assert dummy2.cuml_params["a"] == 100
+        assert dummy2.getOrDefault(dummy2.alpha) == 100
+
+        dummy3 = SparkRapidsMLDummy(
+            inputCols=input_cols,
+            a=100,
+            num_workers=gpu_number,
+            partition_num=ceiling_division(m, max_records_per_batch),
+            m=m,
+            n=n,
+            runtime_check=False,  # don't assert on the runtime.
+        )
+        model3 = dummy3.fit(df, {dummy3.alpha: 9876.0})
+        assert dummy3.cuml_params["a"] == 100
+        assert dummy3.getOrDefault(dummy3.alpha) == 100
+        assert model3.cuml_params["a"] == 9876.0
+        assert model3.getOrDefault(model3.alpha) == 9876.0
 
         # Transform the training dataset with a clean spark
         with CleanSparkSession() as clean_spark:

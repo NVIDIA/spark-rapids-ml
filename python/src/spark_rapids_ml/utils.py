@@ -16,16 +16,45 @@
 import inspect
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Set, Tuple, Union
 
 if TYPE_CHECKING:
     import cudf
+    import cupy as cp
 
 import numpy as np
 from pyspark import BarrierTaskContext, SparkContext, TaskContext
 from pyspark.sql import SparkSession
 
 _ArrayOrder = Literal["C", "F"]
+
+
+def _method_names_from_param(spark_param_name: str) -> List[str]:
+    """
+    Returns getter and setter method names, per Spark ML conventions, for passed in attribute.
+    """
+    cap = spark_param_name[0].upper() + spark_param_name[1:]
+    getter = f"get{cap}"
+    setter = f"set{cap}"
+    return [getter, setter]
+
+
+def _unsupported_methods_attributes(clazz: Any) -> Set[str]:
+    """
+    Returns set of methods and attributes not supported by spark-rapids-ml for passed in class
+    as determined from empty values in the dictionary returned by _param_mapping() invoked on the class.
+    """
+    if "_param_mapping" in [
+        member_name for member_name, _ in inspect.getmembers(clazz, inspect.ismethod)
+    ]:
+        param_map = clazz._param_mapping()
+        _unsupported_params = [k for k, v in param_map.items() if not v]
+        _unsupported_methods: List[str] = sum(
+            [_method_names_from_param(k) for k in _unsupported_params], []
+        )
+        return set(_unsupported_params + _unsupported_methods)
+    else:
+        return set()
 
 
 def _get_spark_session() -> SparkSession:
@@ -61,16 +90,37 @@ def _str_or_numerical(x: str) -> Union[str, float, int]:
 
 def _get_gpu_id(task_context: TaskContext) -> int:
     """Get the gpu id from the task resources"""
-    if task_context is None:
-        # safety check.
-        raise RuntimeError("_get_gpu_id should not be invoked from driver side.")
-    resources = task_context.resources()
-    if "gpu" not in resources:
-        raise RuntimeError(
-            "Couldn't get the gpu id, Please check the GPU resource configuration."
+    import os
+
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        if os.environ["CUDA_VISIBLE_DEVICES"]:
+            num_assigned = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
+            # when CUDA_VISIBLE_DEVICES is set and non-empty, use 0-th index entry
+            gpu_id = 0
+        else:
+            raise RuntimeError(
+                "Couldn't get gpu id since CUDA_VISIBLE_DEVICES is set to an empty string.  Please check the GPU resource configuration."
+            )
+    else:
+        if task_context is None:
+            # safety check.
+            raise RuntimeError("_get_gpu_id should not be invoked from driver side.")
+        resources = task_context.resources()
+        if "gpu" not in resources:
+            raise RuntimeError(
+                "Couldn't get the gpu id, Please check the GPU resource configuration."
+            )
+        num_assigned = len(resources["gpu"].addresses)
+        # return the first gpu id.
+        gpu_id = int(resources["gpu"].addresses[0].strip())
+
+    if num_assigned > 1:
+        logger = get_logger(_get_gpu_id)
+        logger.warn(
+            f"Task got assigned {num_assigned} GPUs but using only 1.  This could be a waste of GPU resources."
         )
-    # return the first gpu id.
-    return int(resources["gpu"].addresses[0].strip())
+
+    return gpu_id
 
 
 def _get_default_params_from_func(
@@ -92,11 +142,11 @@ def _get_default_params_from_func(
     return filtered_params_dict
 
 
-def _get_class_name(cls: type) -> str:
+def _get_class_or_callable_name(cls_or_callable: Union[type, Callable]) -> str:
     """
     Return the class name.
     """
-    return f"{cls.__module__}.{cls.__name__}"
+    return f"{cls_or_callable.__module__}.{cls_or_callable.__name__}"
 
 
 class PartitionDescriptor:
@@ -140,23 +190,27 @@ class PartitionDescriptor:
 
 
 def _concat_and_free(
-    np_array_list: List[np.ndarray], order: _ArrayOrder = "F"
-) -> np.ndarray:
+    array_list: Union[List["cp.ndarray"], List[np.ndarray]], order: _ArrayOrder = "F"
+) -> Union["cp.ndarray", np.ndarray]:
     """
     concatenates a list of compatible numpy arrays into a 'order' ordered output array,
     in a memory efficient way.
     Note: frees list elements so do not reuse after calling.
     """
-    rows = sum(arr.shape[0] for arr in np_array_list)
-    if len(np_array_list[0].shape) > 1:
-        cols = np_array_list[0].shape[1]
+    import cupy as cp
+
+    array_module = cp if isinstance(array_list[0], cp.ndarray) else np
+
+    rows = sum(arr.shape[0] for arr in array_list)
+    if len(array_list[0].shape) > 1:
+        cols = array_list[0].shape[1]
         concat_shape: Tuple[int, ...] = (rows, cols)
     else:
         concat_shape = (rows,)
-    d_type = np_array_list[0].dtype
-    concated = np.empty(shape=concat_shape, order=order, dtype=d_type)
-    np.concatenate(np_array_list, out=concated)
-    del np_array_list[:]
+    d_type = array_list[0].dtype
+    concated = array_module.empty(shape=concat_shape, order=order, dtype=d_type)
+    array_module.concatenate(array_list, out=concated)
+    del array_list[:]
     return concated
 
 
@@ -186,9 +240,11 @@ def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
 
 
 # similar to https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/utils.py
-def get_logger(cls: type, level: str = "INFO") -> logging.Logger:
+def get_logger(
+    cls_or_callable: Union[type, Callable], level: str = "INFO"
+) -> logging.Logger:
     """Gets a logger by name, or creates and configures it for the first time."""
-    name = _get_class_name(cls)
+    name = _get_class_or_callable_name(cls_or_callable)
     logger = logging.getLogger(name)
 
     logger.setLevel(level)
