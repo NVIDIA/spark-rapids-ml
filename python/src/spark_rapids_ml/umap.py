@@ -335,6 +335,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
             return {
                 "embedding_": [local_model.embedding_.tolist()],
+                "raw_data_": [concated.tolist()],
                 "n_cols": len(local_model.embedding_[0]),
                 "dtype": dtype,
             }
@@ -349,6 +350,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             [
                 StructField(
                     "embedding_",
+                    ArrayType(ArrayType(FloatType()), False),
+                    False,
+                ),
+                StructField(
+                    "raw_data_",
                     ArrayType(ArrayType(FloatType()), False),
                     False,
                 ),
@@ -378,20 +384,40 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
 
 class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
-    def __init__(self, embedding_: List[List[float]], n_cols: int, dtype: str) -> None:
+    def __init__(
+        self,
+        embedding_: List[List[float]],
+        raw_data_: List[List[float]],
+        n_cols: int,
+        dtype: str,
+    ) -> None:
         super(UMAPModel, self).__init__(
-            embedding_=embedding_, n_cols=n_cols, dtype=dtype
+            embedding_=embedding_, raw_data_=raw_data_, n_cols=n_cols, dtype=dtype
         )
         self.embedding_ = embedding_
+        self.raw_data_ = raw_data_
 
     @property
     def embedding(self) -> List[List[float]]:
         return self.embedding_
 
+    @property
+    def raw_data(self) -> List[List[float]]:
+        return self.raw_data_
+
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
-        raise NotImplementedError("TODO")
+        def _construct_umap() -> CumlT:
+            raise NotImplementedError("TODO")
+
+        def _transform_internal(
+            umap: CumlT,
+            df: Union[pd.DataFrame, np.ndarray],
+        ) -> pd.Series:
+            raise NotImplementedError("TODO")
+
+        return _construct_umap, _transform_internal, None
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return (False, False)

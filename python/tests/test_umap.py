@@ -28,7 +28,10 @@ from .utils import (
     create_pyspark_dataframe,
     cuml_supported_data_types,
     pyspark_supported_feature_types,
+    assert_params,
 )
+
+from spark_rapids_ml.umap import UMAP
 
 
 def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -77,7 +80,6 @@ def _spark_umap_trustworthiness(
     dtype: np.dtype,
     feature_type: str,
 ) -> float:
-    from spark_rapids_ml.umap import UMAP
 
     local_model = UMAP(
         n_neighbors=n_neighbors,
@@ -143,7 +145,7 @@ def _run_spark_test(
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
-@pytest.mark.parametrize("n_workers", [8])
+@pytest.mark.parametrize("n_workers", [12])
 @pytest.mark.parametrize("n_rows", [100, 500])
 @pytest.mark.parametrize(
     "sampling_ratio", [1.0]
@@ -190,3 +192,35 @@ def test_spark_umap(
         )
 
     assert result
+
+def test_umap_persistence(tmp_path: str) -> None:
+    # Default constructor
+    default_cuml_params = {
+        "n_neighbors": 15,
+        "n_components": 2,
+        "metric": "euclidean",
+        "n_epochs": None,
+        "learning_rate": 1.0,
+        "init": "spectral",
+        "min_dist": 0.1,
+        "spread": 1.0,
+        "set_op_mix_ratio": 1.0,
+        "local_connectivity": 1.0,
+        "repulsion_strength": 1.0,
+        "negative_sample_rate": 5,
+        "transform_queue_size": 4.0,
+        "a": None,
+        "b": None,
+        "precomputed_knn": None,
+        "random_state": None,
+        "verbose": False,
+    }
+    default_umap = UMAP()
+    assert_params(default_umap, {}, default_cuml_params)
+
+    # Estimator persistence
+    path = tmp_path + "/umap_tests"
+    estimator_path = f"{path}/umap"
+    default_umap.write().overwrite().save(estimator_path)
+    loaded_umap = UMAP.load(estimator_path)
+    assert_params(loaded_umap, {}, default_cuml_params)
