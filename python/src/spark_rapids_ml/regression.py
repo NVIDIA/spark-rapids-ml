@@ -520,7 +520,6 @@ class LinearRegression(
                         # and label columns are all standardized.
                         init_parameters = init_parameters.copy()
                         if "alpha" in init_parameters.keys():
-                            print(f"pdesc.m {pdesc.m}")
                             init_parameters["alpha"] *= (float)(pdesc.m)
 
                     else:
@@ -708,7 +707,6 @@ class LinearRegressionModel(
 
             for i in range(len(coefs)):
                 lr = LinearRegressionMG(output_type="numpy")
-                print(f"index: {i}: coef: {coefs[i]}")
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )
