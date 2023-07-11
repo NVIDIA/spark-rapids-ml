@@ -20,17 +20,18 @@ If you already have a Dataproc account, you can run the example notebooks on a D
 
   gcloud storage buckets create gs://${GCS_BUCKET}
   ```
-- Upload the initialization script to your GCS bucket:
+- Upload the initialization scripts to your GCS bucket:
   ```
   gsutil cp spark_rapids_ml.sh gs://${GCS_BUCKET}/spark_rapids_ml.sh
+  gsutil cp ../../python/benchmark/dataproc/spark-rapids.sh gs://${GCS_BUCKET}/spark-rapids.sh
   ```
 - Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS:
   ```
   export CUDA_VERSION=11.8
-  export RAPIDS_VERSION=23.4
+  export RAPIDS_VERSION=23.6
 
   gcloud dataproc clusters create $USER-spark-rapids-ml \
-  --image-version=2.0.29-ubuntu18 \
+  --image-version=2.1-ubuntu \
   --region ${COMPUTE_REGION} \
   --master-machine-type n1-standard-16 \
   --master-accelerator type=nvidia-tesla-t4,count=1 \
@@ -40,7 +41,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --worker-machine-type n1-standard-16 \
   --num-worker-local-ssds 4 \
   --worker-local-ssd-interface=NVME \
-  --initialization-actions gs://goog-dataproc-initialization-actions-us-central1/gpu/install_gpu_driver.sh,gs://goog-dataproc-initialization-actions-us-central1/rapids/rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
+  --initialization-actions gs://goog-dataproc-initialization-actions-us-central1/gpu/install_gpu_driver.sh,gs://${GCS_BUCKET}/spark_rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
   --optional-components=JUPYTER \
   --metadata gpu-driver-provider="NVIDIA" \
   --metadata rapids-runtime=SPARK \
@@ -48,7 +49,8 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --metadata rapids-version=${RAPIDS_VERSION} \
   --bucket ${GCS_BUCKET} \
   --enable-component-gateway \
-  --subnet=default
+  --subnet=default \
+  --no-shielded-secure-boot
   ```
 - In the [Dataproc console](https://console.cloud.google.com/dataproc/clusters), select your cluster, go to the "Web Interfaces" tab, and click on the "JupyterLab" link.
 - In JupyterLab, upload the desired [notebook](../) via the `Upload Files` button.

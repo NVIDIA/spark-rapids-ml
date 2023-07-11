@@ -14,16 +14,14 @@ fi
 
 BENCHMARK_HOME=${BENCHMARK_HOME:-${GCS_BUCKET}/benchmark}
 CUDA_VERSION=${CUDA_VERSION:-11.8}
-RAPIDS_VERSION=${RAPIDS_VERSION:-23.4.0}
 
 gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
 --worker-accelerator type=nvidia-tesla-t4,count=1
---initialization-actions gs://goog-dataproc-initialization-actions-us-central1/gpu/install_gpu_driver.sh,gs://goog-dataproc-initialization-actions-us-central1/rapids/rapids.sh,gs://${BENCHMARK_HOME}/init_benchmark.sh
+--initialization-actions gs://${BENCHMARK_HOME}/spark-rapids.sh,gs://${BENCHMARK_HOME}/init_benchmark.sh
 --metadata gpu-driver-provider="NVIDIA"
 --metadata rapids-runtime=SPARK
 --metadata cuda-version=${CUDA_VERSION}
---metadata rapids-version=${RAPIDS_VERSION}
 --metadata benchmark-home=${BENCHMARK_HOME}
 EOF
 )
@@ -51,7 +49,7 @@ if [[ $? == 0 ]]; then
 else
     set -x
     gcloud dataproc clusters create ${cluster_name} \
-    --image-version=2.0.29-ubuntu18 \
+    --image-version=2.1-ubuntu \
     --region ${COMPUTE_REGION} \
     --master-machine-type n1-standard-16 \
     --num-workers 2 \
@@ -64,5 +62,6 @@ else
     --bucket ${GCS_BUCKET} \
     --enable-component-gateway \
     --max-idle "30m" \
-    --subnet=default
+    --subnet=default \
+    --no-shielded-secure-boot
 fi
