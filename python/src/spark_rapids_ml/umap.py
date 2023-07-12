@@ -388,6 +388,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         return _cuml_fit
 
+    # TODO: Add class flag and conditional to core function to avoid this override
     def _call_cuml_fit_func(
         self,
         dataset: DataFrame,
@@ -433,9 +434,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             param_alias.cuml_init: self.cuml_params,
         }
 
-        cuml_fit_func = self._get_cuml_fit_generator_func(
-            dataset, None
-        )
+        cuml_fit_func = self._get_cuml_fit_generator_func(dataset, None)
         array_order = self._fit_array_order()
 
         cuml_verbose = self.cuml_params.get("verbose", False)
