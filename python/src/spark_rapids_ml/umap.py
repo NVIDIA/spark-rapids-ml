@@ -38,10 +38,7 @@ from pyspark.sql.types import (
     ArrayType,
     DoubleType,
     FloatType,
-    IntegerType,
-    LongType,
     Row,
-    StringType,
     StructField,
     StructType,
 )
@@ -284,9 +281,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
 
-    def _create_pyspark_model(self, result: Row) -> "UMAPModel":
-        return UMAPModel.from_row(result)
-
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
         if self.sample_fraction < 1.0:
             data_subset = dataset.sample(
@@ -309,6 +303,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             paramMaps=None,
         )
         rows = pipelined_rdd.collect()
+        # Collect and concatenate row-by-row fit results
         embeddings = [row["embedding_"] for row in rows]
         raw_data = [row["raw_data_"] for row in rows]
 
@@ -319,9 +314,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             dtype=str(np.array(raw_data[0][0]).dtype),
         )
         model._num_workers = input_num_workers
-
-        print("n_cols:", len(raw_data[0]))
-        print("dtype:", str(np.array(raw_data[0][0]).dtype))
 
         self._copyValues(model)
         self._copy_cuml_params(model)  # type: ignore
@@ -366,9 +358,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             else:
                 # Call unsupervised fit
                 local_model = umap_object.fit(concated)
-
-            print("fit embedding shape:", local_model.embedding_.shape)
-            print("fit raw_data shape:", concated.shape)
 
             embedding = local_model.embedding_
             del local_model
@@ -513,6 +502,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free
                 # memory.  do not rely on inputs after this call.
+
+                # Yield fit results row by row to avoid breaching pyspark serialization limits
                 for row in cuml_fit_func(inputs, params):
                     yield row
                 logger.info("Cuml fit complete")
