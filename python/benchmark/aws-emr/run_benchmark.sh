@@ -78,7 +78,7 @@ elif [[ ${cluster_type} == "cpu" ]]; then
     device="CPU"
 else
     echo "unknown cluster type ${cluster_type}"
-    echo "usage: ./${script_name} cpu|gpu"
+    echo "usage: $0 cpu|gpu"
     exit 1
 fi
 
