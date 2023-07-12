@@ -62,8 +62,9 @@ _default_conf = {
     "spark.master": f"local[{_gpu_number}]",
     "spark.python.worker.reuse": "false",
     "spark.driver.host": "127.0.0.1",
+    "spark.driver.maxResultSize": "0",
     "spark.task.maxFailures": "1",
-    "spark.driver.memory": "5g",
+    "spark.driver.memory": "30g",
     "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
     "spark.sql.pyspark.jvmStacktrace.enabled": "true",
 }

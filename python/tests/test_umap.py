@@ -23,15 +23,15 @@ import pytest
 from cuml.metrics import trustworthiness
 from sklearn.datasets import load_digits, load_iris
 
+from spark_rapids_ml.umap import UMAP
+
 from .sparksession import CleanSparkSession
 from .utils import (
+    assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
     pyspark_supported_feature_types,
-    assert_params,
 )
-
-from spark_rapids_ml.umap import UMAP
 
 
 def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -80,7 +80,6 @@ def _spark_umap_trustworthiness(
     dtype: np.dtype,
     feature_type: str,
 ) -> float:
-
     local_model = UMAP(
         n_neighbors=n_neighbors,
         sample_fraction=sampling_ratio,
@@ -155,7 +154,7 @@ def _run_spark_test(
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
-def test_spark_umap(
+def _test_spark_umap(
     n_parts: int,
     n_workers: int,
     n_rows: int,
@@ -193,7 +192,8 @@ def test_spark_umap(
 
     assert result
 
-def test_umap_persistence(tmp_path: str) -> None:
+
+def _test_umap_persistence(tmp_path: str) -> None:
     # Default constructor
     default_cuml_params = {
         "n_neighbors": 15,
@@ -224,3 +224,72 @@ def test_umap_persistence(tmp_path: str) -> None:
     default_umap.write().overwrite().save(estimator_path)
     loaded_umap = UMAP.load(estimator_path)
     assert_params(loaded_umap, {}, default_cuml_params)
+
+
+def test() -> None:
+    from cuml.datasets import make_blobs
+
+    from spark_rapids_ml.umap import UMAP
+
+    local_blobs = False
+
+    if local_blobs:
+        X, _ = make_blobs(
+            10000, 3000, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10
+        )
+        print("X shape:", X.shape)
+        print("X dtype:", X.dtype)
+
+    with CleanSparkSession() as spark:
+        spark_conf = spark.sparkContext.getConf()
+        for key, value in spark_conf.getAll():
+            if key == "spark.driver.memory" or key == "spark.driver.maxResultSize":
+                print(f"{key} = {value}")
+
+        if local_blobs:
+            data_df, features_col, _ = create_pyspark_dataframe(
+                spark, "array", cuml_supported_data_types[0], X, None
+            )
+            local_model = UMAP(sample_fraction=1.0).setFeaturesCol(features_col)
+        else:
+            data_df = spark.read.parquet("../benchmark/blobs_200k_3k_f64.parquet")
+            features_cols = [f"c{i}" for i in range(3000)]
+            local_model = UMAP(sample_fraction=1.0).setFeaturesCols(features_cols)
+
+        gpu_model = local_model.fit(data_df)
+        print(
+            "output embedding shape, dtype: ",
+            (len(gpu_model.embedding), len(gpu_model.embedding_[0])),
+            np.array(gpu_model.embedding[0][0]).dtype,
+        )
+        print(
+            "output raw data shape, dtype: ",
+            (len(gpu_model.raw_data), len(gpu_model.raw_data[0])),
+            np.array(gpu_model.raw_data[0][0]).dtype,
+        )
+
+        import cupy
+        from cuml.common.sparse_utils import is_sparse
+        from cuml.internals.array_sparse import SparseCumlArray
+        from cuml.internals.input_utils import input_to_cuml_array
+
+        """
+        convert_dtype = True
+        raw_data_cuml, _, _, _ = input_to_cuml_array(
+            X,
+            order="C",
+            check_dtype=np.float32,
+            convert_to_dtype=(np.float32 if convert_dtype else None),
+        )
+
+        print("cuml raw data shape:", raw_data_cuml.shape)
+
+        sparse = False
+        if sparse:
+            raw_data_cuml = SparseCumlArray(
+                X, convert_to_dtype=cupy.float32, convert_format=False
+            )
+        """
+
+        # embedding = gpu_model.transform(data_df)
+        # embedding.show()

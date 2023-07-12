@@ -14,10 +14,23 @@
 # limitations under the License.
 #
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
+from pyspark import RDD
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
@@ -35,10 +48,12 @@ from pyspark.sql.types import (
 
 from spark_rapids_ml.core import FitInputType
 
+from .common.cuml_context import CumlContext
 from .core import (
     CumlT,
     FitInputType,
     _ConstructFunc,
+    _CumlCommon,
     _CumlEstimatorSupervised,
     _CumlModel,
     _EvaluateFunc,
@@ -48,7 +63,17 @@ from .core import (
     transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from .utils import _ArrayOrder, _concat_and_free
+from .utils import (
+    _ArrayOrder,
+    _concat_and_free,
+    _get_spark_session,
+    _is_local,
+    get_logger,
+)
+
+if TYPE_CHECKING:
+    import cudf
+    from pyspark.ml._typing import ParamMap
 
 
 class UMAPClass(_CumlClass):
@@ -284,8 +309,19 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             paramMaps=None,
         )
         rows = pipelined_rdd.collect()
-        model = self._create_pyspark_model(rows[0])
+        embeddings = [row["embedding_"] for row in rows]
+        raw_data = [row["raw_data_"] for row in rows]
+
+        model = UMAPModel(
+            embedding_=embeddings,
+            raw_data_=raw_data,
+            n_cols=len(raw_data[0]),
+            dtype=str(np.array(raw_data[0][0]).dtype),
+        )
         model._num_workers = input_num_workers
+
+        print("n_cols:", len(raw_data[0]))
+        print("dtype:", str(np.array(raw_data[0][0]).dtype))
 
         self._copyValues(model)
         self._copy_cuml_params(model)  # type: ignore
@@ -331,16 +367,163 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 # Call unsupervised fit
                 local_model = umap_object.fit(concated)
 
-            dtype = str(local_model.embedding_.dtype)
+            print("fit embedding shape:", local_model.embedding_.shape)
+            print("fit raw_data shape:", concated.shape)
 
-            return {
-                "embedding_": [local_model.embedding_.tolist()],
-                "raw_data_": [concated.tolist()],
-                "n_cols": len(local_model.embedding_[0]),
-                "dtype": dtype,
-            }
+            embedding = local_model.embedding_
+            del local_model
+
+            for embedding, raw_data in zip(embedding, concated):
+                yield pd.DataFrame(
+                    data=[
+                        {
+                            "embedding_": embedding.tolist(),
+                            "raw_data_": raw_data.tolist(),
+                        }
+                    ]
+                )
 
         return _cuml_fit
+
+    def _call_cuml_fit_func(
+        self,
+        dataset: DataFrame,
+        partially_collect: bool = True,
+        paramMaps: Optional[Sequence["ParamMap"]] = None,
+    ) -> RDD:
+        """
+        Fits a model to the input dataset. This is called by the default implementation of fit.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            input dataset
+
+        Returns
+        -------
+        :class:`Transformer`
+            fitted model
+        """
+
+        cls = self.__class__
+
+        select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
+
+        num_workers = self.num_workers
+
+        dataset = dataset.select(*select_cols)
+
+        if dataset.rdd.getNumPartitions() != num_workers:
+            dataset = self._repartition_dataset(dataset)
+
+        is_local = _is_local(_get_spark_session().sparkContext)
+
+        cuda_managed_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled:
+            get_logger(cls).info("CUDA managed memory enabled.")
+
+        # parameters passed to subclass
+        params: Dict[str, Any] = {
+            param_alias.cuml_init: self.cuml_params,
+        }
+
+        # Convert the paramMaps into cuml paramMaps
+        fit_multiple_params = []
+        if paramMaps is not None:
+            for paramMap in paramMaps:
+                tmp_fit_multiple_params = {}
+                for k, v in paramMap.items():
+                    name = self._get_cuml_param(k.name, False)
+                    assert name is not None
+                    tmp_fit_multiple_params[name] = self._get_cuml_mapping_value(
+                        name, v
+                    )
+                fit_multiple_params.append(tmp_fit_multiple_params)
+        params[param_alias.fit_multiple_params] = fit_multiple_params
+
+        cuml_fit_func = self._get_cuml_fit_func(
+            dataset, None if len(fit_multiple_params) == 0 else fit_multiple_params
+        )
+        array_order = self._fit_array_order()
+
+        cuml_verbose = self.cuml_params.get("verbose", False)
+
+        (enable_nccl, require_ucx) = self._require_nccl_ucx()
+
+        def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            from pyspark import BarrierTaskContext
+
+            logger = get_logger(cls)
+            logger.info("Initializing cuml context")
+
+            import cupy as cp
+
+            if cuda_managed_mem_enabled:
+                import rmm
+                from rmm.allocators.cupy import rmm_cupy_allocator
+
+                rmm.reinitialize(managed_memory=True)
+                cp.cuda.set_allocator(rmm_cupy_allocator)
+
+            _CumlCommon.initialize_cuml_logging(cuml_verbose)
+
+            context = BarrierTaskContext.get()
+            partition_id = context.partitionId()
+
+            # set gpu device
+            _CumlCommon.set_gpu_device(context, is_local)
+
+            with CumlContext(
+                partition_id, num_workers, context, enable_nccl, require_ucx
+            ) as cc:
+                # handle the input
+                # inputs = [(X, Optional(y)), (X, Optional(y))]
+                logger.info("Loading data into python worker memory")
+                inputs = []
+                sizes = []
+                for pdf in pdf_iter:
+                    sizes.append(pdf.shape[0])
+                    if multi_col_names:
+                        features = np.array(pdf[multi_col_names], order=array_order)
+                    else:
+                        features = np.array(list(pdf[alias.data]), order=array_order)
+                    # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
+                    # invoking cupy array on the list
+                    if cuda_managed_mem_enabled:
+                        features = cp.array(features)
+
+                    label = pdf[alias.label] if alias.label in pdf.columns else None
+                    row_number = (
+                        pdf[alias.row_number]
+                        if alias.row_number in pdf.columns
+                        else None
+                    )
+                    inputs.append((features, label, row_number))
+
+                params[param_alias.handle] = cc.handle
+                params[param_alias.part_sizes] = sizes
+                params[param_alias.num_cols] = dimension
+                params[param_alias.loop] = cc._loop
+
+                logger.info("Invoking cuml fit")
+
+                # call the cuml fit function
+                # *note*: cuml_fit_func may delete components of inputs to free
+                # memory.  do not rely on inputs after this call.
+                for row in cuml_fit_func(inputs, params):
+                    yield row
+                logger.info("Cuml fit complete")
+
+        pipelined_rdd = (
+            dataset.mapInPandas(_train_udf, schema=self._out_schema())  # type: ignore
+            .rdd.barrier()
+            .mapPartitions(lambda x: x)
+        )
+
+        return pipelined_rdd
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return (False, False)
@@ -350,16 +533,14 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             [
                 StructField(
                     "embedding_",
-                    ArrayType(ArrayType(FloatType()), False),
+                    ArrayType(FloatType(), False),
                     False,
                 ),
                 StructField(
                     "raw_data_",
-                    ArrayType(ArrayType(FloatType()), False),
+                    ArrayType(FloatType(), False),
                     False,
                 ),
-                StructField("n_cols", IntegerType(), False),
-                StructField("dtype", StringType(), False),
             ]
         )
 
@@ -392,7 +573,10 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         dtype: str,
     ) -> None:
         super(UMAPModel, self).__init__(
-            embedding_=embedding_, raw_data_=raw_data_, n_cols=n_cols, dtype=dtype
+            embedding_=embedding_,
+            raw_data_=raw_data_,
+            n_cols=n_cols,
+            dtype=dtype,
         )
         self.embedding_ = embedding_
         self.raw_data_ = raw_data_
