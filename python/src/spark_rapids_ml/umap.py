@@ -310,6 +310,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         # Collect and concatenate row-by-row fit results
         embeddings = [row["embedding_"] for row in rows]
         raw_data = [row["raw_data_"] for row in rows]
+        del rows
 
         model = UMAPModel(
             embedding_=embeddings,
