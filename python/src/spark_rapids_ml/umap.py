@@ -328,7 +328,15 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
 
-    def _get_cuml_fit_func(
+    def _get_cuml_fit_func(  # type: ignore
+        self, dataset: DataFrame
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+        """
+        This class overrides the parent function with a different return signature.
+        """
+        pass
+
+    def _get_cuml_fit_generator_func(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
@@ -425,22 +433,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             param_alias.cuml_init: self.cuml_params,
         }
 
-        # Convert the paramMaps into cuml paramMaps
-        fit_multiple_params = []
-        if paramMaps is not None:
-            for paramMap in paramMaps:
-                tmp_fit_multiple_params = {}
-                for k, v in paramMap.items():
-                    name = self._get_cuml_param(k.name, False)
-                    assert name is not None
-                    tmp_fit_multiple_params[name] = self._get_cuml_mapping_value(
-                        name, v
-                    )
-                fit_multiple_params.append(tmp_fit_multiple_params)
-        params[param_alias.fit_multiple_params] = fit_multiple_params
-
-        cuml_fit_func = self._get_cuml_fit_func(
-            dataset, None if len(fit_multiple_params) == 0 else fit_multiple_params
+        cuml_fit_func = self._get_cuml_fit_generator_func(
+            dataset, None
         )
         array_order = self._fit_array_order()
 
