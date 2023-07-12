@@ -19,6 +19,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     Iterator,
     List,
     Optional,
@@ -43,7 +44,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import FitInputType
+from spark_rapids_ml.core import FitInputType, _CumlModel
 
 from .common.cuml_context import CumlContext
 from .core import (
@@ -281,6 +282,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
 
+    def _create_pyspark_model(self, result: Row) -> _CumlModel:
+        raise NotImplementedError("UMAP does not support row-wise model creation")
+
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
         if self.sample_fraction < 1.0:
             data_subset = dataset.sample(
@@ -327,14 +331,16 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]], Generator[Dict[str, Any], None, None]
+    ]:
         cls = self.__class__
         array_order = self._fit_array_order()
 
         def _cuml_fit(
             dfs: FitInputType,
             params: Dict[str, Any],
-        ) -> Dict[str, Any]:
+        ) -> Generator[Dict[str, Any], None, None]:
             from cuml.manifold import UMAP as CumlUMAP
 
             umap_object = CumlUMAP(
