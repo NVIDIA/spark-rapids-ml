@@ -283,7 +283,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.sample_fraction = sample_fraction
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
-        raise NotImplementedError("UMAP does not support row-wise model creation")
+        raise NotImplementedError("UMAP does not support model creation from Row")
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
         if self.sample_fraction < 1.0:
@@ -334,7 +334,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     ) -> Callable[
         [FitInputType, Dict[str, Any]], Generator[Dict[str, Any], None, None]
     ]:
-        cls = self.__class__
         array_order = self._fit_array_order()
 
         def _cuml_fit(
