@@ -1,0 +1,205 @@
+﻿..  Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+..    http://www.apache.org/licenses/LICENSE-2.0
+
+..  Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+
+RandomForestClassifier
+=====================================================
+
+.. currentmodule:: spark_rapids_ml.classification
+
+.. autoclass:: RandomForestClassifier
+    :no-private-members:
+
+    
+      
+    
+
+    
+    
+
+    .. rubric:: Methods
+
+    .. autosummary::
+    
+       ~RandomForestClassifier.clear
+       ~RandomForestClassifier.copy
+       ~RandomForestClassifier.explainParam
+       ~RandomForestClassifier.explainParams
+       ~RandomForestClassifier.extractParamMap
+       ~RandomForestClassifier.fit
+       ~RandomForestClassifier.fitMultiple
+       ~RandomForestClassifier.getBootstrap
+       ~RandomForestClassifier.getFeatureSubsetStrategy
+       ~RandomForestClassifier.getFeaturesCol
+       ~RandomForestClassifier.getFeaturesCols
+       ~RandomForestClassifier.getImpurity
+       ~RandomForestClassifier.getLabelCol
+       ~RandomForestClassifier.getMaxBins
+       ~RandomForestClassifier.getMaxDepth
+       ~RandomForestClassifier.getMinInstancesPerNode
+       ~RandomForestClassifier.getNumTrees
+       ~RandomForestClassifier.getOrDefault
+       ~RandomForestClassifier.getParam
+       ~RandomForestClassifier.getProbabilityCol
+       ~RandomForestClassifier.getRawPredictionCol
+       ~RandomForestClassifier.getSeed
+       ~RandomForestClassifier.hasDefault
+       ~RandomForestClassifier.hasParam
+       ~RandomForestClassifier.initialize_cuml_logging
+       ~RandomForestClassifier.initialize_cuml_params
+       ~RandomForestClassifier.isDefined
+       ~RandomForestClassifier.isSet
+       ~RandomForestClassifier.load
+       ~RandomForestClassifier.read
+       ~RandomForestClassifier.save
+       ~RandomForestClassifier.set
+       ~RandomForestClassifier.setBootstrap
+       ~RandomForestClassifier.setFeatureSubsetStrategy
+       ~RandomForestClassifier.setFeaturesCol
+       ~RandomForestClassifier.setFeaturesCols
+       ~RandomForestClassifier.setImpurity
+       ~RandomForestClassifier.setLabelCol
+       ~RandomForestClassifier.setMaxBins
+       ~RandomForestClassifier.setMaxDepth
+       ~RandomForestClassifier.setMinInstancesPerNode
+       ~RandomForestClassifier.setNumTrees
+       ~RandomForestClassifier.setPredictionCol
+       ~RandomForestClassifier.setProbabilityCol
+       ~RandomForestClassifier.setRawPredictionCol
+       ~RandomForestClassifier.setSeed
+       ~RandomForestClassifier.set_gpu_device
+       ~RandomForestClassifier.set_params
+       ~RandomForestClassifier.write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes
+
+    .. autosummary::
+    
+       ~RandomForestClassifier.bootstrap
+       ~RandomForestClassifier.cuml_params
+       ~RandomForestClassifier.featureSubsetStrategy
+       ~RandomForestClassifier.featuresCol
+       ~RandomForestClassifier.featuresCols
+       ~RandomForestClassifier.impurity
+       ~RandomForestClassifier.labelCol
+       ~RandomForestClassifier.maxBins
+       ~RandomForestClassifier.maxDepth
+       ~RandomForestClassifier.minInstancesPerNode
+       ~RandomForestClassifier.numTrees
+       ~RandomForestClassifier.num_workers
+       ~RandomForestClassifier.params
+       ~RandomForestClassifier.probabilityCol
+       ~RandomForestClassifier.rawPredictionCol
+       ~RandomForestClassifier.seed
+       ~RandomForestClassifier.supportedFeatureSubsetStrategies
+       ~RandomForestClassifier.supportedImpurities
+
+    
+    
+
+    
+    
+
+    .. rubric:: Methods Documentation
+
+    
+    .. automethod:: clear
+    .. automethod:: copy
+    .. automethod:: explainParam
+    .. automethod:: explainParams
+    .. automethod:: extractParamMap
+    .. automethod:: fit
+    .. automethod:: fitMultiple
+    .. automethod:: getBootstrap
+    .. automethod:: getFeatureSubsetStrategy
+    .. automethod:: getFeaturesCol
+    .. automethod:: getFeaturesCols
+    .. automethod:: getImpurity
+    .. automethod:: getLabelCol
+    .. automethod:: getMaxBins
+    .. automethod:: getMaxDepth
+    .. automethod:: getMinInstancesPerNode
+    .. automethod:: getNumTrees
+    .. automethod:: getOrDefault
+    .. automethod:: getParam
+    .. automethod:: getProbabilityCol
+    .. automethod:: getRawPredictionCol
+    .. automethod:: getSeed
+    .. automethod:: hasDefault
+    .. automethod:: hasParam
+    .. automethod:: initialize_cuml_logging
+    .. automethod:: initialize_cuml_params
+    .. automethod:: isDefined
+    .. automethod:: isSet
+    .. automethod:: load
+    .. automethod:: read
+    .. automethod:: save
+    .. automethod:: set
+    .. automethod:: setBootstrap
+    .. automethod:: setFeatureSubsetStrategy
+    .. automethod:: setFeaturesCol
+    .. automethod:: setFeaturesCols
+    .. automethod:: setImpurity
+    .. automethod:: setLabelCol
+    .. automethod:: setMaxBins
+    .. automethod:: setMaxDepth
+    .. automethod:: setMinInstancesPerNode
+    .. automethod:: setNumTrees
+    .. automethod:: setPredictionCol
+    .. automethod:: setProbabilityCol
+    .. automethod:: setRawPredictionCol
+    .. automethod:: setSeed
+    .. automethod:: set_gpu_device
+    .. automethod:: set_params
+    .. automethod:: write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes Documentation
+
+    
+    .. autoattribute:: bootstrap
+    .. autoattribute:: cuml_params
+    .. autoattribute:: featureSubsetStrategy
+    .. autoattribute:: featuresCol
+    .. autoattribute:: featuresCols
+    .. autoattribute:: impurity
+    .. autoattribute:: labelCol
+    .. autoattribute:: maxBins
+    .. autoattribute:: maxDepth
+    .. autoattribute:: minInstancesPerNode
+    .. autoattribute:: numTrees
+    .. autoattribute:: num_workers
+    .. autoattribute:: params
+    .. autoattribute:: probabilityCol
+    .. autoattribute:: rawPredictionCol
+    .. autoattribute:: seed
+    .. autoattribute:: supportedFeatureSubsetStrategies
+    .. autoattribute:: supportedImpurities
+
+    
+    

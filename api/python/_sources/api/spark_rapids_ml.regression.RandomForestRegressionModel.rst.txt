@@ -1,0 +1,203 @@
+﻿..  Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+..    http://www.apache.org/licenses/LICENSE-2.0
+
+..  Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+
+RandomForestRegressionModel
+======================================================
+
+.. currentmodule:: spark_rapids_ml.regression
+
+.. autoclass:: RandomForestRegressionModel
+    :no-private-members:
+
+    
+      
+    
+
+    
+    
+
+    .. rubric:: Methods
+
+    .. autosummary::
+    
+       ~RandomForestRegressionModel.calculate_regression_metrics
+       ~RandomForestRegressionModel.clear
+       ~RandomForestRegressionModel.copy
+       ~RandomForestRegressionModel.cpu
+       ~RandomForestRegressionModel.explainParam
+       ~RandomForestRegressionModel.explainParams
+       ~RandomForestRegressionModel.extractParamMap
+       ~RandomForestRegressionModel.from_row
+       ~RandomForestRegressionModel.getBootstrap
+       ~RandomForestRegressionModel.getFeatureSubsetStrategy
+       ~RandomForestRegressionModel.getFeaturesCol
+       ~RandomForestRegressionModel.getFeaturesCols
+       ~RandomForestRegressionModel.getImpurity
+       ~RandomForestRegressionModel.getLabelCol
+       ~RandomForestRegressionModel.getMaxBins
+       ~RandomForestRegressionModel.getMaxDepth
+       ~RandomForestRegressionModel.getMinInstancesPerNode
+       ~RandomForestRegressionModel.getOrDefault
+       ~RandomForestRegressionModel.getParam
+       ~RandomForestRegressionModel.getPredictionCol
+       ~RandomForestRegressionModel.getSeed
+       ~RandomForestRegressionModel.get_model_attributes
+       ~RandomForestRegressionModel.hasDefault
+       ~RandomForestRegressionModel.hasParam
+       ~RandomForestRegressionModel.initialize_cuml_logging
+       ~RandomForestRegressionModel.initialize_cuml_params
+       ~RandomForestRegressionModel.isDefined
+       ~RandomForestRegressionModel.isSet
+       ~RandomForestRegressionModel.load
+       ~RandomForestRegressionModel.predict
+       ~RandomForestRegressionModel.predictLeaf
+       ~RandomForestRegressionModel.read
+       ~RandomForestRegressionModel.save
+       ~RandomForestRegressionModel.set
+       ~RandomForestRegressionModel.setFeaturesCol
+       ~RandomForestRegressionModel.setFeaturesCols
+       ~RandomForestRegressionModel.setLabelCol
+       ~RandomForestRegressionModel.setPredictionCol
+       ~RandomForestRegressionModel.set_gpu_device
+       ~RandomForestRegressionModel.set_params
+       ~RandomForestRegressionModel.transform
+       ~RandomForestRegressionModel.write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes
+
+    .. autosummary::
+    
+       ~RandomForestRegressionModel.bootstrap
+       ~RandomForestRegressionModel.cuml_params
+       ~RandomForestRegressionModel.featureImportances
+       ~RandomForestRegressionModel.featureSubsetStrategy
+       ~RandomForestRegressionModel.featuresCol
+       ~RandomForestRegressionModel.featuresCols
+       ~RandomForestRegressionModel.getNumTrees
+       ~RandomForestRegressionModel.impurity
+       ~RandomForestRegressionModel.labelCol
+       ~RandomForestRegressionModel.maxBins
+       ~RandomForestRegressionModel.maxDepth
+       ~RandomForestRegressionModel.minInstancesPerNode
+       ~RandomForestRegressionModel.numFeatures
+       ~RandomForestRegressionModel.numTrees
+       ~RandomForestRegressionModel.num_workers
+       ~RandomForestRegressionModel.params
+       ~RandomForestRegressionModel.predictionCol
+       ~RandomForestRegressionModel.seed
+       ~RandomForestRegressionModel.supportedFeatureSubsetStrategies
+       ~RandomForestRegressionModel.supportedImpurities
+       ~RandomForestRegressionModel.toDebugString
+       ~RandomForestRegressionModel.totalNumNodes
+       ~RandomForestRegressionModel.treeWeights
+       ~RandomForestRegressionModel.trees
+
+    
+    
+
+    
+    
+
+    .. rubric:: Methods Documentation
+
+    
+    .. automethod:: calculate_regression_metrics
+    .. automethod:: clear
+    .. automethod:: copy
+    .. automethod:: cpu
+    .. automethod:: explainParam
+    .. automethod:: explainParams
+    .. automethod:: extractParamMap
+    .. automethod:: from_row
+    .. automethod:: getBootstrap
+    .. automethod:: getFeatureSubsetStrategy
+    .. automethod:: getFeaturesCol
+    .. automethod:: getFeaturesCols
+    .. automethod:: getImpurity
+    .. automethod:: getLabelCol
+    .. automethod:: getMaxBins
+    .. automethod:: getMaxDepth
+    .. automethod:: getMinInstancesPerNode
+    .. automethod:: getOrDefault
+    .. automethod:: getParam
+    .. automethod:: getPredictionCol
+    .. automethod:: getSeed
+    .. automethod:: get_model_attributes
+    .. automethod:: hasDefault
+    .. automethod:: hasParam
+    .. automethod:: initialize_cuml_logging
+    .. automethod:: initialize_cuml_params
+    .. automethod:: isDefined
+    .. automethod:: isSet
+    .. automethod:: load
+    .. automethod:: predict
+    .. automethod:: predictLeaf
+    .. automethod:: read
+    .. automethod:: save
+    .. automethod:: set
+    .. automethod:: setFeaturesCol
+    .. automethod:: setFeaturesCols
+    .. automethod:: setLabelCol
+    .. automethod:: setPredictionCol
+    .. automethod:: set_gpu_device
+    .. automethod:: set_params
+    .. automethod:: transform
+    .. automethod:: write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes Documentation
+
+    
+    .. autoattribute:: bootstrap
+    .. autoattribute:: cuml_params
+    .. autoattribute:: featureImportances
+    .. autoattribute:: featureSubsetStrategy
+    .. autoattribute:: featuresCol
+    .. autoattribute:: featuresCols
+    .. autoattribute:: getNumTrees
+    .. autoattribute:: impurity
+    .. autoattribute:: labelCol
+    .. autoattribute:: maxBins
+    .. autoattribute:: maxDepth
+    .. autoattribute:: minInstancesPerNode
+    .. autoattribute:: numFeatures
+    .. autoattribute:: numTrees
+    .. autoattribute:: num_workers
+    .. autoattribute:: params
+    .. autoattribute:: predictionCol
+    .. autoattribute:: seed
+    .. autoattribute:: supportedFeatureSubsetStrategies
+    .. autoattribute:: supportedImpurities
+    .. autoattribute:: toDebugString
+    .. autoattribute:: totalNumNodes
+    .. autoattribute:: treeWeights
+    .. autoattribute:: trees
+
+    
+    
