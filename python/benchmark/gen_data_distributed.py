@@ -70,6 +70,7 @@ class BlobsDataGen(DataGenBaseMeta):
         # must replace the None to the correct type
         params["centers"] = int
         params["random_state"] = int
+        params["include_labels"] = bool
         return params
 
     def gen_dataframe_and_meta(
@@ -110,6 +111,8 @@ class BlobsDataGen(DataGenBaseMeta):
         params["centers"] = centers
         del params["random_state"]
 
+        include_labels = params.get("include_labels", False)
+
         maxRecordsPerBatch = int(
             spark.sparkContext.getConf().get(
                 "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
@@ -128,21 +131,25 @@ class BlobsDataGen(DataGenBaseMeta):
                     **params,
                     random_state=partition_seeds[partition_index],
                 )
-                data = np.concatenate(
-                    (
-                        X.astype(dtype),
-                        y.reshape(n_partition_samples, 1).astype(dtype),
-                    ),
-                    axis=1,
-                )
+                if include_labels:
+                    data = np.concatenate(
+                        (
+                            X.astype(dtype),
+                            y.reshape(n_partition_samples, 1).astype(dtype),
+                        ),
+                        axis=1,
+                    )
+                else:
+                    data = X.astype(dtype)
                 del X
                 del y
                 for i in range(0, n_partition_samples, maxRecordsPerBatch):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_samples)
                     yield pd.DataFrame(data=data[i:end_idx])
 
-        label_col = "label"
-        self.schema.append(f"{label_col} {self.pyspark_type}")
+        if include_labels:
+            label_col = "label"
+            self.schema.append(f"{label_col} {self.pyspark_type}")
 
         return (
             (

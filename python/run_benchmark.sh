@@ -15,13 +15,17 @@
 
 # if multiple gpus are available, set CUDA_VISIBLE_DEVICES to comma separated list of gpu indices to use
 export CUDA_VISIBLE_DEVICES=0
+cuda_version=11
 
 cluster_type=${1:-gpu}
 shift
 local_threads=4
+num_gpus=1
 if [[ $cluster_type == "gpu" ]]; then
     num_cpus=0
-    num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
+    if [ -n $CUDA_VISIBLE_DEVICES ]; then
+        num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
+    fi
 elif [[ $cluster_type == "cpu" ]]; then
     num_cpus=$local_threads
     num_gpus=0
@@ -31,116 +35,220 @@ else
     exit 1
 fi
 
+num_runs=1
+
 MODE=${1:-all}
 shift
 EXTRA_ARGS=$@
 
 unset SPARK_HOME
 
+# data set params
+num_rows=5000
+knn_num_rows=$num_rows
+num_cols=3000
+
+# for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
+#gen_data_script=./benchmark/gen_data.py
+#gen_data_root=/tmp/non-distributed2
+gen_data_script=./benchmark/gen_data_distributed.py
+gen_data_root=/tmp/distributed2
+
+# if num_rows=1m => output_files=50, scale linearly
+output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
+
 
 # stop on first fail
 set -e
 
+sep="=================="
+
+# TODO adjust maxRecorsPerBatch based on num columns
+common_confs=$( 
+cat <<EOF 
+--spark_confs spark.sql.execution.arrow.pyspark.enabled=true \
+--spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=20000 \
+--spark_confs spark.python.worker.reuse=true \
+--spark_confs spark.master=local[$local_threads] \
+--spark_confs spark.driver.memory=128g
+EOF
+)
+
+if [[ $cluster_type == "gpu" ]]
+then
+SPARK_RAPIDS_VERSION=23.06.0
+if [ ! -f rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar ]; then
+    echo "downloading spark rapids jar"
+    curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}-cuda${cuda_version}.jar \
+    -o rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+fi
+
+spark_rapids_confs=$( 
+cat <<EOF 
+--spark_confs spark.executorEnv.PYTHONPATH=rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+--spark_confs spark.sql.files.minPartitionNum=${num_gpus}
+--spark_confs spark.rapids.memory.gpu.minAllocFraction=0.0001 \
+--spark_confs spark.plugins=com.nvidia.spark.SQLPlugin \
+--spark_confs spark.locality.wait=0s \
+--spark_confs spark.sql.cache.serializer=com.nvidia.spark.ParquetCachedBatchSerializer \
+--spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
+--spark_confs spark.rapids.sql.explain=ALL
+--spark_confs spark.rapids.memory.gpu.reserve=20 \
+--spark_confs spark.sql.execution.sortBeforeRepartition=false \
+--spark_confs spark.rapids.sql.python.gpu.enabled=true \
+--spark_confs spark.rapids.memory.pinnedPool.size=2G \
+--spark_confs spark.python.daemon.module=rapids.daemon \
+--spark_confs spark.rapids.sql.batchSizeBytes=512m \
+--spark_confs spark.sql.adaptive.enabled=false \
+--spark_confs spark.sql.files.maxPartitionBytes=2000000000000 \
+--spark_confs spark.rapids.sql.concurrentGpuTasks=2 \
+--spark_confs spark.jars=rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+EOF
+)
+fi
+
 # KMeans
 if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/blobs/5k_3k_float32.parquet" ]]; then
-        python ./benchmark/gen_data.py default \
-            --num_rows 5000 \
-            --num_cols 3000 \
+    if [[ ! -d "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script default \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/default/5k_3k_float32.parquet" \
-            --spark_conf "spark.master=local[$local_threads]" \
-            --spark_confs "spark.driver.memory=128g"
+            --output_dir "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+           
     fi
 
+    echo "$sep algo: kmeans $sep"
     python ./benchmark/benchmark_runner.py kmeans \
         --k 1000 \
+        --tol 1.0e-20 \
+        --maxIter 30 \
+        --initMode random \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \
-        --train_path "/tmp/default/5k_3k_float32.parquet" \
-        --report_path "report_kmeans.csv" \
-        --spark_confs "spark.master=local[$local_threads]" \
-        --spark_confs "spark.driver.memory=128g" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_kmeans_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
 
 # KNearestNeighbors
 if [[ "${MODE}" == "knn" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/blobs/5k_3k_float32.parquet" ]]; then
-        python ./benchmark/gen_data.py blobs \
-            --num_rows 5000 \
-            --num_cols 3000 \
+    if [[ ! -d "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script blobs \
+            --num_rows $knn_num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/blobs/5k_3k_float32.parquet" \
-            --spark_conf "spark.master=local[$local_threads]" \
-            --spark_confs "spark.driver.memory=128g"
+            --output_dir "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
     fi
 
+    echo "$sep algo: knn $sep"
     python ./benchmark/benchmark_runner.py knn \
         --n_neighbors 3 \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \
-        --train_path "/tmp/blobs/5k_3k_float32.parquet" \
-        --report_path "report_knn.csv" \
-        --spark_confs "spark.master=local[$local_threads]" \
-        --spark_confs "spark.driver.memory=128g" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_knn_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
 
 # Linear Regression
+# TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
+# https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
 if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/regression/5k_3k_float32.parquet" ]]; then
-        python ./benchmark/gen_data.py regression \
-            --num_rows 5000 \
-            --num_cols 3000 \
+    if [[ ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script regression \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --noise 10 \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/regression/5k_3k_float32.parquet" \
-            --spark_conf "spark.master=local[$local_threads]" \
-            --spark_confs "spark.driver.memory=128g"
+            --output_dir "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
     fi
 
+    echo "$sep algo: linear regression - no regularization $sep"
     python ./benchmark/benchmark_runner.py linear_regression \
+        --regParam 0.0 \
+        --elasticNetParam 0.0 \
+        --standardization False \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
-        --train_path "/tmp/regression/5k_3k_float32.parquet" \
-        --transform_path "/tmp/regression/5k_3k_float32.parquet" \
-        --report_path "report_linear_regression.csv" \
-        --spark_confs "spark.master=local[$local_threads]" \
-        --spark_confs "spark.driver.memory=128g" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_linear_regression_noreg_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+    
+    echo "$sep algo: linear regression - elasticnet regularization $sep"
+    python ./benchmark/benchmark_runner.py linear_regression \
+        --regParam 0.00001 \
+        --elasticNetParam 0.5 \
+        --tol 1.0e-30 \
+        --maxIter 10 \
+        --standardization False \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_linear_regression_elastic_net_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+    
+    echo "$sep algo: linear regression - ridge regularization $sep"
+    python ./benchmark/benchmark_runner.py linear_regression \
+        --regParam 0.00001 \
+        --elasticNetParam 0.0 \
+        --tol 1.0e-30 \
+        --maxIter 10 \
+        --standardization False \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_linear_regression_elastic_net_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
 
 # PCA
 if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "/tmp/blobs/5k_3k_float32.parquet" ]]; then
-        python ./benchmark/gen_data.py low_rank_matrix \
-            --num_rows 5000 \
-            --num_cols 3000 \
+    if [[ ! -d "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script low_rank_matrix \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/low_rank_matrix/5k_3k_float32.parquet" \
-            --spark_conf "spark.master=local[$local_threads]" \
-            --spark_confs "spark.driver.memory=128g"
+            --output_dir "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
     fi
 
+    echo "$sep algo: pca $sep"
     python ./benchmark/benchmark_runner.py pca \
         --k 3 \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \
-        --train_path "/tmp/blobs/5k_3k_float32.parquet" \
-        --report_path "report_pca.csv" \
-        --spark_confs "spark.master=local[$local_threads]" \
-        --spark_confs "spark.driver.memory=128g" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_pca_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 
 #    # standalone mode
@@ -153,7 +261,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
 #        --num_cpus 0 \
 #        --num_runs 3 \
 #        --no_cache \
-#        --parquet_path "/tmp/blobs/5k_3k_float32.parquet" \
+#        --parquet_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
 #        --report_path "./report_standalone.csv" \
 #        --spark_confs "spark.master=${SPARK_MASTER}" \
 #        --spark_confs "spark.driver.memory=128g" \
@@ -168,50 +276,58 @@ fi
 
 # Random Forest Classification
 if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d /tmp/classification/5k_3k_float32.parquet ]]; then
-        python ./benchmark/gen_data.py classification \
-            --num_rows 5000 \
-            --num_cols 3000 \
+    if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+        python $gen_data_script classification \
+            --n_informative $( expr $num_cols / 3 )  \
+            --n_redundant $( expr $num_cols / 3 ) \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/classification/5k_3k_float32.parquet" \
-            --spark_conf "spark.master=local[$local_threads]" \
-            --spark_confs "spark.driver.memory=128g"
+            --output_dir "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
     fi
 
+    echo "$sep algo: random forest classification $sep"
     python ./benchmark/benchmark_runner.py random_forest_classifier \
+        --numTrees 50 \
+        --maxBins 128 \
+        --maxDepth 13 \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
-        --train_path "/tmp/classification/5k_3k_float32.parquet" \
-        --transform_path "/tmp/classification/5k_3k_float32.parquet" \
-        --report_path "report_rf_classifier.csv" \
-        --spark_confs "spark.master=local[$local_threads]" \
-        --spark_confs "spark.driver.memory=128g" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_rf_classifier_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
 
 # Random Forest Regression
 if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d /tmp/regression/5k_3k_float32.parquet ]]; then
-        python ./benchmark/gen_data.py regression \
-            --num_rows 5000 \
-            --num_cols 3000 \
+    if [[ ! -d ${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+        python $gen_data_script regression \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "/tmp/regression/5k_3k_float32.parquet" \
-            --spark_conf "spark.master=local[$local_threads]" \
-            --spark_confs "spark.driver.memory=128g"
+            --output_dir "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
     fi
 
+    echo "$sep algo: random forest regression $sep"
     python ./benchmark/benchmark_runner.py random_forest_regressor \
+        --numTrees 30 \
+        --maxBins 128 \
+        --maxDepth 6 \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
-        --train_path "/tmp/regression/5k_3k_float32.parquet" \
-        --transform_path "/tmp/regression/5k_3k_float32.parquet" \
-        --report_path "report_rf_regressor.csv" \
-        --spark_confs "spark.master=local[$local_threads]" \
-        --spark_confs "spark.driver.memory=128g" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=20000" \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_rf_regressor_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
