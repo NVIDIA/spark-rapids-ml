@@ -12,14 +12,12 @@ from pyspark.sql import Row
 from pyspark.sql.functions import array, col
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
-
 from .sparksession import CleanSparkSession
 from .utils import (
-    array_equal,
-    assert_params,
     create_pyspark_dataframe,
     idfn,
     make_classification_dataset,
+    array_equal
 )
 
 
@@ -38,6 +36,7 @@ def test_toy_example(gpu_number: int) -> None:
         label_col = "label"
         schema = features_col + " array<float>, " + label_col + " float"
         df = spark.createDataFrame(data, schema=schema)
+
         lr_estimator = LogisticRegression(num_workers=gpu_number)
         lr_estimator.setFeaturesCol(features_col)
         lr_estimator.setLabelCol(label_col)
@@ -55,13 +54,17 @@ def test_toy_example(gpu_number: int) -> None:
         )
         assert lr_model.intercept == pytest.approx(-2.2614916e-08, abs=1e-6)
 
+        preds_df = lr_model.transform(df)
+        preds = [ row["prediction"] for row in preds_df.collect()]
+        assert preds == [1., 1., 0., 0.]
+
 
 # TODO support float64
-# 'vector' will be converted to float64 so It depends on float64 support
-@pytest.mark.parametrize("feature_type", ["array", "multi_cols"])
+# 'vector' will be converted to float64 so It depends on float64 support  
+@pytest.mark.parametrize("feature_type", ["array", "multi_cols"])  
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32])
-@pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.parametrize("data_type", [np.float32])  
+@pytest.mark.parametrize("max_record_batch", [100, 10000]) 
 @pytest.mark.parametrize("n_classes", [2])
 @pytest.mark.slow
 def test_classifier(
@@ -103,6 +106,13 @@ def test_classifier(
         spark_lr.setLabelCol(label_col)
         spark_lr_model: LogisticRegressionModel = spark_lr.fit(train_df)
 
+        assert spark_lr_model.n_cols == cu_lr.n_cols
+        assert spark_lr_model.dtype == cu_lr.dtype
+        assert len(spark_lr_model.coef_) == len(cu_lr.coef_)
+        for i in range(len(spark_lr_model.coef_)):
+            assert spark_lr_model.coef_[i] == pytest.approx(cu_lr.coef_[i], tolerance)
+        assert spark_lr_model.intercept_ == pytest.approx(cu_lr.intercept_, tolerance)
+
         # test coefficients and intercepts
         assert spark_lr_model.n_cols == cu_lr.n_cols
         assert spark_lr_model.dtype == cu_lr.dtype
@@ -116,6 +126,14 @@ def test_classifier(
             spark_lr_model.coefficients.toArray(), cu_lr.coef_[0], tolerance
         )
         assert spark_lr_model.intercept == pytest.approx(cu_lr.intercept_[0], tolerance)
+
+        # test transform
+        test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
+
+        result = spark_lr_model.transform(test_df).collect()
+        spark_preds = [row["prediction"] for row in result]
+        cu_preds = cu_lr.predict(X_test)
+        assert array_equal(cu_preds, spark_preds, 1e-3)
 
 
 LogisticRegressionType = TypeVar(
@@ -228,3 +246,4 @@ def test_compat(
         assert model.intercept == model2.intercept
         # assert model.transform(df).take(1) == model2.transform(df).take(1)
         # assert model.numFeatures == 2
+

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast, Callable
 
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
@@ -63,7 +63,23 @@ from .tree import (
     _RandomForestModel,
 )
 from .utils import _get_spark_session
-
+from .params import _CumlClass, _CumlParams, HasFeaturesCols
+from .core import _CumlEstimatorSupervised, _CumlModelWithPredictionCol, FitInputType, param_alias
+from pyspark.ml.param.shared import (
+    HasFeaturesCol,
+    HasLabelCol,
+    HasPredictionCol 
+)
+from .utils import PartitionDescriptor, _concat_and_free, _ArrayOrder
+from pyspark.sql.types import (
+    ArrayType,
+    DoubleType,
+    FloatType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 class _RFClassifierParams(
     _RandomForestClassifierParams, HasProbabilityCol, HasRawPredictionCol
@@ -512,29 +528,6 @@ class RandomForestClassificationModel(
         return scores
 
 
-from typing import Callable
-
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasPredictionCol
-from pyspark.sql.types import (
-    ArrayType,
-    DoubleType,
-    FloatType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
-
-from .core import (
-    FitInputType,
-    _CumlEstimatorSupervised,
-    _CumlModelWithPredictionCol,
-    param_alias,
-)
-from .params import HasFeaturesCols, _CumlClass, _CumlParams
-from .utils import PartitionDescriptor, _ArrayOrder, _concat_and_free
-
-
 class LogisticRegressionClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
@@ -651,6 +644,7 @@ class LogisticRegression(
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+
         array_order = self._fit_array_order()
 
         def _logistic_regression_fit(
@@ -753,7 +747,6 @@ class LogisticRegressionModel(
     _LogisticRegressionCumlParams,
 ):
     """Model fitted by :class:`LogisticRegression`."""
-
     def __init__(
         self,
         coef_: List[List[float]],
@@ -764,11 +757,6 @@ class LogisticRegressionModel(
         super().__init__(dtype=dtype, n_cols=n_cols, coef_=coef_, intercept_=intercept_)
         self.coef_ = coef_
         self.intercept_ = intercept_
-
-    def _get_cuml_transform_func(  # type:ignore
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:  # type:ignore
-        pass
 
     def _transform(self, dataset: DataFrame) -> DataFrame:  # type:ignore
         pass
@@ -788,3 +776,34 @@ class LogisticRegressionModel(
         """
         assert len(self.intercept_) == 1, "multi classes not supported yet"
         return self.intercept_[0]
+    def _get_cuml_transform_func(
+         self, dataset: DataFrame, category: str = transform_evaluate.transform
+     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+         coef_ = self.coef_
+         intercept_ = self.intercept_
+         n_cols = self.n_cols
+         dtype = self.dtype
+
+         def _construct_lr() -> CumlT:
+             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG 
+             from cuml.internals.input_utils import input_to_cuml_array
+             import numpy as np
+
+             lr = LogisticRegressionMG()
+             lr.n_cols = n_cols
+             lr.dtype = np.dtype(dtype)
+             lr.intercept_ = input_to_cuml_array(np.array(intercept_, order="C").astype(dtype)).array
+             lr.coef_ = input_to_cuml_array(np.array(coef_, order="C").astype(dtype)).array
+             return lr
+
+         def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
+             ret = lr.predict(pdf)
+             return pd.Series(ret)
+
+         return _construct_lr, _predict, None
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        df = super()._transform(dataset)
+        return df.withColumn(
+            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+        )
