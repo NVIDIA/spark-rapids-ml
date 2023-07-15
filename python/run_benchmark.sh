@@ -15,13 +15,13 @@
 
 # if multiple gpus are available, set CUDA_VISIBLE_DEVICES to comma separated list of gpu indices to use
 export CUDA_VISIBLE_DEVICES=0
-cuda_version=11
+cuda_version=${cuda_version:-11}
 
 cluster_type=${1:-gpu}
 shift
-local_threads=4
+local_threads=${local_threads:-4}
 num_gpus=1
-if [[ $cluster_type == "gpu" ]]; then
+if [[ $cluster_type == "gpu" || $cluster_type == "gpu_etl" ]]; then
     num_cpus=0
     if [ -n $CUDA_VISIBLE_DEVICES ]; then
         num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
@@ -44,9 +44,9 @@ EXTRA_ARGS=$@
 unset SPARK_HOME
 
 # data set params
-num_rows=5000
+num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
-num_cols=3000
+num_cols=${num_cols:-3000}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
 #gen_data_script=./benchmark/gen_data.py
@@ -74,18 +74,21 @@ cat <<EOF
 EOF
 )
 
-if [[ $cluster_type == "gpu" ]]
+
+
+if [[ $cluster_type == "gpu_etl" ]]
 then
 SPARK_RAPIDS_VERSION=23.06.0
-if [ ! -f rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar ]; then
+rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
+if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
     curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}-cuda${cuda_version}.jar \
-    -o rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+    -o $rapids_jar
 fi
 
 spark_rapids_confs=$( 
 cat <<EOF 
---spark_confs spark.executorEnv.PYTHONPATH=rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+--spark_confs spark.executorEnv.PYTHONPATH=${rapids_jar}
 --spark_confs spark.sql.files.minPartitionNum=${num_gpus}
 --spark_confs spark.rapids.memory.gpu.minAllocFraction=0.0001 \
 --spark_confs spark.plugins=com.nvidia.spark.SQLPlugin \
@@ -102,7 +105,7 @@ cat <<EOF
 --spark_confs spark.sql.adaptive.enabled=false \
 --spark_confs spark.sql.files.maxPartitionBytes=2000000000000 \
 --spark_confs spark.rapids.sql.concurrentGpuTasks=2 \
---spark_confs spark.jars=rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+--spark_confs spark.jars=${rapids_jar}
 EOF
 )
 fi
