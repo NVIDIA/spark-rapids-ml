@@ -371,6 +371,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return (True, False)
 
+    def _fit_return_by_row(self) -> bool:
+        """
+        If the fit func is implemented as a generator function to return data row-by-row in the output RDD.
+        """
+        return False
+
     @abstractmethod
     def _get_cuml_fit_func(
         self,
@@ -460,9 +466,20 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 fit_multiple_params.append(tmp_fit_multiple_params)
         params[param_alias.fit_multiple_params] = fit_multiple_params
 
-        cuml_fit_func = self._get_cuml_fit_func(
-            dataset, None if len(fit_multiple_params) == 0 else fit_multiple_params
-        )
+        return_by_row = self._fit_return_by_row()
+
+        if not return_by_row:
+            cuml_fit_func = self._get_cuml_fit_func(
+                dataset, None if len(fit_multiple_params) == 0 else fit_multiple_params
+            )
+        else:
+            try:
+                cuml_fit_func = self._get_cuml_fit_generator_func(dataset, None)  # type: ignore
+            except AttributeError:
+                raise NotImplementedError(
+                    f"The class {type(self).__name__} must implement _get_cuml_fit_generator_func if return_by_row is True."
+                )
+
         array_order = self._fit_array_order()
 
         cuml_verbose = self.cuml_params.get("verbose", False)
@@ -531,6 +548,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 # memory.  do not rely on inputs after this call.
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
+
+                if self._fit_return_by_row():
+                    for row in result:
+                        yield row
+                    return
 
             if partially_collect == True:
                 if enable_nccl:
