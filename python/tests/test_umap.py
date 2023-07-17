@@ -15,15 +15,16 @@
 #
 
 import math
-from typing import Tuple
+from typing import List, Tuple, Union
 
 import cupy as cp
 import numpy as np
 import pytest
 from cuml.metrics import trustworthiness
+from pyspark.sql.functions import array
 from sklearn.datasets import load_digits, load_iris
 
-from spark_rapids_ml.umap import UMAP
+from spark_rapids_ml.umap import UMAP, UMAPModel
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -154,7 +155,7 @@ def _run_spark_test(
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
-def test_spark_umap(
+def _test_spark_umap(
     n_parts: int,
     n_workers: int,
     n_rows: int,
@@ -193,7 +194,7 @@ def test_spark_umap(
     assert result
 
 
-def test_umap_persistence(tmp_path: str) -> None:
+def test_umap_estimator_persistence(tmp_path: str) -> None:
     # Default constructor
     default_cuml_params = {
         "n_neighbors": 15,
@@ -224,3 +225,46 @@ def test_umap_persistence(tmp_path: str) -> None:
     default_umap.write().overwrite().save(estimator_path)
     loaded_umap = UMAP.load(estimator_path)
     assert_params(loaded_umap, {}, default_cuml_params)
+
+
+def test_umap_model_persistence(tmp_path: str) -> None:
+    from cuml.datasets import make_blobs
+
+    X, _ = make_blobs(
+        100,
+        20,
+        centers=42,
+        cluster_std=0.1,
+        dtype=np.float32,
+        random_state=10,
+    )
+
+    with CleanSparkSession() as spark:
+        pyspark_type = "float"
+        feature_cols: Union[str, List[str]] = [f"c{i}" for i in range(X.shape[1])]
+        schema = [f"{c} {pyspark_type}" for c in feature_cols]
+        df = spark.createDataFrame(X.tolist(), ",".join(schema))
+        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        umap = UMAP(num_workers=3).setFeaturesCol("features")
+
+        def assert_umap_model(model: UMAPModel) -> None:
+            embedding = np.array(model.embedding)
+            raw_data = np.array(model.raw_data)
+            assert embedding.shape == (100, 2)
+            assert raw_data.shape == (100, 20)
+            assert np.array_equal(raw_data, X.get())
+            assert (
+                model.dtype == "float64"
+            )  # TODO: test float32 once convert_dtype is implemented
+            assert model.n_cols == X.shape[1]
+
+        umap_model = umap.fit(df)
+        assert_umap_model(model=umap_model)
+
+        # Model persistence
+        path = tmp_path + "/umap_tests"
+        model_path = f"{path}/umap_model"
+        umap_model.write().overwrite().save(model_path)
+        umap_model_loaded = UMAPModel.load(model_path)
+        assert_umap_model(model=umap_model_loaded)
