@@ -388,7 +388,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         return _cuml_fit
 
-    def _fit_return_by_row(self) -> bool:
+    def _use_fit_generator(self) -> bool:
         return True
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
