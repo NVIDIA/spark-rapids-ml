@@ -560,10 +560,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
 
-                if use_generator:
-                    for row in result:
-                        yield row
-                    return
+            if use_generator:
+                for row in result:
+                    yield row
+                return
 
             if partially_collect == True:
                 if enable_nccl:

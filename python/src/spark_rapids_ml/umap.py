@@ -148,7 +148,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     used for low-dimensional data visualization and general non-linear dimension reduction.
     The algorithm finds a low dimensional embedding of the data that approximates an underlying manifold.
     The fit() method constructs a KNN-graph representation of an input dataset and then optimizes a
-    low dimensional embedding, and is performed locally. The transform() method transforms an input dataset
+    low dimensional embedding, and is performed on a single node. The transform() method transforms an input dataset
     into the optimized embedding space, and is performed distributedly.
 
     Parameters
@@ -244,9 +244,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             * ``6`` - Enables all messages up to and including trace messages.
 
     sample_fraction : float (optional, default=1.0)
-        The fraction of the dataset to be used for fitting the model. Since fitting is done locally, very large datasets
-        must be subsampled to fit within local memory and execute in a reasonable time. Smaller fractions will result in
-        faster training, but may result in sub-optimal embeddings.
+        The fraction of the dataset to be used for fitting the model. Since fitting is done on a single node, very large
+        datasets must be subsampled to fit within the node's memory and execute in a reasonable time. Smaller fractions
+        will result in faster training, but may result in sub-optimal embeddings.
 
     featuresCol: str
         The name of the column that contains input vectors. featuresCol should be set when input vectors are stored
@@ -264,16 +264,49 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     --------
     >>> from spark_rapids_ml.umap import UMAP
     >>> from cuml.datasets import make_blobs
-    >>> X, _ = make_blobs(1000, 10, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10)
-    >>> df = spark.createDataFrame(X, ["features"])
-    >>> df.show()
-    # TODO: show DF
-    >>> local_model = UMAP(sample_fraction=0.5)
-    >>> local_model.setFeaturesCol("features")
-    >>> distributed_model = local_model.fit(df)
-    >>> embeddings = distributed_model.transform(df)
-    >>> embeddings.show()
-    # TODO: show output DF
+    >>> import cupy as cp
+
+    >>> X, _ = make_blobs(500, 5, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10)
+    >>> feature_cols = [f"c{i}" for i in range(X.shape[1])]
+    >>> schema = [f"{c} {"float"}" for c in feature_cols]
+    >>> df = spark.createDataFrame(X.tolist(), ",".join(schema))
+    >>> df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+    >>> df.show(10, False)
+
+    +--------------------------------------------------------+
+    |features                                                |
+    +--------------------------------------------------------+
+    |[1.5578103, -9.300072, 9.220654, 4.5838223, -3.2613218] |
+    |[9.295866, 1.3326015, -4.6483326, 4.43685, 6.906736]    |
+    |[1.1148645, 0.9800974, -9.67569, -8.020592, -3.748023]  |
+    |[-4.6454153, -8.095899, -4.9839406, 7.954683, -8.15784] |
+    |[-6.5075264, -5.538241, -6.740191, 3.0490158, 4.1693997]|
+    |[7.9449835, 4.142317, 6.207676, 3.202615, 7.1319785]    |
+    |[-0.3837125, 6.826891, -4.35618, -9.582829, -1.5456663] |
+    |[2.5012932, 4.2080708, 3.5172815, 2.5741744, -6.291008] |
+    |[9.317718, 1.3419528, -4.832837, 4.5362573, 6.9357944]  |
+    |[-6.65039, -5.438729, -6.858565, 2.9733503, 3.99863]    |
+    +--------------------------------------------------------+
+    only showing top 10 rows
+
+    >>> umap_estimator = UMAP(sample_fraction=0.5, num_workers=3).setFeaturesCol("features")
+    >>> umap_model = umap_estimator.fit(df)
+    >>> output = umap_model.transform(df).toPandas()
+    >>> embedding = cp.asarray(output["embedding"].to_list())
+    >>> print("First 10 embeddings:")
+    >>> print(embedding[:10])
+
+    First 10 embeddings:
+    [[  5.378397    6.504756 ]
+    [ 12.531521   13.946098 ]
+    [ 11.990916    6.049594 ]
+    [-14.175631    7.4849815]
+    [  7.065363  -16.75355  ]
+    [  1.8876278   1.0889664]
+    [  0.6557462  17.965862 ]
+    [-16.220764   -6.4817486]
+    [ 12.476492   13.80965  ]
+    [  6.823325  -16.71719  ]]
 
     """
 
@@ -316,7 +349,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             embedding_=embeddings,
             raw_data_=raw_data,
             n_cols=len(raw_data[0]),
-            dtype=str(np.array(raw_data[0][0]).dtype),
+            dtype="np.float32" if isinstance(raw_data[0][0], float) else "np.float64",
         )
         model._num_workers = input_num_workers
 
@@ -368,13 +401,13 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     labels = pd.concat(label_list)
                 else:
                     labels = _concat_and_free(label_list, order=array_order)
-                local_model = umap_object.fit(concated, y=labels)
+                umap_model = umap_object.fit(concated, y=labels)
             else:
                 # Call unsupervised fit
-                local_model = umap_object.fit(concated)
+                umap_model = umap_object.fit(concated)
 
-            embedding = local_model.embedding_
-            del local_model
+            embedding = umap_model.embedding_
+            del umap_model
 
             for embedding, raw_data in zip(embedding, concated):
                 yield pd.DataFrame(

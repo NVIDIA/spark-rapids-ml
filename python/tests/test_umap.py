@@ -81,7 +81,7 @@ def _spark_umap_trustworthiness(
     dtype: np.dtype,
     feature_type: str,
 ) -> float:
-    local_model = UMAP(
+    umap_estimator = UMAP(
         n_neighbors=n_neighbors,
         sample_fraction=sampling_ratio,
         random_state=42,
@@ -95,16 +95,16 @@ def _spark_umap_trustworthiness(
                 spark, feature_type, dtype, local_X, local_y
             )
             assert label_col is not None
-            local_model.setLabelCol(label_col)
+            umap_estimator.setLabelCol(label_col)
         else:
             data_df, features_col, _ = create_pyspark_dataframe(
                 spark, feature_type, dtype, local_X, None
             )
 
         data_df = data_df.repartition(n_parts)
-        local_model.setFeaturesCol(features_col)
-        distributed_model = local_model.fit(data_df)
-        embedding = cp.array(distributed_model.embedding_)
+        umap_estimator.setFeaturesCol(features_col)
+        umap_model = umap_estimator.fit(data_df)
+        embedding = cp.array(umap_model.embedding_)
 
     return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
