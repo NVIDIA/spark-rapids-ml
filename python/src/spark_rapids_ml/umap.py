@@ -138,7 +138,7 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol)
         """
         Sets the value of :py:attr:`labelCol`.
         """
-        return self.set_params(labelCol=value) 
+        return self.set_params(labelCol=value)
 
 
 class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
@@ -314,6 +314,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         super().__init__()
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
+        self.maxRecordsPerBatch = 10000
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
         raise NotImplementedError("UMAP does not support model creation from Row")
@@ -334,7 +335,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         if data_subset.rdd.getNumPartitions() != 1:
             data_subset = data_subset.repartition(1)
 
-        #set maxrecordsperbatch as model param
+        maxRecordsPerBatch_str = _get_spark_session().conf.get(
+            "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+        )
+        assert maxRecordsPerBatch_str is not None
+        self.maxRecordsPerBatch = int(maxRecordsPerBatch_str)
 
         pipelined_rdd = self._call_cuml_fit_func(
             dataset=data_subset,
@@ -413,22 +418,20 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             embedding = umap_model.embedding_
             del umap_model
 
-            maxRecordsPerBatch = 10000
-            num_sections = (
-                len(embedding) + maxRecordsPerBatch - 1
-            ) // maxRecordsPerBatch
+            chunkSize = self.maxRecordsPerBatch
+            num_sections = (len(embedding) + chunkSize - 1) // chunkSize
 
-            embedding_chunks = np.array_split(embedding, num_sections)
-            raw_data_chunks = np.array_split(concated, num_sections)
-            del embedding
-            del concated
+            for i in range(num_sections):
+                start = i * chunkSize
+                end = min(
+                    (i + 1) * chunkSize, len(embedding)
+                )  # To ensure the last chunk is not out of bounds
 
-            for embedding, raw_data in zip(embedding_chunks, raw_data_chunks):
                 yield pd.DataFrame(
                     data=[
                         {
-                            "embedding_": embedding.tolist(),
-                            "raw_data_": raw_data.tolist(),
+                            "embedding_": embedding[start:end].tolist(),
+                            "raw_data_": concated[start:end].tolist(),
                         }
                     ]
                 )
