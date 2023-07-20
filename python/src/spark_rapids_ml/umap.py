@@ -138,7 +138,7 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol)
         """
         Sets the value of :py:attr:`labelCol`.
         """
-        return self.set_params(labelCol=value)
+        return self.set_params(labelCol=value) 
 
 
 class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
@@ -333,6 +333,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self._num_workers = 1
         if data_subset.rdd.getNumPartitions() != 1:
             data_subset = data_subset.repartition(1)
+
+        #set maxrecordsperbatch as model param
 
         pipelined_rdd = self._call_cuml_fit_func(
             dataset=data_subset,
