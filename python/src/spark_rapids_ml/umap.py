@@ -341,8 +341,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         )
         rows = pipelined_rdd.collect()
         # Collect and concatenate row-by-row fit results
-        embeddings = [row["embedding_"] for row in rows]
-        raw_data = [row["raw_data_"] for row in rows]
+        from itertools import chain
+
+        embeddings = list(chain.from_iterable([row["embedding_"] for row in rows]))
+        raw_data = list(chain.from_iterable([row["raw_data_"] for row in rows]))
         del rows
 
         model = UMAPModel(
@@ -409,7 +411,17 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             embedding = umap_model.embedding_
             del umap_model
 
-            for embedding, raw_data in zip(embedding, concated):
+            maxRecordsPerBatch = 10000
+            num_sections = (
+                len(embedding) + maxRecordsPerBatch - 1
+            ) // maxRecordsPerBatch
+
+            embedding_chunks = np.array_split(embedding, num_sections)
+            raw_data_chunks = np.array_split(concated, num_sections)
+            del embedding
+            del concated
+
+            for embedding, raw_data in zip(embedding_chunks, raw_data_chunks):
                 yield pd.DataFrame(
                     data=[
                         {
@@ -432,12 +444,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             [
                 StructField(
                     "embedding_",
-                    ArrayType(FloatType(), False),
+                    ArrayType(ArrayType(FloatType(), False), False),
                     False,
                 ),
                 StructField(
                     "raw_data_",
-                    ArrayType(FloatType(), False),
+                    ArrayType(ArrayType(FloatType(), False), False),
                     False,
                 ),
             ]
