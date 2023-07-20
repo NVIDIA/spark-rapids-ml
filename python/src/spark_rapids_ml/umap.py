@@ -423,9 +423,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
             for i in range(num_sections):
                 start = i * chunkSize
-                end = min(
-                    (i + 1) * chunkSize, len(embedding)
-                )  # To ensure the last chunk is not out of bounds
+                end = min((i + 1) * chunkSize, len(embedding))
 
                 yield pd.DataFrame(
                     data=[
