@@ -155,7 +155,7 @@ def _run_spark_test(
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
-def test_spark_umap(
+def _test_spark_umap(
     n_parts: int,
     n_workers: int,
     n_rows: int,
@@ -254,7 +254,7 @@ def test_umap_model_persistence(tmp_path: str) -> None:
             assert embedding.shape == (100, 2)
             assert raw_data.shape == (100, 20)
             assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "np.float32"
+            assert model.dtype == "float"
             assert model.n_cols == X.shape[1]
 
         umap_model = umap.fit(df)

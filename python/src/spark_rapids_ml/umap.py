@@ -358,8 +358,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             embedding_=embeddings,
             raw_data_=raw_data,
             n_cols=len(raw_data[0]),
-            dtype="np.float32" if isinstance(raw_data[0][0], float) else "np.float64",
+            dtype=type(raw_data[0][0]).__name__,
         )
+
         model._num_workers = input_num_workers
 
         self._copyValues(model)
