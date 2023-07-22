@@ -145,30 +145,16 @@ def _run_spark_test(
 
     return trust_diff <= 0.15
 
-'''
+
 @pytest.mark.parametrize("n_parts", [2, 9])
 @pytest.mark.parametrize("n_workers", [12])
 @pytest.mark.parametrize("n_rows", [100, 500])
-@pytest.mark.parametrize(
-    "sampling_ratio", [1.0]
-)  # Temporarily set to full dataset for fit() testing
+@pytest.mark.parametrize("sampling_ratio", [0.55, 0.9])
 @pytest.mark.parametrize("supervised", [True, False])
 @pytest.mark.parametrize("dataset", ["digits", "iris"])
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
-'''
-@pytest.mark.parametrize("n_parts", [5])
-@pytest.mark.parametrize("n_workers", [8])
-@pytest.mark.parametrize("n_rows", [500])
-@pytest.mark.parametrize(
-    "sampling_ratio", [1.0]
-)  # Temporarily set to full dataset for fit() testing
-@pytest.mark.parametrize("supervised", [True])
-@pytest.mark.parametrize("dataset", ["digits"])
-@pytest.mark.parametrize("n_neighbors", [10])
-@pytest.mark.parametrize("dtype", [cuml_supported_data_types[0]])
-@pytest.mark.parametrize("feature_type", [pyspark_supported_feature_types[0]])
 def test_spark_umap(
     n_parts: int,
     n_workers: int,

@@ -536,7 +536,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             internal_model._raw_data = raw_data_cuml
 
             return internal_model
-        
+
         def _transform_internal(
             umap: CumlT,
             df: Union[pd.DataFrame, np.ndarray],
@@ -545,10 +545,10 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             is_df_np = isinstance(df, np.ndarray)
             is_emb_np = isinstance(embedding, np.ndarray)
-            
+
             # Input is either numpy array or pandas dataframe
             input_list = [
-                df[i, :] if is_df_np else df.iloc[i, :] for i in range(df.shape[0])
+                df[i, :] if is_df_np else df.iloc[i, :] for i in range(df.shape[0])  # type: ignore
             ]
             emb_list = [
                 embedding[i, :] if is_emb_np else embedding.iloc[i, :]
@@ -563,7 +563,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             )
 
             return result
-        
+
         return _construct_umap, _transform_internal, None
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
