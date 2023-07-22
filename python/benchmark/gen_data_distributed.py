@@ -85,6 +85,8 @@ class BlobsDataGen(DataGenBaseMeta):
 
         print(f"Passing {params} to make_blobs")
 
+        include_labels = params.pop("include_labels", False)
+
         rows = self.num_rows
         cols = self.num_cols
         assert self.args is not None
@@ -104,14 +106,12 @@ class BlobsDataGen(DataGenBaseMeta):
 
         # Generate centers upfront.
         _, _, centers = make_blobs(
-            n_samples=0, n_features=cols, **params, return_centers=True
+            n_samples=1, n_features=cols, **params, return_centers=True
         )
 
         # Update params for partition-specific calls.
         params["centers"] = centers
         del params["random_state"]
-
-        include_labels = params.get("include_labels", False)
 
         maxRecordsPerBatch = int(
             spark.sparkContext.getConf().get(
@@ -382,7 +382,9 @@ class RegressionDataGen(DataGenBaseMeta):
                     cols,
                     numPartitions=num_partitions,
                     seed=seed,
-                ).map(lambda nparray: nparray.tolist()),
+                ).map(
+                    lambda nparray: nparray.tolist()  # type: ignore
+                ),
                 schema=",".join(self.schema),
             )
 

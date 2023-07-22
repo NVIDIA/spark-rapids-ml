@@ -1,6 +1,6 @@
 #! /bin/bash
 #
-# Usage: ./run_benchmark.sh cpu|gpu <mode> [<args>]
+# Usage: ./run_benchmark.sh cpu|gpu|gpu_etl <mode> [<args>]
 # where <mode> can be:
 #     all
 #     kmeans
@@ -10,11 +10,28 @@
 #     random_forest_classifier
 #     random_forest_regressor
 #
+#     and any comma separted list of the above like knn,linear_regression
+#
+# gpu_etl is gpu ML with Spark RAPIDS plugin for gpu accelerated data loading
+# 
 # By default, the tests should target a single node with a single GPU for CI/CD purposes.
 # For more advanced configurations, use extra <args>.
-
 # if multiple gpus are available, set CUDA_VISIBLE_DEVICES to comma separated list of gpu indices to use
-export CUDA_VISIBLE_DEVICES=0
+#
+# The following environment variables can be set on the command-line to control behavior with the indicated
+# defaults:
+# cuda_version=${cuda_version:-11}
+# cluster_type=${1:-gpu}
+# local_threads=${local_threads:-4}
+# num_rows=${num_rows:-5000}
+# num_cols=${num_cols:-3000}
+# rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
+#
+# ex:  num_rows=1000000 num_cols=300 ./run_benchmark.sh gpu_etl kmeans,pca 
+# would run gpu based kmeans and pca on respective synthetic datasets with 1m rows and 300 cols
+# and would enable the Spark RAPIDS plugin for gpu accelerated data loading.
+
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 cuda_version=${cuda_version:-11}
 
 cluster_type=${1:-gpu}
@@ -31,7 +48,7 @@ elif [[ $cluster_type == "cpu" ]]; then
     num_gpus=0
 else
     echo "unknown cluster type $cluster_type"
-    echo "usage: $0 cpu|gpu mode [extra-args] "
+    echo "usage: $0 cpu|gpu|gpu_etl mode [extra-args] "
     exit 1
 fi
 
@@ -49,13 +66,15 @@ knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
-#gen_data_script=./benchmark/gen_data.py
-#gen_data_root=/tmp/non-distributed2
-gen_data_script=./benchmark/gen_data_distributed.py
-gen_data_root=/tmp/distributed2
+gen_data_script=./benchmark/gen_data.py
+#gen_data_script=./benchmark/gen_data_distributed.py
+gen_data_root=/tmp/data
 
 # if num_rows=1m => output_files=50, scale linearly
 output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
+
+# if num_cols=3000 => arrow_batch_size=20000, scale linearly for smaller number of columns
+arrow_batch_size=$(( 20000 * ( ( $num_cols + 3000 - 1 ) / $num_cols ) ))
 
 
 # stop on first fail
@@ -67,10 +86,11 @@ sep="=================="
 common_confs=$( 
 cat <<EOF 
 --spark_confs spark.sql.execution.arrow.pyspark.enabled=true \
---spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=20000 \
+--spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=$arrow_batch_size \
 --spark_confs spark.python.worker.reuse=true \
 --spark_confs spark.master=local[$local_threads] \
---spark_confs spark.driver.memory=128g
+--spark_confs spark.driver.memory=128g \
+--spark_confs spark.rapids.ml.uvm.enabled=true
 EOF
 )
 
@@ -86,18 +106,22 @@ if [ ! -f $rapids_jar ]; then
     -o $rapids_jar
 fi
 
+
 spark_rapids_confs=$( 
 cat <<EOF 
---spark_confs spark.executorEnv.PYTHONPATH=${rapids_jar}
---spark_confs spark.sql.files.minPartitionNum=${num_gpus}
+--spark_confs spark.executorEnv.PYTHONPATH=${rapids_jar} \
+--spark_confs spark.sql.files.minPartitionNum=${num_gpus} \
 --spark_confs spark.rapids.memory.gpu.minAllocFraction=0.0001 \
 --spark_confs spark.plugins=com.nvidia.spark.SQLPlugin \
 --spark_confs spark.locality.wait=0s \
 --spark_confs spark.sql.cache.serializer=com.nvidia.spark.ParquetCachedBatchSerializer \
 --spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
---spark_confs spark.rapids.sql.explain=ALL
+--spark_confs spark.rapids.sql.explain=ALL \
 --spark_confs spark.rapids.memory.gpu.reserve=20 \
 --spark_confs spark.sql.execution.sortBeforeRepartition=false \
+--spark_confs spark.rapids.sql.format.parquet.reader.type=MULTITHREADED \
+--spark_confs spark.rapids.sql.format.parquet.multiThreadedRead.maxNumFilesParallel=20 \
+--spark_confs spark.rapids.sql.multiThreadedRead.numThreads=20 \
 --spark_confs spark.rapids.sql.python.gpu.enabled=true \
 --spark_confs spark.rapids.memory.pinnedPool.size=2G \
 --spark_confs spark.python.daemon.module=rapids.daemon \
@@ -109,14 +133,15 @@ cat <<EOF
 EOF
 )
 fi
-
+    
 # KMeans
-if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script default \
             --num_rows $num_rows \
             --num_cols $num_cols \
             --output_num_files $output_num_files \
+            --numPartitions $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
             --output_dir "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" \
@@ -141,7 +166,7 @@ if [[ "${MODE}" == "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
 fi
 
 # KNearestNeighbors
-if [[ "${MODE}" == "knn" ]] || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script blobs \
             --num_rows $knn_num_rows \
@@ -169,7 +194,7 @@ fi
 # Linear Regression
 # TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
 # https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
-if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
@@ -224,13 +249,13 @@ if [[ "${MODE}" == "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --num_runs $num_runs \
         --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
-        --report_path "report_linear_regression_elastic_net_${cluster_type}.csv" \
+        --report_path "report_linear_regression_ridge_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
 
 # PCA
-if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "pca" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script low_rank_matrix \
             --num_rows $num_rows \
@@ -278,7 +303,7 @@ if [[ "${MODE}" == "pca" ]] || [[ "${MODE}" == "all" ]]; then
 fi
 
 # Random Forest Classification
-if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
         python $gen_data_script classification \
             --n_informative $( expr $num_cols / 3 )  \
@@ -308,7 +333,7 @@ if [[ "${MODE}" == "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
 fi
 
 # Random Forest Regression
-if [[ "${MODE}" == "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d ${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
