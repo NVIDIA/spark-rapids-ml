@@ -508,7 +508,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
-        driver_embedding = self.embedding_
+        driver_embedding = np.array(self.embedding_, dtype=np.float32)
         driver_raw_data = np.array(self.raw_data_, dtype=np.float32)
 
         def _construct_umap() -> CumlT:
@@ -519,9 +519,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             from cuml.manifold import UMAP as CumlUMAP
 
             if is_sparse(driver_raw_data):
-                raw_data_cuml = SparseCumlArray(
-                    driver_raw_data, convert_to_dtype=cp.float32, convert_format=False
-                )
+                raw_data_cuml = SparseCumlArray(driver_raw_data, convert_format=False)
             else:
                 raw_data_cuml, _, _, _ = input_to_cuml_array(
                     driver_raw_data,
@@ -530,9 +528,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                 )
 
             internal_model = CumlUMAP(**cuml_alg_params)
-            internal_model.embedding_ = cp.array(
-                driver_embedding, dtype=cp.float32
-            ).data
+            internal_model.embedding_ = cp.array(driver_embedding).data
             internal_model._raw_data = raw_data_cuml
 
             return internal_model
