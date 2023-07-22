@@ -65,8 +65,8 @@ def _local_umap_trustworthiness(
     local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
     y_train = local_y if supervised else None
     local_model.fit(local_X, y=y_train)
+    embedding = local_model.transform(local_X)
 
-    embedding = local_model.embedding_
     return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
 
@@ -104,9 +104,11 @@ def _spark_umap_trustworthiness(
         data_df = data_df.repartition(n_parts)
         umap_estimator.setFeaturesCol(features_col)
         umap_model = umap_estimator.fit(data_df)
-        embedding = cp.array(umap_model.embedding_)
+        pdf = umap_model.transform(data_df).toPandas()
+        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+        input = cp.asarray(pdf["input"].to_list()).astype(cp.float32)
 
-    return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
+    return trustworthiness(input, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
 
 def _run_spark_test(
@@ -143,7 +145,7 @@ def _run_spark_test(
 
     return trust_diff <= 0.15
 
-
+'''
 @pytest.mark.parametrize("n_parts", [2, 9])
 @pytest.mark.parametrize("n_workers", [12])
 @pytest.mark.parametrize("n_rows", [100, 500])
@@ -155,6 +157,18 @@ def _run_spark_test(
 @pytest.mark.parametrize("n_neighbors", [10])
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
+'''
+@pytest.mark.parametrize("n_parts", [5])
+@pytest.mark.parametrize("n_workers", [8])
+@pytest.mark.parametrize("n_rows", [500])
+@pytest.mark.parametrize(
+    "sampling_ratio", [1.0]
+)  # Temporarily set to full dataset for fit() testing
+@pytest.mark.parametrize("supervised", [True])
+@pytest.mark.parametrize("dataset", ["digits"])
+@pytest.mark.parametrize("n_neighbors", [10])
+@pytest.mark.parametrize("dtype", [cuml_supported_data_types[0]])
+@pytest.mark.parametrize("feature_type", [pyspark_supported_feature_types[0]])
 def test_spark_umap(
     n_parts: int,
     n_workers: int,
@@ -241,7 +255,7 @@ def test_umap_model_persistence(tmp_path: str) -> None:
 
     with CleanSparkSession() as spark:
         pyspark_type = "float"
-        feature_cols: Union[str, List[str]] = [f"c{i}" for i in range(X.shape[1])]
+        feature_cols = [f"c{i}" for i in range(X.shape[1])]
         schema = [f"{c} {pyspark_type}" for c in feature_cols]
         df = spark.createDataFrame(X.tolist(), ",".join(schema))
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)

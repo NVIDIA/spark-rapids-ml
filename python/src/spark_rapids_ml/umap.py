@@ -507,19 +507,72 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
-        def _construct_umap() -> CumlT:
-            raise NotImplementedError("TODO")
+        cuml_alg_params = self.cuml_params.copy()
+        driver_embedding = self.embedding_
+        driver_raw_data = np.array(self.raw_data_)
 
+        def _construct_umap() -> CumlT:
+            import cupy as cp
+            from cuml.common.sparse_utils import is_sparse
+            from cuml.internals.array_sparse import SparseCumlArray
+            from cuml.internals.input_utils import input_to_cuml_array
+            from cuml.manifold import UMAP as CumlUMAP
+
+            if is_sparse(driver_raw_data):
+                raw_data_cuml = SparseCumlArray(
+                    driver_raw_data, convert_to_dtype=cp.float32, convert_format=False
+                )
+            else:
+                raw_data_cuml, _, _, _ = input_to_cuml_array(
+                    driver_raw_data,
+                    order="C",
+                    convert_to_dtype=np.float32,
+                )
+
+            internal_model = CumlUMAP(**cuml_alg_params)
+            internal_model.embedding_ = (
+                cp.array(driver_embedding).astype(cp.float32).data
+            )
+            internal_model._raw_data = raw_data_cuml
+
+            return internal_model
+        
         def _transform_internal(
             umap: CumlT,
             df: Union[pd.DataFrame, np.ndarray],
         ) -> pd.Series:
-            raise NotImplementedError("TODO")
+            embedding = umap.transform(df)
 
+            is_df_np = isinstance(df, np.ndarray)
+            is_emb_np = isinstance(embedding, np.ndarray)
+            
+            # Input is either numpy array or pandas dataframe
+            input_list = [
+                df[i, :] if is_df_np else df.iloc[i, :] for i in range(df.shape[0])
+            ]
+            emb_list = [
+                embedding[i, :] if is_emb_np else embedding.iloc[i, :]
+                for i in range(embedding.shape[0])
+            ]
+
+            result = pd.DataFrame(
+                {
+                    "input": input_list,
+                    "embedding": emb_list,
+                }
+            )
+
+            return result
+        
         return _construct_umap, _transform_internal, None
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return (False, False)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        raise NotImplementedError("TODO")
+        return StructType(
+            [
+                StructField("input", ArrayType(FloatType(), False), False),
+                StructField("embedding", ArrayType(FloatType(), False), False),
+            ]
+        )
