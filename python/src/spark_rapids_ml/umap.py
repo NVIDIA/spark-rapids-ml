@@ -32,7 +32,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 from pyspark import RDD
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
+from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasOutputCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
@@ -102,7 +102,7 @@ class UMAPClass(_CumlClass):
         }
 
 
-class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol):
+class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol, HasOutputCol):
     def __init__(self) -> None:
         super().__init__()
         self._setDefault()
@@ -139,6 +139,21 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol)
         Sets the value of :py:attr:`labelCol`.
         """
         return self.set_params(labelCol=value)
+    
+    def getOutputCol(self) -> str:
+        """
+        Gets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
+        """
+        if self.isDefined(self.outputCol):
+            return self.getOrDefault("outputCol")
+        else:
+            raise RuntimeError("outputCol is not set")
+        
+    def setOutputCol(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
+        """
+        return self.set_params(outputCol=value)
 
 
 class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
@@ -260,6 +275,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         The name of the column that contains labels. If provided, supervised fitting will be performed, where labels
         will be taken into account when optimizing the embedding.
 
+    outputCol: str (optional)
+        The name of the column that contains embeddings. If not provided, the default name of "embedding" will be used.
+
     Examples
     --------
     >>> from spark_rapids_ml.umap import UMAP
@@ -315,6 +333,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
         self.maxRecordsPerBatch = 10000
+        self.setOutputCol("embedding")
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
         raise NotImplementedError("UMAP does not support model creation from Row")
@@ -552,8 +571,8 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             result = pd.DataFrame(
                 {
-                    "input": input_list,
-                    "embedding": emb_list,
+                    self.getFeaturesCol(): input_list,
+                    self.getOutputCol(): emb_list,
                 }
             )
 
@@ -567,7 +586,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return StructType(
             [
-                StructField("input", ArrayType(FloatType(), False), False),
-                StructField("embedding", ArrayType(FloatType(), False), False),
+                StructField(self.getFeaturesCol(), ArrayType(FloatType(), False), False),
+                StructField(self.getOutputCol(), ArrayType(FloatType(), False), False),
             ]
         )
