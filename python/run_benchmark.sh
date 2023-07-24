@@ -82,7 +82,6 @@ set -e
 
 sep="=================="
 
-# TODO adjust maxRecorsPerBatch based on num columns
 common_confs=$( 
 cat <<EOF 
 --spark_confs spark.sql.execution.arrow.pyspark.enabled=true \
