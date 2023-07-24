@@ -102,7 +102,9 @@ class UMAPClass(_CumlClass):
         }
 
 
-class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol, HasOutputCol):
+class _UMAPCumlParams(
+    _CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol, HasOutputCol
+):
     def __init__(self) -> None:
         super().__init__()
         self._setDefault()
@@ -111,6 +113,7 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol,
         """
         Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
         """
+
         if self.isDefined(self.featuresCols):
             return self.getFeaturesCols()
         elif self.isDefined(self.featuresCol):
@@ -139,16 +142,13 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol,
         Sets the value of :py:attr:`labelCol`.
         """
         return self.set_params(labelCol=value)
-    
+
     def getOutputCol(self) -> str:
         """
         Gets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
         """
-        if self.isDefined(self.outputCol):
-            return self.getOrDefault("outputCol")
-        else:
-            raise RuntimeError("outputCol is not set")
-        
+        return self.getOrDefault("outputCol")
+
     def setOutputCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
@@ -526,23 +526,24 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
-        cuml_alg_params = self.cuml_params.copy()
+        cuml_alg_params = self.cuml_params
         driver_embedding = np.array(self.embedding_, dtype=np.float32)
         driver_raw_data = np.array(self.raw_data_, dtype=np.float32)
 
         def _construct_umap() -> CumlT:
             import cupy as cp
-            from cuml.common import SparseCumlArray, input_to_cuml_array
+            from cuml.common import SparseCumlArray
             from cuml.common.sparse_utils import is_sparse
             from cuml.manifold import UMAP as CumlUMAP
+
+            from .utils import cudf_to_cuml_array
 
             if is_sparse(driver_raw_data):
                 raw_data_cuml = SparseCumlArray(driver_raw_data, convert_format=False)
             else:
-                raw_data_cuml, _, _, _ = input_to_cuml_array(
+                raw_data_cuml = cudf_to_cuml_array(
                     driver_raw_data,
                     order="C",
-                    convert_to_dtype=np.float32,
                 )
 
             internal_model = CumlUMAP(**cuml_alg_params)
@@ -571,7 +572,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             result = pd.DataFrame(
                 {
-                    self.getFeaturesCol(): input_list,
+                    "features": input_list,
                     self.getOutputCol(): emb_list,
                 }
             )
@@ -586,7 +587,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         return StructType(
             [
-                StructField(self.getFeaturesCol(), ArrayType(FloatType(), False), False),
+                StructField("features", ArrayType(FloatType(), False), False),
                 StructField(self.getOutputCol(), ArrayType(FloatType(), False), False),
             ]
         )

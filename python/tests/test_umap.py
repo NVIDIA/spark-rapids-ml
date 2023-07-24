@@ -105,8 +105,8 @@ def _spark_umap_trustworthiness(
         umap_estimator.setFeaturesCol(features_col)
         umap_model = umap_estimator.fit(data_df)
         pdf = umap_model.transform(data_df).toPandas()
-        embedding = cp.asarray(pdf[umap_estimator.getOutputCol()].to_list()).astype(cp.float32)
-        input = cp.asarray(pdf[umap_estimator.getFeaturesCol()].to_list()).astype(cp.float32)
+        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
     return trustworthiness(input, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
