@@ -513,9 +513,8 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
         def _construct_umap() -> CumlT:
             import cupy as cp
+            from cuml.common import SparseCumlArray, input_to_cuml_array
             from cuml.common.sparse_utils import is_sparse
-            from cuml.internals.array_sparse import SparseCumlArray
-            from cuml.internals.input_utils import input_to_cuml_array
             from cuml.manifold import UMAP as CumlUMAP
 
             if is_sparse(driver_raw_data):
