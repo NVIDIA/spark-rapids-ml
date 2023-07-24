@@ -50,6 +50,8 @@ def test_make_blobs(dtype: str) -> None:
         "0.7",
         "--random_state",
         "0",
+        "--include_labels",
+        "true",
     ]
     data_gen = BlobsDataGen(input_args)
     args = data_gen.args
