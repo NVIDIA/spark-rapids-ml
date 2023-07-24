@@ -15,19 +15,24 @@
 #
 
 ARG CUDA_VERSION=11.8.0
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 ARG PYSPARK_VERSION=3.3.1
 ARG RAPIDS_VERSION=23.6.0
-
+ARG ARCH=amd64
+#ARG ARCH=arm64
 # Install packages to build spark-rapids-ml
 RUN apt-get update -y \
     && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
     && rm -rf /var/lib/apt/lists
 
 RUN apt-get update -y \
-    && apt install -y git numactl python3.8 python3.8-venv python3-pip python-is-python3 software-properties-common wget zip \
+    && apt install -y git numactl python3.10-venv python3-pip python-is-python3 software-properties-common wget zip \
     && python -m pip install --upgrade pip \
+    && rm -rf /var/lib/apt/lists
+
+RUN apt-get update -y \
+    && apt install -y python3.10-dev cmake curl \
     && rm -rf /var/lib/apt/lists
 
 # install RAPIDS
@@ -35,10 +40,6 @@ RUN apt-get update -y \
 RUN pip install --no-cache-dir \
     cudf-cu11~=${RAPIDS_VERSION} \
     cuml-cu11~=${RAPIDS_VERSION} \
-    dask-cudf-cu11~=${RAPIDS_VERSION} \
-    pylibraft-cu11~=${RAPIDS_VERSION} \
-    raft-dask-cu11~=${RAPIDS_VERSION} \
-    rmm-cu11~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install python dependencies
@@ -47,7 +48,7 @@ RUN pip install --no-cache-dir pyspark==${PYSPARK_VERSION} "scikit-learn>=1.2.1"
     numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0" "twine>=4.0.0"
 
 # Config JAVA_HOME
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-$ARCH
 
 ### END OF CACHE ###
 
