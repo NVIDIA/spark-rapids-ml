@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
@@ -32,7 +32,7 @@ from pyspark.ml.classification import (
     RandomForestClassificationSummary,
     _RandomForestClassifierParams,
 )
-from pyspark.ml.linalg import Vector
+from pyspark.ml.linalg import Vector, Vectors
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -511,15 +511,9 @@ class RandomForestClassificationModel(
         return scores
 
 
-from .params import _CumlClass, _CumlParams, HasFeaturesCols
 from typing import Callable
-from .core import _CumlEstimatorSupervised, _CumlModelWithPredictionCol, FitInputType, param_alias
-from pyspark.ml.param.shared import (
-    HasFeaturesCol,
-    HasLabelCol,
-    HasPredictionCol 
-)
-from .utils import PartitionDescriptor, _concat_and_free, _ArrayOrder
+
+from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasPredictionCol
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
@@ -530,27 +524,34 @@ from pyspark.sql.types import (
     StructType,
 )
 
+from .core import (
+    FitInputType,
+    _CumlEstimatorSupervised,
+    _CumlModelWithPredictionCol,
+    param_alias,
+)
+from .params import HasFeaturesCols, _CumlClass, _CumlParams
+from .utils import PartitionDescriptor, _ArrayOrder, _concat_and_free
+
+
 class LogisticRegressionClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
-        }
+        return {}
 
     @classmethod
     def _param_value_mapping(
         cls,
     ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
-        return {
-        }
+        return {}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
-        return {
-        }
+        return {}
+
 
 class _LogisticRegressionCumlParams(
     _CumlParams, HasFeaturesCol, HasLabelCol, HasFeaturesCols, HasPredictionCol
 ):
-
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
         Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
@@ -562,7 +563,9 @@ class _LogisticRegressionCumlParams(
         else:
             raise RuntimeError("featuresCol is not set")
 
-    def setFeaturesCol(self: "_LogisticRegressionCumlParams", value: Union[str, List[str]]) -> "_LogisticRegressionCumlParams":
+    def setFeaturesCol(
+        self: "_LogisticRegressionCumlParams", value: Union[str, List[str]]
+    ) -> "_LogisticRegressionCumlParams":
         """
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
@@ -572,33 +575,71 @@ class _LogisticRegressionCumlParams(
             self.set_params(featuresCols=value)
         return self
 
-    def setFeaturesCols(self: "_LogisticRegressionCumlParams", value: List[str]) -> "_LogisticRegressionCumlParams":
+    def setFeaturesCols(
+        self: "_LogisticRegressionCumlParams", value: List[str]
+    ) -> "_LogisticRegressionCumlParams":
         """
         Sets the value of :py:attr:`featuresCols`.
         """
         return self.set_params(featuresCols=value)
 
-    def setLabelCol(self: "_LogisticRegressionCumlParams", value: str) -> "_LogisticRegressionCumlParams":
+    def setLabelCol(
+        self: "_LogisticRegressionCumlParams", value: str
+    ) -> "_LogisticRegressionCumlParams":
         """
         Sets the value of :py:attr:`labelCol`.
         """
         return self.set_params(labelCol=value)
 
-    def setPredictionCol(self: "_LogisticRegressionCumlParams", value: str) -> "_LogisticRegressionCumlParams":
+    def setPredictionCol(
+        self: "_LogisticRegressionCumlParams", value: str
+    ) -> "_LogisticRegressionCumlParams":
         """
         Sets the value of :py:attr:`predictionCol`.
         """
         return self.set_params(predictionCol=value)
+
 
 class LogisticRegression(
     LogisticRegressionClass,
     _CumlEstimatorSupervised,
     _LogisticRegressionCumlParams,
 ):
-    def __init__(
-        self, 
-        *, 
-        num_workers: Optional[int] = None) :
+    """
+    Examples
+    --------
+    >>> from spark_rapids_ml.classification import LogisticRegression
+    >>> data = [
+    ...     ([1.0, 2.0], 1.0),
+    ...     ([1.0, 3.0], 1.0),
+    ...     ([2.0, 1.0], 0.0),
+    ...     ([3.0, 1.0], 0.0),
+    ... ]
+    >>> schema = "features array<float>, label float"
+    >>> df = spark.createDataFrame(data, schema=schema)
+    >>> df.show()
+    +----------+-----+
+    |  features|label|
+    +----------+-----+
+    |[1.0, 2.0]|  1.0|
+    |[1.0, 3.0]|  1.0|
+    |[2.0, 1.0]|  0.0|
+    |[3.0, 1.0]|  0.0|
+    +----------+-----+
+
+    >>> lr_estimator = LogisticRegression()
+    >>> lr_estimator.setFeaturesCol("features")
+    LogisticRegression_a757215437b0
+    >>> lr_estimator.setLabelCol("label")
+    LogisticRegression_a757215437b0
+    >>> lr_model = lr_estimator.fit(df)
+    >>> lr_model.coefficients
+    DenseVector([-0.7148, 0.7148])
+    >>> lr_model.intercept
+    -8.543887375367376e-09
+    """
+
+    def __init__(self, *, num_workers: Optional[int] = None):
         super().__init__()
 
     def _fit_array_order(self) -> _ArrayOrder:
@@ -609,7 +650,6 @@ class LogisticRegression(
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
-
         num_workers = self.num_workers
         array_order = self._fit_array_order()
         num_classes = dataset.select(alias.label).distinct().count()
@@ -621,8 +661,8 @@ class LogisticRegression(
             init_parameters = params[param_alias.cuml_init]
 
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
-            supported_params = [
-            ]
+
+            supported_params: List[str] = []
 
             # filter only supported params
             init_parameters = {
@@ -648,11 +688,10 @@ class LogisticRegression(
                 [concated.shape[0]], params[param_alias.num_cols]
             )
 
-
             logistic_regression.fit(
                 [(concated, concated_y)],
                 pdesc.m,
-                pdesc.n, 
+                pdesc.n,
                 pdesc.parts_rank_size,
                 pdesc.rank,
             )
@@ -679,6 +718,7 @@ class LogisticRegression(
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
         return LogisticRegressionModel.from_row(result)
 
+
 class LogisticRegressionModel(
     LogisticRegressionClass,
     _CumlModelWithPredictionCol,
@@ -697,10 +737,26 @@ class LogisticRegressionModel(
         self.coef_ = coef_
         self.intercept_ = intercept_
 
-    def _get_cuml_transform_func(
+    def _get_cuml_transform_func(  # type:ignore
         self, dataset: DataFrame, category: str = transform_evaluate.transform
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:  # type:ignore
         pass
 
-    def _transform(self, dataset: DataFrame) -> DataFrame:
+    def _transform(self, dataset: DataFrame) -> DataFrame:  # type:ignore
         pass
+
+    @property
+    def coefficients(self) -> Vector:
+        """
+        Model coefficients.
+        """
+        assert len(self.coef_) == 1, "multi classes not supported yet"
+        return Vectors.dense(cast(list, self.coef_[0]))
+
+    @property
+    def intercept(self) -> float:
+        """
+        Model intercept.
+        """
+        assert len(self.intercept_) == 1, "multi classes not supported yet"
+        return self.intercept_[0]
