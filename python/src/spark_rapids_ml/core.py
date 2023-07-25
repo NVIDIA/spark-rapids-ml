@@ -680,6 +680,10 @@ class _CumlEstimator(Estimator, _CumlCaller):
             task_cores = (int(executor_cores) // 2) + 1
             treqs = TaskResourceRequests().cpus(task_cores)
             rp = ResourceProfileBuilder().require(treqs).build
+
+            self.logger.warning(
+                f"Each training task requires task.cores: {task_cores}"
+            )
             return rdd.withResources(rp)
 
     def _fit_internal(
