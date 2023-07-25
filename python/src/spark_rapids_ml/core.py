@@ -660,6 +660,28 @@ class _CumlEstimator(Estimator, _CumlCaller):
         else:
             return super().fitMultiple(dataset, paramMaps)
 
+    def _try_stage_level_scheduling(self, rdd: RDD) -> RDD:
+        executor_cores = (
+            _get_spark_session().sparkContext.getConf().get("spark.executor.cores")
+        )
+        if executor_cores is None:
+            self.logger.warning(
+                "Stage level scheduling in XGBoost "
+                "requires spark.executor.cores to be set "
+            )
+            return rdd
+        else:
+            from pyspark.resource.profile import ResourceProfileBuilder
+            from pyspark.resource.requests import TaskResourceRequests
+
+            # TODO avoid stage level scheduling on the spark before 3.4.0
+            # each training task requires cpu cores > total executor cores/2 which can
+            # ensure each training task be sent to different executor.
+            task_cores = (int(executor_cores) // 2) + 1
+            treqs = TaskResourceRequests().cpus(task_cores)
+            rp = ResourceProfileBuilder().require(treqs).build
+            return rdd.withResources(rp)
+
     def _fit_internal(
         self, dataset: DataFrame, paramMaps: Optional[Sequence["ParamMap"]]
     ) -> List["_CumlModel"]:
@@ -669,6 +691,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
             partially_collect=True,
             paramMaps=paramMaps,
         )
+
+        pipelined_rdd = self._try_stage_level_scheduling(pipelined_rdd)
+
         rows = pipelined_rdd.collect()
 
         models: List["_CumlModel"] = [None]  # type: ignore
