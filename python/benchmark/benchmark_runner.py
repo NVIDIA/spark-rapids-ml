@@ -24,6 +24,7 @@ from benchmark.bench_random_forest import (
     BenchmarkRandomForestClassifier,
     BenchmarkRandomForestRegressor,
 )
+from benchmark.bench_logistic_regression import BenchmarkLogisticRegression
 
 
 class BenchmarkRunner:
@@ -35,6 +36,7 @@ class BenchmarkRunner:
             "pca": BenchmarkPCA,
             "random_forest_classifier": BenchmarkRandomForestClassifier,
             "random_forest_regressor": BenchmarkRandomForestRegressor,
+            "logistic_regression": BenchmarkLogisticRegression,
         }
         algorithms = "\n    ".join(registered_algorithms.keys())
         parser = argparse.ArgumentParser(
