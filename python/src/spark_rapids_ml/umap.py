@@ -32,7 +32,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 from pyspark import RDD
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
+from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasOutputCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
@@ -102,7 +102,9 @@ class UMAPClass(_CumlClass):
         }
 
 
-class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol):
+class _UMAPCumlParams(
+    _CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol, HasOutputCol
+):
     def __init__(self) -> None:
         super().__init__()
         self._setDefault()
@@ -111,6 +113,7 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol)
         """
         Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
         """
+
         if self.isDefined(self.featuresCols):
             return self.getFeaturesCols()
         elif self.isDefined(self.featuresCol):
@@ -139,6 +142,18 @@ class _UMAPCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol)
         Sets the value of :py:attr:`labelCol`.
         """
         return self.set_params(labelCol=value)
+
+    def getOutputCol(self) -> str:
+        """
+        Gets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
+        """
+        return self.getOrDefault("outputCol")
+
+    def setOutputCol(self: P, value: str) -> P:
+        """
+        Sets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
+        """
+        return self.set_params(outputCol=value)
 
 
 class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
@@ -260,6 +275,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         The name of the column that contains labels. If provided, supervised fitting will be performed, where labels
         will be taken into account when optimizing the embedding.
 
+    outputCol: str (optional)
+        The name of the column that contains embeddings. If not provided, the default name of "embedding" will be used.
+
     Examples
     --------
     >>> from spark_rapids_ml.umap import UMAP
@@ -315,6 +333,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
         self.maxRecordsPerBatch = 10000
+        self.setOutputCol("embedding")
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
         raise NotImplementedError("UMAP does not support model creation from Row")
@@ -507,14 +526,58 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+        cuml_alg_params = self.cuml_params
+        driver_embedding = np.array(self.embedding_, dtype=np.float32)
+        driver_raw_data = np.array(self.raw_data_, dtype=np.float32)
+
         def _construct_umap() -> CumlT:
-            raise NotImplementedError("TODO")
+            import cupy as cp
+            from cuml.common import SparseCumlArray
+            from cuml.common.sparse_utils import is_sparse
+            from cuml.manifold import UMAP as CumlUMAP
+
+            from .utils import cudf_to_cuml_array
+
+            if is_sparse(driver_raw_data):
+                raw_data_cuml = SparseCumlArray(driver_raw_data, convert_format=False)
+            else:
+                raw_data_cuml = cudf_to_cuml_array(
+                    driver_raw_data,
+                    order="C",
+                )
+
+            internal_model = CumlUMAP(**cuml_alg_params)
+            internal_model.embedding_ = cp.array(driver_embedding).data
+            internal_model._raw_data = raw_data_cuml
+
+            return internal_model
 
         def _transform_internal(
             umap: CumlT,
             df: Union[pd.DataFrame, np.ndarray],
         ) -> pd.Series:
-            raise NotImplementedError("TODO")
+            embedding = umap.transform(df)
+
+            is_df_np = isinstance(df, np.ndarray)
+            is_emb_np = isinstance(embedding, np.ndarray)
+
+            # Input is either numpy array or pandas dataframe
+            input_list = [
+                df[i, :] if is_df_np else df.iloc[i, :] for i in range(df.shape[0])  # type: ignore
+            ]
+            emb_list = [
+                embedding[i, :] if is_emb_np else embedding.iloc[i, :]
+                for i in range(embedding.shape[0])
+            ]
+
+            result = pd.DataFrame(
+                {
+                    "features": input_list,
+                    self.getOutputCol(): emb_list,
+                }
+            )
+
+            return result
 
         return _construct_umap, _transform_internal, None
 
@@ -522,4 +585,9 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         return (False, False)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        raise NotImplementedError("TODO")
+        return StructType(
+            [
+                StructField("features", ArrayType(FloatType(), False), False),
+                StructField(self.getOutputCol(), ArrayType(FloatType(), False), False),
+            ]
+        )
