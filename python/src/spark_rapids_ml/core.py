@@ -223,7 +223,6 @@ class _CumlModelReader(MLReader):
 class _CumlCommon(MLWritable, MLReadable):
     def __init__(self) -> None:
         super().__init__()
-        self.logger = get_logger(self.__class__)
 
     @staticmethod
     def set_gpu_device(
@@ -616,6 +615,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
     def __init__(self) -> None:
         super().__init__()
+        self.logger = get_logger(self.__class__)
 
     @abstractmethod
     def _create_pyspark_model(self, result: Row) -> "_CumlModel":
