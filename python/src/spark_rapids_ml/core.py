@@ -661,10 +661,16 @@ class _CumlEstimator(Estimator, _CumlCaller):
             return super().fitMultiple(dataset, paramMaps)
 
     def _try_stage_level_scheduling(self, rdd: RDD) -> RDD:
+        sc = _get_spark_session().sparkContext
         executor_cores = (
-            _get_spark_session().sparkContext.getConf().get("spark.executor.cores")
+            sc.getConf().get("spark.executor.cores")
         )
-        if executor_cores is None:
+        if _is_local(sc):
+            # TODO verify if stage level scheduling works on local mode.
+            # Local mode doesn't support stage level scheduling
+            return rdd
+        elif executor_cores is None:
+            # TODO to check if there is other way to get executor cores.
             self.logger.warning(
                 "Stage level scheduling in XGBoost "
                 "requires spark.executor.cores to be set "
@@ -674,11 +680,19 @@ class _CumlEstimator(Estimator, _CumlCaller):
             from pyspark.resource.profile import ResourceProfileBuilder
             from pyspark.resource.requests import TaskResourceRequests
 
-            # TODO avoid stage level scheduling on the spark before 3.4.0
+            executor_gpu_amount = (
+                _get_spark_session().sparkContext.getConf().get("spark.executor.resource.gpu.amount")
+            )
+
+            if executor_gpu_amount is None:
+                self.logger.error("spark.executor.resource.gpu.amount is not set")
+
+            # TODO 1. avoid stage level scheduling on the spark before 3.4.0
+            # TODO 2. check spark.task.resource.gpu.amount
             # each training task requires cpu cores > total executor cores/2 which can
             # ensure each training task be sent to different executor.
             task_cores = (int(executor_cores) // 2) + 1
-            treqs = TaskResourceRequests().cpus(task_cores)
+            treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", 0.08)
             rp = ResourceProfileBuilder().require(treqs).build
 
             self.logger.warning(
