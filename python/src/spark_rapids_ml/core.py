@@ -665,34 +665,34 @@ class _CumlEstimator(Estimator, _CumlCaller):
         executor_cores = (
             sc.getConf().get("spark.executor.cores")
         )
+        executor_gpu_amount = (
+            sc.getConf().get("spark.executor.resource.gpu.amount")
+        )
+        task_gpu_amount = (
+            sc.getConf().get("spark.task.resource.gpu.amount")
+        )
         if _is_local(sc):
             # TODO verify if stage level scheduling works on local mode.
             # Local mode doesn't support stage level scheduling
             return rdd
-        elif executor_cores is None:
+        elif any(x is None for x in [executor_cores, executor_gpu_amount, task_gpu_amount]):
             # TODO to check if there is other way to get executor cores.
             self.logger.warning(
                 "Stage level scheduling in XGBoost "
-                "requires spark.executor.cores to be set "
+                "requires spark.executor.cores, spark.executor.resource.gpu.amount"
+                "and spark.task.resource.gpu.amount to be set "
             )
             return rdd
         else:
             from pyspark.resource.profile import ResourceProfileBuilder
             from pyspark.resource.requests import TaskResourceRequests
 
-            executor_gpu_amount = (
-                _get_spark_session().sparkContext.getConf().get("spark.executor.resource.gpu.amount")
-            )
-
-            if executor_gpu_amount is None:
-                self.logger.error("spark.executor.resource.gpu.amount is not set")
-
             # TODO 1. avoid stage level scheduling on the spark before 3.4.0
             # TODO 2. check spark.task.resource.gpu.amount
             # each training task requires cpu cores > total executor cores/2 which can
             # ensure each training task be sent to different executor.
             task_cores = (int(executor_cores) // 2) + 1
-            treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", 0.08)
+            treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", float(task_gpu_amount))
             rp = ResourceProfileBuilder().require(treqs).build
 
             self.logger.warning(
