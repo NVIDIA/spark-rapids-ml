@@ -20,10 +20,8 @@ from typing import (
     Callable,
     Dict,
     Generator,
-    Iterator,
     List,
     Optional,
-    Sequence,
     Tuple,
     Type,
     Union,
@@ -32,9 +30,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import pyspark
-from pyspark import RDD
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasOutputCol
-from pyspark.ml.util import MLWriter
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
@@ -48,15 +44,12 @@ from pyspark.sql.types import (
 
 from spark_rapids_ml.core import FitInputType, _CumlModel
 
-from .common.cuml_context import CumlContext
 from .core import (
     CumlT,
     FitInputType,
     _ConstructFunc,
-    _CumlCommon,
     _CumlEstimatorSupervised,
     _CumlModel,
-    _CumlModelWriter,
     _EvaluateFunc,
     _TransformFunc,
     alias,
@@ -64,13 +57,7 @@ from .core import (
     transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from .utils import (
-    _ArrayOrder,
-    _concat_and_free,
-    _get_spark_session,
-    _is_local,
-    get_logger,
-)
+from .utils import _ArrayOrder, _concat_and_free, _get_spark_session
 
 if TYPE_CHECKING:
     import cudf
