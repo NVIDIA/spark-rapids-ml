@@ -235,8 +235,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         This function should match the metric used to train the UMAP embeedings.
 
     random_state : int, RandomState instance (optional, default=None)
-        If set to a non-zero value, this will ensure reproducible results during fit(). Note that transform() is
-        inherently stochastic and may yield slightly varied embedding results.
+        The seed used by the random number generator during embedding initialization and during sampling used by the
+        optimizer. Unfortunately, achieving a high amount of parallelism during the optimization stage often comes at
+        the expense of determinism, since many floating-point additions are being made in parallel without a deterministic
+        ordering. This causes slightly different results across training sessions, even when the same seed is used for
+        random number generation. Setting a random_state will enable consistency of trained embeddings, allowing for
+        reproducible results to 3 digits of precision, but will do so at the expense of training time and memory usage.
 
     verbose :
         Logging level.
