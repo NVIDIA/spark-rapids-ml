@@ -156,7 +156,7 @@ def _run_spark_test(
 @pytest.mark.parametrize("dtype", cuml_supported_data_types)
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.slow
-def _test_spark_umap(
+def test_spark_umap(
     n_parts: int,
     n_workers: int,
     n_rows: int,
