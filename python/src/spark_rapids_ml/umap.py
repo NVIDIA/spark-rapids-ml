@@ -20,10 +20,8 @@ from typing import (
     Callable,
     Dict,
     Generator,
-    Iterator,
     List,
     Optional,
-    Sequence,
     Tuple,
     Type,
     Union,
@@ -31,7 +29,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pyspark import RDD
+import pyspark
 from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasOutputCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
@@ -46,12 +44,10 @@ from pyspark.sql.types import (
 
 from spark_rapids_ml.core import FitInputType, _CumlModel
 
-from .common.cuml_context import CumlContext
 from .core import (
     CumlT,
     FitInputType,
     _ConstructFunc,
-    _CumlCommon,
     _CumlEstimatorSupervised,
     _CumlModel,
     _EvaluateFunc,
@@ -61,13 +57,7 @@ from .core import (
     transform_evaluate,
 )
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
-from .utils import (
-    _ArrayOrder,
-    _concat_and_free,
-    _get_spark_session,
-    _is_local,
-    get_logger,
-)
+from .utils import _ArrayOrder, _concat_and_free, _get_spark_session
 
 if TYPE_CHECKING:
     import cudf
@@ -245,8 +235,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         This function should match the metric used to train the UMAP embeedings.
 
     random_state : int, RandomState instance (optional, default=None)
-        If set to a non-zero value, this will ensure reproducible results during fit(). Note that transform() is
-        inherently stochastic and may yield slightly varied embedding results.
+        The seed used by the random number generator during embedding initialization and during sampling used by the
+        optimizer. Unfortunately, achieving a high amount of parallelism during the optimization stage often comes at
+        the expense of determinism, since many floating-point additions are being made in parallel without a deterministic
+        ordering. This causes slightly different results across training sessions, even when the same seed is used for
+        random number generation. Setting a random_state will enable consistency of trained embeddings, allowing for
+        reproducible results to 3 digits of precision, but will do so at the expense of training time and memory usage.
 
     verbose :
         Logging level.
@@ -373,9 +367,13 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         raw_data = list(chain.from_iterable([row["raw_data_"] for row in rows]))
         del rows
 
+        spark = _get_spark_session()
+        broadcast_embeddings = spark.sparkContext.broadcast(embeddings)
+        broadcast_raw_data = spark.sparkContext.broadcast(raw_data)
+
         model = UMAPModel(
-            embedding_=embeddings,
-            raw_data_=raw_data,
+            embedding_=broadcast_embeddings,
+            raw_data_=broadcast_raw_data,
             n_cols=len(raw_data[0]),
             dtype=type(raw_data[0][0]).__name__,
         )
@@ -501,8 +499,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def __init__(
         self,
-        embedding_: List[List[float]],
-        raw_data_: List[List[float]],
+        embedding_: Union[pyspark.broadcast.Broadcast, List[List[float]]],
+        raw_data_: Union[pyspark.broadcast.Broadcast, List[List[float]]],
         n_cols: int,
         dtype: str,
     ) -> None:
@@ -517,18 +515,20 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
     @property
     def embedding(self) -> List[List[float]]:
-        return self.embedding_
+        if isinstance(self.embedding_, list):
+            return self.embedding_
+        return self.embedding_.value
 
     @property
     def raw_data(self) -> List[List[float]]:
-        return self.raw_data_
+        if isinstance(self.raw_data_, list):
+            return self.raw_data_
+        return self.raw_data_.value
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params
-        driver_embedding = np.array(self.embedding_, dtype=np.float32)
-        driver_raw_data = np.array(self.raw_data_, dtype=np.float32)
 
         def _construct_umap() -> CumlT:
             import cupy as cp
@@ -538,16 +538,19 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             from .utils import cudf_to_cuml_array
 
-            if is_sparse(driver_raw_data):
-                raw_data_cuml = SparseCumlArray(driver_raw_data, convert_format=False)
+            embedding_np = np.array(self.embedding, dtype=np.float32)
+            raw_data_np = np.array(self.raw_data, dtype=np.float32)
+
+            if is_sparse(raw_data_np):
+                raw_data_cuml = SparseCumlArray(raw_data_np, convert_format=False)
             else:
                 raw_data_cuml = cudf_to_cuml_array(
-                    driver_raw_data,
+                    raw_data_np,
                     order="C",
                 )
 
             internal_model = CumlUMAP(**cuml_alg_params)
-            internal_model.embedding_ = cp.array(driver_embedding).data
+            internal_model.embedding_ = cp.array(embedding_np).data
             internal_model._raw_data = raw_data_cuml
 
             return internal_model
@@ -591,3 +594,11 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                 StructField(self.getOutputCol(), ArrayType(FloatType(), False), False),
             ]
         )
+
+    def get_model_attributes(self) -> Optional[Dict[str, Any]]:
+        """Override parent method to bring broadcast variables to driver before JSON serialization."""
+        if not isinstance(self.embedding_, list):
+            self._model_attributes["embedding_"] = self.embedding_.value
+        if not isinstance(self.raw_data_, list):
+            self._model_attributes["raw_data_"] = self.raw_data_.value
+        return self._model_attributes
