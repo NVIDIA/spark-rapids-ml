@@ -661,44 +661,50 @@ class _CumlEstimator(Estimator, _CumlCaller):
             return super().fitMultiple(dataset, paramMaps)
 
     def _try_stage_level_scheduling(self, rdd: RDD) -> RDD:
-        sc = _get_spark_session().sparkContext
-        executor_cores = (
-            sc.getConf().get("spark.executor.cores")
-        )
-        executor_gpu_amount = (
-            sc.getConf().get("spark.executor.resource.gpu.amount")
-        )
-        task_gpu_amount = (
-            sc.getConf().get("spark.task.resource.gpu.amount")
-        )
-        if _is_local(sc):
-            # TODO verify if stage level scheduling works on local mode.
+        ss = _get_spark_session()
+        sc = ss.sparkContext
+
+        if ss.version < "3.4.0":
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
+            )
+            return rdd
+        elif _is_local(sc):
             # Local mode doesn't support stage level scheduling
             return rdd
-        elif any(x is None for x in [executor_cores, executor_gpu_amount, task_gpu_amount]):
-            # TODO to check if there is other way to get executor cores.
+
+        executor_cores = sc.getConf().get("spark.executor.cores")
+        executor_gpu_amount = sc.getConf().get("spark.executor.resource.gpu.amount")
+
+        if executor_cores is None or executor_gpu_amount is None:
             self.logger.warning(
-                "Stage level scheduling in XGBoost "
-                "requires spark.executor.cores, spark.executor.resource.gpu.amount"
-                "and spark.task.resource.gpu.amount to be set "
+                "Stage level scheduling in spark-rapids-ml requires spark.executor.cores, "
+                "spark.executor.resource.gpu.amount to be set "
             )
             return rdd
-        else:
-            from pyspark.resource.profile import ResourceProfileBuilder
-            from pyspark.resource.requests import TaskResourceRequests
 
-            # TODO 1. avoid stage level scheduling on the spark before 3.4.0
-            # TODO 2. check spark.task.resource.gpu.amount
-            # each training task requires cpu cores > total executor cores/2 which can
-            # ensure each training task be sent to different executor.
-            task_cores = (int(executor_cores) // 2) + 1
-            treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", float(task_gpu_amount))
-            rp = ResourceProfileBuilder().require(treqs).build
+        task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
 
+        if task_gpu_amount == executor_gpu_amount:
             self.logger.warning(
-                f"Each training task requires task.cores: {task_cores}"
+                f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
+                f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
+                f"the number of runnable tasks per executor to: 1. Please adjust your configuration."
             )
-            return rdd.withResources(rp)
+            return rdd
+
+        from pyspark.resource.profile import ResourceProfileBuilder
+        from pyspark.resource.requests import TaskResourceRequests
+
+        # each training task requires cpu cores > total executor cores/2 which can
+        # ensure each training task be sent to different executor.
+        task_cores = (int(executor_cores) // 2) + 1
+        task_gpus = 0.01 if task_gpu_amount is None else float(task_gpu_amount)
+
+        treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", task_gpus)
+        rp = ResourceProfileBuilder().require(treqs).build
+
+        return rdd.withResources(rp)
 
     def _fit_internal(
         self, dataset: DataFrame, paramMaps: Optional[Sequence["ParamMap"]]
