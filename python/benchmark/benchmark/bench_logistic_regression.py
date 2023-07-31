@@ -105,9 +105,16 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         print(f"{benchmark_string} accuracy: {accuracy}")
 
         results = {
-            "training_time": fit_time,
+            "fit_time": fit_time,
             "transform_time": transform_time,
             "accuracy": accuracy,
+            "num_gpus": self.args.num_gpus,
+            "num_cpus": self.args.num_cpus,
+            "train_path": self.args.train_path,
+            "maxIter": params["maxIter"],
+            "tol": params["tol"],
+            "regParam": params["regParam"],
+            "standardization": params["standardization"],
         }
 
         return results

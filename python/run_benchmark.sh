@@ -9,6 +9,7 @@
 #     pca
 #     random_forest_classifier
 #     random_forest_regressor
+#     logistic_regression
 #
 #     and any comma separted list of the above like knn,linear_regression
 #
@@ -66,7 +67,7 @@ knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
-gen_data_script=./benchmark/gen_data.py
+gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
 #gen_data_script=./benchmark/gen_data_distributed.py
 gen_data_root=/tmp/data
 
@@ -354,6 +355,38 @@ if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
         --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_rf_regressor_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+fi
+
+# Logistic Regression Classification
+if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+        python $gen_data_script classification \
+            --n_informative $( expr $num_cols / 3 )  \
+            --n_redundant $( expr $num_cols / 3 ) \
+            --n_repeated $( expr $num_cols / 3 ) \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+    fi
+
+    echo "$sep algo: logistic regression $sep"
+    python ./benchmark/benchmark_runner.py logistic_regression \
+        --standardization False \
+        --maxIter 200 \
+        --tol 1e-30 \
+        --regParam 0.00001 \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_logistic_regression_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
