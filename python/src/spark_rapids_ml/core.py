@@ -699,7 +699,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         # each training task requires cpu cores > total executor cores/2 which can
         # ensure each training task be sent to different executor.
         task_cores = (int(executor_cores) // 2) + 1
-        task_gpus = 0.01 if task_gpu_amount is None else float(task_gpu_amount)
+        task_gpus = 0.1 if task_gpu_amount is None else float(task_gpu_amount)
 
         treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", task_gpus)
         rp = ResourceProfileBuilder().require(treqs).build
