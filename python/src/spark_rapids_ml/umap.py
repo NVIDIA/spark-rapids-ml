@@ -483,12 +483,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
     ]:
-        (
-            select_cols,
-            multi_col_names,
-            dimension,
-            feature_type,
-        ) = super(
+        (select_cols, multi_col_names, dimension, feature_type,) = super(
             _CumlEstimatorSupervised, self
         )._pre_process_data(dataset)
 
