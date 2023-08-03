@@ -696,10 +696,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
         from pyspark.resource.profile import ResourceProfileBuilder
         from pyspark.resource.requests import TaskResourceRequests
 
-        # Each training task requires only 1 cpu cores to allow other cpu tasks
-        # running alongside the training tasks
-        # and requires 1 gpu to ensure the training task be sent to different executors
-        treqs = TaskResourceRequests().cpus(1).resource("gpu", 1.0)
+        # each training task requires cpu cores > total executor cores/2 which can
+        # ensure each training task be sent to different executor.
+        task_cores = (int(executor_cores) // 2) + 1
+        # To ensure the training task take the whole GPU exclusively
+        task_gpus = 1.0
+
+        treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", task_gpus)
         rp = ResourceProfileBuilder().require(treqs).build
 
         return rdd.withResources(rp)
