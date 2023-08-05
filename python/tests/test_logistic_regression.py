@@ -1,7 +1,15 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
+from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
+from pyspark.ml.classification import (
+    LogisticRegressionModel as SparkLogisticRegressionModel,
+)
+from pyspark.ml.functions import array_to_vector
+from pyspark.ml.linalg import Vectors
+from pyspark.sql import Row
+from pyspark.sql.functions import array, col
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
 
@@ -30,7 +38,6 @@ def test_toy_example(gpu_number: int) -> None:
         label_col = "label"
         schema = features_col + " array<float>, " + label_col + " float"
         df = spark.createDataFrame(data, schema=schema)
-        df.show()
         lr_estimator = LogisticRegression(num_workers=gpu_number)
         lr_estimator.setFeaturesCol(features_col)
         lr_estimator.setLabelCol(label_col)
@@ -109,3 +116,115 @@ def test_classifier(
             spark_lr_model.coefficients.toArray(), cu_lr.coef_[0], tolerance
         )
         assert spark_lr_model.intercept == pytest.approx(cu_lr.intercept_[0], tolerance)
+
+
+LogisticRegressionType = TypeVar(
+    "LogisticRegressionType", Type[LogisticRegression], Type[SparkLogisticRegression]
+)
+LogisticRegressionModelType = TypeVar(
+    "LogisticRegressionModelType",
+    Type[LogisticRegressionModel],
+    Type[SparkLogisticRegressionModel],
+)
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat(
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    tmp_path: str,
+) -> None:
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+
+    X = np.array(
+        [
+            [1.0, 2.0],
+            [1.0, 3.0],
+            [2.0, 1.0],
+            [3.0, 1.0],
+        ]
+    )
+    y = np.array(
+        [
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+        ]
+    )
+    num_rows = len(X)
+
+    weight = np.ones([num_rows])
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        df = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        df = df.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        lr = _LogisticRegression()
+        # lr = _LogisticRegression(regParam=0.1, standardization=False)
+        # assert lr.getRegParam() == 0.1
+
+        lr.setFeaturesCol("features")
+        # lr.setMaxIter(30)
+        # lr.setRegParam(0.01)
+        lr.setLabelCol("label")
+        if isinstance(lr, SparkLogisticRegression):
+            lr.setWeightCol("weight")
+
+        assert lr.getFeaturesCol() == "features"
+        # assert lr.getMaxIter() == 30
+        # assert lr.getRegParam() == 0.01
+        assert lr.getLabelCol() == "label"
+
+        model = lr.fit(df)
+        coefficients = model.coefficients.toArray()
+        intercept = model.intercept
+
+        if isinstance(lr, SparkLogisticRegression):
+            assert array_equal(coefficients, [-17.65543489, 17.65543489])
+            assert intercept == pytest.approx(0, abs=1e-6)
+        else:
+            assert array_equal(coefficients, [-0.71483159, 0.71483147])
+            assert intercept == pytest.approx(0, abs=1e-6)
+
+        # example = df.head()
+        # if example:
+        #     model.predict(example.features)
+
+        # model.setPredictionCol("prediction")
+        # output = model.transform(df).head()
+        ## Row(weight=1.0, label=2.0374512672424316, features=DenseVector([-0.2052, 1.4941]), prediction=2.037452415464224)
+        # assert np.isclose(output.prediction, 2.037452415464224)
+
+        lr_path = tmp_path + "/log_reg"
+        lr.save(lr_path)
+
+        lr2 = _LogisticRegression.load(lr_path)
+        # assert lr2.getMaxIter() == 5
+
+        model_path = tmp_path + "/log_reg_model"
+        model.save(model_path)
+
+        model2 = _LogisticRegressionModel.load(model_path)
+        assert array_equal(model.coefficients.toArray(), model2.coefficients.toArray())
+        assert model.intercept == model2.intercept
+        # assert model.transform(df).take(1) == model2.transform(df).take(1)
+        # assert model.numFeatures == 2

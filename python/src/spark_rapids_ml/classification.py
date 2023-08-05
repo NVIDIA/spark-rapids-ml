@@ -32,7 +32,8 @@ from pyspark.ml.classification import (
     RandomForestClassificationSummary,
     _RandomForestClassifierParams,
 )
-from pyspark.ml.linalg import Vector, Vectors
+from pyspark.ml.functions import vector_to_array
+from pyspark.ml.linalg import Vector, Vectors, VectorUDT
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -650,9 +651,7 @@ class LogisticRegression(
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
-        num_workers = self.num_workers
         array_order = self._fit_array_order()
-        num_classes = dataset.select(alias.label).distinct().count()
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -704,6 +703,35 @@ class LogisticRegression(
             }
 
         return _logistic_regression_fit
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[
+        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+    ]:
+        (
+            select_cols,
+            multi_col_names,
+            dimension,
+            feature_type,
+        ) = super()._pre_process_data(dataset)
+
+        # if input format is vectorUDT, convert data type from float32
+        # TODO: support float64
+        input_col, _ = self._get_input_columns()
+        label_col = self.getLabelCol()
+
+        if input_col is not None and isinstance(
+            dataset.schema[input_col].dataType, VectorUDT
+        ):
+            select_cols[0] = vector_to_array(col(input_col), dtype="float32").alias(
+                alias.data
+            )
+
+            select_cols[1] = col(label_col).cast(FloatType()).alias(alias.label)
+            feature_type = FloatType
+
+        return select_cols, multi_col_names, dimension, feature_type
 
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(

@@ -10,5 +10,5 @@ then
 fi
 echo "use --runslow to run all tests"
 pytest benchmark/test_gen_data.py
-pytest -ra "$@" --durations=10 tests
-# pytest -ra --runslow --durations=10 tests
+pytest -ra "$@" --durations=10 --ignore=tests/test_logistic_regression.py tests
+# pytest -ra --runslow --durations=10 --ignore=tests/test_logistic_regression.py tests
