@@ -73,7 +73,7 @@ def test_toy_example(gpu_number: int) -> None:
         assert preds == [1., 1., 0., 0.]
         probs = [ row["probs"] for row in preds_df_local]
         assert len(probs) == len(preds)
-        assert [p > 0.5 for p in probs] == [True, True, False, False]
+        assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
 
 
 def test_params(tmp_path: str) -> None:
