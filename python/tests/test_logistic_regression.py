@@ -46,12 +46,14 @@ def test_toy_example(gpu_number: int) -> None:
     with CleanSparkSession() as spark:
         features_col = "features"
         label_col = "label"
-        schema = features_col + " array<float>, " + label_col + " float"
+        probability_col = "probs"
+        schema = features_col + " array<float>, " + label_col + " float" 
         df = spark.createDataFrame(data, schema=schema)
 
         lr_estimator = LogisticRegression(regParam=1.0, num_workers=gpu_number)
         lr_estimator.setFeaturesCol(features_col)
         lr_estimator.setLabelCol(label_col)
+        lr_estimator.setProbabilityCol(probability_col)
         lr_model = lr_estimator.fit(df)
 
         assert lr_model.n_cols == 2
@@ -66,9 +68,12 @@ def test_toy_example(gpu_number: int) -> None:
         )
         assert lr_model.intercept == pytest.approx(0, abs=1e-6)
 
-        preds_df = lr_model.transform(df)
-        preds = [row["prediction"] for row in preds_df.collect()]
-        assert preds == [1.0, 1.0, 0.0, 0.0]
+        preds_df_local = lr_model.transform(df).collect()
+        preds = [ row["prediction"] for row in preds_df_local]
+        assert preds == [1., 1., 0., 0.]
+        probs = [ row["probs"] for row in preds_df_local]
+        assert len(probs) == len(preds)
+        assert [p > 0.5 for p in probs] == [True, True, False, False]
 
 
 def test_params(tmp_path: str) -> None:

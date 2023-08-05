@@ -17,7 +17,9 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import sum
+from pyspark.sql.functions import sum, col
+from pyspark.ml.feature import StandardScaler
+from pyspark.ml.functions import array_to_vector, vector_to_array
 
 from .base import BenchmarkBase
 from .utils import inspect_default_params_from_func, with_benchmark
@@ -53,14 +55,27 @@ class BenchmarkLogisticRegression(BenchmarkBase):
                 num_workers=self.args.num_gpus, **params
             )
             benchmark_string = "Spark Rapids ML LogisticRegression training"
+            # scaler = StandardScaler(withMean=True, withStd=True, inputCol="features_col_vec", outputCol="scaled_col_vec")
+
+            # train_df = train_df.withColumn("features_col_vec", array_to_vector(features_col))
+
+            # train_df = scaler.fit(train_df).transform(train_df).drop(features_col,"features_col_vec").withColumn(features_col, vector_to_array("scaled_col_vec","float32"))
+            # train_df.cache()
         else:
             from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 
             lr = SparkLogisticRegression(**params)  # type: ignore[assignment]
             benchmark_string = "Spark ML LogisticRegression training"
+            # scaler = StandardScaler(withMean=True, withStd=True, inputCol=features_col, outputCol="scaled_col_vec")
+
+            # train_df = scaler.fit(train_df).transform(train_df).drop(features_col).withColumnRenamed("scaled_col_vec", features_col)
+            # train_df.cache()
+            # print(f"standardization: {lr.getStandardization()}")
 
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
+
+       
 
         model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
 
@@ -76,14 +91,23 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
         df_with_preds = model.transform(eval_df)
 
+        print(f"pred schema: ")
+        df_with_preds.printSchema()
+
         # model does not yet have col getters setters and uses default value for prediction col
-        prediction_col = model.getOrDefault(model.predictionCol)
+        prediction_col = model.getPredictionCol()
+        probability_col = model.getProbabilityCol()
 
         # run a simple dummy computation to trigger transform. count is short
         # circuited due to pandas_udf used internally
         _, transform_time = with_benchmark(
             "Spark ML LogisticRegression transform",
             lambda: df_with_preds.agg(sum(prediction_col)).collect(),
+        )
+
+        df_with_preds = df_with_preds.select(col(prediction_col).cast("double").alias(prediction_col),
+            label_name,
+            col(probability_col),
         )
 
         from pyspark.ml.evaluation import (
@@ -95,19 +119,25 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         evaluator: Union[
             BinaryClassificationEvaluator, MulticlassClassificationEvaluator
         ] = (
-            BinaryClassificationEvaluator()
-            .setRawPredictionCol(prediction_col)
+            MulticlassClassificationEvaluator()
+            .setMetricName("logLoss")
+            .setPredictionCol(prediction_col)
+            .setProbabilityCol(probability_col)
             .setLabelCol(label_name)
         )
 
-        accuracy = evaluator.evaluate(df_with_preds)
+        log_loss = evaluator.evaluate(df_with_preds)
+        coefficients = np.array(model.coefficients)
+        coefs_l1 = np.sum(np.abs(coefficients))
+        coefs_l2 = np.sum(coefficients**2)
+        full_objective = log_loss + 0.5*lr.getRegParam()*coefs_l2
 
-        print(f"{benchmark_string} accuracy: {accuracy}")
+        print(f"{benchmark_string} full_objective: {full_objective}")
 
         results = {
             "fit_time": fit_time,
             "transform_time": transform_time,
-            "accuracy": accuracy,
+            "full_objective": full_objective,
             "num_gpus": self.args.num_gpus,
             "num_cpus": self.args.num_cpus,
             "train_path": self.args.train_path,
