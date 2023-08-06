@@ -89,10 +89,9 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
         eval_df = train_df if transform_df is None else transform_df
 
-        df_with_preds = model.transform(eval_df)
+        eval_df_with_preds = model.transform(eval_df)
+        train_df_with_preds = model.transform(train_df)
 
-        print(f"pred schema: ")
-        df_with_preds.printSchema()
 
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getPredictionCol()
@@ -102,10 +101,15 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         # circuited due to pandas_udf used internally
         _, transform_time = with_benchmark(
             "Spark ML LogisticRegression transform",
-            lambda: df_with_preds.agg(sum(prediction_col)).collect(),
+            lambda: eval_df_with_preds.agg(sum(prediction_col)).collect(),
         )
 
-        df_with_preds = df_with_preds.select(col(prediction_col).cast("double").alias(prediction_col),
+        eval_df_with_preds = eval_df_with_preds.select(col(prediction_col).cast("double").alias(prediction_col),
+            label_name,
+            col(probability_col),
+        )
+
+        train_df_with_preds = train_df_with_preds.select(col(prediction_col).cast("double").alias(prediction_col),
             label_name,
             col(probability_col),
         )
@@ -116,7 +120,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         )
         # TODO: support multiple classes
         # binary classification
-        evaluator: Union[
+        evaluator_train: Union[
             BinaryClassificationEvaluator, MulticlassClassificationEvaluator
         ] = (
             MulticlassClassificationEvaluator()
@@ -126,18 +130,30 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             .setLabelCol(label_name)
         )
 
-        log_loss = evaluator.evaluate(df_with_preds)
+        evaluator_test: Union[
+            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
+        ] = (
+            BinaryClassificationEvaluator()
+            .setRawPredictionCol(probability_col)
+            .setLabelCol(label_name)
+        )
+
+        log_loss = evaluator_train.evaluate(train_df_with_preds)
         coefficients = np.array(model.coefficients)
         coefs_l1 = np.sum(np.abs(coefficients))
         coefs_l2 = np.sum(coefficients**2)
-        full_objective = log_loss + 0.5*lr.getRegParam()*coefs_l2
+        train_full_objective = log_loss + 0.5*lr.getRegParam()*coefs_l2
 
-        print(f"{benchmark_string} full_objective: {full_objective}")
+        eval_auc = evaluator_test.evaluate(eval_df_with_preds)
+
+        print(f"{benchmark_string} train_full_objective: {train_full_objective}")
+        print(f"{benchmark_string} eval_auc: {eval_auc}")
 
         results = {
             "fit_time": fit_time,
             "transform_time": transform_time,
-            "full_objective": full_objective,
+            "train_full_objective": train_full_objective,
+            "eval_auc": eval_auc,
             "num_gpus": self.args.num_gpus,
             "num_cpus": self.args.num_cpus,
             "train_path": self.args.train_path,
