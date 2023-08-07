@@ -674,6 +674,9 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             embedding = self.embedding
             raw_data = self.raw_data
+            if embedding.dtype != np.float32:
+                embedding = embedding.astype(np.float32)
+                raw_data = raw_data.astype(np.float32)
 
             if is_sparse(raw_data):
                 raw_data_cuml = SparseCumlArray(raw_data, convert_format=False)
