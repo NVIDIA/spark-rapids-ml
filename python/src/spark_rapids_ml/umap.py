@@ -385,14 +385,16 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 pd.concat(
                     [pd.Series(x) for x in pdf_output["embedding_"]], ignore_index=True
                 )
-            )
+            ),
+            dtype=np.float32,
         )
         raw_data = np.array(
             list(
                 pd.concat(
                     [pd.Series(x) for x in pdf_output["raw_data_"]], ignore_index=True
                 )
-            )
+            ),
+            dtype=np.float32,
         )
         del pdf_output
 
@@ -405,6 +407,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             raw_data_=broadcast_raw_data,
             n_cols=len(raw_data[0]),
             dtype=type(raw_data[0][0]).__name__,
+        )
+
+        print(
+            type(raw_data[0][0]).__name__,
         )
 
         model._num_workers = input_num_workers
@@ -733,7 +739,9 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         )
 
     def get_model_attributes(self) -> Optional[Dict[str, Any]]:
-        """Override parent method to bring broadcast variables to driver before JSON serialization."""
+        """
+        Override parent method to bring broadcast variables to driver before JSON serialization.
+        """
         if not isinstance(self.embedding_, np.ndarray):
             self._model_attributes["embedding_"] = self.embedding_.value
         if not isinstance(self.raw_data_, np.ndarray):

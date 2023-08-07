@@ -303,7 +303,7 @@ def test_umap_model_persistence(tmp_path: str) -> None:
             assert embedding.shape == (100, 2)
             assert raw_data.shape == (100, 20)
             assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "float64"
+            assert model.dtype == "float32"
             assert model.n_cols == X.shape[1]
 
         umap_model = umap.fit(df)
