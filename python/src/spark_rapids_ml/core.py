@@ -685,6 +685,12 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
 
+        if task_gpu_amount is None:
+            # if spark.task.resource.gpu.amount is not set, the default concurrent tasks
+            # with gpu requirement will be 1, which means 2 training tasks will never
+            # be scheduled into the same executor.
+            return rdd
+
         if task_gpu_amount == executor_gpu_amount:
             self.logger.warning(
                 f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
@@ -698,8 +704,15 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         # each training task requires cpu cores > total executor cores/2 which can
         # ensure each training task be sent to different executor.
+        #
+        # Please note that we can't set task_cores to the value which is smaller than total executor cores/2
+        # because only task_gpus can't ensure the tasks be sent to different executor even task_gpus=1.0
+        #
+        # TODO do we need to set task_cores to executor_cores to not allow other gpus tasks running alongside
+        # of training task?
         task_cores = (int(executor_cores) // 2) + 1
-        # To ensure the training task take the whole GPU exclusively
+        # task_gpus means how many slots per gpu address the task requires,
+        # it does mean how many gpus it would like to require, so it can be any value of (0, 0.5] or 1.
         task_gpus = 1.0
 
         treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", task_gpus)
