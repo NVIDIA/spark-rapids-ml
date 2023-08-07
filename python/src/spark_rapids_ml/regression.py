@@ -202,6 +202,7 @@ class LinearRegressionClass(_CumlClass):
         return {
             "algorithm": "eig",
             "fit_intercept": True,
+            "copy_X": None,
             "normalize": False,
             "verbose": False,
             "alpha": 0.0001,
@@ -498,6 +499,7 @@ class LinearRegression(
                         "fit_intercept",
                         "normalize",
                         "verbose",
+                        "copy_X",
                     ]
                 else:
                     if init_parameters["l1_ratio"] == 0:
@@ -548,6 +550,10 @@ class LinearRegression(
                 final_init_parameters = {
                     k: v for k, v in init_parameters.items() if k in supported_params
                 }
+
+                # cuml adds copy_X argument since 23.08
+                if "copy_X" in final_init_parameters:
+                    final_init_parameters["copy_X"] = False
 
                 linear_regression = CumlLinearRegression(
                     handle=params[param_alias.handle],
