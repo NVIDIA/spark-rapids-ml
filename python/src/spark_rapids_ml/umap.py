@@ -409,10 +409,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             dtype=type(raw_data[0][0]).__name__,
         )
 
-        print(
-            type(raw_data[0][0]).__name__,
-        )
-
         model._num_workers = input_num_workers
 
         self._copyValues(model)
@@ -656,14 +652,14 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     @property
     def embedding(self) -> np.ndarray:
         if isinstance(self.embedding_, np.ndarray):
-            return self.embedding_
-        return self.embedding_.value
+            return self.embedding_.tolist()
+        return self.embedding_.value.tolist()
 
     @property
     def raw_data(self) -> np.ndarray:
         if isinstance(self.raw_data_, np.ndarray):
-            return self.raw_data_
-        return self.raw_data_.value
+            return self.raw_data_.tolist()
+        return self.raw_data_.value.tolist()
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
@@ -678,8 +674,17 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             from .utils import cudf_to_cuml_array
 
-            embedding = self.embedding
-            raw_data = self.raw_data
+            embedding = (
+                self.embedding_
+                if isinstance(self.embedding_, np.ndarray)
+                else self.embedding_.value
+            )
+            raw_data = (
+                self.raw_data_
+                if isinstance(self.raw_data_, np.ndarray)
+                else self.raw_data_.value
+            )
+
             if embedding.dtype != np.float32:
                 embedding = embedding.astype(np.float32)
                 raw_data = raw_data.astype(np.float32)
