@@ -116,7 +116,6 @@ cat <<EOF
 --spark_confs spark.sql.cache.serializer=com.nvidia.spark.ParquetCachedBatchSerializer \
 --spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
 --spark_confs spark.rapids.sql.explain=ALL \
---spark_confs spark.rapids.memory.gpu.reserve=20 \
 --spark_confs spark.sql.execution.sortBeforeRepartition=false \
 --spark_confs spark.rapids.sql.format.parquet.reader.type=MULTITHREADED \
 --spark_confs spark.rapids.sql.format.parquet.multiThreadedRead.maxNumFilesParallel=20 \
