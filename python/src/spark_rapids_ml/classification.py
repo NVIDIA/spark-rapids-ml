@@ -716,7 +716,7 @@ class LogisticRegression(
             feature_type,
         ) = super()._pre_process_data(dataset)
 
-        # if input format is vectorUDT, convert data type from float32
+        # if input format is vectorUDT, convert data type to float32
         # TODO: support float64
         input_col, _ = self._get_input_columns()
         label_col = self.getLabelCol()
