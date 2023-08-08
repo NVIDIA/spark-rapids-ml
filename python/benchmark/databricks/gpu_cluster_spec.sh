@@ -20,7 +20,6 @@ cat <<EOF
         "spark.sql.cache.serializer": "com.nvidia.spark.ParquetCachedBatchSerializer",
         "spark.rapids.memory.gpu.pooling.enabled": "false",
         "spark.rapids.sql.explain": "ALL",
-        "spark.rapids.memory.gpu.reserve": "20",
         "spark.sql.execution.sortBeforeRepartition": "false",
         "spark.rapids.sql.python.gpu.enabled": "true",
         "spark.rapids.memory.pinnedPool.size": "2G",
