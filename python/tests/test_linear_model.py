@@ -98,6 +98,12 @@ def test_default_cuml_params() -> None:
         [CumlLinearRegression, Ridge, CD], ["handle", "output_type"]
     )
     spark_params = LinearRegression()._get_cuml_params_default()
+
+    import cuml
+    from packaging import version
+
+    if version.parse(cuml.__version__) < version.parse("23.08.00"):
+        spark_params.pop("copy_X")
     assert cuml_params == spark_params
 
 
