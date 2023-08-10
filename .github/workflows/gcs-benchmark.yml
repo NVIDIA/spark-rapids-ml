@@ -38,7 +38,6 @@ jobs:
         run: |
           set -x
           cat <<< $KEY_FILE_CONTENT > key.json
-          cat key.json
           gcloud auth activate-service-account $SERVICE_ACCOUNT --key-file key.json
           gcloud config set project $PROJECT
           gcloud config set dataproc/region $DATAPROC_REGION
