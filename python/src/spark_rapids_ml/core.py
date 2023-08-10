@@ -224,7 +224,6 @@ class _CumlModelReader(MLReader):
 class _CumlCommon(MLWritable, MLReadable):
     def __init__(self) -> None:
         super().__init__()
-        self.logger = get_logger(self.__class__)
 
     @staticmethod
     def set_gpu_device(
@@ -649,6 +648,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
     def __init__(self) -> None:
         super().__init__()
+        self.logger = get_logger(self.__class__)
 
     @abstractmethod
     def _create_pyspark_model(self, result: Row) -> "_CumlModel":
@@ -693,6 +693,66 @@ class _CumlEstimator(Estimator, _CumlCaller):
         else:
             return super().fitMultiple(dataset, paramMaps)
 
+    def _try_stage_level_scheduling(self, rdd: RDD) -> RDD:
+        ss = _get_spark_session()
+        sc = ss.sparkContext
+
+        if ss.version < "3.4.0":
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
+            )
+            return rdd
+        elif _is_local(sc):
+            # Local mode doesn't support stage level scheduling
+            return rdd
+
+        executor_cores = sc.getConf().get("spark.executor.cores")
+        executor_gpu_amount = sc.getConf().get("spark.executor.resource.gpu.amount")
+
+        if executor_cores is None or executor_gpu_amount is None:
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml requires spark.executor.cores, "
+                "spark.executor.resource.gpu.amount to be set "
+            )
+            return rdd
+
+        task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
+
+        if task_gpu_amount is None:
+            # if spark.task.resource.gpu.amount is not set, the default concurrent tasks
+            # with gpu requirement will be 1, which means 2 training tasks will never
+            # be scheduled into the same executor.
+            return rdd
+
+        if task_gpu_amount == executor_gpu_amount:
+            self.logger.warning(
+                f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
+                f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
+                f"the number of runnable tasks per executor to: 1. Please adjust your configuration."
+            )
+            return rdd
+
+        from pyspark.resource.profile import ResourceProfileBuilder
+        from pyspark.resource.requests import TaskResourceRequests
+
+        # each training task requires cpu cores > total executor cores/2 which can
+        # ensure each training task be sent to different executor.
+        #
+        # Please note that we can't set task_cores to the value which is smaller than total executor cores/2
+        # because only task_gpus can't ensure the tasks be sent to different executor even task_gpus=1.0
+        #
+        # TODO do we need to set task_cores to executor_cores to not allow other gpus tasks running alongside
+        # of training task?
+        task_cores = (int(executor_cores) // 2) + 1
+        # task_gpus means how many slots per gpu address the task requires,
+        # it does mean how many gpus it would like to require, so it can be any value of (0, 0.5] or 1.
+        task_gpus = 1.0
+
+        treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", task_gpus)
+        rp = ResourceProfileBuilder().require(treqs).build
+
+        return rdd.withResources(rp)
+
     def _fit_internal(
         self, dataset: DataFrame, paramMaps: Optional[Sequence["ParamMap"]]
     ) -> List["_CumlModel"]:
@@ -702,6 +762,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
             partially_collect=True,
             paramMaps=paramMaps,
         )
+
+        pipelined_rdd = self._try_stage_level_scheduling(pipelined_rdd)
+
         rows = pipelined_rdd.collect()
 
         models: List["_CumlModel"] = [None]  # type: ignore
