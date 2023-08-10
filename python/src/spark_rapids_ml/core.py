@@ -716,6 +716,16 @@ class _CumlEstimator(Estimator, _CumlCaller):
             )
             return rdd
 
+        if int(executor_gpu_amount) > 1:
+            # For spark.executor.resource.gpu.amount>1, we suppose user knows how to configure
+            # to make spark-rapids-ml run successfully.
+            #
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml will not work"
+                "when spark.executor.resource.gpu.amount>1"
+            )
+            return rdd
+
         task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
 
         if task_gpu_amount is None:
@@ -741,9 +751,16 @@ class _CumlEstimator(Estimator, _CumlCaller):
         # Please note that we can't set task_cores to the value which is smaller than total executor cores/2
         # because only task_gpus can't ensure the tasks be sent to different executor even task_gpus=1.0
         #
-        # TODO do we need to set task_cores to executor_cores to not allow other gpus tasks running alongside
-        # of training task?
-        task_cores = (int(executor_cores) // 2) + 1
+        # If spark-rapids enabled. we don't allow other ETL task running alongside training task to avoid OOM
+        spark_plugins = ss.conf.get("spark.plugins", " ")
+        assert spark_plugins is not None
+        spark_rapids_sql_enabled = ss.conf.get("spark.rapids.sql.enabled", "true")
+        task_cores = (
+            int(executor_cores)
+            if "com.nvidia.spark.SQLPlugin" in spark_plugins
+            and "true" == spark_rapids_sql_enabled
+            else (int(executor_cores) // 2) + 1
+        )
         # task_gpus means how many slots per gpu address the task requires,
         # it does mean how many gpus it would like to require, so it can be any value of (0, 0.5] or 1.
         task_gpus = 1.0
