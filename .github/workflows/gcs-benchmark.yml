@@ -1,0 +1,50 @@
+# Copyright (c) 2023, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# A workflow to trigger gcs tests
+name: GCS Benchmark Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  Benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: run benchmark
+        env:
+          PROJECT: rapids-spark
+          DATAPROC_REGION: us-central1
+          COMPUTE_REGION: us-central1
+          COMPUTE_ZONE: us-central1-a
+          GCS_BUCKET: spark-rapids-ml-benchmarking
+          KEY_FILE_CONTENT: ${{ secrets.GCLOUD_PRIVATE_KEY }}
+          SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
+        shell: bash
+        run: |
+          set -x
+          cat <<< $KEY_FILE_CONTENT > key.json
+          cat key.json
+          gcloud auth activate-service-account $SERVICE_ACCOUNT --key-file key.json
+          gcloud config set project $PROJECT
+          gcloud config set dataproc/region $DATAPROC_REGION
+          gcloud config set compute/region $COMPUTE_REGION
+          gcloud config set compute/zone $COMPUTE_ZONE
+          export BENCHMARK_HOME=$GCS_BUCKET/benchmark
+          cd python/benchmark/dataproc
+          ./setup.sh
+          ./run_benchmark.sh
