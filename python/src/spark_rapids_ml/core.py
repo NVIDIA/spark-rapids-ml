@@ -721,7 +721,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
             # to make spark-rapids-ml run successfully.
             #
             self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml will not work"
+                "Stage level scheduling in spark-rapids-ml will not work "
                 "when spark.executor.resource.gpu.amount>1"
             )
             return rdd
@@ -767,6 +767,10 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", task_gpus)
         rp = ResourceProfileBuilder().require(treqs).build
+
+        self.logger.info(
+            f"Training tasks require the resource(cores={task_cores}, gpu={task_gpus})"
+        )
 
         return rdd.withResources(rp)
 
