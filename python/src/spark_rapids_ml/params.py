@@ -101,14 +101,14 @@ class _CumlClass(object):
     @classmethod
     def _param_value_mapping(
         cls,
-    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
         """
-        Return a dictionary of cuML parameter names and a function mapping their Spark ML Param string
+        Return a dictionary of cuML parameter names and a function mapping their Spark ML Param
         values to cuML values of either str, float, or int type.
 
-        The mapped function should accept all string inputs and return None for any unmapped input values.
+        The mapped function should return None for any unmapped input values.
 
-        If it is desired that a cuML string value be accepted as a valid input, it must be explicitly mapped to
+        If it is desired that a cuML value be accepted as a valid input, it must be explicitly mapped to
         itself in the function (see "squared_loss" and "eig" in example below).
 
         Example

@@ -1,6 +1,4 @@
-from typing import Any, Dict, Tuple, Dict, Any, Type, TypeVar
-from .sparksession import CleanSparkSession
-from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
+from typing import Any, Dict, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
@@ -14,13 +12,14 @@ from pyspark.sql import Row
 from pyspark.sql.functions import array, col
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
+
 from .sparksession import CleanSparkSession
 from .utils import (
+    array_equal,
+    assert_params,
     create_pyspark_dataframe,
     idfn,
     make_classification_dataset,
-    array_equal,
-    assert_params
 )
 
 
@@ -58,15 +57,15 @@ def test_toy_example(gpu_number: int) -> None:
         assert lr_model.intercept == pytest.approx(-2.2614916e-08, abs=1e-6)
 
         preds_df = lr_model.transform(df)
-        preds = [ row["prediction"] for row in preds_df.collect()]
-        assert preds == [1., 1., 0., 0.]
+        preds = [row["prediction"] for row in preds_df.collect()]
+        assert preds == [1.0, 1.0, 0.0, 0.0]
+
 
 def test_params(tmp_path: str) -> None:
-
-   # Default params
+    # Default params
     default_spark_params = {
         "maxIter": 100,
-        "regParam": 1.0, # TODO: support default value 0.0, i.e. no regularization
+        "regParam": 1.0,  # TODO: support default value 0.0, i.e. no regularization
         "tol": 1e-06,
         "fitIntercept": True,
     }
@@ -97,7 +96,7 @@ def test_params(tmp_path: str) -> None:
     expected_cuml_params.update(
         {
             "max_iter": 30,
-            "C" : 2.0, # C should be equal to 1 / regParam 
+            "C": 2.0,  # C should be equal to 1 / regParam
             "tol": 1e-2,
             "fit_intercept": False,
         }
@@ -111,13 +110,14 @@ def test_params(tmp_path: str) -> None:
     loaded_lr = LogisticRegression.load(estimator_path)
     assert_params(loaded_lr, expected_spark_params, expected_cuml_params)
 
+
 # TODO support float64
-# 'vector' will be converted to float64 so It depends on float64 support  
-@pytest.mark.parametrize("fit_intercept", [True, False])  
-@pytest.mark.parametrize("feature_type", ["array", "multi_cols"])  
+# 'vector' will be converted to float32
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32])  
-@pytest.mark.parametrize("max_record_batch", [100, 10000]) 
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize("n_classes", [2])
 @pytest.mark.slow
 def test_classifier(
@@ -142,7 +142,8 @@ def test_classifier(
     )
 
     from cuml import LogisticRegression as cuLR
-    cu_lr = cuLR(fit_intercept = fit_intercept)
+
+    cu_lr = cuLR(fit_intercept=fit_intercept)
     cu_lr.fit(X_train, y_train)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -164,7 +165,7 @@ def test_classifier(
         assert spark_lr_model.n_cols == cu_lr.n_cols
         assert spark_lr_model.dtype == cu_lr.dtype
 
-        assert array_equal(spark_lr_model.coef_, cu_lr.coef_, tolerance)
+        assert array_equal(np.array(spark_lr_model.coef_), cu_lr.coef_, tolerance)
         assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)
 
         # test coefficients and intercepts
@@ -241,63 +242,74 @@ def test_compat(
             (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
         )
 
-        df = spark.createDataFrame(
+        bdf = spark.createDataFrame(
             np_array.tolist(),
             ",".join(schema),
         )
 
-        df = df.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+        bdf = bdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
             *feature_cols
         )
 
-        lr = _LogisticRegression()
-        # lr = _LogisticRegression(regParam=0.1, standardization=False)
-        # assert lr.getRegParam() == 0.1
+        blor = _LogisticRegression(regParam=0.1)
+        assert blor.getRegParam() == 0.1
 
-        lr.setFeaturesCol("features")
-        # lr.setMaxIter(30)
-        # lr.setRegParam(0.01)
-        lr.setLabelCol("label")
-        if isinstance(lr, SparkLogisticRegression):
-            lr.setWeightCol("weight")
+        blor.setFeaturesCol("features")
+        blor.setMaxIter(10)
+        blor.setRegParam(0.01)
+        blor.setLabelCol("label")
+        if isinstance(blor, SparkLogisticRegression):
+            blor.setWeightCol("weight")
 
-        assert lr.getFeaturesCol() == "features"
-        # assert lr.getMaxIter() == 30
-        # assert lr.getRegParam() == 0.01
-        assert lr.getLabelCol() == "label"
+        assert blor.getFeaturesCol() == "features"
+        assert blor.getMaxIter() == 10
+        assert blor.getRegParam() == 0.01
+        assert blor.getLabelCol() == "label"
 
-        model = lr.fit(df)
-        coefficients = model.coefficients.toArray()
-        intercept = model.intercept
+        blor.clear(blor.maxIter)
+        assert blor.getMaxIter() == 100
 
-        if isinstance(lr, SparkLogisticRegression):
-            assert array_equal(coefficients, [-17.65543489, 17.65543489])
-            assert intercept == pytest.approx(0, abs=1e-6)
+        blor_model = blor.fit(bdf)
+
+        blor_model.setFeaturesCol("features")
+        blor_model.setProbabilityCol("newProbability")
+        assert blor_model.getProbabilityCol() == "newProbability"
+
+        coefficients = blor_model.coefficients.toArray()
+        intercept = blor_model.intercept
+
+        if isinstance(blor, SparkLogisticRegression):
+            assert array_equal(coefficients, [-2.48197058, 2.48197058])
+            assert intercept == pytest.approx(0, abs=1e-3)
         else:
-            assert array_equal(coefficients, [-0.71483159, 0.71483147])
-            assert intercept == pytest.approx(0, abs=1e-6)
+            assert array_equal(coefficients, [-3.41141391, 3.41142201])
+            assert intercept == pytest.approx(0, abs=1e-3)
+
+        # blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
 
         # example = df.head()
-        # if example:
-        #     model.predict(example.features)
+        # blor_model.predict(example.features)
+        # blor_model.predictRaw(examples.features)
+        # blor_model.predictProbability(examples.features)
 
-        # model.setPredictionCol("prediction")
-        # output = model.transform(df).head()
-        ## Row(weight=1.0, label=2.0374512672424316, features=DenseVector([-0.2052, 1.4941]), prediction=2.037452415464224)
-        # assert np.isclose(output.prediction, 2.037452415464224)
+        output = blor_model.transform(bdf).head()
+        assert output.prediction == 1.0
+        # assert output.newProbability == DenseVector([])
+        # assert output.rawProbability == DenseVector([])
 
-        lr_path = tmp_path + "/log_reg"
-        lr.save(lr_path)
+        blor_path = tmp_path + "/log_reg"
+        blor.save(blor_path)
 
-        lr2 = _LogisticRegression.load(lr_path)
-        # assert lr2.getMaxIter() == 5
+        blor2 = _LogisticRegression.load(blor_path)
+        assert blor2.getRegParam() == 0.01
 
         model_path = tmp_path + "/log_reg_model"
-        model.save(model_path)
+        blor_model.save(model_path)
 
         model2 = _LogisticRegressionModel.load(model_path)
-        assert array_equal(model.coefficients.toArray(), model2.coefficients.toArray())
-        assert model.intercept == model2.intercept
-        # assert model.transform(df).take(1) == model2.transform(df).take(1)
-        # assert model.numFeatures == 2
-
+        assert array_equal(
+            blor_model.coefficients.toArray(), model2.coefficients.toArray()
+        )
+        assert blor_model.intercept == model2.intercept
+        assert blor_model.transform(bdf).take(1) == model2.transform(bdf).take(1)
+        assert blor_model.numFeatures == 2
