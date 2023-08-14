@@ -352,21 +352,8 @@ class _CumlParams(_CumlClass, Params):
                     gpus_per_executor = float(
                         spark.conf.get("spark.executor.resource.gpu.amount", "1")  # type: ignore
                     )
-                    gpus_per_task = float(
-                        spark.conf.get("spark.task.resource.gpu.amount", "1")  # type: ignore
-                    )
 
-                    if gpus_per_task != 1:
-                        msg = (
-                            "WARNING: cuML requires 1 GPU per task, "
-                            "'spark.task.resource.gpu.amount' is currently set to {}"
-                        )
-                        print(msg.format(gpus_per_task))
-                        gpus_per_task = 1
-
-                    num_workers = max(
-                        int(num_executors * gpus_per_executor / gpus_per_task), 1
-                    )
+                    num_workers = max(int(num_executors * gpus_per_executor), 1)
         except Exception as e:
             # ignore any exceptions and just use default value
             print(e)
