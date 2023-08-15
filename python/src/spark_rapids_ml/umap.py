@@ -344,6 +344,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
         self.maxRecordsPerBatch = 10000
+        self.BROADCAST_LIMIT = 8 << 30
         self.setOutputCol("embedding")
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
@@ -399,7 +400,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         del pdf_output
 
         def _chunk_arr(
-            arr: np.ndarray, BROADCAST_LIMIT: int = 8 << 30
+            arr: np.ndarray, BROADCAST_LIMIT: int = self.BROADCAST_LIMIT
         ) -> List[np.ndarray]:
             """Chunk an array, if oversized, into smaller arrays that can be broadcasted."""
             if arr.nbytes <= BROADCAST_LIMIT:
