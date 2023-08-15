@@ -674,7 +674,6 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         res = []
         for chunk in self.embedding_:
             res.extend(chunk.value.tolist())
-
         return res
 
     @property
@@ -682,7 +681,6 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         res = []
         for chunk in self.raw_data_:
             res.extend(chunk.value.tolist())
-
         return res
 
     def _get_cuml_transform_func(
