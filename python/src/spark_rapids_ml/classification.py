@@ -13,7 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
@@ -21,6 +32,8 @@ from .metrics.MulticlassMetrics import MulticlassMetrics
 
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
+
+import sys
 
 import pandas as pd
 from pyspark import Row, keyword_only
@@ -30,39 +43,59 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.classification import (
     RandomForestClassificationSummary,
+    _LogisticRegressionParams,
     _RandomForestClassifierParams,
 )
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import Vector, Vectors, VectorUDT
-from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
+from pyspark.ml.param.shared import (
+    HasFeaturesCol,
+    HasLabelCol,
+    HasPredictionCol,
+    HasProbabilityCol,
+    HasRawPredictionCol,
+)
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
+    ArrayType,
     DoubleType,
     FloatType,
     IntegerType,
     IntegralType,
+    StringType,
     StructField,
     StructType,
 )
 
 from .core import (
     CumlT,
+    FitInputType,
     TransformInputType,
     _ConstructFunc,
+    _CumlEstimatorSupervised,
+    _CumlModelWithPredictionCol,
     _EvaluateFunc,
     _TransformFunc,
     alias,
+    param_alias,
     pred,
     transform_evaluate,
 )
+from .params import HasFeaturesCols, _CumlClass, _CumlParams
 from .tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from .utils import _get_spark_session
+from .utils import (
+    PartitionDescriptor,
+    _ArrayOrder,
+    _concat_and_free,
+    _get_spark_session,
+    dtype_to_pyspark_type,
+)
 
 
 class _RFClassifierParams(
@@ -512,46 +545,46 @@ class RandomForestClassificationModel(
         return scores
 
 
-from typing import Callable
-
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasPredictionCol
-from pyspark.sql.types import (
-    ArrayType,
-    DoubleType,
-    FloatType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
-
-from .core import (
-    FitInputType,
-    _CumlEstimatorSupervised,
-    _CumlModelWithPredictionCol,
-    param_alias,
-)
-from .params import HasFeaturesCols, _CumlClass, _CumlParams
-from .utils import PartitionDescriptor, _ArrayOrder, _concat_and_free
-
-
 class LogisticRegressionClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {}
+        return {
+            "maxIter": "max_iter",
+            "regParam": "C",  # regParam = 1/C
+            "tol": "tol",
+            "fitIntercept": "fit_intercept",
+            "elasticNetParam": None,
+            "threshold": None,
+            "thresholds": None,
+            "standardization": None,
+            "weightCol": None,
+            "aggregationDepth": None,
+            "family": "",  # family can be 'auto', 'binomial' or 'multinomial', cuml automatically detects num_classes
+            "lowerBoundsOnCoefficients": None,
+            "upperBoundsOnCoefficients": None,
+            "lowerBoundsOnIntercepts": None,
+            "upperBoundsOnIntercepts": None,
+            "maxBlockSizeInMB": None,
+        }
 
     @classmethod
     def _param_value_mapping(
         cls,
-    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
-        return {}
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
+        return {"C": lambda x: 1.0 / x if x != 0.0 else 0.0}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
-        return {}
+        return {
+            "fit_intercept": True,
+            "verbose": False,
+            "C": 1.0,
+            "max_iter": 1000,
+            "tol": 0.0001,
+        }
 
 
 class _LogisticRegressionCumlParams(
-    _CumlParams, HasFeaturesCol, HasLabelCol, HasFeaturesCols, HasPredictionCol
+    _CumlParams, _LogisticRegressionParams, HasFeaturesCols
 ):
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
@@ -600,6 +633,14 @@ class _LogisticRegressionCumlParams(
         """
         return self.set_params(predictionCol=value)
 
+    def setProbabilityCol(
+        self: "_LogisticRegressionCumlParams", value: str
+    ) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`probabilityCol`.
+        """
+        return self.set_params(probabilityCol=value)
+
 
 class LogisticRegression(
     LogisticRegressionClass,
@@ -640,8 +681,31 @@ class LogisticRegression(
     -8.543887375367376e-09
     """
 
-    def __init__(self, *, num_workers: Optional[int] = None):
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        featuresCol: Union[str, List[str]] = "features",
+        labelCol: str = "label",
+        predictionCol: str = "prediction",
+        maxIter: int = 100,
+        regParam: float = 0.0,  # NOTE: the default value of regParam is actually set to 1e-300 on GPU
+        tol: float = 1e-6,
+        fitIntercept: bool = True,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ):
         super().__init__()
+
+        # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
+        if regParam == 0.0:
+            self.logger.warn(
+                "no regularization is not supported yet. regParam is set to 1e-300"
+            )
+            self.set_params(**{"regParam": sys.float_info.min})
+
+        self.set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
@@ -661,17 +725,13 @@ class LogisticRegression(
 
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
-            supported_params: List[str] = []
-
-            # filter only supported params
-            init_parameters = {
-                k: v for k, v in init_parameters.items() if k in supported_params
-            }
-
             logistic_regression = LogisticRegressionMG(
                 handle=params[param_alias.handle],
                 **init_parameters,
             )
+
+            logistic_regression.penalty_normalized = False
+            logistic_regression.lbfgs_memory = 10
 
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
@@ -746,6 +806,30 @@ class LogisticRegression(
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
         return LogisticRegressionModel.from_row(result)
 
+    def setMaxIter(self, value: int) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`maxIter`.
+        """
+        return self.set_params(maxIter=value)
+
+    def setRegParam(self, value: float) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`regParam`.
+        """
+        return self.set_params(regParam=value)
+
+    def setTol(self, value: float) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`tol`.
+        """
+        return self.set_params(tol=value)
+
+    def setFitIntercept(self, value: bool) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`fitIntercept`.
+        """
+        return self.set_params(fitIntercept=value)
+
 
 class LogisticRegressionModel(
     LogisticRegressionClass,
@@ -765,14 +849,6 @@ class LogisticRegressionModel(
         self.coef_ = coef_
         self.intercept_ = intercept_
 
-    def _get_cuml_transform_func(  # type:ignore
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:  # type:ignore
-        pass
-
-    def _transform(self, dataset: DataFrame) -> DataFrame:  # type:ignore
-        pass
-
     @property
     def coefficients(self) -> Vector:
         """
@@ -788,3 +864,45 @@ class LogisticRegressionModel(
         """
         assert len(self.intercept_) == 1, "multi classes not supported yet"
         return self.intercept_[0]
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame, category: str = transform_evaluate.transform
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+        coef_ = self.coef_
+        intercept_ = self.intercept_
+        n_cols = self.n_cols
+        dtype = self.dtype
+
+        def _construct_lr() -> CumlT:
+            import numpy as np
+            from cuml.internals.input_utils import input_to_cuml_array
+            from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
+
+            lr = LogisticRegressionMG(output_type="numpy")
+            lr.n_cols = n_cols
+            lr.dtype = np.dtype(dtype)
+            lr.intercept_ = input_to_cuml_array(
+                np.array(intercept_, order="C").astype(dtype)
+            ).array
+            lr.coef_ = input_to_cuml_array(
+                np.array(coef_, order="C").astype(dtype)
+            ).array
+            return lr
+
+        def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
+            ret = lr.predict(pdf)
+            return pd.Series(ret)
+
+        return _construct_lr, _predict, None
+
+    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
+        assert self.dtype is not None
+
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+        return f"{pyspark_type}"
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        df = super()._transform(dataset)
+        return df.withColumn(
+            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+        )
