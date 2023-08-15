@@ -56,6 +56,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
+from pyspark.resource import ResourceProfileBuilder, TaskResourceRequests
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
@@ -224,6 +225,7 @@ class _CumlModelReader(MLReader):
 class _CumlCommon(MLWritable, MLReadable):
     def __init__(self) -> None:
         super().__init__()
+        self.logger = get_logger(self.__class__)
 
     @staticmethod
     def set_gpu_device(
@@ -277,6 +279,66 @@ class _CumlCommon(MLWritable, MLReadable):
                 raise ValueError(f"invalid value for verbose parameter: {verbose}")
 
             cuml_logger.set_level(log_level)
+
+    def _skip_stage_level_scheduling(self) -> bool:
+        """Check if stage-level scheduling is not needed, return true to skip stage-level scheduling"""
+        ss = _get_spark_session()
+        sc = ss.sparkContext
+
+        if ss.version < "3.4.0":
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
+            )
+            return True
+        elif _is_local(sc):
+            # Local mode doesn't support stage level scheduling
+            return True
+
+        executor_cores = sc.getConf().get("spark.executor.cores")
+        executor_gpu_amount = sc.getConf().get("spark.executor.resource.gpu.amount")
+
+        if executor_cores is None or executor_gpu_amount is None:
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml requires spark.executor.cores, "
+                "spark.executor.resource.gpu.amount to be set"
+            )
+            return True
+
+        if int(executor_cores) == 1:
+            # there will be only 1 task running at any time.
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml requires spark.executor.cores>1 "
+            )
+            return True
+
+        if int(executor_gpu_amount) > 1:
+            # For spark.executor.resource.gpu.amount>1, we suppose user knows how to configure
+            # to make spark-rapids-ml run successfully.
+            #
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml will not work "
+                "when spark.executor.resource.gpu.amount>1"
+            )
+            return True
+
+        task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
+
+        if task_gpu_amount is None:
+            # if spark.task.resource.gpu.amount is not set, the default concurrent tasks
+            # with gpu requirement will be 1, which means 2 training tasks will never
+            # be scheduled into the same executor.
+            return True
+
+        if task_gpu_amount == executor_gpu_amount:
+            self.logger.warning(
+                f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
+                f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
+                f"the number of runnable tasks per executor to: 1. Please adjust your configuration."
+            )
+            return True
+
+        # We can enable stage-level scheduling
+        return False
 
 
 class _CumlCaller(_CumlParams, _CumlCommon):
@@ -694,56 +756,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
             return super().fitMultiple(dataset, paramMaps)
 
     def _try_stage_level_scheduling(self, rdd: RDD) -> RDD:
+        """Try to enable stage-level scheduling for training phase"""
+        if self._skip_stage_level_scheduling():
+            return rdd
+
         ss = _get_spark_session()
-        sc = ss.sparkContext
-
-        if ss.version < "3.4.0":
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
-            )
-            return rdd
-        elif _is_local(sc):
-            # Local mode doesn't support stage level scheduling
-            return rdd
-
-        executor_cores = sc.getConf().get("spark.executor.cores")
-        executor_gpu_amount = sc.getConf().get("spark.executor.resource.gpu.amount")
-
-        if executor_cores is None or executor_gpu_amount is None:
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml requires spark.executor.cores, "
-                "spark.executor.resource.gpu.amount to be set "
-            )
-            return rdd
-
-        if int(executor_gpu_amount) > 1:
-            # For spark.executor.resource.gpu.amount>1, we suppose user knows how to configure
-            # to make spark-rapids-ml run successfully.
-            #
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml will not work "
-                "when spark.executor.resource.gpu.amount>1"
-            )
-            return rdd
-
-        task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
-
-        if task_gpu_amount is None:
-            # if spark.task.resource.gpu.amount is not set, the default concurrent tasks
-            # with gpu requirement will be 1, which means 2 training tasks will never
-            # be scheduled into the same executor.
-            return rdd
-
-        if task_gpu_amount == executor_gpu_amount:
-            self.logger.warning(
-                f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
-                f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
-                f"the number of runnable tasks per executor to: 1. Please adjust your configuration."
-            )
-            return rdd
-
-        from pyspark.resource.profile import ResourceProfileBuilder
-        from pyspark.resource.requests import TaskResourceRequests
+        executor_cores = ss.sparkContext.getConf().get("spark.executor.cores")
+        assert executor_cores is not None
 
         # each training task requires cpu cores > total executor cores/2 which can
         # ensure each training task be sent to different executor.
@@ -894,6 +913,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         self._model_attributes["n_cols"] = n_cols
         self.dtype = dtype
         self.n_cols = n_cols
+        self.logger = get_logger(self.__class__)
 
     def cpu(self) -> Model:
         """Return the equivalent PySpark CPU model"""
@@ -1041,7 +1061,69 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                         data[pred.model_index] = index
                     yield data
 
-        return dataset.mapInPandas(_transform_udf, schema=schema)  # type: ignore
+        df = dataset.mapInPandas(_transform_udf, schema=schema)  # type: ignore
+        return self._try_stage_level_scheduling(df)
+
+    def _try_stage_level_scheduling(self, df: DataFrame) -> DataFrame:
+        """Try to enable stage-level scheduling for transform tasks"""
+        if self._skip_stage_level_scheduling():
+            return df
+
+        ss = _get_spark_session()
+
+        # Default the concurrent transform tasks to 2
+        concurrent_transform_tasks = int(
+            ss.conf.get("spark.rapids.ml.concurrentPredictTasks", "2")  # type: ignore
+        )
+
+        if concurrent_transform_tasks <= 0:
+            raise ValueError(
+                "The value of spark.rapids.ml.concurrentPredictTasks must be greater than 0."
+            )
+
+        executor_cores = int(ss.sparkContext.getConf().get("spark.executor.cores"))  # type: ignore
+
+        if (
+            executor_cores // 2 < concurrent_transform_tasks < executor_cores
+            or concurrent_transform_tasks > executor_cores
+        ):
+            original_concurrent_transform_tasks = concurrent_transform_tasks
+            concurrent_transform_tasks = (
+                executor_cores // 2
+                if concurrent_transform_tasks < executor_cores
+                else executor_cores
+            )
+            self.logger.warning(
+                "The spark.rapids.ml.concurrentPredictTasks should be in "
+                f"[1, {executor_cores // 2}] or {executor_cores}, "
+                f"we found it's {original_concurrent_transform_tasks}. We're "
+                f"going to use {concurrent_transform_tasks}"
+            )
+
+        task_cores = executor_cores // concurrent_transform_tasks
+
+        default_task_cpus = int(ss.sparkContext.getConf().get("spark.task.cpus"))  # type: ignore
+        if task_cores == default_task_cpus:
+            self.logger.warning(
+                "The Spark configurations have been set up to ensure that "
+                f"{concurrent_transform_tasks} transform tasks will be concurrently executed."
+            )
+            return df
+
+        treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", 1.0)
+        rp = ResourceProfileBuilder().require(treqs).build
+
+        self.logger.info(
+            f"Transform tasks require the resource(cores={task_cores}, gpu=1.0) and there will be "
+            f"{concurrent_transform_tasks} transform tasks running at the same time."
+        )
+
+        # TODO Do we need to coalesce partitions to num_workers*concurrent_transform_tasks
+        # num_workers = self._infer_num_workers()
+        # df = df.coalesce(num_workers * concurrent_transform_tasks)
+
+        df = df.rdd.withResources(rp).toDF()
+        return df
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """
@@ -1165,7 +1247,7 @@ class _CumlModelWithColumns(_CumlModel):
         pred_col = predict_udf(struct(*select_cols))
 
         if self._is_single_pred(dataset.schema):
-            return dataset.withColumn(pred_name, pred_col)
+            out_df = dataset.withColumn(pred_name, pred_col)
         else:
             # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
             pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
@@ -1187,9 +1269,9 @@ class _CumlModelWithColumns(_CumlModel):
                 )
 
             # 3. Drop the unused column
-            dataset = dataset.drop(pred_struct_col_name)
+            out_df = dataset.drop(pred_struct_col_name)
 
-            return dataset
+        return self._try_stage_level_scheduling(out_df)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
