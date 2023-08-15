@@ -315,3 +315,50 @@ def test_umap_model_persistence(tmp_path: str) -> None:
         umap_model.write().overwrite().save(model_path)
         umap_model_loaded = UMAPModel.load(model_path)
         assert_umap_model(model=umap_model_loaded)
+
+
+@pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 20, 8 << 18])
+def test_umap_broadcast_chunks(BROADCAST_LIMIT: int) -> None:
+    from cuml.datasets import make_blobs
+
+    X, _ = make_blobs(
+        5000,
+        3000,
+        centers=42,
+        cluster_std=0.1,
+        dtype=np.float32,
+        random_state=10,
+    )
+
+    with CleanSparkSession() as spark:
+        pyspark_type = "float"
+        feature_cols = [f"c{i}" for i in range(X.shape[1])]
+        schema = [f"{c} {pyspark_type}" for c in feature_cols]
+        df = spark.createDataFrame(X.tolist(), ",".join(schema))
+        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        umap = UMAP(num_workers=3).setFeaturesCol("features")
+        umap.BROADCAST_LIMIT = BROADCAST_LIMIT
+
+        umap_model = umap.fit(df)
+
+        def assert_umap_model(model: UMAPModel) -> None:
+            embedding = np.array(model.embedding)
+            raw_data = np.array(model.raw_data)
+            assert embedding.shape == (5000, 2)
+            assert raw_data.shape == (5000, 3000)
+            assert np.array_equal(raw_data, X.get())
+            assert model.dtype == "float32"
+            assert model.n_cols == X.shape[1]
+
+        assert_umap_model(model=umap_model)
+
+        pdf = umap_model.transform(df).toPandas()
+        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+
+        dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=5000)
+        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        trust_diff = loc_umap - dist_umap
+
+        assert trust_diff <= 0.15

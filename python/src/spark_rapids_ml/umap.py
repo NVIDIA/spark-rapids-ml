@@ -344,6 +344,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
         self.maxRecordsPerBatch = 10000
+        self.BROADCAST_LIMIT = 8 << 30
         self.setOutputCol("embedding")
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
@@ -398,9 +399,29 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         )
         del pdf_output
 
+        def _chunk_arr(
+            arr: np.ndarray, BROADCAST_LIMIT: int = self.BROADCAST_LIMIT
+        ) -> List[np.ndarray]:
+            """Chunk an array, if oversized, into smaller arrays that can be broadcasted."""
+            if arr.nbytes <= BROADCAST_LIMIT:
+                return [arr]
+
+            rows_per_chunk = BROADCAST_LIMIT // (arr.nbytes // arr.shape[0])
+            num_chunks = (arr.shape[0] + rows_per_chunk - 1) // rows_per_chunk
+            chunks = [
+                arr[i * rows_per_chunk : (i + 1) * rows_per_chunk]
+                for i in range(num_chunks)
+            ]
+
+            return chunks
+
         spark = _get_spark_session()
-        broadcast_embeddings = spark.sparkContext.broadcast(embeddings)
-        broadcast_raw_data = spark.sparkContext.broadcast(raw_data)
+        broadcast_embeddings = [
+            spark.sparkContext.broadcast(chunk) for chunk in _chunk_arr(embeddings)
+        ]
+        broadcast_raw_data = [
+            spark.sparkContext.broadcast(chunk) for chunk in _chunk_arr(raw_data)
+        ]
 
         model = UMAPModel(
             embedding_=broadcast_embeddings,
@@ -635,8 +656,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
     def __init__(
         self,
-        embedding_: Union[pyspark.broadcast.Broadcast, np.ndarray],
-        raw_data_: Union[pyspark.broadcast.Broadcast, np.ndarray],
+        embedding_: List[pyspark.broadcast.Broadcast],
+        raw_data_: List[pyspark.broadcast.Broadcast],
         n_cols: int,
         dtype: str,
     ) -> None:
@@ -650,16 +671,18 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         self.raw_data_ = raw_data_
 
     @property
-    def embedding(self) -> np.ndarray:
-        if isinstance(self.embedding_, np.ndarray):
-            return self.embedding_.tolist()
-        return self.embedding_.value.tolist()
+    def embedding(self) -> List[List[float]]:
+        res = []
+        for chunk in self.embedding_:
+            res.extend(chunk.value.tolist())
+        return res
 
     @property
-    def raw_data(self) -> np.ndarray:
-        if isinstance(self.raw_data_, np.ndarray):
-            return self.raw_data_.tolist()
-        return self.raw_data_.value.tolist()
+    def raw_data(self) -> List[List[float]]:
+        res = []
+        for chunk in self.raw_data_:
+            res.extend(chunk.value.tolist())
+        return res
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
@@ -675,14 +698,14 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             from .utils import cudf_to_cuml_array
 
             embedding = (
-                self.embedding_
-                if isinstance(self.embedding_, np.ndarray)
-                else self.embedding_.value
+                self.embedding_[0].value
+                if len(self.embedding_) == 1
+                else np.concatenate([chunk.value for chunk in self.embedding_])
             )
             raw_data = (
-                self.raw_data_
-                if isinstance(self.raw_data_, np.ndarray)
-                else self.raw_data_.value
+                self.raw_data_[0].value
+                if len(self.raw_data_) == 1
+                else np.concatenate([chunk.value for chunk in self.raw_data_])
             )
 
             if embedding.dtype != np.float32:
@@ -747,10 +770,11 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         """
         Override parent method to bring broadcast variables to driver before JSON serialization.
         """
-        if not isinstance(self.embedding_, np.ndarray):
-            self._model_attributes["embedding_"] = self.embedding_.value
-        if not isinstance(self.raw_data_, np.ndarray):
-            self._model_attributes["raw_data_"] = self.raw_data_.value
+
+        self._model_attributes["embedding_"] = [
+            chunk.value for chunk in self.embedding_
+        ]
+        self._model_attributes["raw_data_"] = [chunk.value for chunk in self.raw_data_]
         return self._model_attributes
 
     def write(self) -> MLWriter:
@@ -783,10 +807,13 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
             os.makedirs(data_path)
         assert model_attributes is not None
         for key, value in model_attributes.items():
-            if isinstance(value, np.ndarray):
-                array_path = os.path.join(data_path, f"{key}.npy")
-                np.save(array_path, value)
-                model_attributes[key] = array_path
+            if isinstance(value, list) and isinstance(value[0], np.ndarray):
+                paths = []
+                for idx, chunk in enumerate(value):
+                    array_path = os.path.join(data_path, f"{key}_{idx}.npy")
+                    np.save(array_path, chunk)
+                    paths.append(array_path)
+                model_attributes[key] = paths
 
         metadata_file_path = os.path.join(data_path, "metadata.json")
         model_attributes_str = json.dumps(model_attributes)
@@ -809,8 +836,13 @@ class _CumlModelReaderNumpy(_CumlModelReader):
         model_attr_dict = json.loads(model_attr_str)
 
         for key, value in model_attr_dict.items():
-            if isinstance(value, str) and value.endswith(".npy"):
-                model_attr_dict[key] = np.load(value)
+            if isinstance(value, list) and value[0].endswith(".npy"):
+                arrays = []
+                spark = _get_spark_session()
+                for array_path in value:
+                    array = np.load(array_path)
+                    arrays.append(spark.sparkContext.broadcast(array))
+                model_attr_dict[key] = arrays
 
         instance = self.model_cls(**model_attr_dict)
         DefaultParamsReader.getAndSetParams(instance, metadata)
