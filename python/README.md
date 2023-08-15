@@ -9,7 +9,7 @@ For simplicity, the following instructions just use Spark local mode, assuming a
 First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).
 ```bash
 conda create -n rapids-23.06 \
-    -c rapidsai  -c conda-forge -c nvidia \
+    -c rapidsai -c conda-forge -c nvidia \
     cuml=23.06 python=3.9 cudatoolkit=11.5
 ```
 
