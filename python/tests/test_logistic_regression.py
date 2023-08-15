@@ -47,7 +47,7 @@ def test_toy_example(gpu_number: int) -> None:
         features_col = "features"
         label_col = "label"
         probability_col = "probs"
-        schema = features_col + " array<float>, " + label_col + " float" 
+        schema = features_col + " array<float>, " + label_col + " float"
         df = spark.createDataFrame(data, schema=schema)
 
         lr_estimator = LogisticRegression(regParam=1.0, num_workers=gpu_number)
@@ -69,9 +69,9 @@ def test_toy_example(gpu_number: int) -> None:
         assert lr_model.intercept == pytest.approx(0, abs=1e-6)
 
         preds_df_local = lr_model.transform(df).collect()
-        preds = [ row["prediction"] for row in preds_df_local]
-        assert preds == [1., 1., 0., 0.]
-        probs = [ row["probs"] for row in preds_df_local]
+        preds = [row["prediction"] for row in preds_df_local]
+        assert preds == [1.0, 1.0, 0.0, 0.0]
+        probs = [row["probs"] for row in preds_df_local]
         assert len(probs) == len(preds)
         assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
 
@@ -318,18 +318,19 @@ def test_compat(
         output = blor_model.transform(bdf).head()
         assert output.prediction == 1.0
 
+        assert array_equal(
+            output.newProbability.toArray(),
+            Vectors.dense([0.0814, 0.9186]).toArray(),
+        )
+
         if isinstance(blor_model, SparkLogisticRegressionModel):
-            assert array_equal(
-                output.newProbability.toArray(),
-                Vectors.dense([0.0814, 0.9186]).toArray(),
-            )
             assert array_equal(
                 output.rawPrediction.toArray(),
                 Vectors.dense([-2.4238, 2.4238]).toArray(),
             )
         else:
             warnings.warn(
-                "transform of spark rapids ml currently does not support probabilityCol and rawPredictionCol"
+                "transform of spark rapids ml currently does not support rawPredictionCol"
             )
 
         blor_path = tmp_path + "/log_reg"

@@ -18,13 +18,13 @@ import sys
 
 from benchmark.bench_kmeans import BenchmarkKMeans
 from benchmark.bench_linear_regression import BenchmarkLinearRegression
+from benchmark.bench_logistic_regression import BenchmarkLogisticRegression
 from benchmark.bench_nearest_neighbors import BenchmarkNearestNeighbors
 from benchmark.bench_pca import BenchmarkPCA
 from benchmark.bench_random_forest import (
     BenchmarkRandomForestClassifier,
     BenchmarkRandomForestRegressor,
 )
-from benchmark.bench_logistic_regression import BenchmarkLogisticRegression
 
 
 class BenchmarkRunner:

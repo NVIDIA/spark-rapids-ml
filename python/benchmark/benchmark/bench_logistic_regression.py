@@ -16,10 +16,10 @@
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import sum, col
 from pyspark.ml.feature import StandardScaler
 from pyspark.ml.functions import array_to_vector, vector_to_array
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import col, sum
 
 from .base import BenchmarkBase
 from .utils import inspect_default_params_from_func, with_benchmark
@@ -27,11 +27,25 @@ from .utils import inspect_default_params_from_func, with_benchmark
 
 class BenchmarkLogisticRegression(BenchmarkBase):
     def _supported_class_params(self) -> Dict[str, Any]:
-        from pyspark.ml.classification import LogisticRegression 
+        from pyspark.ml.classification import LogisticRegression
 
         params = inspect_default_params_from_func(
             LogisticRegression.__init__,
-            ["featuresCol", "labelCol", "predictionCol", "weightCol"]
+            [
+                "featuresCol",
+                "labelCol",
+                "predictionCol",
+                "weightCol",
+                "elasticNetParam",
+                "threshold",
+                "thresholds",
+                "aggregationDepth",
+                "maxBlockSizeInMB",
+                "lowerBoundsOnCoefficients",
+                "upperBoundsOnCoefficients",
+                "lowerBoundsOnIntercepts",
+                "upperBoundsOnIntercepts",
+            ],
         )
         return params
 
@@ -51,9 +65,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         if self.args.num_gpus > 0:
             from spark_rapids_ml.classification import LogisticRegression
 
-            lr = LogisticRegression(
-                num_workers=self.args.num_gpus, **params
-            )
+            lr = LogisticRegression(num_workers=self.args.num_gpus, **params)
             benchmark_string = "Spark Rapids ML LogisticRegression training"
             # scaler = StandardScaler(withMean=True, withStd=True, inputCol="features_col_vec", outputCol="scaled_col_vec")
 
@@ -62,7 +74,9 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             # train_df = scaler.fit(train_df).transform(train_df).drop(features_col,"features_col_vec").withColumn(features_col, vector_to_array("scaled_col_vec","float32"))
             # train_df.cache()
         else:
-            from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
+            from pyspark.ml.classification import (
+                LogisticRegression as SparkLogisticRegression,
+            )
 
             lr = SparkLogisticRegression(**params)  # type: ignore[assignment]
             benchmark_string = "Spark ML LogisticRegression training"
@@ -74,8 +88,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
-
-       
 
         model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
 
@@ -92,7 +104,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         eval_df_with_preds = model.transform(eval_df)
         train_df_with_preds = model.transform(train_df)
 
-
         # model does not yet have col getters setters and uses default value for prediction col
         prediction_col = model.getPredictionCol()
         probability_col = model.getProbabilityCol()
@@ -104,12 +115,14 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             lambda: eval_df_with_preds.agg(sum(prediction_col)).collect(),
         )
 
-        eval_df_with_preds = eval_df_with_preds.select(col(prediction_col).cast("double").alias(prediction_col),
+        eval_df_with_preds = eval_df_with_preds.select(
+            col(prediction_col).cast("double").alias(prediction_col),
             label_name,
             col(probability_col),
         )
 
-        train_df_with_preds = train_df_with_preds.select(col(prediction_col).cast("double").alias(prediction_col),
+        train_df_with_preds = train_df_with_preds.select(
+            col(prediction_col).cast("double").alias(prediction_col),
             label_name,
             col(probability_col),
         )
@@ -118,13 +131,14 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             BinaryClassificationEvaluator,
             MulticlassClassificationEvaluator,
         )
+
         # TODO: support multiple classes
         # binary classification
         evaluator_train: Union[
             BinaryClassificationEvaluator, MulticlassClassificationEvaluator
         ] = (
             MulticlassClassificationEvaluator()
-            .setMetricName("logLoss")
+            .setMetricName("logLoss")  # type:ignore
             .setPredictionCol(prediction_col)
             .setProbabilityCol(probability_col)
             .setLabelCol(label_name)
@@ -142,7 +156,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         coefficients = np.array(model.coefficients)
         coefs_l1 = np.sum(np.abs(coefficients))
         coefs_l2 = np.sum(coefficients**2)
-        train_full_objective = log_loss + 0.5*lr.getRegParam()*coefs_l2
+        train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
 
         eval_auc = evaluator_test.evaluate(eval_df_with_preds)
 
