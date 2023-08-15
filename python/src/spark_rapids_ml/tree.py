@@ -88,7 +88,7 @@ class _RandomForestClass(_CumlClass):
     @classmethod
     def _param_value_mapping(
         cls,
-    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
         def _tree_mapping(feature_subset: str) -> Union[None, str, float, int]:
             _maybe_numerical = _str_or_numerical(feature_subset)
             if isinstance(_maybe_numerical, int) or isinstance(_maybe_numerical, float):

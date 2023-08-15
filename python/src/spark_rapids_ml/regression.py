@@ -183,7 +183,7 @@ class LinearRegressionClass(_CumlClass):
     @classmethod
     def _param_value_mapping(
         cls,
-    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
         return {
             "loss": lambda x: {
                 "squaredError": "squared_loss",
@@ -776,7 +776,7 @@ class _RandomForestRegressorClass(_RandomForestClass):
     @classmethod
     def _param_value_mapping(
         cls,
-    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
         mapping = super()._param_value_mapping()
         mapping["split_criterion"] = lambda x: {"variance": "mse", "mse": "mse"}.get(
             x, None
