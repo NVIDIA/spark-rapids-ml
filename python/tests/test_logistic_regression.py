@@ -18,6 +18,7 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
         "Logistic Regression requires cuml 23.08.00 or above. Try upgrading cuml or ignoring this file in testing"
     )
 
+import sys
 import warnings
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
@@ -74,14 +75,14 @@ def test_params(tmp_path: str) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
-        "regParam": 1.0e-300,  # TODO: support default value 0.0, i.e. no regularization
+        "regParam": sys.float_info.min,  # TODO: support default value 0.0, i.e. no regularization
         "tol": 1e-06,
         "fitIntercept": True,
     }
 
     default_cuml_params = {
         "max_iter": 100,
-        "C": 1.0 / default_spark_params["regParam"],
+        "C": 1.0 / sys.float_info.min,
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -139,7 +140,7 @@ def test_classifier(
     gpu_number: int,
 ) -> None:
     tolerance = 0.001
-    reg_param = 1e-300
+    reg_param = sys.float_info.min
 
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,

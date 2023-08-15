@@ -33,6 +33,8 @@ from .metrics.MulticlassMetrics import MulticlassMetrics
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
 
+import sys
+
 import pandas as pd
 from pyspark import Row, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
@@ -701,7 +703,7 @@ class LogisticRegression(
             self.logger.warn(
                 "no regularization is not supported yet. regParam is set to 1e-300"
             )
-            self.set_params(**{"regParam": 1e-300})
+            self.set_params(**{"regParam": sys.float_info.min})
 
         self.set_params(**self._input_kwargs)
 
