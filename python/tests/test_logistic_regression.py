@@ -1,7 +1,9 @@
 from typing import Any, Dict, Tuple, Type, TypeVar
 
+import cuml
 import numpy as np
 import pytest
+from packaging import version
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
@@ -10,6 +12,13 @@ from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors
 from pyspark.sql import Row
 from pyspark.sql.functions import array, col
+
+if version.parse(cuml.__version__) < version.parse("23.08.00"):
+    raise ValueError(
+        "Logistic Regression requires cuml 23.08.00 or above. Try upgrading cuml or ignoring this file in testing"
+    )
+
+import warnings
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
 
@@ -39,7 +48,7 @@ def test_toy_example(gpu_number: int) -> None:
         schema = features_col + " array<float>, " + label_col + " float"
         df = spark.createDataFrame(data, schema=schema)
 
-        lr_estimator = LogisticRegression(num_workers=gpu_number)
+        lr_estimator = LogisticRegression(regParam=1.0, num_workers=gpu_number)
         lr_estimator.setFeaturesCol(features_col)
         lr_estimator.setLabelCol(label_col)
         lr_model = lr_estimator.fit(df)
@@ -48,13 +57,13 @@ def test_toy_example(gpu_number: int) -> None:
         assert lr_model.dtype == "float32"
 
         assert len(lr_model.coef_) == 1
-        assert lr_model.coef_[0] == pytest.approx([-0.71483153, 0.7148315], abs=1e-6)
-        assert lr_model.intercept_ == pytest.approx([-2.2614916e-08], abs=1e-6)
+        assert lr_model.coef_[0] == pytest.approx([-0.287264, 0.287264], abs=1e-6)
+        assert lr_model.intercept_ == pytest.approx([0], abs=1e-6)
 
         assert lr_model.coefficients.toArray() == pytest.approx(
-            [-0.71483153, 0.7148315], abs=1e-6
+            [-0.287264, 0.287264], abs=1e-6
         )
-        assert lr_model.intercept == pytest.approx(-2.2614916e-08, abs=1e-6)
+        assert lr_model.intercept == pytest.approx(0, abs=1e-6)
 
         preds_df = lr_model.transform(df)
         preds = [row["prediction"] for row in preds_df.collect()]
@@ -65,14 +74,14 @@ def test_params(tmp_path: str) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
-        "regParam": 1.0,  # TODO: support default value 0.0, i.e. no regularization
+        "regParam": 1.0e-300,  # TODO: support default value 0.0, i.e. no regularization
         "tol": 1e-06,
         "fitIntercept": True,
     }
 
     default_cuml_params = {
         "max_iter": 100,
-        "C": 1.0,
+        "C": 1.0 / default_spark_params["regParam"],
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -130,6 +139,7 @@ def test_classifier(
     gpu_number: int,
 ) -> None:
     tolerance = 0.001
+    reg_param = 1e-300
 
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
@@ -143,7 +153,7 @@ def test_classifier(
 
     from cuml import LogisticRegression as cuLR
 
-    cu_lr = cuLR(fit_intercept=fit_intercept)
+    cu_lr = cuLR(fit_intercept=fit_intercept, C=1 / reg_param)
     cu_lr.fit(X_train, y_train)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -155,6 +165,7 @@ def test_classifier(
         assert label_col is not None
         spark_lr = LogisticRegression(
             fitIntercept=fit_intercept,
+            regParam=reg_param,
             num_workers=gpu_number,
         )
         spark_lr.setFeaturesCol(features_col)
@@ -251,7 +262,12 @@ def test_compat(
             *feature_cols
         )
 
-        blor = _LogisticRegression(regParam=0.1)
+        if lr_types[0] is SparkLogisticRegression:
+            blor = _LogisticRegression(regParam=0.1, standardization=False)
+        else:
+            warnings.warn("spark rapids ml does not accept standardization")
+            blor = _LogisticRegression(regParam=0.1)
+
         assert blor.getRegParam() == 0.1
 
         blor.setFeaturesCol("features")
@@ -278,24 +294,37 @@ def test_compat(
         coefficients = blor_model.coefficients.toArray()
         intercept = blor_model.intercept
 
-        if isinstance(blor, SparkLogisticRegression):
-            assert array_equal(coefficients, [-2.48197058, 2.48197058])
-            assert intercept == pytest.approx(0, abs=1e-3)
+        assert array_equal(coefficients, [-2.42377087, 2.42377087])
+        assert intercept == pytest.approx(0, abs=1e-6)
+
+        if isinstance(blor_model, SparkLogisticRegressionModel):
+            blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
+
+            example = bdf.head()
+            blor_model.predict(example.features)  # type:ignore
+            blor_model.predictRaw(example.features)  # type:ignore
+            blor_model.predictProbability(example.features)  # type:ignore
         else:
-            assert array_equal(coefficients, [-3.41141391, 3.41142201])
-            assert intercept == pytest.approx(0, abs=1e-3)
-
-        # blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
-
-        # example = df.head()
-        # blor_model.predict(example.features)
-        # blor_model.predictRaw(examples.features)
-        # blor_model.predictProbability(examples.features)
+            warnings.warn(
+                "evaluate, predict, predictRaw, and predictProbability are currently not supported in Spark Rapids ML Logistic Regression"
+            )
 
         output = blor_model.transform(bdf).head()
         assert output.prediction == 1.0
-        # assert output.newProbability == DenseVector([])
-        # assert output.rawProbability == DenseVector([])
+
+        if isinstance(blor_model, SparkLogisticRegressionModel):
+            assert array_equal(
+                output.newProbability.toArray(),
+                Vectors.dense([0.0814, 0.9186]).toArray(),
+            )
+            assert array_equal(
+                output.rawPrediction.toArray(),
+                Vectors.dense([-2.4238, 2.4238]).toArray(),
+            )
+        else:
+            warnings.warn(
+                "transform of spark rapids ml currently does not support probabilityCol and rawPredictionCol"
+            )
 
         blor_path = tmp_path + "/log_reg"
         blor.save(blor_path)

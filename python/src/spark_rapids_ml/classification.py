@@ -551,20 +551,18 @@ class LogisticRegressionClass(_CumlClass):
             "regParam": "C",  # regParam = 1/C
             "tol": "tol",
             "fitIntercept": "fit_intercept",
-            "elasticNetParam": "",
-            "threshold": "",
-            "thresholds": "",
-            "probabilityCol": "",
-            "rawPredictionCol": "",
-            "standardization": "",
-            "weightCol": "",
-            "aggregationDepth": "",
-            "family": "",
-            "lowerBoundsOnCoefficients": "",
-            "upperBoundsOnCoefficients": "",
-            "lowerBoundsOnIntercepts": "",
-            "upperBoundsOnIntercepts": "",
-            "maxBlockSizeInMB": "",
+            "elasticNetParam": None,
+            "threshold": None,
+            "thresholds": None,
+            "standardization": None,
+            "weightCol": None,
+            "aggregationDepth": None,
+            "family": "",  # family can be 'auto', 'binomial' or 'multinomial', cuml automatically detects num_classes
+            "lowerBoundsOnCoefficients": None,
+            "upperBoundsOnCoefficients": None,
+            "lowerBoundsOnIntercepts": None,
+            "upperBoundsOnIntercepts": None,
+            "maxBlockSizeInMB": None,
         }
 
     @classmethod
@@ -689,7 +687,7 @@ class LogisticRegression(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         maxIter: int = 100,
-        regParam: float = 1.0,  # TODO: support default value 0.0
+        regParam: float = 0.0,  # NOTE: the default value of regParam is actually set to 1e-300 on GPU
         tol: float = 1e-6,
         fitIntercept: bool = True,
         num_workers: Optional[int] = None,
@@ -698,13 +696,12 @@ class LogisticRegression(
     ):
         super().__init__()
 
-        # TODO: remove this checking and set_param on regParam once no regularization is supported
-        assert (
-            regParam != 0.0
-        ), "no regularization is not supported yet. Set regParam to a non-zero value"
-        self.set_params(
-            **{"regParam": regParam}
-        )  # rewrite the default param value from 0.0 to non-zero
+        # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
+        if regParam == 0.0:
+            self.logger.warn(
+                "no regularization is not supported yet. regParam is set to 1e-300"
+            )
+            self.set_params(**{"regParam": 1e-300})
 
         self.set_params(**self._input_kwargs)
 
@@ -730,6 +727,9 @@ class LogisticRegression(
                 handle=params[param_alias.handle],
                 **init_parameters,
             )
+
+            logistic_regression.penalty_normalized = False
+            logistic_regression.lbfgs_memory = 10
 
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
