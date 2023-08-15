@@ -786,7 +786,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         pipelined_rdd = self._try_stage_level_scheduling(pipelined_rdd)
 
+        self.logger.info("Training ... ")
         rows = pipelined_rdd.collect()
+        self.logger.info("Finished training")
 
         models: List["_CumlModel"] = [None]  # type: ignore
         if paramMaps is not None:
