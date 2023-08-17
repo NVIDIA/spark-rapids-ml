@@ -162,7 +162,6 @@ class BenchmarkUMAP(BenchmarkBase):
             "fit": fit_time,
             "transform": transform_time,
             "total_time": total_time,
-            "n_neighbors": n_neighbors,
             "num_gpus": num_gpus,
             "num_cpus": num_cpus,
             "no_cache": no_cache,
