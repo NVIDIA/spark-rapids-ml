@@ -82,11 +82,10 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
 
         # placeholder try block till hasSummary is supported in gpu model
-        try:
-            if model.hasSummary:
-                print(f"total iterations: {model.summary.totalIterations}")
-                print(f"objective history: {model.summary.objectiveHistory}")
-        except:
+        if model.hasSummary:
+            print(f"total iterations: {model.summary.totalIterations}")
+            print(f"objective history: {model.summary.objectiveHistory}")
+        else:
             print("model does not have hasSummary attribute")
 
         eval_df = train_df if transform_df is None else transform_df

@@ -900,3 +900,11 @@ class LogisticRegressionModel(
             return pd.DataFrame(data)
 
         return _construct_lr, _predict, None
+
+    @property
+    def hasSummary(self) -> bool:
+        """
+        Indicates whether a training summary exists for this model
+        instance.
+        """
+        return False
