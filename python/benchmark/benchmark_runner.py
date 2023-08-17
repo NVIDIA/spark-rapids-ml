@@ -25,7 +25,7 @@ from benchmark.bench_random_forest import (
     BenchmarkRandomForestClassifier,
     BenchmarkRandomForestRegressor,
 )
-
+from benchmark.bench_umap import BenchmarkUMAP
 
 class BenchmarkRunner:
     def __init__(self) -> None:
@@ -37,6 +37,7 @@ class BenchmarkRunner:
             "random_forest_classifier": BenchmarkRandomForestClassifier,
             "random_forest_regressor": BenchmarkRandomForestRegressor,
             "logistic_regression": BenchmarkLogisticRegression,
+            "umap": BenchmarkUMAP,
         }
         algorithms = "\n    ".join(registered_algorithms.keys())
         parser = argparse.ArgumentParser(
