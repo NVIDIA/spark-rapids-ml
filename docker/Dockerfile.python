@@ -17,7 +17,7 @@
 ARG CUDA_VERSION=11.5.2
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
-ARG CUML_VERSION=23.06
+ARG CUML_VERSION=23.08
 
 # Install packages to build spark-rapids-ml
 RUN apt update -y \
