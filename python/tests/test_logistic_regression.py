@@ -269,8 +269,10 @@ def test_compat(
         )
 
         if lr_types[0] is SparkLogisticRegression:
+            assert _LogisticRegression().getRegParam() == 0.0
             blor = _LogisticRegression(regParam=0.1, standardization=False)
         else:
+            assert _LogisticRegression().getRegParam() == sys.float_info.min
             warnings.warn("spark rapids ml does not accept standardization")
             blor = _LogisticRegression(regParam=0.1)
 
@@ -280,6 +282,7 @@ def test_compat(
         blor.setMaxIter(10)
         blor.setRegParam(0.01)
         blor.setLabelCol("label")
+
         if isinstance(blor, SparkLogisticRegression):
             blor.setWeightCol("weight")
 
@@ -304,6 +307,7 @@ def test_compat(
         assert intercept == pytest.approx(0, abs=1e-6)
 
         if isinstance(blor_model, SparkLogisticRegressionModel):
+            assert blor_model.hasSummary == True
             blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
 
             example = bdf.head()
@@ -311,8 +315,9 @@ def test_compat(
             blor_model.predictRaw(example.features)  # type:ignore
             blor_model.predictProbability(example.features)  # type:ignore
         else:
+            assert blor_model.hasSummary == False
             warnings.warn(
-                "evaluate, predict, predictRaw, and predictProbability are currently not supported in Spark Rapids ML Logistic Regression"
+                "hasSummary, evaluate, predict, predictRaw, and predictProbability are currently not supported in Spark Rapids ML Logistic Regression"
             )
 
         output = blor_model.transform(bdf).head()
