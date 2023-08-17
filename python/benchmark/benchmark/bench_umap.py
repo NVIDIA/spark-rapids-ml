@@ -26,7 +26,6 @@ from benchmark.utils import with_benchmark
 
 
 class BenchmarkUMAP(BenchmarkBase):
-
     def _add_extra_arguments(self) -> None:
         self._parser.add_argument(
             "--no_cache",
