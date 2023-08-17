@@ -8,7 +8,7 @@ function get_metadata_attribute() {
   /usr/share/google/get_metadata_value "attributes/${attribute_name}" || echo -n "${default_value}"
 }
 
-RAPIDS_VERSION=$(get_metadata_attribute rapids-version 23.6.0)
+RAPIDS_VERSION=$(get_metadata_attribute rapids-version 23.8.0)
 
 # patch existing packages
 mamba install "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"
