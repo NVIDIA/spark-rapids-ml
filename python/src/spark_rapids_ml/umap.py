@@ -343,7 +343,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         super().__init__()
         self.set_params(**kwargs)
         self.sample_fraction = sample_fraction
-        self.maxRecordsPerBatch = 10000
+        self.max_records_per_batch = 10000
         self.BROADCAST_LIMIT = 8 << 30
         self.setOutputCol("embedding")
 
@@ -366,11 +366,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         if data_subset.rdd.getNumPartitions() != 1:
             data_subset = data_subset.coalesce(1)
 
-        maxRecordsPerBatch_str = _get_spark_session().conf.get(
+        max_records_per_batch_str = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
         )
-        assert maxRecordsPerBatch_str is not None
-        self.maxRecordsPerBatch = int(maxRecordsPerBatch_str)
+        assert max_records_per_batch_str is not None
+        self.max_records_per_batch = int(max_records_per_batch_str)
 
         df_output = self._call_cuml_fit_func_dataframe(
             dataset=data_subset,
@@ -488,7 +488,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             embedding = umap_model.embedding_
             del umap_model
 
-            chunkSize = self.maxRecordsPerBatch
+            chunkSize = self.max_records_per_batch
             num_sections = (len(embedding) + chunkSize - 1) // chunkSize
 
             for i in range(num_sections):

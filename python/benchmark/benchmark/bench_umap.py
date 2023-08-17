@@ -26,8 +26,6 @@ from benchmark.utils import with_benchmark
 
 
 class BenchmarkUMAP(BenchmarkBase):
-    def _supported_class_params(self) -> Dict[str, Any]:
-        return {}
 
     def _add_extra_arguments(self) -> None:
         self._parser.add_argument(
@@ -53,7 +51,6 @@ class BenchmarkUMAP(BenchmarkBase):
         num_gpus = self.args.num_gpus
         num_cpus = self.args.num_cpus
         no_cache = self.args.no_cache
-        n_neighbors = self.args.n_neighbors
 
         func_start_time = time.time()
 
@@ -95,7 +92,7 @@ class BenchmarkUMAP(BenchmarkBase):
             )
 
             def transform(model: UMAPModel, df: DataFrame) -> DataFrame:
-                transformed_df = model.kneighbors(df)
+                transformed_df = model.transform(df)
                 transformed_df.count()
                 return transformed_df
 

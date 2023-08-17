@@ -9,8 +9,9 @@
 #     pca
 #     random_forest_classifier
 #     random_forest_regressor
+#     umap
 #
-#     and any comma separted list of the above like knn,linear_regression
+#     and any comma separated list of the above like knn,linear_regression
 #
 # gpu_etl is gpu ML with Spark RAPIDS plugin for gpu accelerated data loading
 # 
