@@ -10,8 +10,9 @@
 #     random_forest_classifier
 #     random_forest_regressor
 #     logistic_regression
+#     umap
 #
-#     and any comma separted list of the above like knn,linear_regression
+#     and any comma separated list of the above like knn,linear_regression
 #
 # gpu_etl is gpu ML with Spark RAPIDS plugin for gpu accelerated data loading
 # 
@@ -387,6 +388,64 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
         --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_logistic_regression_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+fi
+
+# Logistic Regression Classification
+if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+        python $gen_data_script classification \
+            --n_informative $( expr $num_cols / 3 )  \
+            --n_redundant $( expr $num_cols / 3 ) \
+            --n_repeated $( expr $num_cols / 3 ) \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+    fi
+
+    echo "$sep algo: logistic regression $sep"
+    python ./benchmark/benchmark_runner.py logistic_regression \
+        --standardization False \
+        --maxIter 200 \
+        --tol 1e-30 \
+        --regParam 0.00001 \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_logistic_regression_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+fi
+
+
+# UMAP
+if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script blobs \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+    fi
+
+    echo "$sep algo: umap $sep"
+    python ./benchmark/benchmark_runner.py umap \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --no_cache \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_umap_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
