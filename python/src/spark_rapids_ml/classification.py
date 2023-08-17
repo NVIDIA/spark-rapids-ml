@@ -48,13 +48,7 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import Vector, Vectors, VectorUDT
-from pyspark.ml.param.shared import (
-    HasFeaturesCol,
-    HasLabelCol,
-    HasPredictionCol,
-    HasProbabilityCol,
-    HasRawPredictionCol,
-)
+from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
@@ -556,7 +550,7 @@ class LogisticRegressionClass(_CumlClass):
             "elasticNetParam": None,
             "threshold": None,
             "thresholds": None,
-            "standardization": None,
+            "standardization": "",  # Set to "" instead of None because cuml defaults to standardization = False
             "weightCol": None,
             "aggregationDepth": None,
             "family": "",  # family can be 'auto', 'binomial' or 'multinomial', cuml automatically detects num_classes
@@ -584,7 +578,7 @@ class LogisticRegressionClass(_CumlClass):
 
 
 class _LogisticRegressionCumlParams(
-    _CumlParams, _LogisticRegressionParams, HasFeaturesCols
+    _CumlParams, _LogisticRegressionParams, HasFeaturesCols, HasProbabilityCol
 ):
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
@@ -887,22 +881,22 @@ class LogisticRegressionModel(
             lr.coef_ = input_to_cuml_array(
                 np.array(coef_, order="C").astype(dtype)
             ).array
+            # TBD: infer class indices from data for > 2 classes
+            # needed for predict_proba
+            lr.classes_ = input_to_cuml_array(
+                np.array([0, 1], order="F").astype(dtype)
+            ).array
             return lr
 
-        def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
-            ret = lr.predict(pdf)
-            return pd.Series(ret)
+        def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
+            data = {}
+            data[pred.prediction] = lr.predict(pdf)
+            probs = lr.predict_proba(pdf)
+            if isinstance(probs, pd.DataFrame):
+                data[pred.probability] = pd.Series(probs.values.tolist())
+            else:
+                # should be np.ndarray
+                data[pred.probability] = pd.Series(list(probs))
+            return pd.DataFrame(data)
 
         return _construct_lr, _predict, None
-
-    def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        assert self.dtype is not None
-
-        pyspark_type = dtype_to_pyspark_type(self.dtype)
-        return f"{pyspark_type}"
-
-    def _transform(self, dataset: DataFrame) -> DataFrame:
-        df = super()._transform(dataset)
-        return df.withColumn(
-            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
-        )
