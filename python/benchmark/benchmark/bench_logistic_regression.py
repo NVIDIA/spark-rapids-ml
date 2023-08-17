@@ -67,12 +67,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
             lr = LogisticRegression(num_workers=self.args.num_gpus, **params)
             benchmark_string = "Spark Rapids ML LogisticRegression training"
-            # scaler = StandardScaler(withMean=True, withStd=True, inputCol="features_col_vec", outputCol="scaled_col_vec")
 
-            # train_df = train_df.withColumn("features_col_vec", array_to_vector(features_col))
-
-            # train_df = scaler.fit(train_df).transform(train_df).drop(features_col,"features_col_vec").withColumn(features_col, vector_to_array("scaled_col_vec","float32"))
-            # train_df.cache()
         else:
             from pyspark.ml.classification import (
                 LogisticRegression as SparkLogisticRegression,
@@ -80,11 +75,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
             lr = SparkLogisticRegression(**params)  # type: ignore[assignment]
             benchmark_string = "Spark ML LogisticRegression training"
-            # scaler = StandardScaler(withMean=True, withStd=True, inputCol=features_col, outputCol="scaled_col_vec")
-
-            # train_df = scaler.fit(train_df).transform(train_df).drop(features_col).withColumnRenamed("scaled_col_vec", features_col)
-            # train_df.cache()
-            # print(f"standardization: {lr.getStandardization()}")
 
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
@@ -156,6 +146,8 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         coefficients = np.array(model.coefficients)
         coefs_l1 = np.sum(np.abs(coefficients))
         coefs_l2 = np.sum(coefficients**2)
+
+        # TODO: add l1 regularization penalty term to full objective for when we support it
         train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
 
         eval_auc = evaluator_test.evaluate(eval_df_with_preds)
