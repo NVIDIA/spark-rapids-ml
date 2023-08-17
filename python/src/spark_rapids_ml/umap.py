@@ -690,6 +690,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         cuml_alg_params = self.cuml_params
         driver_embedding = self.embedding_
         driver_raw_data = self.raw_data_
+        outputCol = self.getOutputCol()
 
         def _construct_umap() -> CumlT:
             import cupy as cp
@@ -754,7 +755,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             result = pd.DataFrame(
                 {
                     "features": input_list,
-                    self.getOutputCol(): emb_list,
+                    outputCol: emb_list,
                 }
             )
 
