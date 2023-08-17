@@ -27,6 +27,7 @@ from benchmark.bench_random_forest import (
 )
 from benchmark.bench_umap import BenchmarkUMAP
 
+
 class BenchmarkRunner:
     def __init__(self) -> None:
         registered_algorithms = {
