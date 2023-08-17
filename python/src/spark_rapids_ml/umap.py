@@ -688,6 +688,9 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params
+        driver_embedding = self.embedding_
+        driver_raw_data = self.raw_data_
+        outputCol = self.getOutputCol()
 
         def _construct_umap() -> CumlT:
             import cupy as cp
@@ -697,16 +700,21 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
 
             from .utils import cudf_to_cuml_array
 
+            nonlocal driver_embedding, driver_raw_data
+
             embedding = (
-                self.embedding_[0].value
-                if len(self.embedding_) == 1
-                else np.concatenate([chunk.value for chunk in self.embedding_])
+                driver_embedding[0].value
+                if len(driver_embedding) == 1
+                else np.concatenate([chunk.value for chunk in driver_embedding])
             )
             raw_data = (
-                self.raw_data_[0].value
-                if len(self.raw_data_) == 1
-                else np.concatenate([chunk.value for chunk in self.raw_data_])
+                driver_raw_data[0].value
+                if len(driver_raw_data) == 1
+                else np.concatenate([chunk.value for chunk in driver_raw_data])
             )
+
+            del driver_embedding
+            del driver_raw_data
 
             if embedding.dtype != np.float32:
                 embedding = embedding.astype(np.float32)
@@ -747,7 +755,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             result = pd.DataFrame(
                 {
                     "features": input_list,
-                    self.getOutputCol(): emb_list,
+                    outputCol: emb_list,
                 }
             )
 
