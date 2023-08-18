@@ -411,7 +411,7 @@ if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
     else
         k_arg=""
     fi
-    # umap involves a large amount of data transfer to the driver
+    # UMAP involves a large amount of data transfer to the driver
     spark_rapids_confs_umap="$spark_rapids_confs --spark_confs spark.driver.maxResultSize=0"
 
     python ./benchmark/benchmark_runner.py umap \
