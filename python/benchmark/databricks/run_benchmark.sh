@@ -34,11 +34,11 @@ rf_cpu_options="--subsamplingRate=0.5"
 if [[ $cluster_type == "gpu" ]]
 then
     n_streams="--n_streams 4"
-    kmeans_runs=1
-    rf_runs=1
+    kmeans_runs=3
+    rf_runs=3
     rf_cpu_options=""
 fi
-num_runs=1
+num_runs=3
 
 sep="=================="
 
@@ -123,7 +123,7 @@ sleep 90; done
 
 echo
 echo "$sep algo: logistic regression $sep"
-for i in `seq $rf_runs`; do run_bm logistic_regression \
+for i in `seq $num_runs`; do run_bm logistic_regression \
 --num_runs 1 \
 --standardization False \
 --maxIter 200 \

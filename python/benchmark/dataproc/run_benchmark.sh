@@ -242,7 +242,7 @@ done
 
 echo
 echo "$sep algo: logistic regression $sep"
-for i in `seq $rf_runs`; do
+for i in `seq $num_runs`; do
     set -x
     gcloud dataproc jobs submit pyspark \
     ../benchmark_runner.py \
