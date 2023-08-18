@@ -362,10 +362,10 @@ fi
 # Logistic Regression Classification
 if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+    # same data set as random forest classifier
         python $gen_data_script classification \
             --n_informative $( expr $num_cols / 3 )  \
             --n_redundant $( expr $num_cols / 3 ) \
-            --n_repeated $( expr $num_cols / 3 ) \
             --num_rows $num_rows \
             --num_cols $num_cols \
             --output_num_files $output_num_files \

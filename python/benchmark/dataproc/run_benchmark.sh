@@ -239,3 +239,25 @@ for i in `seq $rf_runs`; do
     set +x
     sleep 30
 done
+
+echo
+echo "$sep algo: logistic regression $sep"
+for i in `seq $rf_runs`; do
+    set -x
+    gcloud dataproc jobs submit pyspark \
+    ../benchmark_runner.py \
+    --cluster=${cluster_name} \
+    --region=${COMPUTE_REGION} \
+    -- \
+    logistic_regression \
+    --num_runs 1 \
+    --standardization False \
+    --maxIter 200 \
+    --tol 1e-30 \
+    --regParam 0.00001 \
+    --train_path "${BENCHMARK_DATA_HOME}/classification/1m_3k_singlecol_float32_50_1_3_inf_red_files.parquet" \
+    ${common_args} \
+    ${extra_args} 2>&1 | tee logistic_regression_$i.out
+    set +x
+    sleep 30
+done

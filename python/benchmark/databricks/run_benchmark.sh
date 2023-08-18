@@ -34,11 +34,11 @@ rf_cpu_options="--subsamplingRate=0.5"
 if [[ $cluster_type == "gpu" ]]
 then
     n_streams="--n_streams 4"
-    kmeans_runs=3
-    rf_runs=3
+    kmeans_runs=1
+    rf_runs=1
     rf_cpu_options=""
 fi
-num_runs=3
+num_runs=1
 
 sep="=================="
 
@@ -120,3 +120,14 @@ $rf_cpu_options \
 --maxDepth 6 \
 --train_path "${BENCHMARK_DATA_HOME}/linear_regression/1m_3k_singlecol_float32_50_files.parquet" && \
 sleep 90; done
+
+echo
+echo "$sep algo: logistic regression $sep"
+for i in `seq $rf_runs`; do run_bm logistic_regression \
+--num_runs 1 \
+--standardization False \
+--maxIter 200 \
+--tol 1e-30 \
+--regParam 0.00001 \
+--train_path "${BENCHMARK_DATA_HOME}/classification/1m_3k_singlecol_float32_50_1_3_inf_red_files.parquet" \
+&& sleep 90; done
