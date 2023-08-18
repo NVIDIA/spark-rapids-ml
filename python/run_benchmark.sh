@@ -422,6 +422,6 @@ if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
         --num_runs $num_runs \
         --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_umap_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
+        $common_confs $spark_rapids_confs_umap \
         ${EXTRA_ARGS}
 fi
