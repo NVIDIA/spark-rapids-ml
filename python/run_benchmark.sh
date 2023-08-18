@@ -411,6 +411,9 @@ if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
     else
         k_arg=""
     fi
+
+    spark_rapids_confs_umap="$spark_rapids_confs --spark_confs spark.driver.maxResultSize=0"
+
     python ./benchmark/benchmark_runner.py umap \
         $k_arg \
         --num_gpus $num_gpus \
