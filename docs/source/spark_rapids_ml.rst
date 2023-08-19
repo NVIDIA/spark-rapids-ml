@@ -43,6 +43,8 @@ Classification
     :template: autosummary/class_with_docs.rst
     :toctree: api
 
+    LogisticRegression
+    LogisticRegressionModel
     RandomForestClassifier
     RandomForestClassificationModel
 
@@ -97,3 +99,16 @@ Tuning
     :toctree: api
 
     CrossValidator
+    
+
+UMAP
+----
+
+.. currentmodule:: spark_rapids_ml.umap
+
+.. autosummary::
+    :template: autosummary/class_with_docs.rst
+    :toctree: api
+
+    UMAP
+    UMAPModel

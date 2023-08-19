@@ -316,6 +316,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     |[9.317718, 1.3419528, -4.832837, 4.5362573, 6.9357944]  |
     |[-6.65039, -5.438729, -6.858565, 2.9733503, 3.99863]    |
     +--------------------------------------------------------+
+    
     only showing top 10 rows
 
     >>> umap_estimator = UMAP(sample_fraction=0.5, num_workers=3).setFeaturesCol("features")

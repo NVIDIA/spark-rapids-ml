@@ -108,6 +108,7 @@ class _RegressionModelEvaluationMixIn:
         -------
         list of float
             metrics
+
         """
 
         if not isinstance(evaluator, RegressionEvaluator):
@@ -290,9 +291,10 @@ class LinearRegression(
 
     Notes
     -----
-        Results for spark ML and spark rapids ml fit() will currently match in all regularization
-        cases only if features and labels are standardized in the input dataframe.  Otherwise,
-        they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
+    
+    Results for spark ML and spark rapids ml fit() will currently match in all regularization
+    cases only if features and labels are standardized in the input dataframe.  Otherwise,
+    they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
 
     Parameters
     ----------

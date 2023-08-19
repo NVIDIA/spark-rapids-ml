@@ -37,11 +37,14 @@ The following table shows the currently supported algorithms.  The goal is to ex
 | K-Means                |   √    |       |
 | k-NN (*)               |   √    |       |
 | LinearRegression       |   √    |       |
+| LogisticRegression     |   √    |       | 
 | PCA                    |   √    |   √   |
 | RandomForestClassifier |   √    |       |
 | RandomForestRegressor  |   √    |       |
 
 Note: Spark does not provide a k-NN implementation, but it does have an [LSH-based Approximate Nearest Neighbor](https://spark.apache.org/docs/latest/ml-features.html#approximate-nearest-neighbor-search) implementation.
+
+In addition to the above, Spark RAPIDS Ml also provides a Spark API for the GPU accelerated UMAP non-linear dimensionality reduction algorithm in the RAPIDS cuML library.
 
 ## Getting started
 
