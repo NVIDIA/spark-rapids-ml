@@ -760,7 +760,7 @@ class LogisticRegression(
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
         maxIter: int = 100,
-        regParam: float = 0.0,  # NOTE: the default value of regParam is actually set to 1e-300 on GPU
+        regParam: float = 0.0,  # NOTE: the default value of regParam is actually mapped to sys.float_info.min on GPU
         tol: float = 1e-6,
         fitIntercept: bool = True,
         num_workers: Optional[int] = None,

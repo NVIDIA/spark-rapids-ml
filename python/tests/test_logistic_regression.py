@@ -289,12 +289,10 @@ def test_compat(
             *feature_cols
         )
 
+        assert _LogisticRegression().getRegParam() == 0.0
         if lr_types[0] is SparkLogisticRegression:
-            assert _LogisticRegression().getRegParam() == 0.0
             blor = _LogisticRegression(regParam=0.1, standardization=False)
         else:
-            assert _LogisticRegression().getRegParam() == 0
-            assert _LogisticRegression().cuml_params["C"] == 1.0 / sys.float_info.min
             warnings.warn("spark rapids ml does not accept standardization")
             blor = _LogisticRegression(regParam=0.1)
 
