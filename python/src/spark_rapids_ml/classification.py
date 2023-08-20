@@ -95,6 +95,8 @@ from .utils import (
     _concat_and_free,
     _get_spark_session,
     java_uid,
+    dtype_to_pyspark_type,
+    get_logger,
 )
 
 T = TypeVar("T")
@@ -573,7 +575,19 @@ class LogisticRegressionClass(_CumlClass):
     def _param_value_mapping(
         cls,
     ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
-        return {"C": lambda x: 1.0 / x if x != 0.0 else 0.0}
+        def regParam_value_mapper(x: float) -> float:
+            # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
+            if x == 0.0:
+                logger = get_logger(cls)
+                logger.warn(
+                    "no regularization is not supported yet. regParam=0 will be map to smallest positive float sys.float_info.min"
+                )
+
+                return 1.0 / sys.float_info.min
+            else:
+                return 1.0 / x
+
+        return {"C": lambda x: regParam_value_mapper(x)}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -756,13 +770,6 @@ class LogisticRegression(
         super().__init__()
         self.set_params(**self._input_kwargs)
 
-        # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
-        if regParam == 0.0:
-            self.logger.warn(
-                "no regularization is not supported yet. regParam is set to 1e-300"
-            )
-            self.set_params(**{"regParam": sys.float_info.min})
-
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
 
@@ -778,11 +785,9 @@ class LogisticRegression(
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             init_parameters = params[param_alias.cuml_init]
-            print(f"debug init_parameters is f{init_parameters}")
 
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
-            print(f"debug init_parameters: f{init_parameters}")
             logistic_regression = LogisticRegressionMG(
                 handle=params[param_alias.handle],
                 **init_parameters,

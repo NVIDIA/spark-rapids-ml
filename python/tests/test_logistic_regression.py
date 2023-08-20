@@ -76,29 +76,39 @@ def test_toy_example(gpu_number: int) -> None:
         assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
 
         # test with regParam set to 0
-        lr_regParam_zero = LogisticRegression(
-            regParam=0.0,
-        )
-        assert lr_regParam_zero.getRegParam() == sys.float_info.min
+        with pytest.warns():
+            lr_regParam_zero = LogisticRegression(
+                regParam=0.0,
+            )
+
+        assert lr_regParam_zero.getRegParam() == 0
+        assert lr_regParam_zero.cuml_params["C"] == 1.0 / sys.float_info.min
         model = lr_regParam_zero.fit(df)
         assert model.coefficients.toArray() == pytest.approx(
             [-17.21179962158203, 17.220483779907227], abs=1e-6
         )
         assert model.intercept == pytest.approx(0.008539911359548569, abs=1e-6)
 
+        lr_regParam_zero.setRegParam(1.0)
+        assert lr_regParam_zero.getRegParam() == 1.0
+        with pytest.warns():
+            lr_regParam_zero.setRegParam(0.0)
+        assert lr_regParam_zero.getRegParam() == 0.0
+
 
 def test_params(tmp_path: str) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
-        "regParam": sys.float_info.min,  # TODO: support default value 0.0, i.e. no regularization
+        "regParam": 0.0,  # will be mapped to sys.float_info.min
         "tol": 1e-06,
         "fitIntercept": True,
     }
 
     default_cuml_params = {
         "max_iter": 100,
-        "C": 1.0 / sys.float_info.min,
+        "C": 1.0
+        / sys.float_info.min,  # TODO: support default value 0.0, i.e. no regularization
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -283,7 +293,8 @@ def test_compat(
             assert _LogisticRegression().getRegParam() == 0.0
             blor = _LogisticRegression(regParam=0.1, standardization=False)
         else:
-            assert _LogisticRegression().getRegParam() == sys.float_info.min
+            assert _LogisticRegression().getRegParam() == 0
+            assert _LogisticRegression().cuml_params["C"] == 1.0 / sys.float_info.min
             warnings.warn("spark rapids ml does not accept standardization")
             blor = _LogisticRegression(regParam=0.1)
 
