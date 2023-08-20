@@ -754,6 +754,7 @@ class LogisticRegression(
         **kwargs: Any,
     ):
         super().__init__()
+        self.set_params(**self._input_kwargs)
 
         # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
         if regParam == 0.0:
@@ -761,8 +762,6 @@ class LogisticRegression(
                 "no regularization is not supported yet. regParam is set to 1e-300"
             )
             self.set_params(**{"regParam": sys.float_info.min})
-
-        self.set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
@@ -779,9 +778,11 @@ class LogisticRegression(
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             init_parameters = params[param_alias.cuml_init]
+            print(f"debug init_parameters is f{init_parameters}")
 
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
+            print(f"debug init_parameters: f{init_parameters}")
             logistic_regression = LogisticRegressionMG(
                 handle=params[param_alias.handle],
                 **init_parameters,

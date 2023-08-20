@@ -75,6 +75,17 @@ def test_toy_example(gpu_number: int) -> None:
         assert len(probs) == len(preds)
         assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
 
+        # test with regParam set to 0
+        lr_regParam_zero = LogisticRegression(
+            regParam=0.0,
+        )
+        assert lr_regParam_zero.getRegParam() == sys.float_info.min
+        model = lr_regParam_zero.fit(df)
+        assert model.coefficients.toArray() == pytest.approx(
+            [-17.21179962158203, 17.220483779907227], abs=1e-6
+        )
+        assert model.intercept == pytest.approx(0.008539911359548569, abs=1e-6)
+
 
 def test_params(tmp_path: str) -> None:
     # Default params
