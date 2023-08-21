@@ -68,12 +68,15 @@ def test_toy_example(gpu_number: int) -> None:
         )
         assert lr_model.intercept == pytest.approx(0, abs=1e-6)
 
-        preds_df_local = lr_model.transform(df).collect()
-        preds = [row["prediction"] for row in preds_df_local]
-        assert preds == [1.0, 1.0, 0.0, 0.0]
-        probs = [row["probs"] for row in preds_df_local]
-        assert len(probs) == len(preds)
-        assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
+        def assert_transform(model: LogisticRegressionModel) -> None:
+            preds_df_local = model.transform(df).collect()
+            preds = [row["prediction"] for row in preds_df_local]
+            assert preds == [1.0, 1.0, 0.0, 0.0]
+            probs = [row["probs"] for row in preds_df_local]
+            assert len(probs) == len(preds)
+            assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
+
+        assert_transform(lr_model)
 
         # test with regParam set to 0
         with pytest.warns():
@@ -81,19 +84,20 @@ def test_toy_example(gpu_number: int) -> None:
                 regParam=0.0,
             )
 
+        lr_regParam_zero.setProbabilityCol(probability_col)
+
         assert lr_regParam_zero.getRegParam() == 0
         assert lr_regParam_zero.cuml_params["C"] == 1.0 / sys.float_info.min
-        model = lr_regParam_zero.fit(df)
-        assert model.coefficients.toArray() == pytest.approx(
-            [-17.21179962158203, 17.220483779907227], abs=1e-6
-        )
-        assert model.intercept == pytest.approx(0.008539911359548569, abs=1e-6)
+        model_regParam_zero = lr_regParam_zero.fit(df)
+        assert_transform(model_regParam_zero)
 
-        lr_regParam_zero.setRegParam(1.0)
-        assert lr_regParam_zero.getRegParam() == 1.0
+        lr_regParam_zero.setRegParam(0.1)
+        assert lr_regParam_zero.getRegParam() == 0.1
+        assert lr_regParam_zero.cuml_params["C"] == 1.0 / 0.1
         with pytest.warns():
             lr_regParam_zero.setRegParam(0.0)
         assert lr_regParam_zero.getRegParam() == 0.0
+        assert lr_regParam_zero.cuml_params["C"] == 1.0 / sys.float_info.min
 
 
 def test_params(tmp_path: str) -> None:
