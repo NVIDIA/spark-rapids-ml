@@ -83,7 +83,6 @@ def _spark_umap_trustworthiness(
 ) -> float:
     umap_estimator = UMAP(
         n_neighbors=n_neighbors,
-        sample_fraction=sampling_ratio,
         random_state=42,
         init="random",
         num_workers=n_workers,
@@ -102,7 +101,7 @@ def _spark_umap_trustworthiness(
             )
 
         data_df = data_df.repartition(n_parts)
-        umap_estimator.setFeaturesCol(features_col)
+        umap_estimator.setFeaturesCol(features_col).setSampleFraction(sampling_ratio)
         umap_model = umap_estimator.fit(data_df)
         pdf = umap_model.transform(data_df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)

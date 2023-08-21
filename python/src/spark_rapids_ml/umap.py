@@ -36,7 +36,14 @@ import numpy as np
 import pandas as pd
 import pyspark
 from pandas import DataFrame as PandasDataFrame
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol, HasOutputCol
+from pyspark.ml.param.shared import (
+    HasFeaturesCol,
+    HasLabelCol,
+    HasOutputCol,
+    Param,
+    Params,
+    TypeConverters,
+)
 from pyspark.ml.util import DefaultParamsReader, DefaultParamsWriter, MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
@@ -114,7 +121,438 @@ class _UMAPCumlParams(
 ):
     def __init__(self) -> None:
         super().__init__()
-        self._setDefault()
+        self._setDefault(
+            n_neighbors=15,
+            n_components=2,
+            metric="euclidean",
+            n_epochs=None,
+            learning_rate=1.0,
+            init="spectral",
+            min_dist=0.1,
+            spread=1.0,
+            set_op_mix_ratio=1.0,
+            local_connectivity=1.0,
+            repulsion_strength=1.0,
+            negative_sample_rate=5,
+            transform_queue_size=4.0,
+            a=None,
+            b=None,
+            precomputed_knn=None,
+            random_state=None,
+            sample_fraction=1.0,
+            outputCol="embedding",
+        )
+
+    n_neighbors = Param(
+        Params._dummy(),
+        "n_neighbors",
+        (
+            f"The size of local neighborhood (in terms of number of neighboring sample points) used for manifold approximation."
+            f" Larger values result in more global views of the manifold, while smaller values result in more local data being"
+            f" preserved. In general values should be in the range 2 to 100."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    n_components = Param(
+        Params._dummy(),
+        "n_components",
+        (
+            f"The dimension of the space to embed into. This defaults to 2 to provide easy visualization, but can reasonably"
+            f" be set to any integer value in the range 2 to 100."
+        ),
+        typeConverter=TypeConverters.toInt,
+    )
+
+    metric = Param(
+        Params._dummy(),
+        "metric",
+        (
+            f"Distance metric to use. Supported distances are ['l1', 'cityblock', 'taxicab', 'manhattan', 'euclidean', 'l2',"
+            f" 'sqeuclidean', 'canberra', 'minkowski', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger', 'hamming',"
+            f" 'jaccard']. Metrics that take arguments (such as minkowski) can have arguments passed via the metric_kwds"
+            f" dictionary."
+        ),
+        typeConverter=TypeConverters.toString,
+    )
+
+    n_epochs = Param(
+        Params._dummy(),
+        "n_epochs",
+        (
+            f"The number of training epochs to be used in optimizing the low dimensional embedding. Larger values result in"
+            f" more accurate embeddings. If None is specified a value will be selected based on the size of the input dataset"
+            f" (200 for large datasets, 500 for small)."
+        ),
+        typeConverter=TypeConverters.toInt,
+    )
+
+    learning_rate = Param(
+        Params._dummy(),
+        "learning_rate",
+        "The initial learning rate for the embedding optimization.",
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    init = Param(
+        Params._dummy(),
+        "init",
+        (
+            f"How to initialize the low dimensional embedding. Options are: 'spectral': use a spectral embedding of the fuzzy"
+            f" 1-skeleton 'random': assign initial embedding positions at random."
+        ),
+        typeConverter=TypeConverters.toString,
+    )
+
+    min_dist = Param(
+        Params._dummy(),
+        "min_dist",
+        (
+            f"The effective minimum distance between embedded points. Smaller values will result in a more clustered/clumped"
+            f" embedding where nearby points on the manifold are drawn closer together, while larger values will result in a"
+            f" more even dispersal of points. The value should be set relative to the ``spread`` value, which determines the"
+            f" scale at which embedded points will be spread out."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    spread = Param(
+        Params._dummy(),
+        "spread",
+        (
+            f"The effective scale of embedded points. In combination with ``min_dist`` this determines how clustered/clumped"
+            f" the embedded points are."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    set_op_mix_ratio = Param(
+        Params._dummy(),
+        "set_op_mix_ratio",
+        (
+            f"Interpolate between (fuzzy) union and intersection as the set operation used to combine local fuzzy simplicial"
+            f" sets to obtain a global fuzzy simplicial sets. Both fuzzy set operations use the product t-norm. The value of"
+            f" this parameter should be between 0.0 and 1.0; a value of 1.0 will use a pure fuzzy union, while 0.0 will use a"
+            f" pure fuzzy intersection."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    local_connectivity = Param(
+        Params._dummy(),
+        "local_connectivity",
+        (
+            f"The local connectivity required -- i.e. the number of nearest neighbors that should be assumed to be connected"
+            f" at a local level. The higher this value the more connected the manifold becomes locally. In practice this should"
+            f" be not more than the local intrinsic dimension of the manifold."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    repulsion_strength = Param(
+        Params._dummy(),
+        "repulsion_strength",
+        (
+            f"Weighting applied to negative samples in low dimensional embedding optimization. Values higher than one will"
+            f" result in greater weight being given to negative samples."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    negative_sample_rate = Param(
+        Params._dummy(),
+        "negative_sample_rate",
+        (
+            f"The number of negative samples to select per positive sample in the optimization process. Increasing this value"
+            f" will result in greater repulsive force being applied, greater optimization cost, but slightly more accuracy."
+        ),
+        typeConverter=TypeConverters.toInt,
+    )
+
+    transform_queue_size = Param(
+        Params._dummy(),
+        "transform_queue_size",
+        (
+            f"For transform operations (embedding new points using a trained model), this will control how aggressively to"
+            f" search for nearest neighbors. Larger values will result in slower performance but more accurate nearest neighbor"
+            f" evaluation."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    a = Param(
+        Params._dummy(),
+        "a",
+        (
+            f"More specific parameters controlling the embedding. If None these values are set automatically as determined by"
+            f" ``min_dist`` and ``spread``."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    b = Param(
+        Params._dummy(),
+        "b",
+        (
+            f"More specific parameters controlling the embedding. If None these values are set automatically as determined by"
+            f" ``min_dist`` and ``spread``."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    precomputed_knn = Param(
+        Params._dummy(),
+        "precomputed_knn",
+        (
+            f"Either one of a tuple (indices, distances) of arrays of shape (n_samples, n_neighbors), a pairwise distances"
+            f" dense array of shape (n_samples, n_samples) or a KNN graph sparse array (preferably CSR/COO). This feature"
+            f" allows the precomputation of the KNN outside of UMAP and also allows the use of a custom distance function."
+            f" This function should match the metric used to train the UMAP embeedings."
+        ),
+        typeConverter=TypeConverters.toListListFloat,
+    )
+
+    random_state = Param(
+        Params._dummy(),
+        "random_state",
+        (
+            f"The seed used by the random number generator during embedding initialization and during sampling used by the"
+            f" optimizer. Unfortunately, achieving a high amount of parallelism during the optimization stage often comes at"
+            f" the expense of determinism, since many floating-point additions are being made in parallel without a"
+            f" deterministic ordering. This causes slightly different results across training sessions, even when the same"
+            f" seed is used for random number generation. Setting a random_state will enable consistency of trained embeddings,"
+            f" allowing for reproducible results to 3 digits of precision, but will do so at the expense of training time and"
+            f" memory usage."
+        ),
+        typeConverter=TypeConverters.toInt,
+    )
+
+    sample_fraction = Param(
+        Params._dummy(),
+        "sample_fraction",
+        (
+            f"The fraction of the dataset to be used for fitting the model. Since fitting is done on a single node, very large"
+            f" datasets must be subsampled to fit within the node's memory and execute in a reasonable time. Smaller fractions"
+            f" will result in faster training, but may result in sub-optimal embeddings."
+        ),
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    def getNNeighbors(self) -> float:
+        """
+        Gets the value of `n_neighbors`.
+        """
+        return self.getOrDefault("n_neighbors")
+
+    def setNNeighbors(self: P, value: float) -> P:
+        """
+        Sets the value of `n_neighbors`.
+        """
+        return self.set_params(n_neighbors=value)
+
+    def getNComponents(self) -> int:
+        """
+        Gets the value of `n_components`.
+        """
+        return self.getOrDefault("n_components")
+
+    def setNComponents(self: P, value: int) -> P:
+        """
+        Sets the value of `n_components`.
+        """
+        return self.set_params(n_components=value)
+
+    def getMetric(self) -> str:
+        """
+        Gets the value of `metric`.
+        """
+        return self.getOrDefault("metric")
+
+    def setMetric(self: P, value: str) -> P:
+        """
+        Sets the value of `metric`.
+        """
+        return self.set_params(metric=value)
+
+    def getNEpochs(self) -> int:
+        """
+        Gets the value of `n_epochs`.
+        """
+        return self.getOrDefault("n_epochs")
+
+    def setNEpochs(self: P, value: int) -> P:
+        """
+        Sets the value of `n_epochs`.
+        """
+        return self.set_params(n_epochs=value)
+
+    def getLearningRate(self) -> float:
+        """
+        Gets the value of `learning_rate`.
+        """
+        return self.getOrDefault("learning_rate")
+
+    def setLearningRate(self: P, value: float) -> P:
+        """
+        Sets the value of `learning_rate`.
+        """
+        return self.set_params(learning_rate=value)
+
+    def getInit(self) -> str:
+        """
+        Gets the value of `init`.
+        """
+        return self.getOrDefault("init")
+
+    def setInit(self: P, value: str) -> P:
+        """
+        Sets the value of `init`.
+        """
+        return self.set_params(init=value)
+
+    def getMinDist(self) -> float:
+        """
+        Gets the value of `min_dist`.
+        """
+        return self.getOrDefault("min_dist")
+
+    def setMinDist(self: P, value: float) -> P:
+        """
+        Sets the value of `min_dist`.
+        """
+        return self.set_params(min_dist=value)
+
+    def getSpread(self) -> float:
+        """
+        Gets the value of `spread`.
+        """
+        return self.getOrDefault("spread")
+
+    def setSpread(self: P, value: float) -> P:
+        """
+        Sets the value of `spread`.
+        """
+        return self.set_params(spread=value)
+
+    def getSetOpMixRatio(self) -> float:
+        """
+        Gets the value of `set_op_mix_ratio`.
+        """
+        return self.getOrDefault("set_op_mix_ratio")
+
+    def setSetOpMixRatio(self: P, value: float) -> P:
+        """
+        Sets the value of `set_op_mix_ratio`.
+        """
+        return self.set_params(set_op_mix_ratio=value)
+
+    def getLocalConnectivity(self) -> float:
+        """
+        Gets the value of `local_connectivity`.
+        """
+        return self.getOrDefault("local_connectivity")
+
+    def setLocalConnectivity(self: P, value: float) -> P:
+        """
+        Sets the value of `local_connectivity`.
+        """
+        return self.set_params(local_connectivity=value)
+
+    def getRepulsionStrength(self) -> float:
+        """
+        Gets the value of `repulsion_strength`.
+        """
+        return self.getOrDefault("repulsion_strength")
+
+    def setRepulsionStrength(self: P, value: float) -> P:
+        """
+        Sets the value of `repulsion_strength`.
+        """
+        return self.set_params(repulsion_strength=value)
+
+    def getNegativeSampleRate(self) -> int:
+        """
+        Gets the value of `negative_sample_rate`.
+        """
+        return self.getOrDefault("negative_sample_rate")
+
+    def setNegativeSampleRate(self: P, value: int) -> P:
+        """
+        Sets the value of `negative_sample_rate`.
+        """
+        return self.set_params(negative_sample_rate=value)
+
+    def getTransformQueueSize(self) -> float:
+        """
+        Gets the value of `transform_queue_size`.
+        """
+        return self.getOrDefault("transform_queue_size")
+
+    def setTransformQueueSize(self: P, value: float) -> P:
+        """
+        Sets the value of `transform_queue_size`.
+        """
+        return self.set_params(transform_queue_size=value)
+
+    def getA(self) -> float:
+        """
+        Gets the value of `a`.
+        """
+        return self.getOrDefault("a")
+
+    def setA(self: P, value: float) -> P:
+        """
+        Sets the value of `a`.
+        """
+        return self.set_params(a=value)
+
+    def getB(self) -> float:
+        """
+        Gets the value of `b`.
+        """
+        return self.getOrDefault("b")
+
+    def setB(self: P, value: float) -> P:
+        """
+        Sets the value of `b`.
+        """
+        return self.set_params(b=value)
+
+    def getPrecomputedKNN(self) -> List[List[float]]:
+        """
+        Gets the value of `precomputed_knn`.
+        """
+        return self.getOrDefault("precomputed_knn")
+
+    def setPrecomputedKNN(self: P, value: List[List[float]]) -> P:
+        """
+        Sets the value of `precomputed_knn`.
+        """
+        return self.set_params(precomputed_knn=value)
+
+    def getRandomState(self) -> int:
+        """
+        Gets the value of `random_state`.
+        """
+        return self.getOrDefault("random_state")
+
+    def setRandomState(self: P, value: int) -> P:
+        """
+        Sets the value of `random_state`.
+        """
+        return self.set_params(random_state=value)
+
+    def getSampleFraction(self) -> float:
+        """
+        Gets the value of `sample_fraction`.
+        """
+        return self.getOrDefault("sample_fraction")
+
+    def setSampleFraction(self: P, value: float) -> P:
+        """
+        Sets the value of `sample_fraction`.
+        """
+        return self.set_params(sample_fraction=value)
 
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
         """
@@ -339,26 +777,24 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     """
 
-    def __init__(self, sample_fraction: float = 1.0, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self.set_params(**kwargs)
-        self.sample_fraction = sample_fraction
         max_records_per_batch_str = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
         )
         assert max_records_per_batch_str is not None
         self.max_records_per_batch = int(max_records_per_batch_str)
         self.BROADCAST_LIMIT = 8 << 30
-        self.setOutputCol("embedding")
 
     def _create_pyspark_model(self, result: Row) -> _CumlModel:
         raise NotImplementedError("UMAP does not support model creation from Row")
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
-        if self.sample_fraction < 1.0:
+        if self.getSampleFraction() < 1.0:
             data_subset = dataset.sample(
                 withReplacement=False,
-                fraction=self.sample_fraction,
+                fraction=self.getSampleFraction(),
                 seed=self.cuml_params["random_state"],
             )
         else:
