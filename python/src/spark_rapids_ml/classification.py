@@ -580,7 +580,8 @@ class LogisticRegressionClass(_CumlClass):
             if x == 0.0:
                 logger = get_logger(cls)
                 logger.warn(
-                    "no regularization is not supported yet. regParam=0 will be map to smallest positive float sys.float_info.min"
+                    "no regularization is not supported yet. if regParam is set to 0,"
+                    + "it will be mapped to smallest positive float sys.float_info.min"
                 )
 
                 return 1.0 / sys.float_info.min
