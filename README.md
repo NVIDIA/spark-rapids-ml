@@ -32,19 +32,19 @@ val pca = new com.nvidia.spark.ml.feature.PCA()
 
 The following table shows the currently supported algorithms.  The goal is to expand this over time with support from the underlying RAPIDS cuML libraries.  If you would like support for a specific algorithm, please file a [git issue](https://github.com/NVIDIA/spark-rapids-ml/issues) to help us prioritize.
 
-| Spark ML Algorithm     | Python | Scala |
+| Supported Algorithms   | Python | Scala |
 | :--------------------- | :----: | :---: |
-| K-Means                |   √    |       |
+| CrossValidator         |   √    |       |
+| KMeans                 |   √    |       |
 | k-NN (*)               |   √    |       |
 | LinearRegression       |   √    |       |
 | LogisticRegression     |   √    |       | 
 | PCA                    |   √    |   √   |
 | RandomForestClassifier |   √    |       |
 | RandomForestRegressor  |   √    |       |
+| UMAP (*)               |   √    |       |
 
-Note: Spark does not provide a k-NN implementation, but it does have an [LSH-based Approximate Nearest Neighbor](https://spark.apache.org/docs/latest/ml-features.html#approximate-nearest-neighbor-search) implementation.
-
-In addition to the above, Spark RAPIDS ML also provides a Spark API for the GPU accelerated UMAP non-linear dimensionality reduction algorithm in the RAPIDS cuML library.
+Note: Spark does not provide a k-Nearest Neighbors (k-NN) implementation, but it does have an [LSH-based Approximate Nearest Neighbor](https://spark.apache.org/docs/latest/ml-features.html#approximate-nearest-neighbor-search) implementation.   As an alternative to PCA, we also provide a Spark API for GPU accelerated Uniform Manifold Approximation and Projection (UMAP), a non-linear dimensionality reduction algorithm in the RAPIDS cuML library.
 
 ## Getting started
 
