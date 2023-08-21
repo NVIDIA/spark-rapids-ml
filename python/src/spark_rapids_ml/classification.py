@@ -26,6 +26,7 @@ from typing import (
     cast,
 )
 
+from pyspark.ml.common import _py2java
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
 from .metrics.MulticlassMetrics import MulticlassMetrics
@@ -39,6 +40,9 @@ import pandas as pd
 from pyspark import Row, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
+    LogisticRegressionModel as SparkLogisticRegressionModel,
+)
+from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
 from pyspark.ml.classification import (
@@ -47,7 +51,12 @@ from pyspark.ml.classification import (
     _RandomForestClassifierParams,
 )
 from pyspark.ml.functions import vector_to_array
-from pyspark.ml.linalg import Vector, Vectors, VectorUDT
+from pyspark.ml.linalg import (
+    DenseMatrix,
+    Vector,
+    Vectors,
+    VectorUDT,
+)
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -88,7 +97,7 @@ from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
-    dtype_to_pyspark_type,
+    java_uid,
 )
 
 
@@ -842,6 +851,39 @@ class LogisticRegressionModel(
         super().__init__(dtype=dtype, n_cols=n_cols, coef_=coef_, intercept_=intercept_)
         self.coef_ = coef_
         self.intercept_ = intercept_
+        self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
+
+    def cpu(self) -> SparkLogisticRegressionModel:
+        """Return the PySpark ML LinearRegressionModel"""
+        if self._lr_spark_model is None:
+            sc = _get_spark_session().sparkContext
+            assert sc._jvm is not None
+
+            # TODO Multinomial is not supported yet.
+            num_classes = 2
+            is_multinomial = False
+            num_coefficient_sets = 1
+            coefficients = self.coef_[0]
+
+            assert self.n_cols is not None
+            coefficients_dmatrix = DenseMatrix(
+                num_coefficient_sets, self.n_cols, list(coefficients), True
+            )
+            intercepts = Vectors.dense(self.intercept_)
+
+            java_model = (
+                sc._jvm.org.apache.spark.ml.classification.LogisticRegressionModel(
+                    java_uid(sc, "logreg"),
+                    _py2java(sc, coefficients_dmatrix),
+                    _py2java(sc, intercepts),
+                    num_classes,
+                    is_multinomial,
+                )
+            )
+            self._lr_spark_model = SparkLogisticRegressionModel(java_model)
+            self._copyValues(self._lr_spark_model)
+
+        return self._lr_spark_model
 
     @property
     def coefficients(self) -> Vector:
