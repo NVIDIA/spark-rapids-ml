@@ -641,7 +641,61 @@ class LogisticRegression(
     _CumlEstimatorSupervised,
     _LogisticRegressionCumlParams,
 ):
-    """
+    """LogisticRegression is a machine learning model where the response y is modeled
+    by the sigmoid (or softmax for more than 2 classes) function applied to a linear
+    combination of the features in X. It implements cuML's GPU accelerated
+    LogisticRegression algorithm based on cuML python library, and it can be used in
+    PySpark Pipeline and PySpark ML meta algorithms like
+    :py:class:`~pyspark.ml.tuning.CrossValidator`/
+    :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
+    :py:class:`~pyspark.ml.classification.OneVsRest`
+
+    This currently supports the regularization options:
+
+    * none
+    * L2 (ridge regression)
+
+    and two classes.
+
+    LogisticRegression automatically supports most of the parameters from both
+    :py:class:`~pyspark.ml.classification.LogisticRegression`.
+    And it will automatically map pyspark parameters
+    to cuML parameters.
+
+    Parameters
+    ----------
+    featuresCol:
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
+    labelCol:
+        The label column name.
+    predictionCol:
+        The class prediction column name.
+    probabilityCol:
+        The probability prediction column name.
+    maxIter:
+        The maximum number of iterations of the underlying L-BFGS algorithm.
+    regParam:
+        The regularization parameter.
+    tol:
+        The convergence tolerance.
+    fitIntercept:
+        Whether to fit an intercept term.
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+
     Examples
     --------
     >>> from spark_rapids_ml.classification import LogisticRegression
@@ -682,6 +736,7 @@ class LogisticRegression(
         featuresCol: Union[str, List[str]] = "features",
         labelCol: str = "label",
         predictionCol: str = "prediction",
+        probabilityCol: str = "probability",
         maxIter: int = 100,
         regParam: float = 0.0,  # NOTE: the default value of regParam is actually set to 1e-300 on GPU
         tol: float = 1e-6,
