@@ -642,7 +642,7 @@ class LogisticRegression(
     _LogisticRegressionCumlParams,
 ):
     """LogisticRegression is a machine learning model where the response y is modeled
-    by the sigmoid (or softmax for more than 2 classes) function applied to a linear 
+    by the sigmoid (or softmax for more than 2 classes) function applied to a linear
     combination of the features in X. It implements cuML's GPU accelerated
     LogisticRegression algorithm based on cuML python library, and it can be used in
     PySpark Pipeline and PySpark ML meta algorithms like
@@ -658,7 +658,7 @@ class LogisticRegression(
     and two classes.
 
     LogisticRegression automatically supports most of the parameters from both
-    :py:class:`~pyspark.ml.classification.LogisticRegression`.  
+    :py:class:`~pyspark.ml.classification.LogisticRegression`.
     And it will automatically map pyspark parameters
     to cuML parameters.
 
