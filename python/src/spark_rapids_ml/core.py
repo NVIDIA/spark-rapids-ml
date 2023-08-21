@@ -1096,7 +1096,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             self.logger.warning(
                 "The spark.rapids.ml.concurrentPredictTasks should be in "
                 f"[1, {executor_cores // 2}] or {executor_cores}, "
-                f"we found it's {original_concurrent_transform_tasks}. We're "
+                f"we found it's {original_concurrent_transform_tasks}. But we're "
                 f"going to use {concurrent_transform_tasks}"
             )
 
@@ -1104,7 +1104,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         default_task_cpus = int(ss.sparkContext.getConf().get("spark.task.cpus"))  # type: ignore
         if task_cores == default_task_cpus:
-            self.logger.warning(
+            self.logger.info(
                 "The Spark configurations have been set up to ensure that "
                 f"{concurrent_transform_tasks} transform tasks will be concurrently executed."
             )
