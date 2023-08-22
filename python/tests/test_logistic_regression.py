@@ -306,19 +306,17 @@ def test_compat(
         assert array_equal(coefficients, [-2.42377087, 2.42377087])
         assert intercept == pytest.approx(0, abs=1e-6)
 
-        if isinstance(blor_model, SparkLogisticRegressionModel):
-            assert blor_model.hasSummary == True
-            blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
+        example = bdf.head()
+        if example:
+            blor_model.predict(example.features)
+            blor_model.predictRaw(example.features)
+            blor_model.predictProbability(example.features)
 
-            example = bdf.head()
-            blor_model.predict(example.features)  # type:ignore
-            blor_model.predictRaw(example.features)  # type:ignore
-            blor_model.predictProbability(example.features)  # type:ignore
+        if isinstance(blor_model, SparkLogisticRegressionModel):
+            assert blor_model.hasSummary
+            blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
         else:
-            assert blor_model.hasSummary == False
-            warnings.warn(
-                "hasSummary, evaluate, predict, predictRaw, and predictProbability are currently not supported in Spark Rapids ML Logistic Regression"
-            )
+            assert not blor_model.hasSummary
 
         output = blor_model.transform(bdf).head()
         assert output.prediction == 1.0

@@ -22,6 +22,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeVar,
     Union,
     cast,
 )
@@ -42,6 +43,7 @@ from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
+from pyspark.ml.classification import LogisticRegressionSummary
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
@@ -51,12 +53,7 @@ from pyspark.ml.classification import (
     _RandomForestClassifierParams,
 )
 from pyspark.ml.functions import vector_to_array
-from pyspark.ml.linalg import (
-    DenseMatrix,
-    Vector,
-    Vectors,
-    VectorUDT,
-)
+from pyspark.ml.linalg import DenseMatrix, Vector, Vectors, VectorUDT
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -99,6 +96,8 @@ from .utils import (
     _get_spark_session,
     java_uid,
 )
+
+T = TypeVar("T")
 
 
 class _RFClassifierParams(
@@ -854,7 +853,7 @@ class LogisticRegressionModel(
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
 
     def cpu(self) -> SparkLogisticRegressionModel:
-        """Return the PySpark ML LinearRegressionModel"""
+        """Return the PySpark ML LogisticRegressionModel"""
         if self._lr_spark_model is None:
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None
@@ -869,7 +868,7 @@ class LogisticRegressionModel(
             coefficients_dmatrix = DenseMatrix(
                 num_coefficient_sets, self.n_cols, list(coefficients), True
             )
-            intercepts = Vectors.dense(self.intercept_)
+            intercepts = Vectors.dense(self.intercept)
 
             java_model = (
                 sc._jvm.org.apache.spark.ml.classification.LogisticRegressionModel(
@@ -950,3 +949,27 @@ class LogisticRegressionModel(
         instance.
         """
         return False
+
+    def predict(self, value: Vector) -> float:
+        """cuML doesn't support predicting 1 single sample.
+        Fall back to PySpark ML LogisticRegressionModel"""
+        return self.cpu().predict(value)
+
+    def evaluate(self, dataset: DataFrame) -> LogisticRegressionSummary:
+        """cuML doesn't support evaluating.
+        Fall back to PySpark ML LogisticRegressionModel"""
+        return self.cpu().evaluate(dataset)
+
+    def predictRaw(self, value: Vector) -> Vector:
+        """
+        Raw prediction for each possible label.
+        Fall back to PySpark ML LogisticRegressionModel
+        """
+        return self.cpu().predictRaw(value)
+
+    def predictProbability(self, value: Vector) -> Vector:
+        """
+        Predict the probability of each class given the features.
+        Fall back to PySpark ML LogisticRegressionModel
+        """
+        return self.cpu().predictProbability(value)
