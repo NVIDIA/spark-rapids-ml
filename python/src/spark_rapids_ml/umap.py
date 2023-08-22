@@ -21,9 +21,7 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Generator,
     Iterable,
-    Iterator,
     List,
     Optional,
     Sequence,
@@ -874,27 +872,17 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
 
-    def _get_cuml_fit_func(  # type: ignore
-        self, dataset: DataFrame
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
-        """
-        This class replaces the parent function with a different return signature. See fit_generator_func below.
-        """
-        pass
-
-    def _get_cuml_fit_generator_func(
+    def _get_cuml_fit_func(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[
-        [FitInputType, Dict[str, Any]], Generator[Dict[str, Any], None, None]
-    ]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         array_order = self._fit_array_order()
 
         def _cuml_fit(
             dfs: FitInputType,
             params: Dict[str, Any],
-        ) -> Generator[Dict[str, Any], None, None]:
+        ) -> Dict[str, Any]:
             from cuml.manifold import UMAP as CumlUMAP
 
             umap_object = CumlUMAP(
@@ -922,21 +910,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             embedding = umap_model.embedding_
             del umap_model
 
-            chunkSize = self.max_records_per_batch
-            num_sections = (len(embedding) + chunkSize - 1) // chunkSize
-
-            for i in range(num_sections):
-                start = i * chunkSize
-                end = min((i + 1) * chunkSize, len(embedding))
-
-                yield pd.DataFrame(
-                    data=[
-                        {
-                            "embedding_": embedding[start:end].tolist(),
-                            "raw_data_": concated[start:end].tolist(),
-                        }
-                    ]
-                )
+            return {"embedding": embedding, "raw_data": concated}
 
         return _cuml_fit
 
@@ -947,7 +921,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         paramMaps: Optional[Sequence["ParamMap"]] = None,
     ) -> DataFrame:
         """
-        Fits a model to the input dataset. This overrides the parent function to omit barrier stages and return a dataframe rather than an RDD.
+        Fits a model to the input dataset. This replaces _call_cuml_fit_func() to omit barrier stages and return a dataframe
+        rather than an RDD.
 
         Parameters
         ----------
@@ -982,11 +957,13 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         params[param_alias.fit_multiple_params] = []
 
-        cuml_fit_func = self._get_cuml_fit_generator_func(dataset, None)  # type: ignore
+        cuml_fit_func = self._get_cuml_fit_func(dataset, None)
 
         array_order = self._fit_array_order()
 
         cuml_verbose = self.cuml_params.get("verbose", False)
+
+        chunk_size = self.max_records_per_batch
 
         def _train_udf(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
             from pyspark import TaskContext
@@ -1035,18 +1012,27 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             # call the cuml fit function
             # *note*: cuml_fit_func may delete components of inputs to free
             # memory.  do not rely on inputs after this call.
-            result = cuml_fit_func(inputs, params)
+            embedding, raw_data = cuml_fit_func(inputs, params).values()
             logger.info("Cuml fit complete")
 
-            for row in result:
-                yield row
+            num_sections = (len(embedding) + chunk_size - 1) // chunk_size
+
+            for i in range(num_sections):
+                start = i * chunk_size
+                end = min((i + 1) * chunk_size, len(embedding))
+
+                yield pd.DataFrame(
+                    data=[
+                        {
+                            "embedding_": embedding[start:end].tolist(),
+                            "raw_data_": raw_data[start:end].tolist(),
+                        }
+                    ]
+                )
 
         output_df = dataset.mapInPandas(_train_udf, schema=self._out_schema())
 
         return output_df
-
-    def _use_fit_generator(self) -> bool:
-        return True
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
         return (False, False)
