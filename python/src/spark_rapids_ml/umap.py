@@ -197,7 +197,7 @@ class _UMAPCumlParams(
         "init",
         (
             f"How to initialize the low dimensional embedding. Options are: 'spectral': use a spectral embedding of the fuzzy"
-            f" 1-skeleton 'random': assign initial embedding positions at random."
+            f" 1-skeleton, 'random': assign initial embedding positions at random."
         ),
         typeConverter=TypeConverters.toString,
     )
