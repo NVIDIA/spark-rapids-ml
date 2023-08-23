@@ -35,8 +35,7 @@ from .metrics.MulticlassMetrics import MulticlassMetrics
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
 
-import sys
-
+import numpy as np
 import pandas as pd
 from pyspark import Row, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
@@ -581,10 +580,10 @@ class LogisticRegressionClass(_CumlClass):
                 logger = get_logger(cls)
                 logger.warn(
                     "no regularization is not supported yet. if regParam is set to 0,"
-                    + "it will be mapped to smallest positive float sys.float_info.min"
+                    + "it will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny"
                 )
 
-                return 1.0 / sys.float_info.min
+                return 1.0 / np.finfo("float32").tiny.item()
             else:
                 return 1.0 / x
 

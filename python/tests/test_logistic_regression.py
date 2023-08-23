@@ -18,7 +18,6 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
         "Logistic Regression requires cuml 23.08.00 or above. Try upgrading cuml or ignoring this file in testing"
     )
 
-import sys
 import warnings
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
@@ -87,7 +86,9 @@ def test_toy_example(gpu_number: int) -> None:
         lr_regParam_zero.setProbabilityCol(probability_col)
 
         assert lr_regParam_zero.getRegParam() == 0
-        assert lr_regParam_zero.cuml_params["C"] == 1.0 / sys.float_info.min
+        assert (
+            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
+        )
         model_regParam_zero = lr_regParam_zero.fit(df)
         assert_transform(model_regParam_zero)
 
@@ -97,14 +98,16 @@ def test_toy_example(gpu_number: int) -> None:
         with pytest.warns():
             lr_regParam_zero.setRegParam(0.0)
         assert lr_regParam_zero.getRegParam() == 0.0
-        assert lr_regParam_zero.cuml_params["C"] == 1.0 / sys.float_info.min
+        assert (
+            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
+        )
 
 
 def test_params(tmp_path: str) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
-        "regParam": 0.0,  # will be mapped to sys.float_info.min
+        "regParam": 0.0,  # will be mapped to numpy.finfo('float32').tiny
         "tol": 1e-06,
         "fitIntercept": True,
     }
@@ -112,7 +115,9 @@ def test_params(tmp_path: str) -> None:
     default_cuml_params = {
         "max_iter": 100,
         "C": 1.0
-        / sys.float_info.min,  # TODO: support default value 0.0, i.e. no regularization
+        / np.finfo(
+            "float32"
+        ).tiny,  # TODO: support default value 0.0, i.e. no regularization
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -170,7 +175,7 @@ def test_classifier(
     gpu_number: int,
 ) -> None:
     tolerance = 0.001
-    reg_param = sys.float_info.min
+    reg_param = np.finfo("float32").tiny.item()
 
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
