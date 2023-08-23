@@ -327,6 +327,10 @@ class _CumlCommon(MLWritable, MLReadable):
             # if spark.task.resource.gpu.amount is not set, the default concurrent tasks
             # with gpu requirement will be 1, which means 2 training tasks will never
             # be scheduled into the same executor.
+            self.logger.warning(
+                "We expect spark.task.resource.gpu.amount to be configured as a fraction to "
+                "increase the parallelism of spark tasks"
+            )
             return True
 
         if task_gpu_amount == executor_gpu_amount:
@@ -1113,9 +1117,11 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         treqs = TaskResourceRequests().cpus(task_cores).resource("gpu", 1.0)
         rp = ResourceProfileBuilder().require(treqs).build
 
-        self.logger.info(
+        self.logger.warning(
             f"Transform tasks require the resource(cores={task_cores}, gpu=1.0) and there will be "
-            f"{concurrent_transform_tasks} transform tasks running at the same time."
+            f"{concurrent_transform_tasks} transform tasks running at the same time. But we suggest "
+            f"configuring spark.task.cpus={task_cores} and "
+            f"spark.task.resource.gpu.amount={1/concurrent_transform_tasks} to improve transform performance."
         )
 
         # TODO Do we need to coalesce partitions to num_workers*concurrent_transform_tasks
