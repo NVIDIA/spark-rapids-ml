@@ -93,9 +93,9 @@ from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
-    java_uid,
     dtype_to_pyspark_type,
     get_logger,
+    java_uid,
 )
 
 T = TypeVar("T")
