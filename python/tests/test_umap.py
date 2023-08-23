@@ -83,7 +83,6 @@ def _spark_umap_trustworthiness(
 ) -> float:
     umap_estimator = UMAP(
         n_neighbors=n_neighbors,
-        sample_fraction=sampling_ratio,
         random_state=42,
         init="random",
         num_workers=n_workers,
@@ -102,7 +101,7 @@ def _spark_umap_trustworthiness(
             )
 
         data_df = data_df.repartition(n_parts)
-        umap_estimator.setFeaturesCol(features_col)
+        umap_estimator.setFeaturesCol(features_col).setSampleFraction(sampling_ratio)
         umap_model = umap_estimator.fit(data_df)
         pdf = umap_model.transform(data_df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
@@ -202,8 +201,8 @@ def test_spark_umap(
 @pytest.mark.parametrize("supervised", [True])
 @pytest.mark.parametrize("dataset", ["digits"])
 @pytest.mark.parametrize("n_neighbors", [10])
-@pytest.mark.parametrize("dtype", cuml_supported_data_types)
-@pytest.mark.parametrize("feature_type", [pyspark_supported_feature_types[0]])
+@pytest.mark.parametrize("dtype", [cuml_supported_data_types[0]])
+@pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 def test_spark_umap_fast(
     n_parts: int,
     n_workers: int,
