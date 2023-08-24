@@ -35,8 +35,7 @@ from .metrics.MulticlassMetrics import MulticlassMetrics
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
 
-import sys
-
+import numpy as np
 import pandas as pd
 from pyspark import Row, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
@@ -94,6 +93,8 @@ from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
+    dtype_to_pyspark_type,
+    get_logger,
     java_uid,
 )
 
@@ -573,7 +574,20 @@ class LogisticRegressionClass(_CumlClass):
     def _param_value_mapping(
         cls,
     ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
-        return {"C": lambda x: 1.0 / x if x != 0.0 else 0.0}
+        def regParam_value_mapper(x: float) -> float:
+            # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
+            if x == 0.0:
+                logger = get_logger(cls)
+                logger.warn(
+                    "no regularization is not supported yet. if regParam is set to 0,"
+                    + "it will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny"
+                )
+
+                return 1.0 / np.finfo("float32").tiny.item()
+            else:
+                return 1.0 / x
+
+        return {"C": lambda x: regParam_value_mapper(x)}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -746,7 +760,7 @@ class LogisticRegression(
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
         maxIter: int = 100,
-        regParam: float = 0.0,  # NOTE: the default value of regParam is actually set to 1e-300 on GPU
+        regParam: float = 0.0,  # NOTE: the default value of regParam is actually mapped to sys.float_info.min on GPU
         tol: float = 1e-6,
         fitIntercept: bool = True,
         num_workers: Optional[int] = None,
@@ -754,14 +768,6 @@ class LogisticRegression(
         **kwargs: Any,
     ):
         super().__init__()
-
-        # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
-        if regParam == 0.0:
-            self.logger.warn(
-                "no regularization is not supported yet. regParam is set to 1e-300"
-            )
-            self.set_params(**{"regParam": sys.float_info.min})
-
         self.set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:

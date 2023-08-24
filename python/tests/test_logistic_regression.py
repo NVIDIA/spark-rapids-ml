@@ -18,7 +18,6 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
         "Logistic Regression requires cuml 23.08.00 or above. Try upgrading cuml or ignoring this file in testing"
     )
 
-import sys
 import warnings
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
@@ -68,26 +67,57 @@ def test_toy_example(gpu_number: int) -> None:
         )
         assert lr_model.intercept == pytest.approx(0, abs=1e-6)
 
-        preds_df_local = lr_model.transform(df).collect()
-        preds = [row["prediction"] for row in preds_df_local]
-        assert preds == [1.0, 1.0, 0.0, 0.0]
-        probs = [row["probs"] for row in preds_df_local]
-        assert len(probs) == len(preds)
-        assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
+        def assert_transform(model: LogisticRegressionModel) -> None:
+            preds_df_local = model.transform(df).collect()
+            preds = [row["prediction"] for row in preds_df_local]
+            assert preds == [1.0, 1.0, 0.0, 0.0]
+            probs = [row["probs"] for row in preds_df_local]
+            assert len(probs) == len(preds)
+            assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
+
+        assert_transform(lr_model)
+
+        # test with regParam set to 0
+        with pytest.warns():
+            lr_regParam_zero = LogisticRegression(
+                regParam=0.0,
+            )
+
+        lr_regParam_zero.setProbabilityCol(probability_col)
+
+        assert lr_regParam_zero.getRegParam() == 0
+        assert (
+            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
+        )
+        model_regParam_zero = lr_regParam_zero.fit(df)
+        assert_transform(model_regParam_zero)
+
+        lr_regParam_zero.setRegParam(0.1)
+        assert lr_regParam_zero.getRegParam() == 0.1
+        assert lr_regParam_zero.cuml_params["C"] == 1.0 / 0.1
+        with pytest.warns():
+            lr_regParam_zero.setRegParam(0.0)
+        assert lr_regParam_zero.getRegParam() == 0.0
+        assert (
+            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
+        )
 
 
 def test_params(tmp_path: str) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
-        "regParam": sys.float_info.min,  # TODO: support default value 0.0, i.e. no regularization
+        "regParam": 0.0,  # will be mapped to numpy.finfo('float32').tiny
         "tol": 1e-06,
         "fitIntercept": True,
     }
 
     default_cuml_params = {
         "max_iter": 100,
-        "C": 1.0 / sys.float_info.min,
+        "C": 1.0
+        / np.finfo(
+            "float32"
+        ).tiny,  # TODO: support default value 0.0, i.e. no regularization
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -145,7 +175,7 @@ def test_classifier(
     gpu_number: int,
 ) -> None:
     tolerance = 0.001
-    reg_param = sys.float_info.min
+    reg_param = np.finfo("float32").tiny.item()
 
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
@@ -268,11 +298,10 @@ def test_compat(
             *feature_cols
         )
 
+        assert _LogisticRegression().getRegParam() == 0.0
         if lr_types[0] is SparkLogisticRegression:
-            assert _LogisticRegression().getRegParam() == 0.0
             blor = _LogisticRegression(regParam=0.1, standardization=False)
         else:
-            assert _LogisticRegression().getRegParam() == sys.float_info.min
             warnings.warn("spark rapids ml does not accept standardization")
             blor = _LogisticRegression(regParam=0.1)
 
