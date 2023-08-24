@@ -887,10 +887,7 @@ class LogisticRegression(
             # should never get here
             raise Exception("Unable to determine input column(s).")
 
-
-        if isinstance(
-            dataset.schema[label_col].dataType, DoubleType
-        ):
+        if isinstance(dataset.schema[label_col].dataType, DoubleType):
             select_cols.append(col(label_col).cast(feature_type()).alias(alias.label))
         else:
             select_cols.append(col(label_col).alias(alias.label))

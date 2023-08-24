@@ -973,7 +973,6 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
     ) -> DataFrame:
         """Internal API to support transform and evaluation in a single pass"""
         dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
-        
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -988,7 +987,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         if evaluate_func:
             dataset = dataset.select(alias.label, *select_cols)
         else:
-            dataset = dataset.select(*select_cols)            
+            dataset = dataset.select(*select_cols)
 
         array_order = self._transform_array_order()
 
