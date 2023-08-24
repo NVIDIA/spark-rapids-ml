@@ -9,7 +9,7 @@ from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.sql import Row
 from pyspark.sql.functions import array, col
 
@@ -161,7 +161,7 @@ def test_params(tmp_path: str) -> None:
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("data_type", [np.float32, np.float64])
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize("n_classes", [2])
 @pytest.mark.slow
@@ -210,14 +210,10 @@ def test_classifier(
 
         # test coefficients and intercepts
         assert spark_lr_model.n_cols == cu_lr.n_cols
-        assert spark_lr_model.dtype == cu_lr.dtype
+        assert spark_lr_model.dtype == "float32"
 
         assert array_equal(np.array(spark_lr_model.coef_), cu_lr.coef_, tolerance)
         assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)
-
-        # test coefficients and intercepts
-        assert spark_lr_model.n_cols == cu_lr.n_cols
-        assert spark_lr_model.dtype == cu_lr.dtype
 
         assert len(spark_lr_model.coef_) == 1
         assert len(cu_lr.coef_) == 1
@@ -347,7 +343,9 @@ def test_compat(
         else:
             assert not blor_model.hasSummary
 
-        output = blor_model.transform(bdf).head()
+        output_df = blor_model.transform(bdf)
+        assert isinstance(output_df.schema["features"].dataType, VectorUDT)
+        output = output_df.head()
         assert output.prediction == 1.0
 
         assert array_equal(

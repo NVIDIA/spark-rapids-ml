@@ -20,7 +20,7 @@ import pytest
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.ml.param import Param
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
@@ -442,7 +442,9 @@ def test_linear_regression_spark_compat(
             model.predict(example.features)
 
         model.setPredictionCol("prediction")
-        output = model.transform(df).head()
+        output_df = model.transform(df)
+        assert isinstance(output_df.schema["features"].dataType, VectorUDT)
+        output = output_df.head()
         # Row(weight=1.0, label=2.0374512672424316, features=DenseVector([-0.2052, 1.4941]), prediction=2.037452415464224)
         assert np.isclose(output.prediction, 2.037452415464224)
 

@@ -729,11 +729,11 @@ class LinearRegressionModel(
 
         return _construct_lr, _predict, self.calculate_regression_metrics
 
-    def _transform(self, dataset: DataFrame) -> DataFrame:
-        df = super()._transform(dataset)
-        return df.withColumn(
-            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
-        )
+    # def _transform(self, dataset: DataFrame) -> DataFrame:
+    #     df = super()._transform(dataset)
+    #     return df.withColumn(
+    #         self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
+    #     )
 
     @classmethod
     def _combine(
