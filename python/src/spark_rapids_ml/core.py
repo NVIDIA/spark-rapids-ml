@@ -309,7 +309,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
     def _pre_process_data(
         self, dataset: DataFrame
     ) -> Tuple[
-        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+        List[Column],
+        Optional[List[str]],
+        int,
+        Union[Type[FloatType], Type[DoubleType]],
     ]:
         select_cols = []
 
@@ -926,33 +929,36 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
     def _pre_process_data(
         self, dataset: DataFrame
-    ) -> Tuple[DataFrame, List[str], bool]:
+    ) -> Tuple[DataFrame, List[str], bool, List[str]]:
         """Pre-handle the dataset before transform.
 
         Please note that, this function just transforms the input column if necessary, and
         it will keep the unused columns.
 
-        return (dataset, list of feature names, bool value to indicate if it is multi-columns input)
+        return (dataset, list of feature names, bool value to indicate if it is multi-columns input, list of temporary columns to be dropped)
         """
         select_cols = []
+        tmp_cols = []
         input_is_multi_cols = True
 
         input_col, input_cols = self._get_input_columns()
 
         if input_col is not None:
-            if isinstance(dataset.schema[input_col].dataType, VectorUDT):
+            input_col_type = dataset.schema[input_col].dataType
+            if isinstance(input_col_type, VectorUDT):
                 # Vector type
                 # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
-                tmp_name = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
-                dataset = (
-                    dataset.withColumnRenamed(input_col, tmp_name)
-                    .withColumn(input_col, vector_to_array(col(tmp_name)))
-                    .drop(tmp_name)
+                tmp_input_col = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
+                dataset = dataset.withColumn(
+                    tmp_input_col, vector_to_array(col(input_col))
                 )
-            elif not isinstance(dataset.schema[input_col].dataType, ArrayType):
-                # Array type
+                select_cols.append(tmp_input_col)
+                tmp_cols.append(tmp_input_col)
+            elif isinstance(input_col_type, ArrayType):
+                select_cols.append(input_col)
+            elif not isinstance(input_col_type, ArrayType):
+                # not Array type
                 raise ValueError("Unsupported input type.")
-            select_cols.append(input_col)
             input_is_multi_cols = False
         elif input_cols is not None:
             select_cols.extend(input_cols)
@@ -960,13 +966,13 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             # should never get here
             raise Exception("Unable to determine input column(s).")
 
-        return dataset, select_cols, input_is_multi_cols
+        return dataset, select_cols, input_is_multi_cols, tmp_cols
 
     def _transform_evaluate_internal(
         self, dataset: DataFrame, schema: Union[StructType, str]
     ) -> DataFrame:
         """Internal API to support transform and evaluation in a single pass"""
-        dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
+        dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -978,6 +984,10 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         ) = self._get_cuml_transform_func(
             dataset, transform_evaluate.transform_evaluate
         )
+        if evaluate_func:
+            dataset = dataset.select(alias.label, *select_cols)
+        else:
+            dataset = dataset.select(*select_cols)
 
         array_order = self._transform_array_order()
 
@@ -1096,7 +1106,9 @@ class _CumlModelWithColumns(_CumlModel):
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
-        dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
+        dataset, select_cols, input_is_multi_cols, tmp_cols = self._pre_process_data(
+            dataset
+        )
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -1157,18 +1169,16 @@ class _CumlModelWithColumns(_CumlModel):
             # 3. Drop the unused column
             dataset = dataset.drop(pred_struct_col_name)
 
-            return dataset
+            return dataset.drop(*tmp_cols)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
 
-        pyspark_type = dtype_to_pyspark_type(self.dtype)
-
-        schema = f"{pred.prediction} {pyspark_type}"
+        schema = f"{pred.prediction} double"
         if self._has_probability_col():
-            schema = f"{schema}, {pred.probability} array<{pyspark_type}>"
+            schema = f"{schema}, {pred.probability} array<double>"
         else:
-            schema = f"{pyspark_type}"
+            schema = f"double"
 
         return schema
 
