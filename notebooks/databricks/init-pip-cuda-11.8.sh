@@ -3,7 +3,7 @@
 SPARK_RAPIDS_ML_ZIP=/dbfs/path/to/zip/file
 # IMPORTANT: specify RAPIDS_VERSION fully 23.8.0 and not 23.8
 # also RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 23.8.0 and not 23.08.0)
-# while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.08.1 and not 23.6.0)
+# while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.08.1 and not 23.8.1)
 RAPIDS_VERSION=23.8.0
 SPARK_RAPIDS_VERSION=23.08.1
 
