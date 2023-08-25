@@ -712,7 +712,7 @@ class LinearRegressionModel(
             intercepts = intercept_ if isinstance(intercept_, list) else [intercept_]
 
             for i in range(len(coefs)):
-                lr = LinearRegressionMG(output_type="numpy")
+                lr = LinearRegressionMG(output_type="numpy", copy_X=False)
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )
