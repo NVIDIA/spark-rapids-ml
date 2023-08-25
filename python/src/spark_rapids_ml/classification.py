@@ -840,19 +840,57 @@ class LogisticRegression(
         ) = super()._pre_process_data(dataset)
 
         # if input format is vectorUDT, convert data type to float32
-        # TODO: support float64
-        input_col, _ = self._get_input_columns()
+        # TODO: support float64 optionally, apply this conversion to all algos
+        input_col, input_cols = self._get_input_columns()
         label_col = self.getLabelCol()
 
-        if input_col is not None and isinstance(
-            dataset.schema[input_col].dataType, VectorUDT
-        ):
-            select_cols[0] = vector_to_array(col(input_col), dtype="float32").alias(
-                alias.data
-            )
+        select_cols = []
 
-            select_cols[1] = col(label_col).cast(FloatType()).alias(alias.label)
-            feature_type = FloatType
+        feature_type = FloatType
+
+        if input_col is not None:
+            # Single Column
+            input_datatype = dataset.schema[input_col].dataType
+
+            if isinstance(input_datatype, ArrayType):
+                # Array type
+                if isinstance(input_datatype.elementType, DoubleType):
+                    select_cols.append(
+                        col(input_col).cast(ArrayType(feature_type())).alias(alias.data)
+                    )
+                else:
+                    select_cols.append(col(input_col).alias(alias.data))
+            elif isinstance(input_datatype, VectorUDT):
+                # Vector type
+                select_cols.append(
+                    vector_to_array(col(input_col), "float32").alias(alias.data)  # type: ignore
+                )
+            else:
+                raise ValueError("Unsupported input type.")
+
+        elif input_cols is not None:
+            for c in input_cols:
+                col_type = dataset.schema[c].dataType
+                if isinstance(col_type, IntegralType):
+                    # Convert integral type to float.
+                    select_cols.append(col(c).cast(feature_type()).alias(c))
+                elif isinstance(col_type, FloatType):
+                    select_cols.append(col(c))
+                elif isinstance(col_type, DoubleType):
+                    select_cols.append(col(c).cast(feature_type()))
+                else:
+                    raise ValueError(
+                        "All columns must be integral types or float/double types."
+                    )
+
+        else:
+            # should never get here
+            raise Exception("Unable to determine input column(s).")
+
+        if isinstance(dataset.schema[label_col].dataType, DoubleType):
+            select_cols.append(col(label_col).cast(feature_type()).alias(alias.label))
+        else:
+            select_cols.append(col(label_col).alias(alias.label))
 
         return select_cols, multi_col_names, dimension, feature_type
 

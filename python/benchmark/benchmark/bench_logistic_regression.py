@@ -104,18 +104,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             lambda: eval_df_with_preds.agg(sum(prediction_col)).collect(),
         )
 
-        eval_df_with_preds = eval_df_with_preds.select(
-            col(prediction_col).cast("double").alias(prediction_col),
-            label_name,
-            col(probability_col),
-        )
-
-        train_df_with_preds = train_df_with_preds.select(
-            col(prediction_col).cast("double").alias(prediction_col),
-            label_name,
-            col(probability_col),
-        )
-
         from pyspark.ml.evaluation import (
             BinaryClassificationEvaluator,
             MulticlassClassificationEvaluator,
