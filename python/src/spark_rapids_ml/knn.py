@@ -278,6 +278,7 @@ class NearestNeighbors(
             )
         )
         model._num_workers = self._num_workers
+        model._float32_inputs = self._float32_inputs
         self._copyValues(model)
         self._copy_cuml_params(model)  # type: ignore
         return model

@@ -143,7 +143,7 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             sorted_centers = sorted(model.cluster_centers_, key=lambda p: p)
             assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
             assert sorted_centers[1] == pytest.approx([3.5, 2.5], 0.001)
-            assert model.dtype == "float64"
+            assert model.dtype == "float32"
             assert model.n_cols == 2
 
         def assert_cuml_spark_model(

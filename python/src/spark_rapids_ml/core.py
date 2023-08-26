@@ -152,6 +152,7 @@ class _CumlEstimatorWriter(MLWriter):
             extraMetadata={
                 "_cuml_params": self.instance._cuml_params,
                 "_num_workers": self.instance._num_workers,
+                "_float32_inputs": self.instance._float32_inputs,
             },
         )  # type: ignore
 
@@ -172,6 +173,7 @@ class _CumlEstimatorReader(MLReader):
         DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
         cuml_estimator._cuml_params = metadata["_cuml_params"]
         cuml_estimator._num_workers = metadata["_num_workers"]
+        cuml_estimator._float32_inputs = metadata["_float32_inputs"]
         return cuml_estimator
 
 
@@ -192,6 +194,7 @@ class _CumlModelWriter(MLWriter):
             extraMetadata={
                 "_cuml_params": self.instance._cuml_params,
                 "_num_workers": self.instance._num_workers,
+                "_float32_inputs": self.instance._float32_inputs,
             },
         )
         data_path = os.path.join(path, "data")
@@ -218,6 +221,7 @@ class _CumlModelReader(MLReader):
         DefaultParamsReader.getAndSetParams(instance, metadata)
         instance._cuml_params = metadata["_cuml_params"]
         instance._num_workers = metadata["_num_workers"]
+        instance._float32_inputs = metadata["_float32_inputs"]
         return instance
 
 
@@ -328,37 +332,59 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
             if isinstance(input_datatype, ArrayType):
                 # Array type
-                select_cols.append(col(input_col).alias(alias.data))
-                if isinstance(input_datatype.elementType, DoubleType):
+                if (
+                    isinstance(input_datatype.elementType, DoubleType)
+                    and not self._float32_inputs
+                ):
+                    select_cols.append(col(input_col).alias(alias.data))
                     feature_type = DoubleType
+                elif (
+                    isinstance(input_datatype.elementType, DoubleType)
+                    and self._float32_inputs
+                ):
+                    select_cols.append(
+                        col(input_col).cast(ArrayType(feature_type())).alias(alias.data)
+                    )
+                else:
+                    # FloatType array
+                    select_cols.append(col(input_col).alias(alias.data))
             elif isinstance(input_datatype, VectorUDT):
                 # Vector type
+                vector_element_type = "float32" if self._float32_inputs else "float64"
                 select_cols.append(
-                    vector_to_array(col(input_col)).alias(alias.data)  # type: ignore
+                    vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
                 )
-                feature_type = DoubleType
+                if not self._float32_inputs:
+                    feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
 
             dimension = len(dataset.first()[input_col])  # type: ignore
 
         elif input_cols is not None:
+            # if self._float32_inputs is False and if any columns are double type, convert all to double type
+            # otherwise convert all to float type
+            any_double_types = any(
+                [isinstance(dataset.schema[c].dataType, DoubleType) for c in input_cols]
+            )
+            if not self._float32_inputs and any_double_types:
+                feature_type = DoubleType
             dimension = len(input_cols)
             for c in input_cols:
                 col_type = dataset.schema[c].dataType
-                if isinstance(col_type, IntegralType):
-                    # Convert integral type to float.
-                    select_cols.append(col(c).cast(feature_type()).alias(c))
-                elif isinstance(col_type, FloatType):
-                    select_cols.append(col(c))
-                elif isinstance(col_type, DoubleType):
-                    select_cols.append(col(c))
-                    feature_type = DoubleType
+                if (
+                    isinstance(col_type, IntegralType)
+                    or isinstance(col_type, FloatType)
+                    or isinstance(col_type, DoubleType)
+                ):
+                    if not isinstance(col_type, feature_type):
+                        select_cols.append(col(c).cast(feature_type()).alias(c))
+                    else:
+                        select_cols.append(col(c))
                 else:
                     raise ValueError(
                         "All columns must be integral types or float/double types."
                     )
-
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")
@@ -774,6 +800,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         for index in range(len(models)):
             model = self._create_pyspark_model(rows[index])
             model._num_workers = self._num_workers
+            model._float32_inputs = self._float32_inputs
 
             if paramMaps is not None:
                 self._copyValues(model, paramMaps[index])
@@ -951,23 +978,65 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         if input_col is not None:
             input_col_type = dataset.schema[input_col].dataType
+            tmp_input_col = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
             if isinstance(input_col_type, VectorUDT):
                 # Vector type
                 # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
-                tmp_input_col = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
+                vector_element_type = "float32" if self._float32_inputs else "float64"
                 dataset = dataset.withColumn(
-                    tmp_input_col, vector_to_array(col(input_col))
+                    tmp_input_col, vector_to_array(col(input_col), vector_element_type)
                 )
                 select_cols.append(tmp_input_col)
                 tmp_cols.append(tmp_input_col)
             elif isinstance(input_col_type, ArrayType):
-                select_cols.append(input_col)
+                if (
+                    isinstance(input_col_type.elementType, DoubleType)
+                    and not self._float32_inputs
+                ):
+                    select_cols.append(input_col)
+                elif (
+                    isinstance(input_col_type.elementType, DoubleType)
+                    and self._float32_inputs
+                ):
+                    dataset = dataset.withColumn(
+                        tmp_input_col, col(input_col).cast(ArrayType(FloatType()))
+                    )
+                    select_cols.append(tmp_input_col)
+                    tmp_cols.append(tmp_input_col)
+                else:
+                    # FloatType array
+                    select_cols.append(input_col)
             elif not isinstance(input_col_type, ArrayType):
                 # not Array type
                 raise ValueError("Unsupported input type.")
             input_is_multi_cols = False
         elif input_cols is not None:
-            select_cols.extend(input_cols)
+            any_double_types = any(
+                [isinstance(dataset.schema[c].dataType, DoubleType) for c in input_cols]
+            )
+            feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
+            if not self._float32_inputs and any_double_types:
+                feature_type = DoubleType
+            for c in input_cols:
+                col_type = dataset.schema[c].dataType
+                if (
+                    isinstance(col_type, IntegralType)
+                    or isinstance(col_type, FloatType)
+                    or isinstance(col_type, DoubleType)
+                ):
+                    if not isinstance(col_type, feature_type):
+                        tmp_input_col = f"{c}_c3BhcmstcmFwaWRzLW1sCg=="
+                        dataset = dataset.withColumn(
+                            tmp_input_col, col(c).cast(feature_type())
+                        )
+                        select_cols.append(tmp_input_col)
+                        tmp_cols.append(tmp_input_col)
+                    else:
+                        select_cols.append(c)
+                else:
+                    raise ValueError(
+                        "All columns must be integral types or float/double types."
+                    )
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")

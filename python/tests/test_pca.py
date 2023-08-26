@@ -232,7 +232,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
             assert model.dtype == loaded_model.dtype
             assert model.n_cols == model.n_cols
             assert model.n_cols == 3
-            assert model.dtype == "float64"
+            assert model.dtype == "float32"
 
         assert_cuml_model(pca_model, pca_model_loaded)
 

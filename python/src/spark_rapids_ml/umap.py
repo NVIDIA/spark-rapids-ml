@@ -1059,6 +1059,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
     ]:
+        # cuML UMAP only support float32
+        self._float32_inputs = True
+
         (
             select_cols,
             multi_col_names,
@@ -1227,6 +1230,7 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
             extraMetadata={
                 "_cuml_params": self.instance._cuml_params,
                 "_num_workers": self.instance._num_workers,
+                "_float32_inputs": self.instance._float32_inputs,
             },
         )
         data_path = os.path.join(path, "data")
@@ -1277,4 +1281,5 @@ class _CumlModelReaderNumpy(_CumlModelReader):
         DefaultParamsReader.getAndSetParams(instance, metadata)
         instance._cuml_params = metadata["_cuml_params"]
         instance._num_workers = metadata["_num_workers"]
+        instance._float32_inputs = metadata["_float32_inputs"]
         return instance

@@ -196,6 +196,7 @@ def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(10, 2)], ids=idfn)
 @pytest.mark.parametrize("reg", [0.0, 0.7])
+@pytest.mark.parametrize("float32_inputs", [True, False])
 def test_linear_regression_basic(
     gpu_number: int,
     tmp_path: str,
@@ -203,6 +204,7 @@ def test_linear_regression_basic(
     data_type: np.dtype,
     data_shape: Tuple[int, int],
     reg: float,
+    float32_inputs: bool,
 ) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
@@ -214,7 +216,7 @@ def test_linear_regression_basic(
             spark, feature_type, data_type, X, y
         )
 
-        lr = LinearRegression(num_workers=gpu_number)
+        lr = LinearRegression(num_workers=gpu_number, float32_inputs=float32_inputs)
         lr.setRegParam(reg)
 
         lr.setFeaturesCol(features_col)
@@ -241,7 +243,9 @@ def test_linear_regression_basic(
             assert lhs.intercept == rhs.intercept
 
             # Vector type will be cast to array(double)
-            if feature_type == "vector":
+            if float32_inputs:
+                assert lhs.dtype == "float32"
+            elif feature_type == "vector" and not float32_inputs:
                 assert lhs.dtype == np.dtype(np.float64).name
             else:
                 assert lhs.dtype == np.dtype(data_type).name
@@ -435,7 +439,7 @@ def test_linear_regression_spark_compat(
         assert array_equal(coefficients, expected_coefficients)
 
         intercept = model.intercept
-        assert np.isclose(intercept, -3.3089753423400734e-07)
+        assert np.isclose(intercept, -3.3089753423400734e-07, atol=1.0e-6)
 
         example = df.head()
         if example:

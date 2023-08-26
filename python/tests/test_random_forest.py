@@ -224,11 +224,8 @@ def test_random_forest_basic(
         def assert_model(lhs: RandomForestModel, rhs: RandomForestModel) -> None:
             assert lhs.cuml_params == rhs.cuml_params
 
-            # Vector type will be cast to array(double)
-            if feature_type == "vector":
-                assert lhs.dtype == np.dtype(np.float64).name
-            else:
-                assert lhs.dtype == np.dtype(data_type).name
+            # Vector and array(double) type will be cast to array(float) by default
+            assert lhs.dtype == np.dtype(np.float32).name
 
             assert lhs.dtype == rhs.dtype
             assert lhs.n_cols == rhs.n_cols
