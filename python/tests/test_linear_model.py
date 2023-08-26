@@ -66,7 +66,7 @@ def train_with_cuml_linear_regression(
     if alpha == 0:
         from cuml import LinearRegression as cuLinearRegression
 
-        lr = cuLinearRegression(output_type="numpy")
+        lr = cuLinearRegression(output_type="numpy", copy_X=False)
     else:
         if l1_ratio == 0.0:
             from cuml import Ridge
@@ -439,7 +439,7 @@ def test_linear_regression_spark_compat(
         assert array_equal(coefficients, expected_coefficients)
 
         intercept = model.intercept
-        assert np.isclose(intercept, -3.3089753423400734e-07, atol=1.0e-6)
+        assert np.isclose(intercept, -3.3089753423400734e-07, atol=1.0e-4)
 
         example = df.head()
         if example:

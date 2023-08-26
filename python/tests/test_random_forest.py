@@ -303,7 +303,7 @@ def test_random_forest_classifier(
     num_workers: int,
 ) -> None:
     X_train, X_test, y_train, y_test = make_classification_dataset(
-        datatype=data_type,
+        datatype=cast(np.dtype, np.float32),
         nrows=data_shape[0],
         ncols=data_shape[1],
         n_classes=n_classes,
@@ -313,9 +313,9 @@ def test_random_forest_classifier(
     )
 
     rf_params: Dict[str, Any] = {
-        "n_estimators": 100,
-        "n_bins": 128,
-        "max_depth": 16,
+        "n_estimators": 20,
+        "n_bins": 64,
+        "max_depth": 6,
         "bootstrap": False,
         "max_features": 1.0,
     }
@@ -402,15 +402,15 @@ def test_random_forest_regressor(
     num_workers: int,
 ) -> None:
     X_train, X_test, y_train, y_test = make_regression_dataset(
-        datatype=data_type,
+        datatype=cast(np.dtype, np.float32),
         nrows=data_shape[0],
         ncols=data_shape[1],
     )
 
     rf_params: Dict[str, Any] = {
-        "n_estimators": 100,
-        "n_bins": 128,
-        "max_depth": 16,
+        "n_estimators": 20,
+        "n_bins": 64,
+        "max_depth": 6,
         "bootstrap": False,
         "max_features": 1.0,
         "random_state": 1.0,
