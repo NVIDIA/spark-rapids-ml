@@ -123,7 +123,7 @@ def _get_gpu_id(task_context: TaskContext) -> int:
 
     if num_assigned > 1:
         logger = get_logger(_get_gpu_id)
-        logger.warn(
+        logger.warning(
             f"Task got assigned {num_assigned} GPUs but using only 1.  This could be a waste of GPU resources."
         )
 

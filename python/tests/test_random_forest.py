@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from cuml import accuracy_score
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
@@ -116,7 +117,9 @@ def test_default_cuml_params(Estimator: RandomForest) -> None:
 
 
 @pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
-def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
+def test_random_forest_params(
+    tmp_path: str, RFEstimator: RandomForest, caplog: LogCaptureFixture
+) -> None:
     # Default params
     default_spark_params = {
         "maxBins": 32,
@@ -166,6 +169,11 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
     if RFEstimator == RandomForestRegressor:
         est = RFEstimator(impurity="variance")
         est.cuml_params["split_criterion"] == "mse"
+
+    # make sure no warning when enabling float64 inputs
+    rf_float32 = RFEstimator(float32_inputs=False)
+    assert "float32_inputs to False" not in caplog.text
+    assert not rf_float32._float32_inputs
 
 
 rf_est_model_classes = [

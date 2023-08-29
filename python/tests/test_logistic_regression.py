@@ -3,6 +3,7 @@ from typing import Any, Dict, Tuple, Type, TypeVar
 import cuml
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from packaging import version
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
@@ -32,7 +33,7 @@ from .utils import (
 )
 
 
-def test_toy_example(gpu_number: int) -> None:
+def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
     data = [
@@ -78,10 +79,11 @@ def test_toy_example(gpu_number: int) -> None:
         assert_transform(lr_model)
 
         # test with regParam set to 0
-        with pytest.warns():
-            lr_regParam_zero = LogisticRegression(
-                regParam=0.0,
-            )
+        caplog.clear()
+        lr_regParam_zero = LogisticRegression(
+            regParam=0.0,
+        )
+        assert "no regularization is not supported yet" in caplog.text
 
         lr_regParam_zero.setProbabilityCol(probability_col)
 
@@ -95,15 +97,18 @@ def test_toy_example(gpu_number: int) -> None:
         lr_regParam_zero.setRegParam(0.1)
         assert lr_regParam_zero.getRegParam() == 0.1
         assert lr_regParam_zero.cuml_params["C"] == 1.0 / 0.1
-        with pytest.warns():
-            lr_regParam_zero.setRegParam(0.0)
+
+        caplog.clear()
+        lr_regParam_zero.setRegParam(0.0)
+        assert "no regularization is not supported yet" in caplog.text
+
         assert lr_regParam_zero.getRegParam() == 0.0
         assert (
             lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
         )
 
 
-def test_params(tmp_path: str) -> None:
+def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
@@ -154,6 +159,11 @@ def test_params(tmp_path: str) -> None:
     spark_lr.write().overwrite().save(estimator_path)
     loaded_lr = LogisticRegression.load(estimator_path)
     assert_params(loaded_lr, expected_spark_params, expected_cuml_params)
+
+    # float32_inputs warn, logistic only accepts float32
+    lr_float32 = LogisticRegression(float32_inputs=False)
+    assert "float32_inputs to False" in caplog.text
+    assert lr_float32._float32_inputs
 
 
 # TODO support float64

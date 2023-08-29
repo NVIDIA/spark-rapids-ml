@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import warnings
 from typing import Any, Dict, List, Tuple, Type, TypeVar, cast
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
@@ -108,7 +110,9 @@ def test_default_cuml_params() -> None:
 
 
 @pytest.mark.parametrize("reg", [0.0, 0.7])
-def test_linear_regression_params(tmp_path: str, reg: float) -> None:
+def test_linear_regression_params(
+    tmp_path: str, reg: float, caplog: LogCaptureFixture
+) -> None:
     # Default params
     default_spark_params = {
         "elasticNetParam": 0.0,
@@ -166,6 +170,11 @@ def test_linear_regression_params(tmp_path: str, reg: float) -> None:
         ValueError, match="Value 'l-bfgs' for 'solver' param is unsupported"
     ):
         unsupported_lr = LinearRegression(**spark_params)
+
+    # make sure no warning when enabling float64 inputs
+    lr_float32 = LinearRegression(float32_inputs=False)
+    assert "float32_inputs to False" not in caplog.text
+    assert not lr_float32._float32_inputs
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])

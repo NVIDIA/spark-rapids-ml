@@ -578,7 +578,7 @@ class LogisticRegressionClass(_CumlClass):
             # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
             if x == 0.0:
                 logger = get_logger(cls)
-                logger.warn(
+                logger.warning(
                     "no regularization is not supported yet. if regParam is set to 0,"
                     + "it will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny"
                 )
@@ -767,6 +767,11 @@ class LogisticRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
+        if not self._input_kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
+            )
+            self._input_kwargs.pop("float32_inputs")
         super().__init__()
         self.set_params(**self._input_kwargs)
 
@@ -832,9 +837,6 @@ class LogisticRegression(
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
     ]:
-        # TODO: remove when float64 support is added
-        self._float32_inputs = True
-
         (
             select_cols,
             multi_col_names,

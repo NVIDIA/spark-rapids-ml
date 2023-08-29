@@ -778,6 +778,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
+        if not kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
+            )
+            kwargs.pop("float32_inputs")
         self.set_params(**kwargs)
         max_records_per_batch_str = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
@@ -1059,9 +1064,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     ) -> Tuple[
         List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
     ]:
-        # cuML UMAP only support float32
-        self._float32_inputs = True
-
         (
             select_cols,
             multi_col_names,

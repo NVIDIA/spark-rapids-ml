@@ -30,7 +30,7 @@ from typing import (
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
-from .utils import _is_local
+from .utils import _is_local, get_logger
 
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap

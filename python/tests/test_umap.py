@@ -20,6 +20,7 @@ from typing import List, Tuple, Union
 import cupy as cp
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from cuml.metrics import trustworthiness
 from pyspark.sql.functions import array
 from sklearn.datasets import load_digits, load_iris
@@ -213,6 +214,7 @@ def test_spark_umap_fast(
     n_neighbors: int,
     dtype: np.dtype,
     feature_type: str,
+    caplog: LogCaptureFixture,
 ) -> None:
     result = _run_spark_test(
         n_parts,
@@ -240,6 +242,14 @@ def test_spark_umap_fast(
         )
 
     assert result
+
+    assert UMAP()._float32_inputs
+
+    # float32_inputs warn, umap only accepts float32
+    umap_float32 = UMAP(float32_inputs=False)
+    # float32_inputs warn, umap only accepts float32
+    assert "float32_inputs to False" in caplog.text
+    assert umap_float32._float32_inputs
 
 
 def test_umap_estimator_persistence(tmp_path: str) -> None:
@@ -273,6 +283,7 @@ def test_umap_estimator_persistence(tmp_path: str) -> None:
     default_umap.write().overwrite().save(estimator_path)
     loaded_umap = UMAP.load(estimator_path)
     assert_params(loaded_umap, {}, default_cuml_params)
+    assert loaded_umap._float32_inputs
 
 
 def test_umap_model_persistence(tmp_path: str) -> None:

@@ -56,7 +56,7 @@ from .core import (
     transform_evaluate,
 )
 from .params import P, _CumlClass, _CumlParams
-from .utils import _concat_and_free
+from .utils import _concat_and_free, get_logger
 
 
 class NearestNeighborsClass(_CumlClass):
@@ -252,6 +252,12 @@ class NearestNeighbors(
     """
 
     def __init__(self, **kwargs: Any) -> None:
+        if not kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
+            )
+            kwargs.pop("float32_inputs")
+
         super().__init__()
         self.set_params(**kwargs)
         self._label_isdata = 0
