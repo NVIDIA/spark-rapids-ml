@@ -3,6 +3,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pyspark.sql import DataFrame
 from sklearn.datasets import make_blobs
 
@@ -19,7 +20,7 @@ from .utils import (
 )
 
 
-def test_default_cuml_params() -> None:
+def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
     from cuml.neighbors.nearest_neighbors_mg import (
         NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
@@ -40,6 +41,11 @@ def test_default_cuml_params() -> None:
     )
     spark_params = NearestNeighbors()._get_cuml_params_default()
     assert cuml_params == spark_params
+
+    # float32_inputs warn, NearestNeighbors only accepts float32
+    nn_float32 = NearestNeighbors(float32_inputs=False)
+    assert "float32_inputs to False" in caplog.text
+    assert nn_float32._float32_inputs
 
 
 def test_example(gpu_number: int, tmp_path: str) -> None:

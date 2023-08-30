@@ -778,6 +778,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
+        if not kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
+            )
+            kwargs.pop("float32_inputs")
         self.set_params(**kwargs)
         max_records_per_batch_str = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
@@ -1227,6 +1232,7 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
             extraMetadata={
                 "_cuml_params": self.instance._cuml_params,
                 "_num_workers": self.instance._num_workers,
+                "_float32_inputs": self.instance._float32_inputs,
             },
         )
         data_path = os.path.join(path, "data")
@@ -1277,4 +1283,5 @@ class _CumlModelReaderNumpy(_CumlModelReader):
         DefaultParamsReader.getAndSetParams(instance, metadata)
         instance._cuml_params = metadata["_cuml_params"]
         instance._num_workers = metadata["_num_workers"]
+        instance._float32_inputs = metadata["_float32_inputs"]
         return instance
