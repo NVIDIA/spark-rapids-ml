@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Generator, List, Tuple, Type, TypeVar
+from typing import List, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
