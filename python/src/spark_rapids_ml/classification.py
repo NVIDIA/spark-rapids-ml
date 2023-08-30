@@ -124,8 +124,16 @@ class _RFClassifierParams(
         return self._set(rawPredictionCol=value)
 
 
+class _RandomForestClassifierClass(_RandomForestClass):
+    @classmethod
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
+        mapping = super()._param_mapping()
+        mapping["rawPredictionCol"] = ""
+        return mapping
+
+
 class RandomForestClassifier(
-    _RandomForestClass,
+    _RandomForestClassifierClass,
     _RandomForestEstimator,
     _RandomForestCumlParams,
     _RFClassifierParams,
