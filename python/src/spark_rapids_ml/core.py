@@ -74,6 +74,7 @@ from .utils import (
     _get_gpu_id,
     _get_spark_session,
     _is_local,
+    _is_standalone_or_localcluster,
     dtype_to_pyspark_type,
     get_logger,
 )
@@ -673,8 +674,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
                 "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
             )
             return rdd
-        elif _is_local(sc):
-            # Local mode doesn't support stage level scheduling
+        elif not _is_standalone_or_localcluster(sc):
+            # Only standalone or local-cluster supports stage-level scheduling with dynamic
+            # allocation disabled.
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml only works on spark standalone or "
+                "local cluster mode"
+            )
             return rdd
 
         executor_cores = sc.getConf().get("spark.executor.cores")
@@ -705,7 +711,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
             # be scheduled into the same executor.
             return rdd
 
-        if task_gpu_amount == executor_gpu_amount:
+        if float(task_gpu_amount) == float(executor_gpu_amount):
             self.logger.warning(
                 f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
                 f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
