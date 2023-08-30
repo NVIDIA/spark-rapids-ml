@@ -73,6 +73,13 @@ def _is_local(sc: SparkContext) -> bool:
     return sc._jsc.sc().isLocal()  # type: ignore
 
 
+def _is_standalone_or_localcluster(sc: SparkContext) -> bool:
+    master = sc.getConf().get("spark.master")
+    return master is not None and (
+        master.startswith("spark://") or master.startswith("local-cluster")
+    )
+
+
 def _str_or_numerical(x: str) -> Union[str, float, int]:
     """
     Convert to int if x is str representation of integer,
