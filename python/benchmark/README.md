@@ -9,3 +9,8 @@ They can also be run on the Databricks AWS hosted Spark service.  See [these ins
 
 ![Databricks AWS benchmarking results](databricks/results/running_times.png)
 
+## Other CSPs
+Click on the below for instructions on running the benchmarking scripts in the respective CSP Spark environments 
+- [GCP Dataproc](dataproc/README.md)
+- [AWS EMR](aws-emr/README.md)
+
