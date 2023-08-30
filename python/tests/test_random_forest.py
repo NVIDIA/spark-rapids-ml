@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from cuml import accuracy_score
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
@@ -116,7 +117,9 @@ def test_default_cuml_params(Estimator: RandomForest) -> None:
 
 
 @pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
-def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
+def test_random_forest_params(
+    tmp_path: str, RFEstimator: RandomForest, caplog: LogCaptureFixture
+) -> None:
     # Default params
     default_spark_params = {
         "maxBins": 32,
@@ -166,6 +169,11 @@ def test_random_forest_params(tmp_path: str, RFEstimator: RandomForest) -> None:
     if RFEstimator == RandomForestRegressor:
         est = RFEstimator(impurity="variance")
         est.cuml_params["split_criterion"] == "mse"
+
+    # make sure no warning when enabling float64 inputs
+    rf_float32 = RFEstimator(float32_inputs=False)
+    assert "float32_inputs to False" not in caplog.text
+    assert not rf_float32._float32_inputs
 
 
 rf_est_model_classes = [
@@ -224,11 +232,8 @@ def test_random_forest_basic(
         def assert_model(lhs: RandomForestModel, rhs: RandomForestModel) -> None:
             assert lhs.cuml_params == rhs.cuml_params
 
-            # Vector type will be cast to array(double)
-            if feature_type == "vector":
-                assert lhs.dtype == np.dtype(np.float64).name
-            else:
-                assert lhs.dtype == np.dtype(data_type).name
+            # Vector and array(double) type will be cast to array(float) by default
+            assert lhs.dtype == np.dtype(np.float32).name
 
             assert lhs.dtype == rhs.dtype
             assert lhs.n_cols == rhs.n_cols
@@ -306,7 +311,7 @@ def test_random_forest_classifier(
     num_workers: int,
 ) -> None:
     X_train, X_test, y_train, y_test = make_classification_dataset(
-        datatype=data_type,
+        datatype=cast(np.dtype, np.float32),
         nrows=data_shape[0],
         ncols=data_shape[1],
         n_classes=n_classes,
@@ -316,9 +321,9 @@ def test_random_forest_classifier(
     )
 
     rf_params: Dict[str, Any] = {
-        "n_estimators": 100,
-        "n_bins": 128,
-        "max_depth": 16,
+        "n_estimators": 20,
+        "n_bins": 64,
+        "max_depth": 6,
         "bootstrap": False,
         "max_features": 1.0,
     }
@@ -405,15 +410,15 @@ def test_random_forest_regressor(
     num_workers: int,
 ) -> None:
     X_train, X_test, y_train, y_test = make_regression_dataset(
-        datatype=data_type,
+        datatype=cast(np.dtype, np.float32),
         nrows=data_shape[0],
         ncols=data_shape[1],
     )
 
     rf_params: Dict[str, Any] = {
-        "n_estimators": 100,
-        "n_bins": 128,
-        "max_depth": 16,
+        "n_estimators": 20,
+        "n_bins": 64,
+        "max_depth": 6,
         "bootstrap": False,
         "max_features": 1.0,
         "random_state": 1.0,

@@ -30,7 +30,7 @@ from typing import (
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
-from .utils import _is_local
+from .utils import _is_local, get_logger
 
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
@@ -152,6 +152,7 @@ class _CumlParams(_CumlClass, Params):
 
     _cuml_params: Dict[str, Any] = {}
     _num_workers: Optional[int] = None
+    _float32_inputs: bool = True
 
     @property
     def cuml_params(self) -> Dict[str, Any]:
@@ -255,6 +256,8 @@ class _CumlParams(_CumlClass, Params):
             elif k == "num_workers":
                 # special case, since not a Spark or cuML param
                 self._num_workers = v
+            elif k == "float32_inputs":
+                self._float32_inputs = v
             else:
                 raise ValueError(f"Unsupported param '{k}'.")
         return self

@@ -18,6 +18,7 @@ from typing import List, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pyspark.ml.clustering import KMeans as SparkKMeans
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.functions import array_to_vector
@@ -62,7 +63,9 @@ def test_default_cuml_params() -> None:
     assert cuml_params == spark_params
 
 
-def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
+def test_kmeans_params(
+    gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
+) -> None:
     # Default constructor
     default_spark_params = {
         "initMode": "k-means||",
@@ -124,6 +127,11 @@ def test_kmeans_params(gpu_number: int, tmp_path: str) -> None:
     with pytest.raises(ValueError, match="set one or the other"):
         conflicting_kmeans = KMeans(**conflicting_params)
 
+    # make sure no warning when enabling float64 inputs
+    kmeans_float32 = KMeans(float32_inputs=False)
+    assert "float32_inputs to False" not in caplog.text
+    assert not kmeans_float32._float32_inputs
+
 
 def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
@@ -143,7 +151,7 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             sorted_centers = sorted(model.cluster_centers_, key=lambda p: p)
             assert sorted_centers[0] == pytest.approx([1.0, 1.5], 0.001)
             assert sorted_centers[1] == pytest.approx([3.5, 2.5], 0.001)
-            assert model.dtype == "float64"
+            assert model.dtype == "float32"
             assert model.n_cols == 2
 
         def assert_cuml_spark_model(
