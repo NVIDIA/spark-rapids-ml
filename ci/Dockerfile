@@ -36,6 +36,6 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linu
 
 # install cuML
 ARG CUML_VER=23.08
-RUN conda install -y -c conda-forge mamba=1.4.9 libarchive && \
+RUN conda install -y -c conda-forge mamba libarchive && \
     mamba install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER python=3.9 cuda-version=11.5 \
     && mamba clean --all -f -y
