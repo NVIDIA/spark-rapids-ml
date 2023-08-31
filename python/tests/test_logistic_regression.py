@@ -352,6 +352,8 @@ def test_compat(
             blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
         else:
             assert not blor_model.hasSummary
+            with pytest.raises(RuntimeError, match="No training summary available"):
+                blor_model.summary
 
         output_df = blor_model.transform(bdf)
         assert isinstance(output_df.schema["features"].dataType, VectorUDT)
