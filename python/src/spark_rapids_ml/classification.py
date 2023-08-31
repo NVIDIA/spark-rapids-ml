@@ -42,7 +42,10 @@ from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
-from pyspark.ml.classification import LogisticRegressionSummary
+from pyspark.ml.classification import (
+    LogisticRegressionSummary,
+    LogisticRegressionTrainingSummary,
+)
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
@@ -51,8 +54,7 @@ from pyspark.ml.classification import (
     _LogisticRegressionParams,
     _RandomForestClassifierParams,
 )
-from pyspark.ml.functions import vector_to_array
-from pyspark.ml.linalg import DenseMatrix, Vector, Vectors, VectorUDT
+from pyspark.ml.linalg import DenseMatrix, Vector, Vectors
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -93,7 +95,6 @@ from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
-    dtype_to_pyspark_type,
     get_logger,
     java_uid,
 )
@@ -1000,6 +1001,16 @@ class LogisticRegressionModel(
         instance.
         """
         return False
+
+    @property
+    def summary(self) -> "LogisticRegressionTrainingSummary":
+        """
+        Gets summary (accuracy/precision/recall, objective history, total iterations) of model
+        trained on the training set. An exception is thrown if `trainingSummary is None`.
+        """
+        raise RuntimeError(
+            "No training summary available for this %s" % self.__class__.__name__
+        )
 
     def predict(self, value: Vector) -> float:
         """cuML doesn't support predicting 1 single sample.

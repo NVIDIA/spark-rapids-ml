@@ -789,7 +789,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         pipelined_rdd = self._try_stage_level_scheduling(pipelined_rdd)
 
-        self.logger.info("Training ... ")
+        self.logger.info(
+            f"Training spark-rapids-ml with {self.num_workers} worker(s) ..."
+        )
         rows = pipelined_rdd.collect()
         self.logger.info("Finished training")
 
