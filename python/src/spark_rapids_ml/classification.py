@@ -172,8 +172,6 @@ class RandomForestClassifier(
         The prediction column name.
     probabilityCol
         The column name for predicted class conditional probabilities.
-    rawPredictionCol:
-        The raw prediction column name.
     maxDepth:
         Maximum tree depth. Must be greater than 0.
     maxBins:
@@ -287,7 +285,6 @@ class RandomForestClassifier(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
-        rawPredictionCol: str = "rawPrediction",
         maxDepth: int = 5,
         maxBins: int = 32,
         minInstancesPerNode: int = 1,
@@ -576,6 +573,7 @@ class LogisticRegressionClass(_CumlClass):
             "lowerBoundsOnIntercepts": None,
             "upperBoundsOnIntercepts": None,
             "maxBlockSizeInMB": None,
+            "rawPredictionCol": "",
         }
 
     @classmethod
@@ -608,7 +606,11 @@ class LogisticRegressionClass(_CumlClass):
 
 
 class _LogisticRegressionCumlParams(
-    _CumlParams, _LogisticRegressionParams, HasFeaturesCols, HasProbabilityCol
+    _CumlParams,
+    _LogisticRegressionParams,
+    HasFeaturesCols,
+    HasProbabilityCol,
+    HasRawPredictionCol,
 ):
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
@@ -664,6 +666,14 @@ class _LogisticRegressionCumlParams(
         Sets the value of :py:attr:`probabilityCol`.
         """
         return self.set_params(probabilityCol=value)
+
+    def setRawPredictionCol(
+        self: "_LogisticRegressionCumlParams", value: str
+    ) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`rawPredictionCol`.
+        """
+        return self._set(rawPredictionCol=value)
 
 
 class LogisticRegression(

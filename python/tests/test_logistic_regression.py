@@ -323,6 +323,8 @@ def test_compat(
 
         blor_model.setFeaturesCol("features")
         blor_model.setProbabilityCol("newProbability")
+        blor_model.setRawPredictionCol("newRawPrediction")
+        assert blor_model.getRawPredictionCol() == "newRawPrediction"
         assert blor_model.getProbabilityCol() == "newProbability"
 
         coefficients = blor_model.coefficients.toArray()
@@ -355,7 +357,7 @@ def test_compat(
 
         if isinstance(blor_model, SparkLogisticRegressionModel):
             assert array_equal(
-                output.rawPrediction.toArray(),
+                output.newRawPrediction.toArray(),
                 Vectors.dense([-2.4238, 2.4238]).toArray(),
             )
         else:
