@@ -60,7 +60,8 @@ if [[ $? != 0 ]]; then
     exit 1
 fi
 
-cluster_name=${USER}-spark-rapids-ml-${cluster_type}
+cluster_name=${USER}-spark-rapids-ml-${cluster_type}-{GITHUB_RUN_NUMBER}
+export CLUSTER_NAME=cluster_name
 
 # run benchmarks
 sep="=================="

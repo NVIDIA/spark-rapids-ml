@@ -17,8 +17,13 @@ name: GCS Benchmark Test
 
 on:
   workflow_dispatch:
+    inputs:
+      computer_region:
+        required: true
+        default: 'us-central1'
+        description: 'Number of Octocats'
   schedule:
-    - cron: "0 13 * * 1"
+    - cron: "0 13 * * 1"    
 
 jobs:
   Benchmark:
@@ -31,11 +36,12 @@ jobs:
         env:
           PROJECT: rapids-spark
           DATAPROC_REGION: us-central1
-          COMPUTE_REGION: us-central1
+          COMPUTE_REGION: ${{inputs.computer_region}}
           COMPUTE_ZONE: us-central1-a
           GCS_BUCKET: spark-rapids-ml-benchmarking
           KEY_FILE_CONTENT: ${{ secrets.GCLOUD_PRIVATE_KEY }}
           SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
+          GITHUB_RUN_NUMBER: ${{github.run_number}}
         shell: bash
         run: |
           set -x
@@ -49,3 +55,8 @@ jobs:
           cd python/benchmark/dataproc
           ./setup.sh
           ./run_benchmark.sh
+
+      - name: delete cluster
+        if: ${{ always() }}
+        run: |
+          gcloud container clusters delete $CLUSTER_NAME
