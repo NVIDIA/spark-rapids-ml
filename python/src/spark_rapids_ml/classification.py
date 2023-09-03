@@ -961,6 +961,7 @@ class LogisticRegressionModel(
         self.intercept_ = intercept_
         self.classes_ = classes_
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
+        self.num_classes = len(self.classes_)
 
     def cpu(self) -> SparkLogisticRegressionModel:
         """Return the PySpark ML LogisticRegressionModel"""
@@ -968,7 +969,6 @@ class LogisticRegressionModel(
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None
 
-            num_classes = len(self.classes_)
             is_multinomial = False if len(self.classes_) == 2 else True
 
             assert self.n_cols is not None
@@ -978,7 +978,7 @@ class LogisticRegressionModel(
                     java_uid(sc, "logreg"),
                     _py2java(sc, self.coefficientMatrix),
                     _py2java(sc, self.interceptVector),
-                    num_classes,
+                    self.num_classes,
                     is_multinomial,
                 )
             )
@@ -1030,6 +1030,10 @@ class LogisticRegressionModel(
         Model intercept.
         """
         return Vectors.dense(cast(list, self.intercept_))
+
+    @property
+    def numClasses(self) -> int:
+        return self.num_classes
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform

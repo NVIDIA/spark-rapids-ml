@@ -109,44 +109,9 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             MulticlassClassificationEvaluator,
         )
 
-        # TODO: support multiple classes
-        # binary classification
-        evaluator_train: Union[
-            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-        ] = (
-            MulticlassClassificationEvaluator()
-            .setMetricName("logLoss")  # type:ignore
-            .setPredictionCol(prediction_col)
-            .setProbabilityCol(probability_col)
-            .setLabelCol(label_name)
-        )
-
-        evaluator_test: Union[
-            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-        ] = (
-            BinaryClassificationEvaluator()
-            .setRawPredictionCol(probability_col)
-            .setLabelCol(label_name)
-        )
-
-        log_loss = evaluator_train.evaluate(train_df_with_preds)
-        coefficients = np.array(model.coefficients)
-        coefs_l1 = np.sum(np.abs(coefficients))
-        coefs_l2 = np.sum(coefficients**2)
-
-        # TODO: add l1 regularization penalty term to full objective for when we support it
-        train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
-
-        eval_auc = evaluator_test.evaluate(eval_df_with_preds)
-
-        print(f"{benchmark_string} train_full_objective: {train_full_objective}")
-        print(f"{benchmark_string} eval_auc: {eval_auc}")
-
         results = {
             "fit_time": fit_time,
             "transform_time": transform_time,
-            "train_full_objective": train_full_objective,
-            "eval_auc": eval_auc,
             "num_gpus": self.args.num_gpus,
             "num_cpus": self.args.num_cpus,
             "train_path": self.args.train_path,
@@ -155,5 +120,51 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             "regParam": params["regParam"],
             "standardization": params["standardization"],
         }
+
+        if model.numClasses == 2:
+            evaluator_train: Union[
+                BinaryClassificationEvaluator, MulticlassClassificationEvaluator
+            ] = (
+                MulticlassClassificationEvaluator()
+                .setMetricName("logLoss")  # type:ignore
+                .setPredictionCol(prediction_col)
+                .setProbabilityCol(probability_col)
+                .setLabelCol(label_name)
+            )
+
+            evaluator_test: Union[
+                BinaryClassificationEvaluator, MulticlassClassificationEvaluator
+            ] = (
+                BinaryClassificationEvaluator()
+                .setRawPredictionCol(probability_col)
+                .setLabelCol(label_name)
+            )
+
+            log_loss = evaluator_train.evaluate(train_df_with_preds)
+            coefficients = np.array(model.coefficients)
+            coefs_l1 = np.sum(np.abs(coefficients))
+            coefs_l2 = np.sum(coefficients**2)
+
+            # TODO: add l1 regularization penalty term to full objective for when we support it
+            train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
+
+            eval_auc = evaluator_test.evaluate(eval_df_with_preds)
+
+            print(f"{benchmark_string} train_full_objective: {train_full_objective}")
+            print(f"{benchmark_string} eval_auc: {eval_auc}")
+
+            results["train_full_objective"] = train_full_objective
+            results["eval_auc"] = eval_auc
+        else:
+            evaluator = (
+                MulticlassClassificationEvaluator()
+                .setPredictionCol(prediction_col)
+                .setLabelCol(label_name)
+            )
+
+            accuracy = evaluator.evaluate(eval_df_with_preds)
+
+            print(f"{benchmark_string} accuracy: {accuracy}")
+            results["accuracy"] = accuracy
 
         return results
