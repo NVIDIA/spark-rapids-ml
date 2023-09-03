@@ -54,7 +54,7 @@ from pyspark.ml.classification import (
     _LogisticRegressionParams,
     _RandomForestClassifierParams,
 )
-from pyspark.ml.linalg import DenseMatrix, Vector, Vectors
+from pyspark.ml.linalg import DenseMatrix, Matrices, Matrix, Vector, Vectors
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -844,6 +844,7 @@ class LogisticRegression(
                 model = {
                     "coef_": logistic_regression.coef_.tolist(),
                     "intercept_": logistic_regression.intercept_.tolist(),
+                    "classes_": [logistic_regression.classes_.tolist()],
                     "n_cols": logistic_regression.n_cols,
                     "dtype": logistic_regression.dtype.name,
                 }
@@ -888,10 +889,16 @@ class LogisticRegression(
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
             [
+<<<<<<< HEAD
                 StructField(
                     "coef_", ArrayType(ArrayType(DoubleType(), False), False), False
                 ),
                 StructField("intercept_", ArrayType(DoubleType(), False), False),
+=======
+                StructField("coef_", ArrayType(ArrayType(DoubleType()), False), False),
+                StructField("intercept_", ArrayType(DoubleType()), False),
+                StructField("classes_", ArrayType(DoubleType()), False),
+>>>>>>> ab720c5 (support multi-classes)
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
             ]
@@ -939,12 +946,20 @@ class LogisticRegressionModel(
         self,
         coef_: List[List[float]],
         intercept_: List[float],
+        classes_: List[float],
         n_cols: int,
         dtype: str,
     ) -> None:
-        super().__init__(dtype=dtype, n_cols=n_cols, coef_=coef_, intercept_=intercept_)
+        super().__init__(
+            dtype=dtype,
+            n_cols=n_cols,
+            coef_=coef_,
+            intercept_=intercept_,
+            classes_=classes_,
+        )
         self.coef_ = coef_
         self.intercept_ = intercept_
+        self.classes_ = classes_
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
 
     def cpu(self) -> SparkLogisticRegressionModel:
@@ -953,23 +968,16 @@ class LogisticRegressionModel(
             sc = _get_spark_session().sparkContext
             assert sc._jvm is not None
 
-            # TODO Multinomial is not supported yet.
-            num_classes = 2
-            is_multinomial = False
-            num_coefficient_sets = 1
-            coefficients = self.coef_[0]
+            num_classes = len(self.classes_)
+            is_multinomial = False if len(self.classes_) == 2 else True
 
             assert self.n_cols is not None
-            coefficients_dmatrix = DenseMatrix(
-                num_coefficient_sets, self.n_cols, list(coefficients), True
-            )
-            intercepts = Vectors.dense(self.intercept)
 
             java_model = (
                 sc._jvm.org.apache.spark.ml.classification.LogisticRegressionModel(
                     java_uid(sc, "logreg"),
-                    _py2java(sc, coefficients_dmatrix),
-                    _py2java(sc, intercepts),
+                    _py2java(sc, self.coefficientMatrix),
+                    _py2java(sc, self.interceptVector),
                     num_classes,
                     is_multinomial,
                 )
@@ -984,44 +992,81 @@ class LogisticRegressionModel(
         """
         Model coefficients.
         """
-        assert len(self.coef_) == 1, "multi classes not supported yet"
-        return Vectors.dense(cast(list, self.coef_[0]))
+        if len(self.coef_) == 1:
+            return Vectors.dense(cast(list, self.coef_[0]))
+        else:
+            raise Exception(
+                "Multinomial models contain a matrix of coefficients, use coefficientMatrix instead."
+            )
 
     @property
     def intercept(self) -> float:
         """
         Model intercept.
         """
-        assert len(self.intercept_) == 1, "multi classes not supported yet"
-        return self.intercept_[0]
+        if len(self.intercept_) == 1:
+            return self.intercept_[0]
+        else:
+            raise Exception(
+                "Multinomial models contain a vector of intercepts, use interceptVector instead."
+            )
+
+    @property
+    def coefficientMatrix(self) -> Matrix:
+        """
+        Model coefficients.
+        """
+
+        n_rows = len(self.coef_)
+        n_cols = len(self.coef_[0])
+        flat_coef = [c for row in self.coef_ for c in row]
+        return DenseMatrix(
+            numRows=n_rows, numCols=n_cols, values=flat_coef, isTransposed=True
+        )
+
+    @property
+    def interceptVector(self) -> Vector:
+        """
+        Model intercept.
+        """
+        return Vectors.dense(cast(list, self.intercept_))
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, category: str = transform_evaluate.transform
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         coef_ = self.coef_
         intercept_ = self.intercept_
+        classes_ = self.classes_
         n_cols = self.n_cols
         dtype = self.dtype
 
         def _construct_lr() -> CumlT:
+            import cupy as cp
             import numpy as np
-            from cuml.internals.input_utils import input_to_cuml_array
+            from cuml.internals.global_settings import GlobalSettings
+            from cuml.internals.input_utils import CumlArray, input_to_cuml_array
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
             lr = LogisticRegressionMG(output_type="numpy")
             lr.n_cols = n_cols
             lr.dtype = np.dtype(dtype)
-            lr.intercept_ = input_to_cuml_array(
-                np.array(intercept_, order="C").astype(dtype)
-            ).array
-            lr.coef_ = input_to_cuml_array(
-                np.array(coef_, order="C").astype(dtype)
-            ).array
-            # TBD: infer class indices from data for > 2 classes
-            # needed for predict_proba
+
+            gpu_intercept_ = cp.array(intercept_, order="C", dtype=dtype)
+            gpu_coef_ = cp.array(coef_, order="F", dtype=dtype).T
+            gpu_stacked = GlobalSettings().xpy.vstack([gpu_coef_, gpu_intercept_])
+            lr.solver_model._coef_ = input_to_cuml_array(gpu_stacked, order="C").array
+
+            lr.penalty_normalized = False
+            lr.lbfgs_memory = 10
+
             lr.classes_ = input_to_cuml_array(
-                np.array([0, 1], order="F").astype(dtype)
+                np.array(classes_, order="F").astype(dtype)
             ).array
+            lr._num_classes = len(lr.classes_)
+
+            lr.loss = "sigmoid" if lr._num_classes <= 2 else "softmax"
+            lr.solver_model.qnparams = lr.create_qnparams()
+
             return lr
 
         def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
