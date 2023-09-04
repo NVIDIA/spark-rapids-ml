@@ -28,20 +28,19 @@ on:
 jobs:
   Benchmark:
     runs-on: ubuntu-latest
-
+    env:
+      PROJECT: rapids-spark
+      DATAPROC_REGION: us-central1
+      COMPUTE_REGION: ${{inputs.computer_region}}
+      COMPUTE_ZONE: us-central1-a
+      GCS_BUCKET: spark-rapids-ml-benchmarking
+      KEY_FILE_CONTENT: ${{ secrets.GCLOUD_PRIVATE_KEY }}
+      SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
+      CLUSTER_NAME: Github-spark-rapids-ml-${{github.run_number}}
     steps:
       - uses: actions/checkout@v3
 
       - name: run benchmark
-        env:
-          PROJECT: rapids-spark
-          DATAPROC_REGION: us-central1
-          COMPUTE_REGION: ${{inputs.computer_region}}
-          COMPUTE_ZONE: us-central1-a
-          GCS_BUCKET: spark-rapids-ml-benchmarking
-          KEY_FILE_CONTENT: ${{ secrets.GCLOUD_PRIVATE_KEY }}
-          SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
-          CLUSTER_NAME: Github-spark-rapids-ml-${{github.run_number}}
         shell: bash
         run: |
           set -x
@@ -58,13 +57,10 @@ jobs:
 
       - name: delete cluster
         if: ${{ always() }}
-        env:
-          COMPUTE_REGION: ${{inputs.computer_region}}
-          CLUSTER_NAME: Github-spark-rapids-ml-${{github.run_number}}
+        shell: bash
         run: |
           set -x
           cat <<< $KEY_FILE_CONTENT > key.json
           gcloud auth activate-service-account $SERVICE_ACCOUNT --key-file key.json
           gcloud config set project $PROJECT
           echo y | gcloud container clusters delete $CLUSTER_NAME --region $COMPUTE_REGION
-          
