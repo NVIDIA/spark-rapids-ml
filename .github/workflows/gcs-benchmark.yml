@@ -58,5 +58,8 @@ jobs:
 
       - name: delete cluster
         if: ${{ always() }}
+        env:
+          COMPUTE_REGION: ${{inputs.computer_region}}
+          CLUSTER_NAME: Github-spark-rapids-ml-${{github.run_number}}
         run: |
           echo y | gcloud container clusters delete $CLUSTER_NAME --region $COMPUTE_REGION
