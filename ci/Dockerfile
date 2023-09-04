@@ -28,14 +28,15 @@ ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
 
 # Install conda
 ENV PATH="/root/miniconda3/bin:${PATH}"
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linux-x86_64.sh \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
     && mkdir /root/.conda \
-    && bash Miniconda3-py38_4.10.3-Linux-x86_64.sh -b \
-    && rm -f Miniconda3-py38_4.10.3-Linux-x86_64.sh \
-    && conda init
+    && bash Miniconda3-latest-Linux-x86_64.sh -b \
+    && rm -f Miniconda3-latest-Linux-x86_64.sh \
+    && conda init && conda update -n base conda \
+    && conda install -n base conda-libmamba-solver \
+    && conda config --set solver libmamba
 
 # install cuML
 ARG CUML_VER=23.08
-RUN conda install -y -c conda-forge mamba=1.4.9 libarchive && \
-    mamba install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER python=3.9 cuda-version=11.5 \
-    && mamba clean --all -f -y
+RUN conda install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER python=3.9 cuda-version=11.5 \
+    && conda clean --all -f -y

@@ -42,7 +42,10 @@ from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
-from pyspark.ml.classification import LogisticRegressionSummary
+from pyspark.ml.classification import (
+    LogisticRegressionSummary,
+    LogisticRegressionTrainingSummary,
+)
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
@@ -51,8 +54,7 @@ from pyspark.ml.classification import (
     _LogisticRegressionParams,
     _RandomForestClassifierParams,
 )
-from pyspark.ml.functions import vector_to_array
-from pyspark.ml.linalg import DenseMatrix, Vector, Vectors, VectorUDT
+from pyspark.ml.linalg import DenseMatrix, Vector, Vectors
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -93,7 +95,6 @@ from .utils import (
     _ArrayOrder,
     _concat_and_free,
     _get_spark_session,
-    dtype_to_pyspark_type,
     get_logger,
     java_uid,
 )
@@ -124,8 +125,16 @@ class _RFClassifierParams(
         return self._set(rawPredictionCol=value)
 
 
+class _RandomForestClassifierClass(_RandomForestClass):
+    @classmethod
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
+        mapping = super()._param_mapping()
+        mapping["rawPredictionCol"] = ""
+        return mapping
+
+
 class RandomForestClassifier(
-    _RandomForestClass,
+    _RandomForestClassifierClass,
     _RandomForestEstimator,
     _RandomForestCumlParams,
     _RFClassifierParams,
@@ -164,8 +173,6 @@ class RandomForestClassifier(
         The prediction column name.
     probabilityCol
         The column name for predicted class conditional probabilities.
-    rawPredictionCol:
-        The raw prediction column name.
     maxDepth:
         Maximum tree depth. Must be greater than 0.
     maxBins:
@@ -279,7 +286,6 @@ class RandomForestClassifier(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
-        rawPredictionCol: str = "rawPrediction",
         maxDepth: int = 5,
         maxBins: int = 32,
         minInstancesPerNode: int = 1,
@@ -568,6 +574,7 @@ class LogisticRegressionClass(_CumlClass):
             "lowerBoundsOnIntercepts": None,
             "upperBoundsOnIntercepts": None,
             "maxBlockSizeInMB": None,
+            "rawPredictionCol": "",
         }
 
     @classmethod
@@ -578,7 +585,7 @@ class LogisticRegressionClass(_CumlClass):
             # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
             if x == 0.0:
                 logger = get_logger(cls)
-                logger.warn(
+                logger.warning(
                     "no regularization is not supported yet. if regParam is set to 0,"
                     + "it will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny"
                 )
@@ -600,7 +607,11 @@ class LogisticRegressionClass(_CumlClass):
 
 
 class _LogisticRegressionCumlParams(
-    _CumlParams, _LogisticRegressionParams, HasFeaturesCols, HasProbabilityCol
+    _CumlParams,
+    _LogisticRegressionParams,
+    HasFeaturesCols,
+    HasProbabilityCol,
+    HasRawPredictionCol,
 ):
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type:ignore
         """
@@ -656,6 +667,14 @@ class _LogisticRegressionCumlParams(
         Sets the value of :py:attr:`probabilityCol`.
         """
         return self.set_params(probabilityCol=value)
+
+    def setRawPredictionCol(
+        self: "_LogisticRegressionCumlParams", value: str
+    ) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`rawPredictionCol`.
+        """
+        return self._set(rawPredictionCol=value)
 
 
 class LogisticRegression(
@@ -767,6 +786,11 @@ class LogisticRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
+        if not self._input_kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
+            )
+            self._input_kwargs.pop("float32_inputs")
         super().__init__()
         self.set_params(**self._input_kwargs)
 
@@ -838,21 +862,6 @@ class LogisticRegression(
             dimension,
             feature_type,
         ) = super()._pre_process_data(dataset)
-
-        # if input format is vectorUDT, convert data type to float32
-        # TODO: support float64
-        input_col, _ = self._get_input_columns()
-        label_col = self.getLabelCol()
-
-        if input_col is not None and isinstance(
-            dataset.schema[input_col].dataType, VectorUDT
-        ):
-            select_cols[0] = vector_to_array(col(input_col), dtype="float32").alias(
-                alias.data
-            )
-
-            select_cols[1] = col(label_col).cast(FloatType()).alias(alias.label)
-            feature_type = FloatType
 
         return select_cols, multi_col_names, dimension, feature_type
 
@@ -1010,6 +1019,16 @@ class LogisticRegressionModel(
         instance.
         """
         return False
+
+    @property
+    def summary(self) -> "LogisticRegressionTrainingSummary":
+        """
+        Gets summary (accuracy/precision/recall, objective history, total iterations) of model
+        trained on the training set. An exception is thrown if `trainingSummary is None`.
+        """
+        raise RuntimeError(
+            "No training summary available for this %s" % self.__class__.__name__
+        )
 
     def predict(self, value: Vector) -> float:
         """cuML doesn't support predicting 1 single sample.

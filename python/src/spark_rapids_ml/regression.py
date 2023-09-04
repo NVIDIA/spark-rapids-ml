@@ -712,7 +712,7 @@ class LinearRegressionModel(
             intercepts = intercept_ if isinstance(intercept_, list) else [intercept_]
 
             for i in range(len(coefs)):
-                lr = LinearRegressionMG(output_type="numpy")
+                lr = LinearRegressionMG(output_type="numpy", copy_X=False)
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )
@@ -728,12 +728,6 @@ class LinearRegressionModel(
             return pd.Series(ret)
 
         return _construct_lr, _predict, self.calculate_regression_metrics
-
-    def _transform(self, dataset: DataFrame) -> DataFrame:
-        df = super()._transform(dataset)
-        return df.withColumn(
-            self.getPredictionCol(), df[self.getPredictionCol()].cast("double")
-        )
 
     @classmethod
     def _combine(

@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import warnings
 from typing import Any, Dict, List, Tuple, Type, TypeVar, cast
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.ml.param import Param
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
@@ -66,7 +68,7 @@ def train_with_cuml_linear_regression(
     if alpha == 0:
         from cuml import LinearRegression as cuLinearRegression
 
-        lr = cuLinearRegression(output_type="numpy")
+        lr = cuLinearRegression(output_type="numpy", copy_X=False)
     else:
         if l1_ratio == 0.0:
             from cuml import Ridge
@@ -108,7 +110,9 @@ def test_default_cuml_params() -> None:
 
 
 @pytest.mark.parametrize("reg", [0.0, 0.7])
-def test_linear_regression_params(tmp_path: str, reg: float) -> None:
+def test_linear_regression_params(
+    tmp_path: str, reg: float, caplog: LogCaptureFixture
+) -> None:
     # Default params
     default_spark_params = {
         "elasticNetParam": 0.0,
@@ -167,6 +171,11 @@ def test_linear_regression_params(tmp_path: str, reg: float) -> None:
     ):
         unsupported_lr = LinearRegression(**spark_params)
 
+    # make sure no warning when enabling float64 inputs
+    lr_float32 = LinearRegression(float32_inputs=False)
+    assert "float32_inputs to False" not in caplog.text
+    assert not lr_float32._float32_inputs
+
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
 def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None:
@@ -196,6 +205,7 @@ def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
 @pytest.mark.parametrize("data_shape", [(10, 2)], ids=idfn)
 @pytest.mark.parametrize("reg", [0.0, 0.7])
+@pytest.mark.parametrize("float32_inputs", [True, False])
 def test_linear_regression_basic(
     gpu_number: int,
     tmp_path: str,
@@ -203,6 +213,7 @@ def test_linear_regression_basic(
     data_type: np.dtype,
     data_shape: Tuple[int, int],
     reg: float,
+    float32_inputs: bool,
 ) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
@@ -214,7 +225,7 @@ def test_linear_regression_basic(
             spark, feature_type, data_type, X, y
         )
 
-        lr = LinearRegression(num_workers=gpu_number)
+        lr = LinearRegression(num_workers=gpu_number, float32_inputs=float32_inputs)
         lr.setRegParam(reg)
 
         lr.setFeaturesCol(features_col)
@@ -241,7 +252,9 @@ def test_linear_regression_basic(
             assert lhs.intercept == rhs.intercept
 
             # Vector type will be cast to array(double)
-            if feature_type == "vector":
+            if float32_inputs:
+                assert lhs.dtype == "float32"
+            elif feature_type == "vector" and not float32_inputs:
                 assert lhs.dtype == np.dtype(np.float64).name
             else:
                 assert lhs.dtype == np.dtype(data_type).name
@@ -435,14 +448,16 @@ def test_linear_regression_spark_compat(
         assert array_equal(coefficients, expected_coefficients)
 
         intercept = model.intercept
-        assert np.isclose(intercept, -3.3089753423400734e-07)
+        assert np.isclose(intercept, -3.3089753423400734e-07, atol=1.0e-4)
 
         example = df.head()
         if example:
             model.predict(example.features)
 
         model.setPredictionCol("prediction")
-        output = model.transform(df).head()
+        output_df = model.transform(df)
+        assert isinstance(output_df.schema["features"].dataType, VectorUDT)
+        output = output_df.head()
         # Row(weight=1.0, label=2.0374512672424316, features=DenseVector([-0.2052, 1.4941]), prediction=2.037452415464224)
         assert np.isclose(output.prediction, 2.037452415464224)
 

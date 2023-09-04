@@ -3,13 +3,14 @@ from typing import Any, Dict, Tuple, Type, TypeVar
 import cuml
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from packaging import version
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.sql import Row
 from pyspark.sql.functions import array, col
 
@@ -32,7 +33,7 @@ from .utils import (
 )
 
 
-def test_toy_example(gpu_number: int) -> None:
+def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
     data = [
@@ -78,10 +79,11 @@ def test_toy_example(gpu_number: int) -> None:
         assert_transform(lr_model)
 
         # test with regParam set to 0
-        with pytest.warns():
-            lr_regParam_zero = LogisticRegression(
-                regParam=0.0,
-            )
+        caplog.clear()
+        lr_regParam_zero = LogisticRegression(
+            regParam=0.0,
+        )
+        assert "no regularization is not supported yet" in caplog.text
 
         lr_regParam_zero.setProbabilityCol(probability_col)
 
@@ -95,15 +97,18 @@ def test_toy_example(gpu_number: int) -> None:
         lr_regParam_zero.setRegParam(0.1)
         assert lr_regParam_zero.getRegParam() == 0.1
         assert lr_regParam_zero.cuml_params["C"] == 1.0 / 0.1
-        with pytest.warns():
-            lr_regParam_zero.setRegParam(0.0)
+
+        caplog.clear()
+        lr_regParam_zero.setRegParam(0.0)
+        assert "no regularization is not supported yet" in caplog.text
+
         assert lr_regParam_zero.getRegParam() == 0.0
         assert (
             lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
         )
 
 
-def test_params(tmp_path: str) -> None:
+def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     # Default params
     default_spark_params = {
         "maxIter": 100,
@@ -155,13 +160,18 @@ def test_params(tmp_path: str) -> None:
     loaded_lr = LogisticRegression.load(estimator_path)
     assert_params(loaded_lr, expected_spark_params, expected_cuml_params)
 
+    # float32_inputs warn, logistic only accepts float32
+    lr_float32 = LogisticRegression(float32_inputs=False)
+    assert "float32_inputs to False" in caplog.text
+    assert lr_float32._float32_inputs
+
 
 # TODO support float64
 # 'vector' will be converted to float32
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("data_type", [np.float32, np.float64])
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize("n_classes", [2])
 @pytest.mark.slow
@@ -210,14 +220,10 @@ def test_classifier(
 
         # test coefficients and intercepts
         assert spark_lr_model.n_cols == cu_lr.n_cols
-        assert spark_lr_model.dtype == cu_lr.dtype
+        assert spark_lr_model.dtype == "float32"
 
         assert array_equal(np.array(spark_lr_model.coef_), cu_lr.coef_, tolerance)
         assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)
-
-        # test coefficients and intercepts
-        assert spark_lr_model.n_cols == cu_lr.n_cols
-        assert spark_lr_model.dtype == cu_lr.dtype
 
         assert len(spark_lr_model.coef_) == 1
         assert len(cu_lr.coef_) == 1
@@ -327,6 +333,8 @@ def test_compat(
 
         blor_model.setFeaturesCol("features")
         blor_model.setProbabilityCol("newProbability")
+        blor_model.setRawPredictionCol("newRawPrediction")
+        assert blor_model.getRawPredictionCol() == "newRawPrediction"
         assert blor_model.getProbabilityCol() == "newProbability"
 
         coefficients = blor_model.coefficients.toArray()
@@ -346,8 +354,12 @@ def test_compat(
             blor_model.evaluate(bdf).accuracy == blor_model.summary.accuracy
         else:
             assert not blor_model.hasSummary
+            with pytest.raises(RuntimeError, match="No training summary available"):
+                blor_model.summary
 
-        output = blor_model.transform(bdf).head()
+        output_df = blor_model.transform(bdf)
+        assert isinstance(output_df.schema["features"].dataType, VectorUDT)
+        output = output_df.head()
         assert output.prediction == 1.0
 
         assert array_equal(
@@ -357,7 +369,7 @@ def test_compat(
 
         if isinstance(blor_model, SparkLogisticRegressionModel):
             assert array_equal(
-                output.rawPrediction.toArray(),
+                output.newRawPrediction.toArray(),
                 Vectors.dense([-2.4238, 2.4238]).toArray(),
             )
         else:

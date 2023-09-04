@@ -18,6 +18,7 @@ from typing import Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pyspark.ml.feature import PCA as SparkPCA
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.functions import array_to_vector
@@ -42,7 +43,7 @@ PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
 PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 
 
-def test_default_cuml_params() -> None:
+def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
     from cuml import PCA as CumlPCA
 
     cuml_params = get_default_cuml_parameters(
@@ -58,6 +59,11 @@ def test_default_cuml_params() -> None:
     )
     spark_params = PCA()._get_cuml_params_default()
     assert cuml_params == spark_params
+
+    # make sure no warning when enabling float64 inputs
+    pca_float32 = PCA(float32_inputs=False)
+    assert "float32_inputs to False" not in caplog.text
+    assert not pca_float32._float32_inputs
 
 
 def test_fit(gpu_number: int) -> None:
@@ -134,7 +140,7 @@ def test_fit_rectangle(gpu_number: int) -> None:
         assert gpu_model.explained_variance_ratio_[1] == pytest.approx(0.2, 0.001)
 
 
-def test_pca_params(gpu_number: int, tmp_path: str) -> None:
+def test_pca_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -> None:
     # Default constructor
     default_spark_params = {
         "k": None,
@@ -232,7 +238,7 @@ def test_pca_basic(gpu_number: int, tmp_path: str) -> None:
             assert model.dtype == loaded_model.dtype
             assert model.n_cols == model.n_cols
             assert model.n_cols == 3
-            assert model.dtype == "float64"
+            assert model.dtype == "float32"
 
         assert_cuml_model(pca_model, pca_model_loaded)
 

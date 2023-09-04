@@ -279,6 +279,7 @@ class SparkRapidsMLDummyModel(
         # if the common framework tries to pickle the whole class,
         # it will throw exception since dataset is not picklable.
         self.test_pickle_dataframe = dataset
+        output_cols = self.getInputCols()
 
         def _construct_dummy() -> CumlT:
             dummy = CumlDummy(a=101, b=102, k=103)
@@ -293,7 +294,8 @@ class SparkRapidsMLDummyModel(
 
             assert model_attribute_a == 1024
             if isinstance(df, pd.DataFrame):
-                return df
+                col_mapper = dict(zip(df.columns, output_cols))
+                return df.rename(columns=col_mapper)
             else:
                 # TODO: implement when adding single column test
                 raise NotImplementedError()

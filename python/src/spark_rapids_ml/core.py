@@ -74,6 +74,7 @@ from .utils import (
     _get_gpu_id,
     _get_spark_session,
     _is_local,
+    _is_standalone_or_localcluster,
     dtype_to_pyspark_type,
     get_logger,
 )
@@ -151,6 +152,7 @@ class _CumlEstimatorWriter(MLWriter):
             extraMetadata={
                 "_cuml_params": self.instance._cuml_params,
                 "_num_workers": self.instance._num_workers,
+                "_float32_inputs": self.instance._float32_inputs,
             },
         )  # type: ignore
 
@@ -171,6 +173,7 @@ class _CumlEstimatorReader(MLReader):
         DefaultParamsReader.getAndSetParams(cuml_estimator, metadata)
         cuml_estimator._cuml_params = metadata["_cuml_params"]
         cuml_estimator._num_workers = metadata["_num_workers"]
+        cuml_estimator._float32_inputs = metadata["_float32_inputs"]
         return cuml_estimator
 
 
@@ -191,6 +194,7 @@ class _CumlModelWriter(MLWriter):
             extraMetadata={
                 "_cuml_params": self.instance._cuml_params,
                 "_num_workers": self.instance._num_workers,
+                "_float32_inputs": self.instance._float32_inputs,
             },
         )
         data_path = os.path.join(path, "data")
@@ -217,6 +221,7 @@ class _CumlModelReader(MLReader):
         DefaultParamsReader.getAndSetParams(instance, metadata)
         instance._cuml_params = metadata["_cuml_params"]
         instance._num_workers = metadata["_num_workers"]
+        instance._float32_inputs = metadata["_float32_inputs"]
         return instance
 
 
@@ -309,7 +314,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
     def _pre_process_data(
         self, dataset: DataFrame
     ) -> Tuple[
-        List[Column], Optional[List[str]], int, Union[Type[FloatType], Type[DoubleType]]
+        List[Column],
+        Optional[List[str]],
+        int,
+        Union[Type[FloatType], Type[DoubleType]],
     ]:
         select_cols = []
 
@@ -324,37 +332,59 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
             if isinstance(input_datatype, ArrayType):
                 # Array type
-                select_cols.append(col(input_col).alias(alias.data))
-                if isinstance(input_datatype.elementType, DoubleType):
+                if (
+                    isinstance(input_datatype.elementType, DoubleType)
+                    and not self._float32_inputs
+                ):
+                    select_cols.append(col(input_col).alias(alias.data))
                     feature_type = DoubleType
+                elif (
+                    isinstance(input_datatype.elementType, DoubleType)
+                    and self._float32_inputs
+                ):
+                    select_cols.append(
+                        col(input_col).cast(ArrayType(feature_type())).alias(alias.data)
+                    )
+                else:
+                    # FloatType array
+                    select_cols.append(col(input_col).alias(alias.data))
             elif isinstance(input_datatype, VectorUDT):
                 # Vector type
+                vector_element_type = "float32" if self._float32_inputs else "float64"
                 select_cols.append(
-                    vector_to_array(col(input_col)).alias(alias.data)  # type: ignore
+                    vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
                 )
-                feature_type = DoubleType
+                if not self._float32_inputs:
+                    feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
 
             dimension = len(dataset.first()[input_col])  # type: ignore
 
         elif input_cols is not None:
+            # if self._float32_inputs is False and if any columns are double type, convert all to double type
+            # otherwise convert all to float type
+            any_double_types = any(
+                [isinstance(dataset.schema[c].dataType, DoubleType) for c in input_cols]
+            )
+            if not self._float32_inputs and any_double_types:
+                feature_type = DoubleType
             dimension = len(input_cols)
             for c in input_cols:
                 col_type = dataset.schema[c].dataType
-                if isinstance(col_type, IntegralType):
-                    # Convert integral type to float.
-                    select_cols.append(col(c).cast(feature_type()).alias(c))
-                elif isinstance(col_type, FloatType):
-                    select_cols.append(col(c))
-                elif isinstance(col_type, DoubleType):
-                    select_cols.append(col(c))
-                    feature_type = DoubleType
+                if (
+                    isinstance(col_type, IntegralType)
+                    or isinstance(col_type, FloatType)
+                    or isinstance(col_type, DoubleType)
+                ):
+                    if not isinstance(col_type, feature_type):
+                        select_cols.append(col(c).cast(feature_type()).alias(c))
+                    else:
+                        select_cols.append(col(c))
                 else:
                     raise ValueError(
                         "All columns must be integral types or float/double types."
                     )
-
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")
@@ -670,8 +700,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
                 "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
             )
             return rdd
-        elif _is_local(sc):
-            # Local mode doesn't support stage level scheduling
+        elif not _is_standalone_or_localcluster(sc):
+            # Only standalone or local-cluster supports stage-level scheduling with dynamic
+            # allocation disabled.
+            self.logger.warning(
+                "Stage level scheduling in spark-rapids-ml only works on spark standalone or "
+                "local cluster mode"
+            )
             return rdd
 
         executor_cores = sc.getConf().get("spark.executor.cores")
@@ -702,7 +737,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
             # be scheduled into the same executor.
             return rdd
 
-        if task_gpu_amount == executor_gpu_amount:
+        if float(task_gpu_amount) == float(executor_gpu_amount):
             self.logger.warning(
                 f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
                 f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
@@ -754,7 +789,9 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         pipelined_rdd = self._try_stage_level_scheduling(pipelined_rdd)
 
-        self.logger.info("Training ... ")
+        self.logger.info(
+            f"Training spark-rapids-ml with {self.num_workers} worker(s) ..."
+        )
         rows = pipelined_rdd.collect()
         self.logger.info("Finished training")
 
@@ -765,6 +802,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         for index in range(len(models)):
             model = self._create_pyspark_model(rows[index])
             model._num_workers = self._num_workers
+            model._float32_inputs = self._float32_inputs
 
             if paramMaps is not None:
                 self._copyValues(model, paramMaps[index])
@@ -926,47 +964,92 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
     def _pre_process_data(
         self, dataset: DataFrame
-    ) -> Tuple[DataFrame, List[str], bool]:
+    ) -> Tuple[DataFrame, List[str], bool, List[str]]:
         """Pre-handle the dataset before transform.
 
         Please note that, this function just transforms the input column if necessary, and
         it will keep the unused columns.
 
-        return (dataset, list of feature names, bool value to indicate if it is multi-columns input)
+        return (dataset, list of feature names, bool value to indicate if it is multi-columns input, list of temporary columns to be dropped)
         """
         select_cols = []
+        tmp_cols = []
         input_is_multi_cols = True
 
         input_col, input_cols = self._get_input_columns()
 
         if input_col is not None:
-            if isinstance(dataset.schema[input_col].dataType, VectorUDT):
+            input_col_type = dataset.schema[input_col].dataType
+            tmp_input_col = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
+            if isinstance(input_col_type, VectorUDT):
                 # Vector type
                 # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
-                tmp_name = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
-                dataset = (
-                    dataset.withColumnRenamed(input_col, tmp_name)
-                    .withColumn(input_col, vector_to_array(col(tmp_name)))
-                    .drop(tmp_name)
+                vector_element_type = "float32" if self._float32_inputs else "float64"
+                dataset = dataset.withColumn(
+                    tmp_input_col, vector_to_array(col(input_col), vector_element_type)
                 )
-            elif not isinstance(dataset.schema[input_col].dataType, ArrayType):
-                # Array type
+                select_cols.append(tmp_input_col)
+                tmp_cols.append(tmp_input_col)
+            elif isinstance(input_col_type, ArrayType):
+                if (
+                    isinstance(input_col_type.elementType, DoubleType)
+                    and not self._float32_inputs
+                ):
+                    select_cols.append(input_col)
+                elif (
+                    isinstance(input_col_type.elementType, DoubleType)
+                    and self._float32_inputs
+                ):
+                    dataset = dataset.withColumn(
+                        tmp_input_col, col(input_col).cast(ArrayType(FloatType()))
+                    )
+                    select_cols.append(tmp_input_col)
+                    tmp_cols.append(tmp_input_col)
+                else:
+                    # FloatType array
+                    select_cols.append(input_col)
+            elif not isinstance(input_col_type, ArrayType):
+                # not Array type
                 raise ValueError("Unsupported input type.")
-            select_cols.append(input_col)
             input_is_multi_cols = False
         elif input_cols is not None:
-            select_cols.extend(input_cols)
+            any_double_types = any(
+                [isinstance(dataset.schema[c].dataType, DoubleType) for c in input_cols]
+            )
+            feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
+            if not self._float32_inputs and any_double_types:
+                feature_type = DoubleType
+            for c in input_cols:
+                col_type = dataset.schema[c].dataType
+                if (
+                    isinstance(col_type, IntegralType)
+                    or isinstance(col_type, FloatType)
+                    or isinstance(col_type, DoubleType)
+                ):
+                    if not isinstance(col_type, feature_type):
+                        tmp_input_col = f"{c}_c3BhcmstcmFwaWRzLW1sCg=="
+                        dataset = dataset.withColumn(
+                            tmp_input_col, col(c).cast(feature_type())
+                        )
+                        select_cols.append(tmp_input_col)
+                        tmp_cols.append(tmp_input_col)
+                    else:
+                        select_cols.append(c)
+                else:
+                    raise ValueError(
+                        "All columns must be integral types or float/double types."
+                    )
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")
 
-        return dataset, select_cols, input_is_multi_cols
+        return dataset, select_cols, input_is_multi_cols, tmp_cols
 
     def _transform_evaluate_internal(
         self, dataset: DataFrame, schema: Union[StructType, str]
     ) -> DataFrame:
         """Internal API to support transform and evaluation in a single pass"""
-        dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
+        dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -978,6 +1061,10 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         ) = self._get_cuml_transform_func(
             dataset, transform_evaluate.transform_evaluate
         )
+        if evaluate_func:
+            dataset = dataset.select(alias.label, *select_cols)
+        else:
+            dataset = dataset.select(*select_cols)
 
         array_order = self._transform_array_order()
 
@@ -1096,7 +1183,9 @@ class _CumlModelWithColumns(_CumlModel):
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         """This version of transform is directly adding extra columns to the dataset"""
-        dataset, select_cols, input_is_multi_cols = self._pre_process_data(dataset)
+        dataset, select_cols, input_is_multi_cols, tmp_cols = self._pre_process_data(
+            dataset
+        )
 
         is_local = _is_local(_get_spark_session().sparkContext)
 
@@ -1157,18 +1246,16 @@ class _CumlModelWithColumns(_CumlModel):
             # 3. Drop the unused column
             dataset = dataset.drop(pred_struct_col_name)
 
-            return dataset
+            return dataset.drop(*tmp_cols)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
         assert self.dtype is not None
 
-        pyspark_type = dtype_to_pyspark_type(self.dtype)
-
-        schema = f"{pred.prediction} {pyspark_type}"
+        schema = f"{pred.prediction} double"
         if self._has_probability_col():
-            schema = f"{schema}, {pred.probability} array<{pyspark_type}>"
+            schema = f"{schema}, {pred.probability} array<double>"
         else:
-            schema = f"{pyspark_type}"
+            schema = f"double"
 
         return schema
 
