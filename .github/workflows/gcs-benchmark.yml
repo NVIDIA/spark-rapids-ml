@@ -45,7 +45,6 @@ jobs:
         shell: bash
         run: |
           set -x
-          echo $CLUSTER_NAME
           cat <<< $KEY_FILE_CONTENT > key.json
           gcloud auth activate-service-account $SERVICE_ACCOUNT --key-file key.json
           gcloud config set project $PROJECT
@@ -60,4 +59,4 @@ jobs:
       - name: delete cluster
         if: ${{ always() }}
         run: |
-          gcloud container clusters delete $CLUSTER_NAME
+          echo y | gcloud container clusters delete $CLUSTER_NAME --region $COMPUTE_REGION
