@@ -21,7 +21,7 @@ on:
       computer_region:
         required: true
         default: 'us-central1'
-        description: 'computer region of GCS'
+        description: 'COMPUTER REGION'
   schedule:
     - cron: "0 13 * * 1"    
 
