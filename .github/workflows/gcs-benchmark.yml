@@ -21,7 +21,7 @@ on:
       computer_region:
         required: true
         default: 'us-central1'
-        description: 'Number of Octocats'
+        description: 'computer region of GCS'
   schedule:
     - cron: "0 13 * * 1"    
 
