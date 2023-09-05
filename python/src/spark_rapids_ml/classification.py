@@ -339,7 +339,7 @@ class RandomForestClassifier(
 
 
 class RandomForestClassificationModel(
-    _RandomForestClass,
+    _RandomForestClassifierClass,
     _RandomForestModel,
     _RandomForestCumlParams,
     _RFClassifierParams,
