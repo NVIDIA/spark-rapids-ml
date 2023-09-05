@@ -42,7 +42,8 @@ else
 fi
 
 # start cluster if not already running
-cluster_name=${USER}-spark-rapids-ml-${cluster_type}
+cluster_name=${CLUSTER_NAME:-"${USER}-spark-rapids-ml-${cluster_type}"}
+
 gcloud dataproc clusters list | grep "${cluster_name}"
 if [[ $? == 0 ]]; then
     echo "WARNING: Cluster ${cluster_name} is already started."
