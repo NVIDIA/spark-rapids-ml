@@ -36,7 +36,7 @@ jobs:
       GCS_BUCKET: spark-rapids-ml-benchmarking
       KEY_FILE_CONTENT: ${{ secrets.GCLOUD_PRIVATE_KEY }}
       SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
-      CLUSTER_NAME: Github-spark-rapids-ml-${{github.run_number}}
+      CLUSTER_NAME: github-spark-rapids-ml-${{github.run_number}}
     steps:
       - uses: actions/checkout@v3
 
