@@ -64,4 +64,4 @@ jobs:
           cat <<< $KEY_FILE_CONTENT > key.json
           gcloud auth activate-service-account $SERVICE_ACCOUNT --key-file key.json
           gcloud config set project $PROJECT
-          echo y | gcloud container clusters delete $CLUSTER_NAME --region $COMPUTE_REGION
+          echo y | gcloud dataproc clusters delete $CLUSTER_NAME --region $COMPUTE_REGION
