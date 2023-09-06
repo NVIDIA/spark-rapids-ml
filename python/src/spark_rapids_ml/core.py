@@ -549,6 +549,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     )
                     inputs.append((features, label, row_number))
 
+                if len(sizes) == 0 or all(sz == 0 for sz in sizes):
+                    raise RuntimeError(
+                        "A python worker received no data.  Please increase amount of data or use fewer workers."
+                    )
+
                 params[param_alias.handle] = cc.handle
                 params[param_alias.part_sizes] = sizes
                 params[param_alias.num_cols] = dimension
