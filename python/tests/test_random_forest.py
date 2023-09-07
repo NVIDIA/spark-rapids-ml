@@ -359,11 +359,15 @@ def test_random_forest_classifier(
         result = spark_rf_model.transform(test_df).collect()
         pred_result = [row.prediction for row in result]
 
+        # no need to compare all feature types.
         if feature_type == feature_types.vector:
-            # no need to compare all feature type.
             spark_cpu_result = spark_rf_model.cpu().transform(test_df).collect()
             spark_cpu_pred_result = [row.prediction for row in spark_cpu_result]
-            assert array_equal(spark_cpu_pred_result, pred_result)
+            # Since the precision issue, we can ensure all the predictions are same.
+            commons = np.count_nonzero(
+                np.array(spark_cpu_pred_result) == np.array(pred_result)
+            )
+            assert commons / len(spark_cpu_pred_result) >= 0.99
 
         spark_acc = accuracy_score(y_test, np.array(pred_result))
 
