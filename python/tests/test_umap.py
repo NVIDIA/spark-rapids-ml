@@ -77,7 +77,7 @@ def _spark_umap_trustworthiness(
     n_neighbors: int,
     supervised: bool,
     n_parts: int,
-    n_workers: int,
+    gpu_number: int,
     sampling_ratio: float,
     dtype: np.dtype,
     feature_type: str,
@@ -86,7 +86,7 @@ def _spark_umap_trustworthiness(
         n_neighbors=n_neighbors,
         random_state=42,
         init="random",
-        num_workers=n_workers,
+        num_workers=gpu_number,
     )
 
     with CleanSparkSession() as spark:
@@ -113,7 +113,7 @@ def _spark_umap_trustworthiness(
 
 def _run_spark_test(
     n_parts: int,
-    n_workers: int,
+    gpu_number: int,
     n_rows: int,
     sampling_ratio: float,
     supervised: bool,
@@ -130,7 +130,7 @@ def _run_spark_test(
         n_neighbors,
         supervised,
         n_parts,
-        n_workers,
+        gpu_number,
         sampling_ratio,
         dtype,
         feature_type,
@@ -147,7 +147,6 @@ def _run_spark_test(
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
-@pytest.mark.parametrize("n_workers", [12])
 @pytest.mark.parametrize("n_rows", [100, 500])
 @pytest.mark.parametrize("sampling_ratio", [0.55, 0.9])
 @pytest.mark.parametrize("supervised", [True, False])
@@ -158,7 +157,7 @@ def _run_spark_test(
 @pytest.mark.slow
 def test_spark_umap(
     n_parts: int,
-    n_workers: int,
+    gpu_number: int,
     n_rows: int,
     sampling_ratio: float,
     supervised: bool,
@@ -169,7 +168,7 @@ def test_spark_umap(
 ) -> None:
     result = _run_spark_test(
         n_parts,
-        n_workers,
+        gpu_number,
         n_rows,
         sampling_ratio,
         supervised,
@@ -182,7 +181,7 @@ def test_spark_umap(
     if not result:
         result = _run_spark_test(
             n_parts,
-            n_workers,
+            gpu_number,
             n_rows,
             sampling_ratio,
             supervised,
@@ -196,7 +195,6 @@ def test_spark_umap(
 
 
 @pytest.mark.parametrize("n_parts", [5])
-@pytest.mark.parametrize("n_workers", [8])
 @pytest.mark.parametrize("n_rows", [500])
 @pytest.mark.parametrize("sampling_ratio", [0.7])
 @pytest.mark.parametrize("supervised", [True])
@@ -206,7 +204,7 @@ def test_spark_umap(
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 def test_spark_umap_fast(
     n_parts: int,
-    n_workers: int,
+    gpu_number: int,
     n_rows: int,
     sampling_ratio: float,
     supervised: bool,
@@ -218,7 +216,7 @@ def test_spark_umap_fast(
 ) -> None:
     result = _run_spark_test(
         n_parts,
-        n_workers,
+        gpu_number,
         n_rows,
         sampling_ratio,
         supervised,
@@ -231,7 +229,7 @@ def test_spark_umap_fast(
     if not result:
         result = _run_spark_test(
             n_parts,
-            n_workers,
+            gpu_number,
             n_rows,
             sampling_ratio,
             supervised,
@@ -286,7 +284,7 @@ def test_umap_estimator_persistence(tmp_path: str) -> None:
     assert loaded_umap._float32_inputs
 
 
-def test_umap_model_persistence(tmp_path: str) -> None:
+def test_umap_model_persistence(gpu_number: int, tmp_path: str) -> None:
     from cuml.datasets import make_blobs
 
     X, _ = make_blobs(
@@ -305,7 +303,7 @@ def test_umap_model_persistence(tmp_path: str) -> None:
         df = spark.createDataFrame(X.tolist(), ",".join(schema))
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
 
-        umap = UMAP(num_workers=3).setFeaturesCol("features")
+        umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
 
         def assert_umap_model(model: UMAPModel) -> None:
             embedding = np.array(model.embedding)
@@ -328,7 +326,7 @@ def test_umap_model_persistence(tmp_path: str) -> None:
 
 
 @pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 20, 8 << 18])
-def test_umap_broadcast_chunks(BROADCAST_LIMIT: int) -> None:
+def test_umap_broadcast_chunks(gpu_number: int, BROADCAST_LIMIT: int) -> None:
     from cuml.datasets import make_blobs
 
     X, _ = make_blobs(
@@ -347,7 +345,7 @@ def test_umap_broadcast_chunks(BROADCAST_LIMIT: int) -> None:
         df = spark.createDataFrame(X.tolist(), ",".join(schema))
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
 
-        umap = UMAP(num_workers=3).setFeaturesCol("features")
+        umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
         umap.BROADCAST_LIMIT = BROADCAST_LIMIT
 
         umap_model = umap.fit(df)
