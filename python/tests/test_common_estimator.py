@@ -39,6 +39,7 @@ from spark_rapids_ml.core import (
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
 
+from .sparksession import CleanSparkSession
 from .utils import assert_params, get_default_cuml_parameters
 
 
@@ -434,7 +435,6 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         assert model.num_workers == gpu_number
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
-    from .sparksession import CleanSparkSession
 
     # Estimator fit and get a model
     with CleanSparkSession(conf) as spark:
@@ -484,3 +484,34 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
             for x, y in zip(ret, data):
                 for i in range(n):
                     assert x[i] == y[i]
+
+
+def test_num_workers_validation() -> None:
+    with CleanSparkSession() as spark:
+        data = [
+            [1.0, 4.0, 4.0, 4.0],
+            [2.0, 2.0, 2.0, 2.0],
+            [3.0, 3.0, 3.0, 2.0],
+            [3.0, 3.0, 3.0, 2.0],
+            [5.0, 2.0, 1.0, 3.0],
+        ]
+        m = len(data)
+        n = len(data[0])
+        input_cols = ["c1", "c2", "c3", "c4"]
+
+        df = spark.sparkContext.parallelize(data).toDF(input_cols)
+
+        dummy = SparkRapidsMLDummy(
+            inputCols=input_cols,
+            a=100,
+            num_workers=55,
+            partition_num=1,
+            m=m,
+            n=n,
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="The num_workers \(55\) should be less than or equal to spark default parallelism",
+        ):
+            dummy.fit(df)
