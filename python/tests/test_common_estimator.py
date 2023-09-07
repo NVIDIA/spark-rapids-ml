@@ -39,7 +39,6 @@ from spark_rapids_ml.core import (
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
 
-from .sparksession import CleanSparkSession
 from .utils import assert_params, get_default_cuml_parameters
 
 
@@ -435,6 +434,7 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
         assert model.num_workers == gpu_number
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)}
+    from .sparksession import CleanSparkSession
 
     # Estimator fit and get a model
     with CleanSparkSession(conf) as spark:
@@ -487,6 +487,8 @@ def test_dummy(gpu_number: int, tmp_path: str) -> None:
 
 
 def test_num_workers_validation() -> None:
+    from .sparksession import CleanSparkSession
+
     with CleanSparkSession() as spark:
         data = [
             [1.0, 4.0, 4.0, 4.0],
