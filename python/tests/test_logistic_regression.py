@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
 from packaging import version
+from pyspark.errors import IllegalArgumentException
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
@@ -393,3 +394,15 @@ def test_compat(
         assert blor_model.intercept == model2.intercept
         assert blor_model.transform(bdf).take(1) == model2.transform(bdf).take(1)
         assert blor_model.numFeatures == 2
+
+
+def test_parameters_verification() -> None:
+    with pytest.raises(
+        IllegalArgumentException, match="maxIter given invalid value -1"
+    ):
+        LogisticRegression(maxIter=-1)
+
+    with pytest.raises(
+        IllegalArgumentException, match="regParam given invalid value -1.0"
+    ):
+        LogisticRegression(regParam=-1.0)
