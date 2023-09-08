@@ -892,14 +892,6 @@ class LogisticRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
-        # verify the parameters by spark LR in the jvm space
-        from pyspark.ml.classification import (
-            LogisticRegression as SparkLogisticRegression,
-        )
-
-        lr = SparkLogisticRegression(maxIter=maxIter, regParam=regParam, tol=tol)
-        lr._transfer_params_to_java()
-
         if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."

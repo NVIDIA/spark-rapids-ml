@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple, Type, TypeVar, cast
 import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.errors import IllegalArgumentException
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
@@ -647,3 +648,25 @@ def test_crossvalidator_linear_regression(
         spark_cv_model = spark_cv.fit(df)
 
         assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics)
+
+
+def test_parameters_validation() -> None:
+    data = [
+        ([1.0, 2.0], 1.0),
+        ([3.0, 1.0], 0.0),
+    ]
+
+    with CleanSparkSession() as spark:
+        features_col = "features"
+        label_col = "label"
+        schema = features_col + " array<float>, " + label_col + " float"
+        df = spark.createDataFrame(data, schema=schema)
+        with pytest.raises(
+            IllegalArgumentException, match="maxIter given invalid value -1"
+        ):
+            LinearRegression(maxIter=-1).fit(df)
+
+        with pytest.raises(
+            IllegalArgumentException, match="regParam given invalid value -1.0"
+        ):
+            LinearRegression().setRegParam(-1.0).fit(df)
