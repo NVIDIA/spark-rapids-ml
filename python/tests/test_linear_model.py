@@ -670,3 +670,6 @@ def test_parameters_validation() -> None:
             IllegalArgumentException, match="regParam given invalid value -1.0"
         ):
             LinearRegression().setRegParam(-1.0).fit(df)
+
+        # shouldn't throw an exception for setting cuml values
+        LinearRegression(loss="squared_loss")._validate_parameters()

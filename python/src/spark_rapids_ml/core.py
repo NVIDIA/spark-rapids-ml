@@ -450,6 +450,18 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             pyspark_est = PCA()
 
         if pyspark_est is not None:
+            # Both pyspark and cuml may have a parameter with the same name,
+            # but cuml might have additional optional values that can be set.
+            # If we transfer these cuml-specific values to the Spark JVM,
+            # it would result in an exception.
+            # To avoid this issue, we skip transferring these parameters
+            # since the mapped parameters have been validated in _get_cuml_mapping_value.
+            cuml_params = self._param_value_mapping().keys()
+            param_mapping = self._param_mapping()
+            pyspark_params = [k for k, v in param_mapping.items() if v in cuml_params]
+            for p in pyspark_params:
+                self.clear(self.getParam(p))
+
             self._copyValues(pyspark_est)
             # validate the parameters
             pyspark_est._transfer_params_to_java()
