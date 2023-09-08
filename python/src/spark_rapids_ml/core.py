@@ -419,17 +419,18 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             from pyspark.ml.regression import RandomForestRegressor
 
             pyspark_est = RandomForestRegressor()
-
         elif "LinearRegression" in cls_name:
             from pyspark.ml.regression import LinearRegression
 
             pyspark_est = LinearRegression()
-
         elif "PCA" in cls_name:
             from pyspark.ml.feature import PCA
 
             pyspark_est = PCA()
+        elif "KMeans" in cls_name:
+            from pyspark.ml.clustering import KMeans
 
+            pyspark_est = KMeans()
         if pyspark_est is not None:
             # Both pyspark and cuml may have a parameter with the same name,
             # but cuml might have additional optional values that can be set.
@@ -437,17 +438,19 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             # it would result in an exception.
             # To avoid this issue, we skip transferring these parameters
             # since the mapped parameters have been validated in _get_cuml_mapping_value.
-            cuml_params = self._param_value_mapping().keys()
-            param_mapping = self._param_mapping()
+            cuml_est = self.copy()
+            cuml_params = cuml_est._param_value_mapping().keys()
+            param_mapping = cuml_est._param_mapping()
             pyspark_params = [k for k, v in param_mapping.items() if v in cuml_params]
             for p in pyspark_params:
-                self.clear(self.getParam(p))
+                cuml_est.clear(cuml_est.getParam(p))
 
-            self._copyValues(pyspark_est)
+            cuml_est._copyValues(pyspark_est)
             # validate the parameters
             pyspark_est._transfer_params_to_java()
 
             del pyspark_est
+            del cuml_est
 
     @abstractmethod
     def _get_cuml_fit_func(
