@@ -583,7 +583,9 @@ class LogisticRegressionClass(_CumlClass):
     ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
         def regParam_value_mapper(x: float) -> float:
             # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
-            if x == 0.0:
+            if x < 0:
+                raise ValueError(f"C or regParam given invalid value {x}")
+            elif x == 0.0:
                 logger = get_logger(cls)
                 logger.warning(
                     "no regularization is not supported yet. if regParam is set to 0,"

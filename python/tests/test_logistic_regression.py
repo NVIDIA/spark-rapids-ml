@@ -412,7 +412,7 @@ def test_parameters_validation() -> None:
         ):
             LogisticRegression(maxIter=-1).fit(df)
 
-        with pytest.raises(
-            IllegalArgumentException, match="regParam given invalid value -1.0"
-        ):
+        # regParam is mapped to different value in LogisticRegression which should be in
+        # charge of validating it.
+        with pytest.raises(ValueError, match="C or regParam given invalid value -1.0"):
             LogisticRegression().setRegParam(-1.0).fit(df)
