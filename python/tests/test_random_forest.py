@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
 from cuml import accuracy_score
+from pyspark.errors import IllegalArgumentException
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
 )
@@ -887,3 +888,25 @@ def test_crossvalidator_random_forest(
         spark_cv_model = spark_cv.fit(df)
 
         assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics)
+
+
+def test_parameters_validation() -> None:
+    data = [
+        ([1.0, 2.0], 1.0),
+        ([3.0, 1.0], 0.0),
+    ]
+
+    with CleanSparkSession() as spark:
+        features_col = "features"
+        label_col = "label"
+        schema = features_col + " array<float>, " + label_col + " float"
+        df = spark.createDataFrame(data, schema=schema)
+        with pytest.raises(
+            IllegalArgumentException, match="maxDepth given invalid value -1"
+        ):
+            RandomForestClassifier(maxDepth=-1).fit(df)
+
+        with pytest.raises(
+            IllegalArgumentException, match="maxBins given invalid value -1"
+        ):
+            RandomForestRegressor().setMaxBins(-1).fit(df)

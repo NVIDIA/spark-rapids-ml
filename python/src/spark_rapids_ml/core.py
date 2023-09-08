@@ -55,6 +55,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
+from pyspark.ml.wrapper import JavaParams
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
@@ -400,6 +401,42 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return (True, False)
 
+    def _validate_parameters(self) -> None:
+        cls_name = self.__class__.__name__
+
+        pyspark_est: Optional[JavaParams] = None
+
+        # Is there a better way for the dynamic imports?
+        if "LogisticRegression" in cls_name:
+            from pyspark.ml.classification import LogisticRegression
+
+            pyspark_est = LogisticRegression()
+        elif "RandomForestClassifier" in cls_name:
+            from pyspark.ml.classification import RandomForestClassifier
+
+            pyspark_est = RandomForestClassifier()
+        elif "RandomForestRegressor" in cls_name:
+            from pyspark.ml.regression import RandomForestRegressor
+
+            pyspark_est = RandomForestRegressor()
+
+        elif "LinearRegression" in cls_name:
+            from pyspark.ml.regression import LinearRegression
+
+            pyspark_est = LinearRegression()
+
+        elif "PCA" in cls_name:
+            from pyspark.ml.feature import PCA
+
+            pyspark_est = PCA()
+
+        if pyspark_est is not None:
+            self._copyValues(pyspark_est)
+            # validate the parameters
+            pyspark_est._transfer_params_to_java()
+
+            del pyspark_est
+
     @abstractmethod
     def _get_cuml_fit_func(
         self,
@@ -449,6 +486,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         :class:`Transformer`
             fitted model
         """
+        self._validate_parameters()
 
         cls = self.__class__
 
