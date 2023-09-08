@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple, Type, TypeVar
 import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.errors import IllegalArgumentException
 from pyspark.ml.clustering import KMeans as SparkKMeans
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.functions import array_to_vector
@@ -400,3 +401,23 @@ def test_kmeans_spark_compat(
 
         assert model.transform(df).take(1) == model2.transform(df).take(1)
         # True
+
+
+def test_parameters_validation() -> None:
+    data = [
+        ([1.0, 2.0], 1.0),
+        ([3.0, 1.0], 0.0),
+    ]
+
+    with CleanSparkSession() as spark:
+        features_col = "features"
+        label_col = "label"
+        schema = features_col + " array<float>, " + label_col + " float"
+        df = spark.createDataFrame(data, schema=schema)
+        with pytest.raises(IllegalArgumentException, match="k given invalid value -1"):
+            KMeans(k=-1).fit(df)
+
+        with pytest.raises(
+            IllegalArgumentException, match="maxIter given invalid value -1"
+        ):
+            KMeans().setMaxIter(-1).fit(df)
