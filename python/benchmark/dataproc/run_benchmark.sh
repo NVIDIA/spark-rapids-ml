@@ -21,8 +21,7 @@ gpu_args=$(cat <<EOF
 --num_gpus=2 \
 --spark_confs spark.executor.resource.gpu.amount=1 \
 --spark_confs spark.task.resource.gpu.amount=1 \
---spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
---spark_confs spark.rapids.memory.gpu.reserve=90
+--spark_confs spark.rapids.memory.gpu.pooling.enabled=false
 EOF
 )
 
@@ -48,7 +47,7 @@ elif [[ ${cluster_type} == "cpu" ]]; then
     rf_cpu_options="--subsamplingRate=0.5"
 else
     echo "unknown cluster type ${cluster_type}"
-    echo "usage: ./${script_name} cpu|gpu"
+    echo "usage: $0 cpu|gpu"
     exit 1
 fi
 
@@ -61,7 +60,7 @@ if [[ $? != 0 ]]; then
     exit 1
 fi
 
-cluster_name=${USER}-spark-rapids-ml-${cluster_type}
+cluster_name=${CLUSTER_NAME:-"${USER}-spark-rapids-ml-${cluster_type}"}
 
 # run benchmarks
 sep="=================="
@@ -237,6 +236,28 @@ for i in `seq $rf_runs`; do
     --train_path "${BENCHMARK_DATA_HOME}/linear_regression/1m_3k_singlecol_float32_50_files.parquet" \
     ${common_args} \
     ${extra_args} 2>&1 | tee random_forest_regressor_$i.out
+    set +x
+    sleep 30
+done
+
+echo
+echo "$sep algo: logistic regression $sep"
+for i in `seq $num_runs`; do
+    set -x
+    gcloud dataproc jobs submit pyspark \
+    ../benchmark_runner.py \
+    --cluster=${cluster_name} \
+    --region=${COMPUTE_REGION} \
+    -- \
+    logistic_regression \
+    --num_runs 1 \
+    --standardization False \
+    --maxIter 200 \
+    --tol 1e-30 \
+    --regParam 0.00001 \
+    --train_path "${BENCHMARK_DATA_HOME}/classification/1m_3k_singlecol_float32_50_1_3_inf_red_files.parquet" \
+    ${common_args} \
+    ${extra_args} 2>&1 | tee logistic_regression_$i.out
     set +x
     sleep 30
 done

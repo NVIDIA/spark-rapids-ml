@@ -30,7 +30,7 @@ from typing import (
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
-from .utils import _is_local
+from .utils import _get_spark_session, _is_local, get_logger
 
 if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
@@ -101,14 +101,14 @@ class _CumlClass(object):
     @classmethod
     def _param_value_mapping(
         cls,
-    ) -> Dict[str, Callable[[str], Union[None, str, float, int]]]:
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
         """
-        Return a dictionary of cuML parameter names and a function mapping their Spark ML Param string
+        Return a dictionary of cuML parameter names and a function mapping their Spark ML Param
         values to cuML values of either str, float, or int type.
 
-        The mapped function should accept all string inputs and return None for any unmapped input values.
+        The mapped function should return None for any unmapped input values.
 
-        If it is desired that a cuML string value be accepted as a valid input, it must be explicitly mapped to
+        If it is desired that a cuML value be accepted as a valid input, it must be explicitly mapped to
         itself in the function (see "squared_loss" and "eig" in example below).
 
         Example
@@ -152,6 +152,7 @@ class _CumlParams(_CumlClass, Params):
 
     _cuml_params: Dict[str, Any] = {}
     _num_workers: Optional[int] = None
+    _float32_inputs: bool = True
 
     @property
     def cuml_params(self) -> Dict[str, Any]:
@@ -166,11 +167,31 @@ class _CumlParams(_CumlClass, Params):
         Number of cuML workers, where each cuML worker corresponds to one Spark task
         running on one GPU.
         """
-        return (
-            self._infer_num_workers()
-            if self._num_workers is None
-            else self._num_workers
-        )
+
+        inferred_workers = self._infer_num_workers()
+        if self._num_workers is not None:
+            # user sets the num_workers explicitly
+            sc = _get_spark_session().sparkContext
+            if _is_local(sc):
+                default_parallelism = sc.defaultParallelism
+                if default_parallelism < self._num_workers:
+                    raise ValueError(
+                        f"The num_workers ({self._num_workers}) should be less than "
+                        f"or equal to spark default parallelism ({default_parallelism})"
+                    )
+                elif inferred_workers < self._num_workers:
+                    raise ValueError(
+                        f"The num_workers ({self._num_workers}) should be less than "
+                        f"or equal to total GPUs ({inferred_workers})"
+                    )
+            elif inferred_workers < self._num_workers:
+                get_logger(self.__class__).warning(
+                    f"Spark cluster may not have enough executors. "
+                    f"Found {inferred_workers} < {self._num_workers}"
+                )
+            return self._num_workers
+
+        return inferred_workers
 
     @num_workers.setter
     def num_workers(self, value: int) -> None:
@@ -255,6 +276,8 @@ class _CumlParams(_CumlClass, Params):
             elif k == "num_workers":
                 # special case, since not a Spark or cuML param
                 self._num_workers = v
+            elif k == "float32_inputs":
+                self._float32_inputs = v
             else:
                 raise ValueError(f"Unsupported param '{k}'.")
         return self
@@ -352,21 +375,8 @@ class _CumlParams(_CumlClass, Params):
                     gpus_per_executor = float(
                         spark.conf.get("spark.executor.resource.gpu.amount", "1")  # type: ignore
                     )
-                    gpus_per_task = float(
-                        spark.conf.get("spark.task.resource.gpu.amount", "1")  # type: ignore
-                    )
 
-                    if gpus_per_task != 1:
-                        msg = (
-                            "WARNING: cuML requires 1 GPU per task, "
-                            "'spark.task.resource.gpu.amount' is currently set to {}"
-                        )
-                        print(msg.format(gpus_per_task))
-                        gpus_per_task = 1
-
-                    num_workers = max(
-                        int(num_executors * gpus_per_executor / gpus_per_task), 1
-                    )
+                    num_workers = max(int(num_executors * gpus_per_executor), 1)
         except Exception as e:
             # ignore any exceptions and just use default value
             print(e)

@@ -70,6 +70,7 @@ class BlobsDataGen(DataGenBaseMeta):
         # must replace the None to the correct type
         params["centers"] = int
         params["random_state"] = int
+        params["include_labels"] = bool
         return params
 
     def gen_dataframe_and_meta(
@@ -83,6 +84,8 @@ class BlobsDataGen(DataGenBaseMeta):
             params["random_state"] = 1
 
         print(f"Passing {params} to make_blobs")
+
+        include_labels = params.pop("include_labels", False)
 
         rows = self.num_rows
         cols = self.num_cols
@@ -103,7 +106,7 @@ class BlobsDataGen(DataGenBaseMeta):
 
         # Generate centers upfront.
         _, _, centers = make_blobs(
-            n_samples=0, n_features=cols, **params, return_centers=True
+            n_samples=1, n_features=cols, **params, return_centers=True
         )
 
         # Update params for partition-specific calls.
@@ -128,21 +131,25 @@ class BlobsDataGen(DataGenBaseMeta):
                     **params,
                     random_state=partition_seeds[partition_index],
                 )
-                data = np.concatenate(
-                    (
-                        X.astype(dtype),
-                        y.reshape(n_partition_samples, 1).astype(dtype),
-                    ),
-                    axis=1,
-                )
+                if include_labels:
+                    data = np.concatenate(
+                        (
+                            X.astype(dtype),
+                            y.reshape(n_partition_samples, 1).astype(dtype),
+                        ),
+                        axis=1,
+                    )
+                else:
+                    data = X.astype(dtype)
                 del X
                 del y
                 for i in range(0, n_partition_samples, maxRecordsPerBatch):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_samples)
                     yield pd.DataFrame(data=data[i:end_idx])
 
-        label_col = "label"
-        self.schema.append(f"{label_col} {self.pyspark_type}")
+        if include_labels:
+            label_col = "label"
+            self.schema.append(f"{label_col} {self.pyspark_type}")
 
         return (
             (
@@ -375,7 +382,9 @@ class RegressionDataGen(DataGenBaseMeta):
                     cols,
                     numPartitions=num_partitions,
                     seed=seed,
-                ).map(lambda nparray: nparray.tolist()),
+                ).map(
+                    lambda nparray: nparray.tolist()  # type: ignore
+                ),
                 schema=",".join(self.schema),
             )
 

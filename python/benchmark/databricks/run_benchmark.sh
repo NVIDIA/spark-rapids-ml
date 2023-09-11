@@ -10,7 +10,7 @@ elif [[ $cluster_type == "cpu" ]]; then
     num_gpus=0
 else
     echo "unknown cluster type $cluster_type"
-    echo "usage: ./$script_name cpu|gpu"
+    echo "usage: $0 cpu|gpu"
     exit 1
 fi
 
@@ -120,3 +120,14 @@ $rf_cpu_options \
 --maxDepth 6 \
 --train_path "${BENCHMARK_DATA_HOME}/linear_regression/1m_3k_singlecol_float32_50_files.parquet" && \
 sleep 90; done
+
+echo
+echo "$sep algo: logistic regression $sep"
+for i in `seq $num_runs`; do run_bm logistic_regression \
+--num_runs 1 \
+--standardization False \
+--maxIter 200 \
+--tol 1e-30 \
+--regParam 0.00001 \
+--train_path "${BENCHMARK_DATA_HOME}/classification/1m_3k_singlecol_float32_50_1_3_inf_red_files.parquet" \
+&& sleep 90; done

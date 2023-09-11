@@ -18,12 +18,14 @@ import sys
 
 from benchmark.bench_kmeans import BenchmarkKMeans
 from benchmark.bench_linear_regression import BenchmarkLinearRegression
+from benchmark.bench_logistic_regression import BenchmarkLogisticRegression
 from benchmark.bench_nearest_neighbors import BenchmarkNearestNeighbors
 from benchmark.bench_pca import BenchmarkPCA
 from benchmark.bench_random_forest import (
     BenchmarkRandomForestClassifier,
     BenchmarkRandomForestRegressor,
 )
+from benchmark.bench_umap import BenchmarkUMAP
 
 
 class BenchmarkRunner:
@@ -35,6 +37,8 @@ class BenchmarkRunner:
             "pca": BenchmarkPCA,
             "random_forest_classifier": BenchmarkRandomForestClassifier,
             "random_forest_regressor": BenchmarkRandomForestRegressor,
+            "logistic_regression": BenchmarkLogisticRegression,
+            "umap": BenchmarkUMAP,
         }
         algorithms = "\n    ".join(registered_algorithms.keys())
         parser = argparse.ArgumentParser(

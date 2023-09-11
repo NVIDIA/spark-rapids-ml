@@ -25,7 +25,7 @@ class WithSparkSession(object):
     def __init__(self, confs: List[str], shutdown: bool = True) -> None:
         builder = SparkSession.builder
         for conf in confs:
-            key, value = conf.split("=")
+            key, value = (conf.split("=")[0], "=".join(conf.split("=")[1:]))
             builder = builder.config(key, value)
         self.spark = builder.getOrCreate()
         self.shutdown = shutdown

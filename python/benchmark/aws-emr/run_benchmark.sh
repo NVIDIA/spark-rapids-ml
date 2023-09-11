@@ -78,7 +78,7 @@ elif [[ ${cluster_type} == "cpu" ]]; then
     device="CPU"
 else
     echo "unknown cluster type ${cluster_type}"
-    echo "usage: ./${script_name} cpu|gpu"
+    echo "usage: $0 cpu|gpu"
     exit 1
 fi
 
@@ -273,4 +273,26 @@ for i in `seq $rf_runs`; do
         --steps Type=Spark,Name="${device} Random Forest Regressor",ActionOnFailure=CONTINUE,Args=[${rf_regressor_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
     set +x
     poll_stdout $CLUSTER_ID $STEP_ID ./random_forest_regressor_$i.out
+done
+
+echo
+echo "$sep algo: logistic regression $sep"
+lr_classification_args=$(cat << EOF
+${spark_submit_args},\
+logistic_regression,\
+${extra_args},\
+--num_runs,1,\
+--standardization,False,\
+--maxIter,200,\
+--tol,1e-30,\
+--regParam,0.00001,\
+--train_path,"${BENCHMARK_DATA_HOME}/classification/1m_3k_singlecol_float32_50_1_3_inf_red_files.parquet"
+EOF
+)
+for i in `seq $num_runs`; do
+    set -x
+    STEP_ID=$(aws emr add-steps --cluster-id ${CLUSTER_ID} \
+        --steps Type=Spark,Name="${device} Logistic Regression",ActionOnFailure=CONTINUE,Args=[${lr_classification_args}] | tee /dev/tty | grep -o 's-[0-9|A-Z]*')
+    set +x
+    poll_stdout $CLUSTER_ID $STEP_ID ./logistic_regression_$i.out
 done
