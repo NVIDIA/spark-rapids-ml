@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 import pandas as pd
-from pyspark import Row, keyword_only
+from pyspark import Row, TaskContext, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
@@ -808,17 +808,7 @@ class LogisticRegression(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
-            init_parameters = params[param_alias.cuml_init]
-
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
-
-            logistic_regression = LogisticRegressionMG(
-                handle=params[param_alias.handle],
-                **init_parameters,
-            )
-
-            logistic_regression.penalty_normalized = False
-            logistic_regression.lbfgs_memory = 10
 
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
@@ -830,24 +820,54 @@ class LogisticRegression(
                 concated = _concat_and_free(X_list, order=array_order)
                 concated_y = _concat_and_free(y_list, order=array_order)
 
-            pdesc = PartitionDescriptor.build(
-                [concated.shape[0]], params[param_alias.num_cols]
-            )
+            def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
+                logistic_regression = LogisticRegressionMG(
+                    handle=params[param_alias.handle],
+                    **init_parameters,
+                )
 
-            logistic_regression.fit(
-                [(concated, concated_y)],
-                pdesc.m,
-                pdesc.n,
-                pdesc.parts_rank_size,
-                pdesc.rank,
-            )
+                logistic_regression.penalty_normalized = False
+                logistic_regression.lbfgs_memory = 10
 
-            return {
-                "coef_": [logistic_regression.coef_.tolist()],
-                "intercept_": [logistic_regression.intercept_.tolist()],
-                "n_cols": [logistic_regression.n_cols],
-                "dtype": [logistic_regression.dtype.name],
-            }
+                pdesc = PartitionDescriptor.build(
+                    [concated.shape[0]], params[param_alias.num_cols]
+                )
+
+                logistic_regression.fit(
+                    [(concated, concated_y)],
+                    pdesc.m,
+                    pdesc.n,
+                    pdesc.parts_rank_size,
+                    pdesc.rank,
+                )
+
+                model = {
+                    "coef_": logistic_regression.coef_.tolist(),
+                    "intercept_": logistic_regression.intercept_.tolist(),
+                    "n_cols": logistic_regression.n_cols,
+                    "dtype": logistic_regression.dtype.name,
+                }
+                del logistic_regression
+                return model
+
+            init_parameters = params[param_alias.cuml_init]
+            fit_multiple_params = params[param_alias.fit_multiple_params]
+            if len(fit_multiple_params) == 0:
+                fit_multiple_params.append({})
+
+            models = []
+            for i in range(len(fit_multiple_params)):
+                tmp_params = init_parameters.copy()
+                tmp_params.update(fit_multiple_params[i])
+                models.append(_single_fit(tmp_params))
+
+            models_dict = {}
+            tc = TaskContext.get()
+            assert tc is not None
+            if tc.partitionId() == 0:
+                for k in models[0].keys():
+                    models_dict[k] = [m[k] for m in models]
+            return models_dict
 
         return _logistic_regression_fit
 
@@ -868,8 +888,10 @@ class LogisticRegression(
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
             [
-                StructField("coef_", ArrayType(ArrayType(DoubleType()), False), False),
-                StructField("intercept_", ArrayType(DoubleType()), False),
+                StructField(
+                    "coef_", ArrayType(ArrayType(DoubleType(), False), False), False
+                ),
+                StructField("intercept_", ArrayType(DoubleType(), False), False),
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
             ]
@@ -901,6 +923,9 @@ class LogisticRegression(
         Sets the value of :py:attr:`fitIntercept`.
         """
         return self.set_params(fitIntercept=value)
+
+    def _enable_fit_multiple_in_single_pass(self) -> bool:
+        return True
 
 
 class LogisticRegressionModel(
