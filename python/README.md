@@ -6,11 +6,11 @@ This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-
 
 For simplicity, the following instructions just use Spark local mode, assuming a server with at least one GPU.
 
-First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).
+First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 11.8:
 ```bash
 conda create -n rapids-23.08 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=23.08 python=3.9 cudatoolkit=11.5
+    cuml=23.08 python=3.9 cuda-version=11.8
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -21,13 +21,15 @@ Once you have the conda environment, activate it and install the required packag
 ```bash
 conda activate rapids-23.08
 
-# for development access to notebooks, tests, and benchmarks
+## for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
 cd spark-rapids-ml/python
-pip install -r requirements.txt
+# install additional non-RAPIDS python dependencies for dev
+pip install -r requirements_dev.txt
 pip install -e .
 
-# OPTIONAL: for package installation only
+## OPTIONAL: for package installation only
+# install additional non-RAPIDS python dependencies
 pip install -r https://raw.githubusercontent.com/NVIDIA/spark-rapids-ml/main/python/requirements.txt
 pip install spark-rapids-ml
 ```

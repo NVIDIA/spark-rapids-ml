@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=11.5.2
+ARG CUDA_VERSION=11.8.0
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
 # Install packages to build spark-rapids-ml
@@ -38,5 +38,5 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 
 # install cuML
 ARG CUML_VER=23.08
-RUN conda install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER python=3.9 cuda-version=11.5 \
+RUN conda install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER python=3.9 cuda-version=11.8 \
     && conda clean --all -f -y
