@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>LinearRegression &#8212; spark-rapids-ml 23.6.0 documentation</title>
+    <title>LinearRegression &#8212; spark-rapids-ml 23.8.0 documentation</title>
   
   
   
@@ -109,7 +109,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.6.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
   
 </a></div>
     
@@ -251,6 +251,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCAModel.html">PCAModel</a></li>
 </ul>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegression.html">LogisticRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegressionModel.html">LogisticRegressionModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassifier.html">RandomForestClassifier</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
 </ul>
@@ -270,6 +272,10 @@ document.write(`
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.tuning.CrossValidator.html">CrossValidator</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAP.html">UMAP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAPModel.html">UMAPModel</a></li>
 </ul>
 </div>
 </nav></div>
@@ -348,8 +354,8 @@ PySpark Pipeline and PySpark ML meta algorithms like
 </ul>
 <p>LinearRegression automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.LinearRegression.html#pyspark.ml.regression.LinearRegression" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearRegression</span></code></a>,
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v23.06)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v23.06)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v23.06)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
-and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v23.06)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v23.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v23.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v23.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
+and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v23.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
 to cuML parameters.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

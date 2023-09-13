@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>RandomForestClassificationModel &#8212; spark-rapids-ml 23.6.0 documentation</title>
+    <title>RandomForestClassificationModel &#8212; spark-rapids-ml 23.8.0 documentation</title>
   
   
   
@@ -109,7 +109,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.6.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
   
 </a></div>
     
@@ -251,6 +251,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCAModel.html">PCAModel</a></li>
 </ul>
 <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegression.html">LogisticRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegressionModel.html">LogisticRegressionModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassifier.html">RandomForestClassifier</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">RandomForestClassificationModel</a></li>
 </ul>
@@ -270,6 +272,10 @@ document.write(`
 </ul>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.tuning.CrossValidator.html">CrossValidator</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAP.html">UMAP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAPModel.html">UMAPModel</a></li>
 </ul>
 </div>
 </nav></div>
@@ -399,74 +405,68 @@ document.write(`
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getProbabilityCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.getProbabilityCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getProbabilityCol</span></code></a>()</p></td>
 <td><p>Gets the value of probabilityCol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getRawPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.getRawPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getRawPredictionCol</span></code></a>()</p></td>
-<td><p>Gets the value of rawPredictionCol or its default value.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getSeed" title="spark_rapids_ml.classification.RandomForestClassificationModel.getSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getSeed" title="spark_rapids_ml.classification.RandomForestClassificationModel.getSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code></a>()</p></td>
 <td><p>Gets the value of seed or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.get_model_attributes" title="spark_rapids_ml.classification.RandomForestClassificationModel.get_model_attributes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.get_model_attributes" title="spark_rapids_ml.classification.RandomForestClassificationModel.get_model_attributes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code></a>()</p></td>
 <td><p>Return model attributes as a dictionary.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasDefault" title="spark_rapids_ml.classification.RandomForestClassificationModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasDefault" title="spark_rapids_ml.classification.RandomForestClassificationModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
 <td><p>Checks whether a param has a default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasParam" title="spark_rapids_ml.classification.RandomForestClassificationModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasParam" title="spark_rapids_ml.classification.RandomForestClassificationModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
 <td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_logging" title="spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_logging"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code></a>(verbose)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_logging" title="spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_logging"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code></a>(verbose)</p></td>
 <td><p>Initializes the logger for cuML.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_params" title="spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_params" title="spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code></a>()</p></td>
 <td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.isDefined" title="spark_rapids_ml.classification.RandomForestClassificationModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.isDefined" title="spark_rapids_ml.classification.RandomForestClassificationModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.isSet" title="spark_rapids_ml.classification.RandomForestClassificationModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.isSet" title="spark_rapids_ml.classification.RandomForestClassificationModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.load" title="spark_rapids_ml.classification.RandomForestClassificationModel.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.load" title="spark_rapids_ml.classification.RandomForestClassificationModel.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predict" title="spark_rapids_ml.classification.RandomForestClassificationModel.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predict" title="spark_rapids_ml.classification.RandomForestClassificationModel.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(value)</p></td>
 <td><p>Predict label for the given features.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictLeaf" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictLeaf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictLeaf</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictLeaf" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictLeaf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictLeaf</span></code></a>(value)</p></td>
 <td><p>Predict the indices of the leaves corresponding to the feature vector.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictProbability</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictProbability"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictProbability</span></code></a>(value)</p></td>
 <td><p>Predict the probability of each class given the features.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictRaw</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictRaw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictRaw</span></code></a>(value)</p></td>
 <td><p>Raw prediction for each possible label.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.read" title="spark_rapids_ml.classification.RandomForestClassificationModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.read" title="spark_rapids_ml.classification.RandomForestClassificationModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.save" title="spark_rapids_ml.classification.RandomForestClassificationModel.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.save" title="spark_rapids_ml.classification.RandomForestClassificationModel.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
 <td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.set" title="spark_rapids_ml.classification.RandomForestClassificationModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.set" title="spark_rapids_ml.classification.RandomForestClassificationModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
 <td><p>Sets a parameter in the embedded param map.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.featuresCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <code class="xref py py-attr docutils literal notranslate"><span class="pre">featureCols</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCols" title="spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCols" title="spark_rapids_ml.classification.RandomForestClassificationModel.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.featuresCols" title="spark_rapids_ml.classification.RandomForestClassificationModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setLabelCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setLabelCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.labelCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.labelCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setProbabilityCol</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setProbabilityCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">probabilityCol</span></code></a>.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setRawPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.setRawPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRawPredictionCol</span></code></a>(value)</p></td>
-<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">rawPredictionCol</span></code></a>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.set_gpu_device" title="spark_rapids_ml.classification.RandomForestClassificationModel.set_gpu_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code></a>(context, is_local[, is_transform])</p></td>
 <td><p>Set gpu device according to the spark task resources.</p></td>
@@ -545,28 +545,25 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">probabilityCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rawPredictionCol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.seed" title="spark_rapids_ml.classification.RandomForestClassificationModel.seed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seed</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.seed" title="spark_rapids_ml.classification.RandomForestClassificationModel.seed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seed</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.supportedFeatureSubsetStrategies" title="spark_rapids_ml.classification.RandomForestClassificationModel.supportedFeatureSubsetStrategies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supportedFeatureSubsetStrategies</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.supportedFeatureSubsetStrategies" title="spark_rapids_ml.classification.RandomForestClassificationModel.supportedFeatureSubsetStrategies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supportedFeatureSubsetStrategies</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.supportedImpurities" title="spark_rapids_ml.classification.RandomForestClassificationModel.supportedImpurities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supportedImpurities</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.supportedImpurities" title="spark_rapids_ml.classification.RandomForestClassificationModel.supportedImpurities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supportedImpurities</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.toDebugString" title="spark_rapids_ml.classification.RandomForestClassificationModel.toDebugString"><code class="xref py py-obj docutils literal notranslate"><span class="pre">toDebugString</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.toDebugString" title="spark_rapids_ml.classification.RandomForestClassificationModel.toDebugString"><code class="xref py py-obj docutils literal notranslate"><span class="pre">toDebugString</span></code></a></p></td>
 <td><p>Full description of model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.totalNumNodes" title="spark_rapids_ml.classification.RandomForestClassificationModel.totalNumNodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">totalNumNodes</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.totalNumNodes" title="spark_rapids_ml.classification.RandomForestClassificationModel.totalNumNodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">totalNumNodes</span></code></a></p></td>
 <td><p>Total number of nodes, summed over all trees in the ensemble.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.treeWeights" title="spark_rapids_ml.classification.RandomForestClassificationModel.treeWeights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">treeWeights</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.treeWeights" title="spark_rapids_ml.classification.RandomForestClassificationModel.treeWeights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">treeWeights</span></code></a></p></td>
 <td><p>Return the weights for each tree.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.trees" title="spark_rapids_ml.classification.RandomForestClassificationModel.trees"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trees</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.trees" title="spark_rapids_ml.classification.RandomForestClassificationModel.trees"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trees</span></code></a></p></td>
 <td><p>Trees in this ensemble.</p></td>
 </tr>
 </tbody>
@@ -737,12 +734,6 @@ default value. Raises an error if neither is set.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.getRawPredictionCol">
-<span class="sig-name descname"><span class="pre">getRawPredictionCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getRawPredictionCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the value of rawPredictionCol or its default value.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.getSeed">
 <span class="sig-name descname"><span class="pre">getSeed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getSeed" title="Permalink to this definition">#</a></dt>
 <dd><p>Gets the value of seed or its default value.</p>
@@ -875,12 +866,6 @@ a default value.</p>
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol">
 <span class="sig-name descname"><span class="pre">setProbabilityCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_RFClassifierParams</span></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">probabilityCol</span></code></a>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.setRawPredictionCol">
-<span class="sig-name descname"><span class="pre">setRawPredictionCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_RFClassifierParams</span></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setRawPredictionCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol" title="spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">rawPredictionCol</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1041,11 +1026,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol">
-<span class="sig-name descname"><span class="pre">rawPredictionCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='rawPredictionCol',</span> <span class="pre">doc='raw</span> <span class="pre">prediction</span> <span class="pre">(a.k.a.</span> <span class="pre">confidence)</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.seed">
 <span class="sig-name descname"><span class="pre">seed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='seed',</span> <span class="pre">doc='random</span> <span class="pre">seed.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.seed" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
@@ -1157,7 +1137,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getParam"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.getParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getPredictionCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.getPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getProbabilityCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.getProbabilityCol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getRawPredictionCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.getRawPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.getSeed"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.getSeed()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.get_model_attributes"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.get_model_attributes()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.hasDefault"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.hasDefault()</span></code></a></li>
@@ -1179,7 +1158,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setLabelCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.setLabelCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setPredictionCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.setPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setProbabilityCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.setProbabilityCol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.setRawPredictionCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.setRawPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.set_gpu_device"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.set_gpu_device()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.set_params"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.set_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.transform"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.transform()</span></code></a></li>
@@ -1204,7 +1182,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.params"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.params</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.predictionCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.predictionCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.probabilityCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.probabilityCol</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.rawPredictionCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.seed"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.seed</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.supportedFeatureSubsetStrategies"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.supportedFeatureSubsetStrategies</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.supportedImpurities"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.supportedImpurities</span></code></a></li>

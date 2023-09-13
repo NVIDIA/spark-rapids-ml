@@ -1,0 +1,261 @@
+﻿..  Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+..    http://www.apache.org/licenses/LICENSE-2.0
+
+..  Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+
+UMAPModel
+==============================
+
+.. currentmodule:: spark_rapids_ml.umap
+
+.. autoclass:: UMAPModel
+    :no-private-members:
+
+    
+      
+    
+
+    
+    
+
+    .. rubric:: Methods
+
+    .. autosummary::
+    
+       ~UMAPModel.clear
+       ~UMAPModel.copy
+       ~UMAPModel.cpu
+       ~UMAPModel.explainParam
+       ~UMAPModel.explainParams
+       ~UMAPModel.extractParamMap
+       ~UMAPModel.from_row
+       ~UMAPModel.getA
+       ~UMAPModel.getB
+       ~UMAPModel.getFeaturesCol
+       ~UMAPModel.getFeaturesCols
+       ~UMAPModel.getInit
+       ~UMAPModel.getLabelCol
+       ~UMAPModel.getLearningRate
+       ~UMAPModel.getLocalConnectivity
+       ~UMAPModel.getMetric
+       ~UMAPModel.getMinDist
+       ~UMAPModel.getNComponents
+       ~UMAPModel.getNEpochs
+       ~UMAPModel.getNNeighbors
+       ~UMAPModel.getNegativeSampleRate
+       ~UMAPModel.getOrDefault
+       ~UMAPModel.getOutputCol
+       ~UMAPModel.getParam
+       ~UMAPModel.getPrecomputedKNN
+       ~UMAPModel.getRandomState
+       ~UMAPModel.getRepulsionStrength
+       ~UMAPModel.getSampleFraction
+       ~UMAPModel.getSetOpMixRatio
+       ~UMAPModel.getSpread
+       ~UMAPModel.getTransformQueueSize
+       ~UMAPModel.get_model_attributes
+       ~UMAPModel.hasDefault
+       ~UMAPModel.hasParam
+       ~UMAPModel.initialize_cuml_logging
+       ~UMAPModel.initialize_cuml_params
+       ~UMAPModel.isDefined
+       ~UMAPModel.isSet
+       ~UMAPModel.load
+       ~UMAPModel.read
+       ~UMAPModel.save
+       ~UMAPModel.set
+       ~UMAPModel.setA
+       ~UMAPModel.setB
+       ~UMAPModel.setFeaturesCol
+       ~UMAPModel.setFeaturesCols
+       ~UMAPModel.setInit
+       ~UMAPModel.setLabelCol
+       ~UMAPModel.setLearningRate
+       ~UMAPModel.setLocalConnectivity
+       ~UMAPModel.setMetric
+       ~UMAPModel.setMinDist
+       ~UMAPModel.setNComponents
+       ~UMAPModel.setNEpochs
+       ~UMAPModel.setNNeighbors
+       ~UMAPModel.setNegativeSampleRate
+       ~UMAPModel.setOutputCol
+       ~UMAPModel.setPrecomputedKNN
+       ~UMAPModel.setRandomState
+       ~UMAPModel.setRepulsionStrength
+       ~UMAPModel.setSampleFraction
+       ~UMAPModel.setSetOpMixRatio
+       ~UMAPModel.setSpread
+       ~UMAPModel.setTransformQueueSize
+       ~UMAPModel.set_gpu_device
+       ~UMAPModel.set_params
+       ~UMAPModel.transform
+       ~UMAPModel.write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes
+
+    .. autosummary::
+    
+       ~UMAPModel.a
+       ~UMAPModel.b
+       ~UMAPModel.cuml_params
+       ~UMAPModel.embedding
+       ~UMAPModel.featuresCol
+       ~UMAPModel.featuresCols
+       ~UMAPModel.init
+       ~UMAPModel.labelCol
+       ~UMAPModel.learning_rate
+       ~UMAPModel.local_connectivity
+       ~UMAPModel.metric
+       ~UMAPModel.min_dist
+       ~UMAPModel.n_components
+       ~UMAPModel.n_epochs
+       ~UMAPModel.n_neighbors
+       ~UMAPModel.negative_sample_rate
+       ~UMAPModel.num_workers
+       ~UMAPModel.outputCol
+       ~UMAPModel.params
+       ~UMAPModel.precomputed_knn
+       ~UMAPModel.random_state
+       ~UMAPModel.raw_data
+       ~UMAPModel.repulsion_strength
+       ~UMAPModel.sample_fraction
+       ~UMAPModel.set_op_mix_ratio
+       ~UMAPModel.spread
+       ~UMAPModel.transform_queue_size
+
+    
+    
+
+    
+    
+
+    .. rubric:: Methods Documentation
+
+    
+    .. automethod:: clear
+    .. automethod:: copy
+    .. automethod:: cpu
+    .. automethod:: explainParam
+    .. automethod:: explainParams
+    .. automethod:: extractParamMap
+    .. automethod:: from_row
+    .. automethod:: getA
+    .. automethod:: getB
+    .. automethod:: getFeaturesCol
+    .. automethod:: getFeaturesCols
+    .. automethod:: getInit
+    .. automethod:: getLabelCol
+    .. automethod:: getLearningRate
+    .. automethod:: getLocalConnectivity
+    .. automethod:: getMetric
+    .. automethod:: getMinDist
+    .. automethod:: getNComponents
+    .. automethod:: getNEpochs
+    .. automethod:: getNNeighbors
+    .. automethod:: getNegativeSampleRate
+    .. automethod:: getOrDefault
+    .. automethod:: getOutputCol
+    .. automethod:: getParam
+    .. automethod:: getPrecomputedKNN
+    .. automethod:: getRandomState
+    .. automethod:: getRepulsionStrength
+    .. automethod:: getSampleFraction
+    .. automethod:: getSetOpMixRatio
+    .. automethod:: getSpread
+    .. automethod:: getTransformQueueSize
+    .. automethod:: get_model_attributes
+    .. automethod:: hasDefault
+    .. automethod:: hasParam
+    .. automethod:: initialize_cuml_logging
+    .. automethod:: initialize_cuml_params
+    .. automethod:: isDefined
+    .. automethod:: isSet
+    .. automethod:: load
+    .. automethod:: read
+    .. automethod:: save
+    .. automethod:: set
+    .. automethod:: setA
+    .. automethod:: setB
+    .. automethod:: setFeaturesCol
+    .. automethod:: setFeaturesCols
+    .. automethod:: setInit
+    .. automethod:: setLabelCol
+    .. automethod:: setLearningRate
+    .. automethod:: setLocalConnectivity
+    .. automethod:: setMetric
+    .. automethod:: setMinDist
+    .. automethod:: setNComponents
+    .. automethod:: setNEpochs
+    .. automethod:: setNNeighbors
+    .. automethod:: setNegativeSampleRate
+    .. automethod:: setOutputCol
+    .. automethod:: setPrecomputedKNN
+    .. automethod:: setRandomState
+    .. automethod:: setRepulsionStrength
+    .. automethod:: setSampleFraction
+    .. automethod:: setSetOpMixRatio
+    .. automethod:: setSpread
+    .. automethod:: setTransformQueueSize
+    .. automethod:: set_gpu_device
+    .. automethod:: set_params
+    .. automethod:: transform
+    .. automethod:: write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes Documentation
+
+    
+    .. autoattribute:: a
+    .. autoattribute:: b
+    .. autoattribute:: cuml_params
+    .. autoattribute:: embedding
+    .. autoattribute:: featuresCol
+    .. autoattribute:: featuresCols
+    .. autoattribute:: init
+    .. autoattribute:: labelCol
+    .. autoattribute:: learning_rate
+    .. autoattribute:: local_connectivity
+    .. autoattribute:: metric
+    .. autoattribute:: min_dist
+    .. autoattribute:: n_components
+    .. autoattribute:: n_epochs
+    .. autoattribute:: n_neighbors
+    .. autoattribute:: negative_sample_rate
+    .. autoattribute:: num_workers
+    .. autoattribute:: outputCol
+    .. autoattribute:: params
+    .. autoattribute:: precomputed_knn
+    .. autoattribute:: random_state
+    .. autoattribute:: raw_data
+    .. autoattribute:: repulsion_strength
+    .. autoattribute:: sample_fraction
+    .. autoattribute:: set_op_mix_ratio
+    .. autoattribute:: spread
+    .. autoattribute:: transform_queue_size
+
+    
+    

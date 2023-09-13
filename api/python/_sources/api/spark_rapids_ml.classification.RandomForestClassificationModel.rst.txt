@@ -56,7 +56,6 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.getParam
        ~RandomForestClassificationModel.getPredictionCol
        ~RandomForestClassificationModel.getProbabilityCol
-       ~RandomForestClassificationModel.getRawPredictionCol
        ~RandomForestClassificationModel.getSeed
        ~RandomForestClassificationModel.get_model_attributes
        ~RandomForestClassificationModel.hasDefault
@@ -78,7 +77,6 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.setLabelCol
        ~RandomForestClassificationModel.setPredictionCol
        ~RandomForestClassificationModel.setProbabilityCol
-       ~RandomForestClassificationModel.setRawPredictionCol
        ~RandomForestClassificationModel.set_gpu_device
        ~RandomForestClassificationModel.set_params
        ~RandomForestClassificationModel.transform
@@ -114,7 +112,6 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.params
        ~RandomForestClassificationModel.predictionCol
        ~RandomForestClassificationModel.probabilityCol
-       ~RandomForestClassificationModel.rawPredictionCol
        ~RandomForestClassificationModel.seed
        ~RandomForestClassificationModel.supportedFeatureSubsetStrategies
        ~RandomForestClassificationModel.supportedImpurities
@@ -153,7 +150,6 @@ RandomForestClassificationModel
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getProbabilityCol
-    .. automethod:: getRawPredictionCol
     .. automethod:: getSeed
     .. automethod:: get_model_attributes
     .. automethod:: hasDefault
@@ -175,7 +171,6 @@ RandomForestClassificationModel
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
-    .. automethod:: setRawPredictionCol
     .. automethod:: set_gpu_device
     .. automethod:: set_params
     .. automethod:: transform
@@ -210,7 +205,6 @@ RandomForestClassificationModel
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: probabilityCol
-    .. autoattribute:: rawPredictionCol
     .. autoattribute:: seed
     .. autoattribute:: supportedFeatureSubsetStrategies
     .. autoattribute:: supportedImpurities

@@ -55,7 +55,6 @@ RandomForestClassifier
        ~RandomForestClassifier.getOrDefault
        ~RandomForestClassifier.getParam
        ~RandomForestClassifier.getProbabilityCol
-       ~RandomForestClassifier.getRawPredictionCol
        ~RandomForestClassifier.getSeed
        ~RandomForestClassifier.hasDefault
        ~RandomForestClassifier.hasParam
@@ -79,7 +78,6 @@ RandomForestClassifier
        ~RandomForestClassifier.setNumTrees
        ~RandomForestClassifier.setPredictionCol
        ~RandomForestClassifier.setProbabilityCol
-       ~RandomForestClassifier.setRawPredictionCol
        ~RandomForestClassifier.setSeed
        ~RandomForestClassifier.set_gpu_device
        ~RandomForestClassifier.set_params
@@ -109,7 +107,6 @@ RandomForestClassifier
        ~RandomForestClassifier.num_workers
        ~RandomForestClassifier.params
        ~RandomForestClassifier.probabilityCol
-       ~RandomForestClassifier.rawPredictionCol
        ~RandomForestClassifier.seed
        ~RandomForestClassifier.supportedFeatureSubsetStrategies
        ~RandomForestClassifier.supportedImpurities
@@ -143,7 +140,6 @@ RandomForestClassifier
     .. automethod:: getOrDefault
     .. automethod:: getParam
     .. automethod:: getProbabilityCol
-    .. automethod:: getRawPredictionCol
     .. automethod:: getSeed
     .. automethod:: hasDefault
     .. automethod:: hasParam
@@ -167,7 +163,6 @@ RandomForestClassifier
     .. automethod:: setNumTrees
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
-    .. automethod:: setRawPredictionCol
     .. automethod:: setSeed
     .. automethod:: set_gpu_device
     .. automethod:: set_params
@@ -196,7 +191,6 @@ RandomForestClassifier
     .. autoattribute:: num_workers
     .. autoattribute:: params
     .. autoattribute:: probabilityCol
-    .. autoattribute:: rawPredictionCol
     .. autoattribute:: seed
     .. autoattribute:: supportedFeatureSubsetStrategies
     .. autoattribute:: supportedImpurities

@@ -1,0 +1,189 @@
+﻿..  Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+..    http://www.apache.org/licenses/LICENSE-2.0
+
+..  Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+
+LogisticRegressionModel
+======================================================
+
+.. currentmodule:: spark_rapids_ml.classification
+
+.. autoclass:: LogisticRegressionModel
+    :no-private-members:
+
+    
+      
+    
+
+    
+    
+
+    .. rubric:: Methods
+
+    .. autosummary::
+    
+       ~LogisticRegressionModel.clear
+       ~LogisticRegressionModel.copy
+       ~LogisticRegressionModel.cpu
+       ~LogisticRegressionModel.evaluate
+       ~LogisticRegressionModel.explainParam
+       ~LogisticRegressionModel.explainParams
+       ~LogisticRegressionModel.extractParamMap
+       ~LogisticRegressionModel.from_row
+       ~LogisticRegressionModel.getFeaturesCol
+       ~LogisticRegressionModel.getFeaturesCols
+       ~LogisticRegressionModel.getFitIntercept
+       ~LogisticRegressionModel.getLabelCol
+       ~LogisticRegressionModel.getMaxIter
+       ~LogisticRegressionModel.getOrDefault
+       ~LogisticRegressionModel.getParam
+       ~LogisticRegressionModel.getPredictionCol
+       ~LogisticRegressionModel.getProbabilityCol
+       ~LogisticRegressionModel.getRegParam
+       ~LogisticRegressionModel.getTol
+       ~LogisticRegressionModel.get_model_attributes
+       ~LogisticRegressionModel.hasDefault
+       ~LogisticRegressionModel.hasParam
+       ~LogisticRegressionModel.initialize_cuml_logging
+       ~LogisticRegressionModel.initialize_cuml_params
+       ~LogisticRegressionModel.isDefined
+       ~LogisticRegressionModel.isSet
+       ~LogisticRegressionModel.load
+       ~LogisticRegressionModel.predict
+       ~LogisticRegressionModel.predictProbability
+       ~LogisticRegressionModel.predictRaw
+       ~LogisticRegressionModel.read
+       ~LogisticRegressionModel.save
+       ~LogisticRegressionModel.set
+       ~LogisticRegressionModel.setFeaturesCol
+       ~LogisticRegressionModel.setFeaturesCols
+       ~LogisticRegressionModel.setLabelCol
+       ~LogisticRegressionModel.setPredictionCol
+       ~LogisticRegressionModel.setProbabilityCol
+       ~LogisticRegressionModel.set_gpu_device
+       ~LogisticRegressionModel.set_params
+       ~LogisticRegressionModel.transform
+       ~LogisticRegressionModel.write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes
+
+    .. autosummary::
+    
+       ~LogisticRegressionModel.coefficients
+       ~LogisticRegressionModel.cuml_params
+       ~LogisticRegressionModel.featuresCol
+       ~LogisticRegressionModel.featuresCols
+       ~LogisticRegressionModel.fitIntercept
+       ~LogisticRegressionModel.hasSummary
+       ~LogisticRegressionModel.intercept
+       ~LogisticRegressionModel.labelCol
+       ~LogisticRegressionModel.maxIter
+       ~LogisticRegressionModel.numFeatures
+       ~LogisticRegressionModel.num_workers
+       ~LogisticRegressionModel.params
+       ~LogisticRegressionModel.predictionCol
+       ~LogisticRegressionModel.probabilityCol
+       ~LogisticRegressionModel.regParam
+       ~LogisticRegressionModel.summary
+       ~LogisticRegressionModel.tol
+
+    
+    
+
+    
+    
+
+    .. rubric:: Methods Documentation
+
+    
+    .. automethod:: clear
+    .. automethod:: copy
+    .. automethod:: cpu
+    .. automethod:: evaluate
+    .. automethod:: explainParam
+    .. automethod:: explainParams
+    .. automethod:: extractParamMap
+    .. automethod:: from_row
+    .. automethod:: getFeaturesCol
+    .. automethod:: getFeaturesCols
+    .. automethod:: getFitIntercept
+    .. automethod:: getLabelCol
+    .. automethod:: getMaxIter
+    .. automethod:: getOrDefault
+    .. automethod:: getParam
+    .. automethod:: getPredictionCol
+    .. automethod:: getProbabilityCol
+    .. automethod:: getRegParam
+    .. automethod:: getTol
+    .. automethod:: get_model_attributes
+    .. automethod:: hasDefault
+    .. automethod:: hasParam
+    .. automethod:: initialize_cuml_logging
+    .. automethod:: initialize_cuml_params
+    .. automethod:: isDefined
+    .. automethod:: isSet
+    .. automethod:: load
+    .. automethod:: predict
+    .. automethod:: predictProbability
+    .. automethod:: predictRaw
+    .. automethod:: read
+    .. automethod:: save
+    .. automethod:: set
+    .. automethod:: setFeaturesCol
+    .. automethod:: setFeaturesCols
+    .. automethod:: setLabelCol
+    .. automethod:: setPredictionCol
+    .. automethod:: setProbabilityCol
+    .. automethod:: set_gpu_device
+    .. automethod:: set_params
+    .. automethod:: transform
+    .. automethod:: write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes Documentation
+
+    
+    .. autoattribute:: coefficients
+    .. autoattribute:: cuml_params
+    .. autoattribute:: featuresCol
+    .. autoattribute:: featuresCols
+    .. autoattribute:: fitIntercept
+    .. autoattribute:: hasSummary
+    .. autoattribute:: intercept
+    .. autoattribute:: labelCol
+    .. autoattribute:: maxIter
+    .. autoattribute:: numFeatures
+    .. autoattribute:: num_workers
+    .. autoattribute:: params
+    .. autoattribute:: predictionCol
+    .. autoattribute:: probabilityCol
+    .. autoattribute:: regParam
+    .. autoattribute:: summary
+    .. autoattribute:: tol
+
+    
+    

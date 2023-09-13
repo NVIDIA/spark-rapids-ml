@@ -1,0 +1,1440 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>UMAPModel &#8212; spark-rapids-ml 23.8.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/spark_rapids_ml.umap.UMAPModel';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="UMAP" href="spark_rapids_ml.umap.UMAP.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  <div class="navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../spark_rapids_ml.html">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+  </button>
+`);
+</script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../spark_rapids_ml.html">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
+    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
+    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  </button>
+`);
+</script></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCA.html">PCA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCAModel.html">PCAModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegression.html">LogisticRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegressionModel.html">LogisticRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassifier.html">RandomForestClassifier</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.LinearRegression.html">LinearRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.LinearRegressionModel.html">LinearRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressor.html">RandomForestRegressor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressionModel.html">RandomForestRegressionModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighbors.html">NearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighborsModel.html">NearestNeighborsModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.tuning.CrossValidator.html">CrossValidator</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAP.html">UMAP</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">UMAPModel</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumbs">
+  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../spark_rapids_ml.html" class="nav-link">Spark Rapids ML</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">UMAPModel</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="umapmodel">
+<h1>UMAPModel<a class="headerlink" href="#umapmodel" title="Permalink to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.umap.</span></span><span class="sig-name descname"><span class="pre">UMAPModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embedding_</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Broadcast</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw_data_</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Broadcast</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel" title="Permalink to this definition">#</a></dt>
+<dd><p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.clear" title="spark_rapids_ml.umap.UMAPModel.clear"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code></a>(param)</p></td>
+<td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.copy" title="spark_rapids_ml.umap.UMAPModel.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.cpu" title="spark_rapids_ml.umap.UMAPModel.cpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code></a>()</p></td>
+<td><p>Return the equivalent PySpark CPU model</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.explainParam" title="spark_rapids_ml.umap.UMAPModel.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
+<td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.explainParams" title="spark_rapids_ml.umap.UMAPModel.explainParams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code></a>()</p></td>
+<td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.extractParamMap" title="spark_rapids_ml.umap.UMAPModel.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
+<td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.from_row" title="spark_rapids_ml.umap.UMAPModel.from_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code></a>(model_attributes)</p></td>
+<td><p>Default to pass all the attributes of the model to the model constructor, So please make sure if the constructor can accept all of them.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getA" title="spark_rapids_ml.umap.UMAPModel.getA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getA</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>a</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getB" title="spark_rapids_ml.umap.UMAPModel.getB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getB</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>b</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getFeaturesCol" title="spark_rapids_ml.umap.UMAPModel.getFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code></a>()</p></td>
+<td><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCol" title="spark_rapids_ml.umap.UMAPModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getFeaturesCols" title="spark_rapids_ml.umap.UMAPModel.getFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCols</span></code></a>()</p></td>
+<td><p>Gets the value of featuresCols or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getInit" title="spark_rapids_ml.umap.UMAPModel.getInit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInit</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>init</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getLabelCol" title="spark_rapids_ml.umap.UMAPModel.getLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code></a>()</p></td>
+<td><p>Gets the value of labelCol or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getLearningRate" title="spark_rapids_ml.umap.UMAPModel.getLearningRate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLearningRate</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>learning_rate</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getLocalConnectivity" title="spark_rapids_ml.umap.UMAPModel.getLocalConnectivity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLocalConnectivity</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>local_connectivity</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getMetric" title="spark_rapids_ml.umap.UMAPModel.getMetric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMetric</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>metric</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getMinDist" title="spark_rapids_ml.umap.UMAPModel.getMinDist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinDist</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>min_dist</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getNComponents" title="spark_rapids_ml.umap.UMAPModel.getNComponents"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getNComponents</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>n_components</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getNEpochs" title="spark_rapids_ml.umap.UMAPModel.getNEpochs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getNEpochs</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>n_epochs</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getNNeighbors" title="spark_rapids_ml.umap.UMAPModel.getNNeighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getNNeighbors</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>n_neighbors</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getNegativeSampleRate" title="spark_rapids_ml.umap.UMAPModel.getNegativeSampleRate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getNegativeSampleRate</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>negative_sample_rate</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getOrDefault" title="spark_rapids_ml.umap.UMAPModel.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
+<td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getOutputCol" title="spark_rapids_ml.umap.UMAPModel.getOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOutputCol</span></code></a>()</p></td>
+<td><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.outputCol" title="spark_rapids_ml.umap.UMAPModel.outputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">outputCol</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getParam" title="spark_rapids_ml.umap.UMAPModel.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
+<td><p>Gets a param by its name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getPrecomputedKNN" title="spark_rapids_ml.umap.UMAPModel.getPrecomputedKNN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getPrecomputedKNN</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>precomputed_knn</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getRandomState" title="spark_rapids_ml.umap.UMAPModel.getRandomState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getRandomState</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>random_state</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getRepulsionStrength" title="spark_rapids_ml.umap.UMAPModel.getRepulsionStrength"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getRepulsionStrength</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>repulsion_strength</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getSampleFraction" title="spark_rapids_ml.umap.UMAPModel.getSampleFraction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSampleFraction</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>sample_fraction</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getSetOpMixRatio" title="spark_rapids_ml.umap.UMAPModel.getSetOpMixRatio"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSetOpMixRatio</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>set_op_mix_ratio</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getSpread" title="spark_rapids_ml.umap.UMAPModel.getSpread"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSpread</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>spread</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.getTransformQueueSize" title="spark_rapids_ml.umap.UMAPModel.getTransformQueueSize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getTransformQueueSize</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>transform_queue_size</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.get_model_attributes" title="spark_rapids_ml.umap.UMAPModel.get_model_attributes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code></a>()</p></td>
+<td><p>Override parent method to bring broadcast variables to driver before JSON serialization.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.hasDefault" title="spark_rapids_ml.umap.UMAPModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
+<td><p>Checks whether a param has a default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.hasParam" title="spark_rapids_ml.umap.UMAPModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
+<td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.initialize_cuml_logging" title="spark_rapids_ml.umap.UMAPModel.initialize_cuml_logging"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code></a>(verbose)</p></td>
+<td><p>Initializes the logger for cuML.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.initialize_cuml_params" title="spark_rapids_ml.umap.UMAPModel.initialize_cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code></a>()</p></td>
+<td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.isDefined" title="spark_rapids_ml.umap.UMAPModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.isSet" title="spark_rapids_ml.umap.UMAPModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.load" title="spark_rapids_ml.umap.UMAPModel.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
+<td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.read" title="spark_rapids_ml.umap.UMAPModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.save" title="spark_rapids_ml.umap.UMAPModel.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
+<td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.set" title="spark_rapids_ml.umap.UMAPModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
+<td><p>Sets a parameter in the embedded param map.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setA" title="spark_rapids_ml.umap.UMAPModel.setA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setA</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>a</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setB" title="spark_rapids_ml.umap.UMAPModel.setB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setB</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>b</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setFeaturesCol" title="spark_rapids_ml.umap.UMAPModel.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCol" title="spark_rapids_ml.umap.UMAPModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setFeaturesCols" title="spark_rapids_ml.umap.UMAPModel.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setInit" title="spark_rapids_ml.umap.UMAPModel.setInit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInit</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>init</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setLabelCol" title="spark_rapids_ml.umap.UMAPModel.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.labelCol" title="spark_rapids_ml.umap.UMAPModel.labelCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setLearningRate" title="spark_rapids_ml.umap.UMAPModel.setLearningRate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLearningRate</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>learning_rate</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setLocalConnectivity" title="spark_rapids_ml.umap.UMAPModel.setLocalConnectivity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLocalConnectivity</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>local_connectivity</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setMetric" title="spark_rapids_ml.umap.UMAPModel.setMetric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMetric</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>metric</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setMinDist" title="spark_rapids_ml.umap.UMAPModel.setMinDist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMinDist</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>min_dist</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setNComponents" title="spark_rapids_ml.umap.UMAPModel.setNComponents"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNComponents</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>n_components</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setNEpochs" title="spark_rapids_ml.umap.UMAPModel.setNEpochs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNEpochs</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>n_epochs</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setNNeighbors" title="spark_rapids_ml.umap.UMAPModel.setNNeighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNNeighbors</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>n_neighbors</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setNegativeSampleRate" title="spark_rapids_ml.umap.UMAPModel.setNegativeSampleRate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNegativeSampleRate</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>negative_sample_rate</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setOutputCol" title="spark_rapids_ml.umap.UMAPModel.setOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setOutputCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.outputCol" title="spark_rapids_ml.umap.UMAPModel.outputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">outputCol</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setPrecomputedKNN" title="spark_rapids_ml.umap.UMAPModel.setPrecomputedKNN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPrecomputedKNN</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>precomputed_knn</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setRandomState" title="spark_rapids_ml.umap.UMAPModel.setRandomState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRandomState</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>random_state</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setRepulsionStrength" title="spark_rapids_ml.umap.UMAPModel.setRepulsionStrength"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRepulsionStrength</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>repulsion_strength</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setSampleFraction" title="spark_rapids_ml.umap.UMAPModel.setSampleFraction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSampleFraction</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>sample_fraction</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setSetOpMixRatio" title="spark_rapids_ml.umap.UMAPModel.setSetOpMixRatio"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSetOpMixRatio</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>set_op_mix_ratio</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setSpread" title="spark_rapids_ml.umap.UMAPModel.setSpread"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSpread</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>spread</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.setTransformQueueSize" title="spark_rapids_ml.umap.UMAPModel.setTransformQueueSize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setTransformQueueSize</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>transform_queue_size</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.set_gpu_device" title="spark_rapids_ml.umap.UMAPModel.set_gpu_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code></a>(context, is_local[, is_transform])</p></td>
+<td><p>Set gpu device according to the spark task resources.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.set_params" title="spark_rapids_ml.umap.UMAPModel.set_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code></a>(**kwargs)</p></td>
+<td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.transform" title="spark_rapids_ml.umap.UMAPModel.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code></a>(dataset[, params])</p></td>
+<td><p>Transforms the input dataset with optional parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.write" title="spark_rapids_ml.umap.UMAPModel.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.a" title="spark_rapids_ml.umap.UMAPModel.a"><code class="xref py py-obj docutils literal notranslate"><span class="pre">a</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.b" title="spark_rapids_ml.umap.UMAPModel.b"><code class="xref py py-obj docutils literal notranslate"><span class="pre">b</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.cuml_params" title="spark_rapids_ml.umap.UMAPModel.cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuml_params</span></code></a></p></td>
+<td><p>Returns the dictionary of parameters intended for the underlying cuML class.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.embedding" title="spark_rapids_ml.umap.UMAPModel.embedding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">embedding</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCol" title="spark_rapids_ml.umap.UMAPModel.featuresCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.init" title="spark_rapids_ml.umap.UMAPModel.init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.labelCol" title="spark_rapids_ml.umap.UMAPModel.labelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">labelCol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.learning_rate" title="spark_rapids_ml.umap.UMAPModel.learning_rate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">learning_rate</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.local_connectivity" title="spark_rapids_ml.umap.UMAPModel.local_connectivity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">local_connectivity</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.metric" title="spark_rapids_ml.umap.UMAPModel.metric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">metric</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.min_dist" title="spark_rapids_ml.umap.UMAPModel.min_dist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_dist</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.n_components" title="spark_rapids_ml.umap.UMAPModel.n_components"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_components</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.n_epochs" title="spark_rapids_ml.umap.UMAPModel.n_epochs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_epochs</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.n_neighbors" title="spark_rapids_ml.umap.UMAPModel.n_neighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_neighbors</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.negative_sample_rate" title="spark_rapids_ml.umap.UMAPModel.negative_sample_rate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">negative_sample_rate</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.num_workers" title="spark_rapids_ml.umap.UMAPModel.num_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></a></p></td>
+<td><p>Number of cuML workers, where each cuML worker corresponds to one Spark task running on one GPU.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.outputCol" title="spark_rapids_ml.umap.UMAPModel.outputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">outputCol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.params" title="spark_rapids_ml.umap.UMAPModel.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
+<td><p>Returns all params ordered by name.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.precomputed_knn" title="spark_rapids_ml.umap.UMAPModel.precomputed_knn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">precomputed_knn</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.random_state" title="spark_rapids_ml.umap.UMAPModel.random_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">random_state</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.raw_data" title="spark_rapids_ml.umap.UMAPModel.raw_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">raw_data</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.repulsion_strength" title="spark_rapids_ml.umap.UMAPModel.repulsion_strength"><code class="xref py py-obj docutils literal notranslate"><span class="pre">repulsion_strength</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.sample_fraction" title="spark_rapids_ml.umap.UMAPModel.sample_fraction"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sample_fraction</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.set_op_mix_ratio" title="spark_rapids_ml.umap.UMAPModel.set_op_mix_ratio"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_op_mix_ratio</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.spread" title="spark_rapids_ml.umap.UMAPModel.spread"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spread</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.transform_queue_size" title="spark_rapids_ml.umap.UMAPModel.transform_queue_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform_queue_size</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods Documentation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.clear" title="Permalink to this definition">#</a></dt>
+<dd><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.copy" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.cpu">
+<span class="sig-name descname"><span class="pre">cpu</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Model</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.cpu" title="Permalink to this definition">#</a></dt>
+<dd><p>Return the equivalent PySpark CPU model</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.explainParam">
+<span class="sig-name descname"><span class="pre">explainParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.explainParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Explains a single param and returns its name, doc, and optional
+default value and user-supplied value in a string.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.explainParams">
+<span class="sig-name descname"><span class="pre">explainParams</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.explainParams" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the documentation of all params with their optionally
+default values and user-supplied values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.extractParamMap">
+<span class="sig-name descname"><span class="pre">extractParamMap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ParamMap</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.extractParamMap" title="Permalink to this definition">#</a></dt>
+<dd><p>Extracts the embedded default param values and user-supplied
+values, and then merges them with extra values from input into
+a flat param map, where the latter value is used if there exist
+conflicts, i.e., with ordering: default param values &lt;
+user-supplied values &lt; extra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">dict, optional</span></dt><dd><p>extra param values</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>merged param map</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.from_row">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_attributes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Row</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.from_row" title="Permalink to this definition">#</a></dt>
+<dd><p>Default to pass all the attributes of the model to the model constructor,
+So please make sure if the constructor can accept all of them.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getA">
+<span class="sig-name descname"><span class="pre">getA</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getA" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>a</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getB">
+<span class="sig-name descname"><span class="pre">getB</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getB" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>b</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getFeaturesCol">
+<span class="sig-name descname"><span class="pre">getFeaturesCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCol" title="spark_rapids_ml.umap.UMAPModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getFeaturesCols">
+<span class="sig-name descname"><span class="pre">getFeaturesCols</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getFeaturesCols" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of featuresCols or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getInit">
+<span class="sig-name descname"><span class="pre">getInit</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getInit" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>init</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getLabelCol">
+<span class="sig-name descname"><span class="pre">getLabelCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getLabelCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of labelCol or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getLearningRate">
+<span class="sig-name descname"><span class="pre">getLearningRate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getLearningRate" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>learning_rate</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getLocalConnectivity">
+<span class="sig-name descname"><span class="pre">getLocalConnectivity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getLocalConnectivity" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>local_connectivity</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getMetric">
+<span class="sig-name descname"><span class="pre">getMetric</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getMetric" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>metric</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getMinDist">
+<span class="sig-name descname"><span class="pre">getMinDist</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getMinDist" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>min_dist</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getNComponents">
+<span class="sig-name descname"><span class="pre">getNComponents</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getNComponents" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>n_components</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getNEpochs">
+<span class="sig-name descname"><span class="pre">getNEpochs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getNEpochs" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>n_epochs</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getNNeighbors">
+<span class="sig-name descname"><span class="pre">getNNeighbors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getNNeighbors" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>n_neighbors</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getNegativeSampleRate">
+<span class="sig-name descname"><span class="pre">getNegativeSampleRate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getNegativeSampleRate" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>negative_sample_rate</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getOrDefault">
+<span class="sig-name descname"><span class="pre">getOrDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getOrDefault" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of a param in the user-supplied param map or its
+default value. Raises an error if neither is set.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getOutputCol">
+<span class="sig-name descname"><span class="pre">getOutputCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getOutputCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.outputCol" title="spark_rapids_ml.umap.UMAPModel.outputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">outputCol</span></code></a>. Contains the embeddings of the input data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getParam">
+<span class="sig-name descname"><span class="pre">getParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets a param by its name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getPrecomputedKNN">
+<span class="sig-name descname"><span class="pre">getPrecomputedKNN</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getPrecomputedKNN" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>precomputed_knn</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getRandomState">
+<span class="sig-name descname"><span class="pre">getRandomState</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getRandomState" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>random_state</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getRepulsionStrength">
+<span class="sig-name descname"><span class="pre">getRepulsionStrength</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getRepulsionStrength" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>repulsion_strength</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getSampleFraction">
+<span class="sig-name descname"><span class="pre">getSampleFraction</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getSampleFraction" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>sample_fraction</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getSetOpMixRatio">
+<span class="sig-name descname"><span class="pre">getSetOpMixRatio</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getSetOpMixRatio" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>set_op_mix_ratio</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getSpread">
+<span class="sig-name descname"><span class="pre">getSpread</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getSpread" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>spread</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.getTransformQueueSize">
+<span class="sig-name descname"><span class="pre">getTransformQueueSize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.getTransformQueueSize" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>transform_queue_size</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.get_model_attributes">
+<span class="sig-name descname"><span class="pre">get_model_attributes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.get_model_attributes" title="Permalink to this definition">#</a></dt>
+<dd><p>Override parent method to bring broadcast variables to driver before JSON serialization.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.hasDefault">
+<span class="sig-name descname"><span class="pre">hasDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.hasDefault" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param has a default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.hasParam">
+<span class="sig-name descname"><span class="pre">hasParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.hasParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Tests whether this instance contains a param with a given
+(string) name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.initialize_cuml_logging">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_cuml_logging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.initialize_cuml_logging" title="Permalink to this definition">#</a></dt>
+<dd><p>Initializes the logger for cuML.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>verbose</strong><span class="classifier">Optional[Union[bool, int]]</span></dt><dd><p>If True, sets the log_level to 5.  If integer value, sets the log_level to the value.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.initialize_cuml_params">
+<span class="sig-name descname"><span class="pre">initialize_cuml_params</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.initialize_cuml_params" title="Permalink to this definition">#</a></dt>
+<dd><p>Set the default values of cuML parameters to match their Spark equivalents.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.isDefined">
+<span class="sig-name descname"><span class="pre">isDefined</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.isDefined" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param is explicitly set by user or has
+a default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.isSet">
+<span class="sig-name descname"><span class="pre">isSet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.isSet" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param is explicitly set by user.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RL</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.load" title="Permalink to this definition">#</a></dt>
+<dd><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.read">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLReader.html#pyspark.ml.util.MLReader" title="(in PySpark vmaster)"><span class="pre">MLReader</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.read" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.save" title="Permalink to this definition">#</a></dt>
+<dd><p>Save this ML instance to the given path, a shortcut of ‘write().save(path)’.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.set" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets a parameter in the embedded param map.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setA">
+<span class="sig-name descname"><span class="pre">setA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setA" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>a</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setB">
+<span class="sig-name descname"><span class="pre">setB</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setB" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>b</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setFeaturesCol">
+<span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCol" title="spark_rapids_ml.umap.UMAPModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>. Used when input vectors are stored in a single column.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setFeaturesCols">
+<span class="sig-name descname"><span class="pre">setFeaturesCols</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setFeaturesCols" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>. Used when input vectors are stored as multiple feature columns.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setInit">
+<span class="sig-name descname"><span class="pre">setInit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setInit" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>init</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setLabelCol">
+<span class="sig-name descname"><span class="pre">setLabelCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setLabelCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.labelCol" title="spark_rapids_ml.umap.UMAPModel.labelCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setLearningRate">
+<span class="sig-name descname"><span class="pre">setLearningRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setLearningRate" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>learning_rate</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setLocalConnectivity">
+<span class="sig-name descname"><span class="pre">setLocalConnectivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setLocalConnectivity" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>local_connectivity</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setMetric">
+<span class="sig-name descname"><span class="pre">setMetric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setMetric" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>metric</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setMinDist">
+<span class="sig-name descname"><span class="pre">setMinDist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setMinDist" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>min_dist</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setNComponents">
+<span class="sig-name descname"><span class="pre">setNComponents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setNComponents" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>n_components</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setNEpochs">
+<span class="sig-name descname"><span class="pre">setNEpochs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setNEpochs" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>n_epochs</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setNNeighbors">
+<span class="sig-name descname"><span class="pre">setNNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setNNeighbors" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>n_neighbors</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setNegativeSampleRate">
+<span class="sig-name descname"><span class="pre">setNegativeSampleRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setNegativeSampleRate" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>negative_sample_rate</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setOutputCol">
+<span class="sig-name descname"><span class="pre">setOutputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setOutputCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.umap.UMAPModel.outputCol" title="spark_rapids_ml.umap.UMAPModel.outputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">outputCol</span></code></a>. Contains the embeddings of the input data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setPrecomputedKNN">
+<span class="sig-name descname"><span class="pre">setPrecomputedKNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setPrecomputedKNN" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>precomputed_knn</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setRandomState">
+<span class="sig-name descname"><span class="pre">setRandomState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setRandomState" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>random_state</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setRepulsionStrength">
+<span class="sig-name descname"><span class="pre">setRepulsionStrength</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setRepulsionStrength" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>repulsion_strength</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setSampleFraction">
+<span class="sig-name descname"><span class="pre">setSampleFraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setSampleFraction" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>sample_fraction</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setSetOpMixRatio">
+<span class="sig-name descname"><span class="pre">setSetOpMixRatio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setSetOpMixRatio" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>set_op_mix_ratio</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setSpread">
+<span class="sig-name descname"><span class="pre">setSpread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setSpread" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>spread</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.setTransformQueueSize">
+<span class="sig-name descname"><span class="pre">setTransformQueueSize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.setTransformQueueSize" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>transform_queue_size</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.set_gpu_device">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">set_gpu_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">TaskContext</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.set_gpu_device" title="Permalink to this definition">#</a></dt>
+<dd><p>Set gpu device according to the spark task resources.</p>
+<p>If it is local mode, we use partition id as gpu id for training
+and (partition id ) % gpus for transform.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.set_params">
+<span class="sig-name descname"><span class="pre">set_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.set_params" title="Permalink to this definition">#</a></dt>
+<dd><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
+and value mappings defined by the _CumlClass.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.transform">
+<span class="sig-name descname"><span class="pre">transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.transform" title="Permalink to this definition">#</a></dt>
+<dd><p>Transforms the input dataset with optional parameters.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.3.0.</span></p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>dataset</strong><span class="classifier"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></span></dt><dd><p>input dataset</p>
+</dd>
+<dt><strong>params</strong><span class="classifier">dict, optional</span></dt><dd><p>an optional param map that overrides embedded params.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></dt><dd><p>transformed dataset</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLWriter.html#pyspark.ml.util.MLWriter" title="(in PySpark vmaster)"><span class="pre">MLWriter</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.write" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Attributes Documentation</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.a">
+<span class="sig-name descname"><span class="pre">a</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='a',</span> <span class="pre">doc='More</span> <span class="pre">specific</span> <span class="pre">parameters</span> <span class="pre">controlling</span> <span class="pre">the</span> <span class="pre">embedding.</span> <span class="pre">If</span> <span class="pre">None</span> <span class="pre">these</span> <span class="pre">values</span> <span class="pre">are</span> <span class="pre">set</span> <span class="pre">automatically</span> <span class="pre">as</span> <span class="pre">determined</span> <span class="pre">by</span> <span class="pre">``min_dist``</span> <span class="pre">and</span> <span class="pre">``spread``.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.a" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.b">
+<span class="sig-name descname"><span class="pre">b</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='b',</span> <span class="pre">doc='More</span> <span class="pre">specific</span> <span class="pre">parameters</span> <span class="pre">controlling</span> <span class="pre">the</span> <span class="pre">embedding.</span> <span class="pre">If</span> <span class="pre">None</span> <span class="pre">these</span> <span class="pre">values</span> <span class="pre">are</span> <span class="pre">set</span> <span class="pre">automatically</span> <span class="pre">as</span> <span class="pre">determined</span> <span class="pre">by</span> <span class="pre">``min_dist``</span> <span class="pre">and</span> <span class="pre">``spread``.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.b" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.cuml_params">
+<span class="sig-name descname"><span class="pre">cuml_params</span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.cuml_params" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the dictionary of parameters intended for the underlying cuML class.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.embedding">
+<span class="sig-name descname"><span class="pre">embedding</span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.embedding" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.featuresCol">
+<span class="sig-name descname"><span class="pre">featuresCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='featuresCol',</span> <span class="pre">doc='features</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.featuresCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.featuresCols">
+<span class="sig-name descname"><span class="pre">featuresCols</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='featuresCols',</span> <span class="pre">doc='features</span> <span class="pre">column</span> <span class="pre">names</span> <span class="pre">for</span> <span class="pre">multi-column</span> <span class="pre">input.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.featuresCols" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.init">
+<span class="sig-name descname"><span class="pre">init</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='init',</span> <span class="pre">doc=&quot;How</span> <span class="pre">to</span> <span class="pre">initialize</span> <span class="pre">the</span> <span class="pre">low</span> <span class="pre">dimensional</span> <span class="pre">embedding.</span> <span class="pre">Options</span> <span class="pre">are:</span> <span class="pre">'spectral':</span> <span class="pre">use</span> <span class="pre">a</span> <span class="pre">spectral</span> <span class="pre">embedding</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">fuzzy</span> <span class="pre">1-skeleton,</span> <span class="pre">'random':</span> <span class="pre">assign</span> <span class="pre">initial</span> <span class="pre">embedding</span> <span class="pre">positions</span> <span class="pre">at</span> <span class="pre">random.&quot;)</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.init" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.labelCol">
+<span class="sig-name descname"><span class="pre">labelCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='labelCol',</span> <span class="pre">doc='label</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.labelCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.learning_rate">
+<span class="sig-name descname"><span class="pre">learning_rate</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='learning_rate',</span> <span class="pre">doc='The</span> <span class="pre">initial</span> <span class="pre">learning</span> <span class="pre">rate</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">embedding</span> <span class="pre">optimization.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.learning_rate" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.local_connectivity">
+<span class="sig-name descname"><span class="pre">local_connectivity</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='local_connectivity',</span> <span class="pre">doc='The</span> <span class="pre">local</span> <span class="pre">connectivity</span> <span class="pre">required</span> <span class="pre">--</span> <span class="pre">i.e.</span> <span class="pre">the</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">nearest</span> <span class="pre">neighbors</span> <span class="pre">that</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">assumed</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">connected</span> <span class="pre">at</span> <span class="pre">a</span> <span class="pre">local</span> <span class="pre">level.</span> <span class="pre">The</span> <span class="pre">higher</span> <span class="pre">this</span> <span class="pre">value</span> <span class="pre">the</span> <span class="pre">more</span> <span class="pre">connected</span> <span class="pre">the</span> <span class="pre">manifold</span> <span class="pre">becomes</span> <span class="pre">locally.</span> <span class="pre">In</span> <span class="pre">practice</span> <span class="pre">this</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">not</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">the</span> <span class="pre">local</span> <span class="pre">intrinsic</span> <span class="pre">dimension</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">manifold.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.local_connectivity" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.metric">
+<span class="sig-name descname"><span class="pre">metric</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='metric',</span> <span class="pre">doc=&quot;Distance</span> <span class="pre">metric</span> <span class="pre">to</span> <span class="pre">use.</span> <span class="pre">Supported</span> <span class="pre">distances</span> <span class="pre">are</span> <span class="pre">['l1',</span> <span class="pre">'cityblock',</span> <span class="pre">'taxicab',</span> <span class="pre">'manhattan',</span> <span class="pre">'euclidean',</span> <span class="pre">'l2',</span> <span class="pre">'sqeuclidean',</span> <span class="pre">'canberra',</span> <span class="pre">'minkowski',</span> <span class="pre">'chebyshev',</span> <span class="pre">'linf',</span> <span class="pre">'cosine',</span> <span class="pre">'correlation',</span> <span class="pre">'hellinger',</span> <span class="pre">'hamming',</span> <span class="pre">'jaccard'].</span> <span class="pre">Metrics</span> <span class="pre">that</span> <span class="pre">take</span> <span class="pre">arguments</span> <span class="pre">(such</span> <span class="pre">as</span> <span class="pre">minkowski)</span> <span class="pre">can</span> <span class="pre">have</span> <span class="pre">arguments</span> <span class="pre">passed</span> <span class="pre">via</span> <span class="pre">the</span> <span class="pre">metric_kwds</span> <span class="pre">dictionary.&quot;)</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.metric" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.min_dist">
+<span class="sig-name descname"><span class="pre">min_dist</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='min_dist',</span> <span class="pre">doc='The</span> <span class="pre">effective</span> <span class="pre">minimum</span> <span class="pre">distance</span> <span class="pre">between</span> <span class="pre">embedded</span> <span class="pre">points.</span> <span class="pre">Smaller</span> <span class="pre">values</span> <span class="pre">will</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">a</span> <span class="pre">more</span> <span class="pre">clustered/clumped</span> <span class="pre">embedding</span> <span class="pre">where</span> <span class="pre">nearby</span> <span class="pre">points</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">manifold</span> <span class="pre">are</span> <span class="pre">drawn</span> <span class="pre">closer</span> <span class="pre">together,</span> <span class="pre">while</span> <span class="pre">larger</span> <span class="pre">values</span> <span class="pre">will</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">a</span> <span class="pre">more</span> <span class="pre">even</span> <span class="pre">dispersal</span> <span class="pre">of</span> <span class="pre">points.</span> <span class="pre">The</span> <span class="pre">value</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">set</span> <span class="pre">relative</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">``spread``</span> <span class="pre">value,</span> <span class="pre">which</span> <span class="pre">determines</span> <span class="pre">the</span> <span class="pre">scale</span> <span class="pre">at</span> <span class="pre">which</span> <span class="pre">embedded</span> <span class="pre">points</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">spread</span> <span class="pre">out.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.min_dist" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.n_components">
+<span class="sig-name descname"><span class="pre">n_components</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_components',</span> <span class="pre">doc='The</span> <span class="pre">dimension</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">space</span> <span class="pre">to</span> <span class="pre">embed</span> <span class="pre">into.</span> <span class="pre">This</span> <span class="pre">defaults</span> <span class="pre">to</span> <span class="pre">2</span> <span class="pre">to</span> <span class="pre">provide</span> <span class="pre">easy</span> <span class="pre">visualization,</span> <span class="pre">but</span> <span class="pre">can</span> <span class="pre">reasonably</span> <span class="pre">be</span> <span class="pre">set</span> <span class="pre">to</span> <span class="pre">any</span> <span class="pre">integer</span> <span class="pre">value</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">range</span> <span class="pre">2</span> <span class="pre">to</span> <span class="pre">100.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.n_components" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.n_epochs">
+<span class="sig-name descname"><span class="pre">n_epochs</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_epochs',</span> <span class="pre">doc='The</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">training</span> <span class="pre">epochs</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">used</span> <span class="pre">in</span> <span class="pre">optimizing</span> <span class="pre">the</span> <span class="pre">low</span> <span class="pre">dimensional</span> <span class="pre">embedding.</span> <span class="pre">Larger</span> <span class="pre">values</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">more</span> <span class="pre">accurate</span> <span class="pre">embeddings.</span> <span class="pre">If</span> <span class="pre">None</span> <span class="pre">is</span> <span class="pre">specified</span> <span class="pre">a</span> <span class="pre">value</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">selected</span> <span class="pre">based</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">size</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">input</span> <span class="pre">dataset</span> <span class="pre">(200</span> <span class="pre">for</span> <span class="pre">large</span> <span class="pre">datasets,</span> <span class="pre">500</span> <span class="pre">for</span> <span class="pre">small).')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.n_epochs" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.n_neighbors">
+<span class="sig-name descname"><span class="pre">n_neighbors</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_neighbors',</span> <span class="pre">doc='The</span> <span class="pre">size</span> <span class="pre">of</span> <span class="pre">local</span> <span class="pre">neighborhood</span> <span class="pre">(in</span> <span class="pre">terms</span> <span class="pre">of</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">neighboring</span> <span class="pre">sample</span> <span class="pre">points)</span> <span class="pre">used</span> <span class="pre">for</span> <span class="pre">manifold</span> <span class="pre">approximation.</span> <span class="pre">Larger</span> <span class="pre">values</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">more</span> <span class="pre">global</span> <span class="pre">views</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">manifold,</span> <span class="pre">while</span> <span class="pre">smaller</span> <span class="pre">values</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">more</span> <span class="pre">local</span> <span class="pre">data</span> <span class="pre">being</span> <span class="pre">preserved.</span> <span class="pre">In</span> <span class="pre">general</span> <span class="pre">values</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">range</span> <span class="pre">2</span> <span class="pre">to</span> <span class="pre">100.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.n_neighbors" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.negative_sample_rate">
+<span class="sig-name descname"><span class="pre">negative_sample_rate</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='negative_sample_rate',</span> <span class="pre">doc='The</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">negative</span> <span class="pre">samples</span> <span class="pre">to</span> <span class="pre">select</span> <span class="pre">per</span> <span class="pre">positive</span> <span class="pre">sample</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">optimization</span> <span class="pre">process.</span> <span class="pre">Increasing</span> <span class="pre">this</span> <span class="pre">value</span> <span class="pre">will</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">greater</span> <span class="pre">repulsive</span> <span class="pre">force</span> <span class="pre">being</span> <span class="pre">applied,</span> <span class="pre">greater</span> <span class="pre">optimization</span> <span class="pre">cost,</span> <span class="pre">but</span> <span class="pre">slightly</span> <span class="pre">more</span> <span class="pre">accuracy.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.negative_sample_rate" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.num_workers">
+<span class="sig-name descname"><span class="pre">num_workers</span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.num_workers" title="Permalink to this definition">#</a></dt>
+<dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task
+running on one GPU.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.outputCol">
+<span class="sig-name descname"><span class="pre">outputCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='outputCol',</span> <span class="pre">doc='output</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.outputCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.params">
+<span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.params" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns all params ordered by name. The default implementation
+uses <code class="xref py py-func docutils literal notranslate"><span class="pre">dir()</span></code> to get all attributes of type
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Param</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.precomputed_knn">
+<span class="sig-name descname"><span class="pre">precomputed_knn</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='precomputed_knn',</span> <span class="pre">doc='Either</span> <span class="pre">one</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">tuple</span> <span class="pre">(indices,</span> <span class="pre">distances)</span> <span class="pre">of</span> <span class="pre">arrays</span> <span class="pre">of</span> <span class="pre">shape</span> <span class="pre">(n_samples,</span> <span class="pre">n_neighbors),</span> <span class="pre">a</span> <span class="pre">pairwise</span> <span class="pre">distances</span> <span class="pre">dense</span> <span class="pre">array</span> <span class="pre">of</span> <span class="pre">shape</span> <span class="pre">(n_samples,</span> <span class="pre">n_samples)</span> <span class="pre">or</span> <span class="pre">a</span> <span class="pre">KNN</span> <span class="pre">graph</span> <span class="pre">sparse</span> <span class="pre">array</span> <span class="pre">(preferably</span> <span class="pre">CSR/COO).</span> <span class="pre">This</span> <span class="pre">feature</span> <span class="pre">allows</span> <span class="pre">the</span> <span class="pre">precomputation</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">KNN</span> <span class="pre">outside</span> <span class="pre">of</span> <span class="pre">UMAP</span> <span class="pre">and</span> <span class="pre">also</span> <span class="pre">allows</span> <span class="pre">the</span> <span class="pre">use</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">custom</span> <span class="pre">distance</span> <span class="pre">function.</span> <span class="pre">This</span> <span class="pre">function</span> <span class="pre">should</span> <span class="pre">match</span> <span class="pre">the</span> <span class="pre">metric</span> <span class="pre">used</span> <span class="pre">to</span> <span class="pre">train</span> <span class="pre">the</span> <span class="pre">UMAP</span> <span class="pre">embeedings.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.precomputed_knn" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.random_state">
+<span class="sig-name descname"><span class="pre">random_state</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='random_state',</span> <span class="pre">doc='The</span> <span class="pre">seed</span> <span class="pre">used</span> <span class="pre">by</span> <span class="pre">the</span> <span class="pre">random</span> <span class="pre">number</span> <span class="pre">generator</span> <span class="pre">during</span> <span class="pre">embedding</span> <span class="pre">initialization</span> <span class="pre">and</span> <span class="pre">during</span> <span class="pre">sampling</span> <span class="pre">used</span> <span class="pre">by</span> <span class="pre">the</span> <span class="pre">optimizer.</span> <span class="pre">Unfortunately,</span> <span class="pre">achieving</span> <span class="pre">a</span> <span class="pre">high</span> <span class="pre">amount</span> <span class="pre">of</span> <span class="pre">parallelism</span> <span class="pre">during</span> <span class="pre">the</span> <span class="pre">optimization</span> <span class="pre">stage</span> <span class="pre">often</span> <span class="pre">comes</span> <span class="pre">at</span> <span class="pre">the</span> <span class="pre">expense</span> <span class="pre">of</span> <span class="pre">determinism,</span> <span class="pre">since</span> <span class="pre">many</span> <span class="pre">floating-point</span> <span class="pre">additions</span> <span class="pre">are</span> <span class="pre">being</span> <span class="pre">made</span> <span class="pre">in</span> <span class="pre">parallel</span> <span class="pre">without</span> <span class="pre">a</span> <span class="pre">deterministic</span> <span class="pre">ordering.</span> <span class="pre">This</span> <span class="pre">causes</span> <span class="pre">slightly</span> <span class="pre">different</span> <span class="pre">results</span> <span class="pre">across</span> <span class="pre">training</span> <span class="pre">sessions,</span> <span class="pre">even</span> <span class="pre">when</span> <span class="pre">the</span> <span class="pre">same</span> <span class="pre">seed</span> <span class="pre">is</span> <span class="pre">used</span> <span class="pre">for</span> <span class="pre">random</span> <span class="pre">number</span> <span class="pre">generation.</span> <span class="pre">Setting</span> <span class="pre">a</span> <span class="pre">random_state</span> <span class="pre">will</span> <span class="pre">enable</span> <span class="pre">consistency</span> <span class="pre">of</span> <span class="pre">trained</span> <span class="pre">embeddings,</span> <span class="pre">allowing</span> <span class="pre">for</span> <span class="pre">reproducible</span> <span class="pre">results</span> <span class="pre">to</span> <span class="pre">3</span> <span class="pre">digits</span> <span class="pre">of</span> <span class="pre">precision,</span> <span class="pre">but</span> <span class="pre">will</span> <span class="pre">do</span> <span class="pre">so</span> <span class="pre">at</span> <span class="pre">the</span> <span class="pre">expense</span> <span class="pre">of</span> <span class="pre">training</span> <span class="pre">time</span> <span class="pre">and</span> <span class="pre">memory</span> <span class="pre">usage.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.random_state" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.raw_data">
+<span class="sig-name descname"><span class="pre">raw_data</span></span><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.raw_data" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.repulsion_strength">
+<span class="sig-name descname"><span class="pre">repulsion_strength</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='repulsion_strength',</span> <span class="pre">doc='Weighting</span> <span class="pre">applied</span> <span class="pre">to</span> <span class="pre">negative</span> <span class="pre">samples</span> <span class="pre">in</span> <span class="pre">low</span> <span class="pre">dimensional</span> <span class="pre">embedding</span> <span class="pre">optimization.</span> <span class="pre">Values</span> <span class="pre">higher</span> <span class="pre">than</span> <span class="pre">one</span> <span class="pre">will</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">greater</span> <span class="pre">weight</span> <span class="pre">being</span> <span class="pre">given</span> <span class="pre">to</span> <span class="pre">negative</span> <span class="pre">samples.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.repulsion_strength" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.sample_fraction">
+<span class="sig-name descname"><span class="pre">sample_fraction</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='sample_fraction',</span> <span class="pre">doc=&quot;The</span> <span class="pre">fraction</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">dataset</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">used</span> <span class="pre">for</span> <span class="pre">fitting</span> <span class="pre">the</span> <span class="pre">model.</span> <span class="pre">Since</span> <span class="pre">fitting</span> <span class="pre">is</span> <span class="pre">done</span> <span class="pre">on</span> <span class="pre">a</span> <span class="pre">single</span> <span class="pre">node,</span> <span class="pre">very</span> <span class="pre">large</span> <span class="pre">datasets</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">subsampled</span> <span class="pre">to</span> <span class="pre">fit</span> <span class="pre">within</span> <span class="pre">the</span> <span class="pre">node's</span> <span class="pre">memory</span> <span class="pre">and</span> <span class="pre">execute</span> <span class="pre">in</span> <span class="pre">a</span> <span class="pre">reasonable</span> <span class="pre">time.</span> <span class="pre">Smaller</span> <span class="pre">fractions</span> <span class="pre">will</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">faster</span> <span class="pre">training,</span> <span class="pre">but</span> <span class="pre">may</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">sub-optimal</span> <span class="pre">embeddings.&quot;)</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.sample_fraction" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.set_op_mix_ratio">
+<span class="sig-name descname"><span class="pre">set_op_mix_ratio</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='set_op_mix_ratio',</span> <span class="pre">doc='Interpolate</span> <span class="pre">between</span> <span class="pre">(fuzzy)</span> <span class="pre">union</span> <span class="pre">and</span> <span class="pre">intersection</span> <span class="pre">as</span> <span class="pre">the</span> <span class="pre">set</span> <span class="pre">operation</span> <span class="pre">used</span> <span class="pre">to</span> <span class="pre">combine</span> <span class="pre">local</span> <span class="pre">fuzzy</span> <span class="pre">simplicial</span> <span class="pre">sets</span> <span class="pre">to</span> <span class="pre">obtain</span> <span class="pre">a</span> <span class="pre">global</span> <span class="pre">fuzzy</span> <span class="pre">simplicial</span> <span class="pre">sets.</span> <span class="pre">Both</span> <span class="pre">fuzzy</span> <span class="pre">set</span> <span class="pre">operations</span> <span class="pre">use</span> <span class="pre">the</span> <span class="pre">product</span> <span class="pre">t-norm.</span> <span class="pre">The</span> <span class="pre">value</span> <span class="pre">of</span> <span class="pre">this</span> <span class="pre">parameter</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">between</span> <span class="pre">0.0</span> <span class="pre">and</span> <span class="pre">1.0;</span> <span class="pre">a</span> <span class="pre">value</span> <span class="pre">of</span> <span class="pre">1.0</span> <span class="pre">will</span> <span class="pre">use</span> <span class="pre">a</span> <span class="pre">pure</span> <span class="pre">fuzzy</span> <span class="pre">union,</span> <span class="pre">while</span> <span class="pre">0.0</span> <span class="pre">will</span> <span class="pre">use</span> <span class="pre">a</span> <span class="pre">pure</span> <span class="pre">fuzzy</span> <span class="pre">intersection.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.set_op_mix_ratio" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.spread">
+<span class="sig-name descname"><span class="pre">spread</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='spread',</span> <span class="pre">doc='The</span> <span class="pre">effective</span> <span class="pre">scale</span> <span class="pre">of</span> <span class="pre">embedded</span> <span class="pre">points.</span> <span class="pre">In</span> <span class="pre">combination</span> <span class="pre">with</span> <span class="pre">``min_dist``</span> <span class="pre">this</span> <span class="pre">determines</span> <span class="pre">how</span> <span class="pre">clustered/clumped</span> <span class="pre">the</span> <span class="pre">embedded</span> <span class="pre">points</span> <span class="pre">are.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.spread" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.umap.UMAPModel.transform_queue_size">
+<span class="sig-name descname"><span class="pre">transform_queue_size</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='transform_queue_size',</span> <span class="pre">doc='For</span> <span class="pre">transform</span> <span class="pre">operations</span> <span class="pre">(embedding</span> <span class="pre">new</span> <span class="pre">points</span> <span class="pre">using</span> <span class="pre">a</span> <span class="pre">trained</span> <span class="pre">model),</span> <span class="pre">this</span> <span class="pre">will</span> <span class="pre">control</span> <span class="pre">how</span> <span class="pre">aggressively</span> <span class="pre">to</span> <span class="pre">search</span> <span class="pre">for</span> <span class="pre">nearest</span> <span class="pre">neighbors.</span> <span class="pre">Larger</span> <span class="pre">values</span> <span class="pre">will</span> <span class="pre">result</span> <span class="pre">in</span> <span class="pre">slower</span> <span class="pre">performance</span> <span class="pre">but</span> <span class="pre">more</span> <span class="pre">accurate</span> <span class="pre">nearest</span> <span class="pre">neighbor</span> <span class="pre">evaluation.')</span></em><a class="headerlink" href="#spark_rapids_ml.umap.UMAPModel.transform_queue_size" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+                <footer class="bd-footer-article">
+                  
+<div class="footer-article-items footer-article__inner">
+  
+    <div class="footer-article-item"><!-- Previous / next buttons -->
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="spark_rapids_ml.umap.UMAP.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">UMAP</p>
+      </div>
+    </a>
+</div></div>
+  
+</div>
+
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel"><code class="docutils literal notranslate"><span class="pre">UMAPModel</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.clear"><code class="docutils literal notranslate"><span class="pre">UMAPModel.clear()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.copy"><code class="docutils literal notranslate"><span class="pre">UMAPModel.copy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.cpu"><code class="docutils literal notranslate"><span class="pre">UMAPModel.cpu()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.explainParam"><code class="docutils literal notranslate"><span class="pre">UMAPModel.explainParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.explainParams"><code class="docutils literal notranslate"><span class="pre">UMAPModel.explainParams()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.extractParamMap"><code class="docutils literal notranslate"><span class="pre">UMAPModel.extractParamMap()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.from_row"><code class="docutils literal notranslate"><span class="pre">UMAPModel.from_row()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getA"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getA()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getB"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getB()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getFeaturesCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getFeaturesCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getFeaturesCols"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getFeaturesCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getInit"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getInit()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getLabelCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getLabelCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getLearningRate"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getLearningRate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getLocalConnectivity"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getLocalConnectivity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getMetric"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getMetric()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getMinDist"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getMinDist()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getNComponents"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getNComponents()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getNEpochs"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getNEpochs()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getNNeighbors"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getNNeighbors()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getNegativeSampleRate"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getNegativeSampleRate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getOrDefault"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getOrDefault()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getOutputCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getOutputCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getParam"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getPrecomputedKNN"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getPrecomputedKNN()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getRandomState"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getRandomState()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getRepulsionStrength"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getRepulsionStrength()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getSampleFraction"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getSampleFraction()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getSetOpMixRatio"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getSetOpMixRatio()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getSpread"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getSpread()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.getTransformQueueSize"><code class="docutils literal notranslate"><span class="pre">UMAPModel.getTransformQueueSize()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.get_model_attributes"><code class="docutils literal notranslate"><span class="pre">UMAPModel.get_model_attributes()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.hasDefault"><code class="docutils literal notranslate"><span class="pre">UMAPModel.hasDefault()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.hasParam"><code class="docutils literal notranslate"><span class="pre">UMAPModel.hasParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.initialize_cuml_logging"><code class="docutils literal notranslate"><span class="pre">UMAPModel.initialize_cuml_logging()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.initialize_cuml_params"><code class="docutils literal notranslate"><span class="pre">UMAPModel.initialize_cuml_params()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.isDefined"><code class="docutils literal notranslate"><span class="pre">UMAPModel.isDefined()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.isSet"><code class="docutils literal notranslate"><span class="pre">UMAPModel.isSet()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.load"><code class="docutils literal notranslate"><span class="pre">UMAPModel.load()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.read"><code class="docutils literal notranslate"><span class="pre">UMAPModel.read()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.save"><code class="docutils literal notranslate"><span class="pre">UMAPModel.save()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.set"><code class="docutils literal notranslate"><span class="pre">UMAPModel.set()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setA"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setA()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setB"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setB()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setFeaturesCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setFeaturesCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setFeaturesCols"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setFeaturesCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setInit"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setInit()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setLabelCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setLabelCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setLearningRate"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setLearningRate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setLocalConnectivity"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setLocalConnectivity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setMetric"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setMetric()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setMinDist"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setMinDist()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setNComponents"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setNComponents()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setNEpochs"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setNEpochs()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setNNeighbors"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setNNeighbors()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setNegativeSampleRate"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setNegativeSampleRate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setOutputCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setOutputCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setPrecomputedKNN"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setPrecomputedKNN()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setRandomState"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setRandomState()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setRepulsionStrength"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setRepulsionStrength()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setSampleFraction"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setSampleFraction()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setSetOpMixRatio"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setSetOpMixRatio()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setSpread"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setSpread()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.setTransformQueueSize"><code class="docutils literal notranslate"><span class="pre">UMAPModel.setTransformQueueSize()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.set_gpu_device"><code class="docutils literal notranslate"><span class="pre">UMAPModel.set_gpu_device()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.set_params"><code class="docutils literal notranslate"><span class="pre">UMAPModel.set_params()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.transform"><code class="docutils literal notranslate"><span class="pre">UMAPModel.transform()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.write"><code class="docutils literal notranslate"><span class="pre">UMAPModel.write()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.a"><code class="docutils literal notranslate"><span class="pre">UMAPModel.a</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.b"><code class="docutils literal notranslate"><span class="pre">UMAPModel.b</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.cuml_params"><code class="docutils literal notranslate"><span class="pre">UMAPModel.cuml_params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.embedding"><code class="docutils literal notranslate"><span class="pre">UMAPModel.embedding</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.featuresCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.featuresCol</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.featuresCols"><code class="docutils literal notranslate"><span class="pre">UMAPModel.featuresCols</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.init"><code class="docutils literal notranslate"><span class="pre">UMAPModel.init</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.labelCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.labelCol</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.learning_rate"><code class="docutils literal notranslate"><span class="pre">UMAPModel.learning_rate</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.local_connectivity"><code class="docutils literal notranslate"><span class="pre">UMAPModel.local_connectivity</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.metric"><code class="docutils literal notranslate"><span class="pre">UMAPModel.metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.min_dist"><code class="docutils literal notranslate"><span class="pre">UMAPModel.min_dist</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.n_components"><code class="docutils literal notranslate"><span class="pre">UMAPModel.n_components</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.n_epochs"><code class="docutils literal notranslate"><span class="pre">UMAPModel.n_epochs</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.n_neighbors"><code class="docutils literal notranslate"><span class="pre">UMAPModel.n_neighbors</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.negative_sample_rate"><code class="docutils literal notranslate"><span class="pre">UMAPModel.negative_sample_rate</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.num_workers"><code class="docutils literal notranslate"><span class="pre">UMAPModel.num_workers</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.outputCol"><code class="docutils literal notranslate"><span class="pre">UMAPModel.outputCol</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.params"><code class="docutils literal notranslate"><span class="pre">UMAPModel.params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.precomputed_knn"><code class="docutils literal notranslate"><span class="pre">UMAPModel.precomputed_knn</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.random_state"><code class="docutils literal notranslate"><span class="pre">UMAPModel.random_state</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.raw_data"><code class="docutils literal notranslate"><span class="pre">UMAPModel.raw_data</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.repulsion_strength"><code class="docutils literal notranslate"><span class="pre">UMAPModel.repulsion_strength</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.sample_fraction"><code class="docutils literal notranslate"><span class="pre">UMAPModel.sample_fraction</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.set_op_mix_ratio"><code class="docutils literal notranslate"><span class="pre">UMAPModel.set_op_mix_ratio</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.spread"><code class="docutils literal notranslate"><span class="pre">UMAPModel.spread</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.umap.UMAPModel.transform_queue_size"><code class="docutils literal notranslate"><span class="pre">UMAPModel.transform_queue_size</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div class="tocsection sourcelink">
+    <a href="../_sources/api/spark_rapids_ml.umap.UMAPModel.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright 2023, NVIDIA.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
