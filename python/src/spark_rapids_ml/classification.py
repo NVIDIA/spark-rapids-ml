@@ -820,6 +820,10 @@ class LogisticRegression(
                 concated = _concat_and_free(X_list, order=array_order)
                 concated_y = _concat_and_free(y_list, order=array_order)
 
+            pdesc = PartitionDescriptor.build(
+                [concated.shape[0]], params[param_alias.num_cols]
+            )
+
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
                 logistic_regression = LogisticRegressionMG(
                     handle=params[param_alias.handle],
@@ -828,10 +832,6 @@ class LogisticRegression(
 
                 logistic_regression.penalty_normalized = False
                 logistic_regression.lbfgs_memory = 10
-
-                pdesc = PartitionDescriptor.build(
-                    [concated.shape[0]], params[param_alias.num_cols]
-                )
 
                 logistic_regression.fit(
                     [(concated, concated_y)],
