@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 import cuml
 import numpy as np
@@ -11,6 +11,7 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import Vectors, VectorUDT
+from pyspark.ml.param import Param
 from pyspark.sql import Row
 from pyspark.sql.functions import array, col
 
@@ -28,6 +29,7 @@ from .utils import (
     array_equal,
     assert_params,
     create_pyspark_dataframe,
+    feature_types,
     idfn,
     make_classification_dataset,
 )
@@ -393,3 +395,77 @@ def test_compat(
         assert blor_model.intercept == model2.intercept
         assert blor_model.transform(bdf).take(1) == model2.transform(bdf).take(1)
         assert blor_model.numFeatures == 2
+
+
+@pytest.mark.parametrize("feature_type", [feature_types.vector])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
+@pytest.mark.parametrize("n_classes", [2])
+def test_lr_fit_multiple_in_single_pass(
+    feature_type: str,
+    data_type: np.dtype,
+    data_shape: Tuple[int, int],
+    n_classes: int,
+) -> None:
+    X_train, X_test, y_train, y_test = make_classification_dataset(
+        datatype=data_type,
+        nrows=data_shape[0],
+        ncols=data_shape[1],
+        n_classes=n_classes,
+        n_informative=8,
+        n_redundant=0,
+        n_repeated=0,
+    )
+
+    with CleanSparkSession() as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+
+        assert label_col is not None
+        lr = LogisticRegression()
+        lr.setFeaturesCol(features_col)
+        lr.setLabelCol(label_col)
+
+        initial_lr = lr.copy()
+
+        param_maps: List[Dict[Param, Any]] = [
+            {
+                lr.tol: 1,
+                lr.regParam: 0,
+                lr.fitIntercept: True,
+                lr.maxIter: 39,
+            },
+            {
+                lr.tol: 0.01,
+                lr.regParam: 0.5,
+                lr.fitIntercept: False,
+                lr.maxIter: 100,
+            },
+            {
+                lr.tol: 0.03,
+                lr.regParam: 0.7,
+                lr.fitIntercept: True,
+                lr.maxIter: 29,
+            },
+            {
+                lr.tol: 0.0003,
+                lr.regParam: 0.9,
+                lr.fitIntercept: False,
+                lr.maxIter: 89,
+            },
+        ]
+        models = lr.fit(train_df, param_maps)
+
+        for i, param_map in enumerate(param_maps):
+            rf = initial_lr.copy()
+            single_model = rf.fit(train_df, param_map)
+
+            assert array_equal(
+                single_model.coefficients.toArray(), models[i].coefficients.toArray()
+            )
+            assert array_equal([single_model.intercept], [models[i].intercept])
+
+            for k, v in param_map.items():
+                assert models[i].getOrDefault(k.name) == v
+                assert single_model.getOrDefault(k.name) == v
