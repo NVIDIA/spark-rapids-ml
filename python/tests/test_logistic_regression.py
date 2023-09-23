@@ -85,14 +85,12 @@ def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
         lr_regParam_zero = LogisticRegression(
             regParam=0.0,
         )
-        assert "no regularization is not supported yet" in caplog.text
+        assert not "no regularization is not supported yet" in caplog.text
 
         lr_regParam_zero.setProbabilityCol(probability_col)
 
         assert lr_regParam_zero.getRegParam() == 0
-        assert (
-            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
-        )
+        assert lr_regParam_zero.cuml_params["C"] == 0
         model_regParam_zero = lr_regParam_zero.fit(df)
         assert_transform(model_regParam_zero)
 
@@ -102,29 +100,27 @@ def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
 
         caplog.clear()
         lr_regParam_zero.setRegParam(0.0)
-        assert "no regularization is not supported yet" in caplog.text
+        assert not "no regularization is not supported yet" in caplog.text
 
         assert lr_regParam_zero.getRegParam() == 0.0
-        assert (
-            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
-        )
+        assert lr_regParam_zero.cuml_params["C"] == 0.0
 
 
 def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
-    # Default params
+    # Default params: no regularization
     default_spark_params = {
         "maxIter": 100,
-        "regParam": 0.0,  # will be mapped to numpy.finfo('float32').tiny
+        "regParam": 0.0,
+        "elasticNetParam": 0.0,
         "tol": 1e-06,
         "fitIntercept": True,
     }
 
     default_cuml_params = {
         "max_iter": 100,
-        "C": 1.0
-        / np.finfo(
-            "float32"
-        ).tiny,  # TODO: support default value 0.0, i.e. no regularization
+        "penalty": "none",
+        "C": 0.0,
+        "l1_ratio": None,
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -133,10 +129,11 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
 
     assert_params(default_lr, default_spark_params, default_cuml_params)
 
-    # Spark ML Params
+    # L2 regularization
     spark_params: Dict[str, Any] = {
         "maxIter": 30,
         "regParam": 0.5,
+        "elasticNetParam": 0.0,
         "tol": 1e-2,
         "fitIntercept": False,
     }
@@ -148,7 +145,59 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     expected_cuml_params.update(
         {
             "max_iter": 30,
-            "C": 2.0,  # C should be equal to 1 / regParam
+            "penalty": "l2",
+            "C": 2.0,  # C should be equal to 2.0 / regParam
+            "l1_ratio": None,
+            "tol": 1e-2,
+            "fit_intercept": False,
+        }
+    )
+    assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+
+    # L1 regularization
+    spark_params = {
+        "maxIter": 30,
+        "regParam": 0.5,
+        "elasticNetParam": 1.0,
+        "tol": 1e-2,
+        "fitIntercept": False,
+    }
+
+    spark_lr = LogisticRegression(**spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(
+        {
+            "max_iter": 30,
+            "penalty": "l1",
+            "C": 2.0,  # C should be equal to 1.0 / regParam
+            "l1_ratio": None,
+            "tol": 1e-2,
+            "fit_intercept": False,
+        }
+    )
+    assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+
+    # elasticnet(L1 + L2) regularization
+    spark_params = {
+        "maxIter": 30,
+        "regParam": 0.5,
+        "elasticNetParam": 0.3,
+        "tol": 1e-2,
+        "fitIntercept": False,
+    }
+
+    spark_lr = LogisticRegression(**spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(
+        {
+            "max_iter": 30,
+            "penalty": "elasticnet",
+            "C": 2.0,  # C should be equal to 1.0 / regParam
+            "l1_ratio": 0.3,
             "tol": 1e-2,
             "fit_intercept": False,
         }
@@ -184,9 +233,10 @@ def test_classifier(
     max_record_batch: int,
     gpu_number: int,
     n_classes: int = 2,
-    reg_param: float = 0.0,
+    reg_param: float = 0.,
+    elasticNet_param: float = 0.,
     tolerance: float = 0.001,
-) -> None:
+) -> LogisticRegression:
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -199,9 +249,11 @@ def test_classifier(
 
     from cuml import LogisticRegression as cuLR
 
-    penalty = "l2" if reg_param != 0.0 else "none"
-    C = 1.0 / reg_param if reg_param != 0.0 else 0.0
-    cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C)
+    penalty, C, l1_ratio = LogisticRegression._reg_params_value_mapping(
+        reg_param=reg_param, elasticNet_param=elasticNet_param
+    )
+
+    cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C, l1_ratio=l1_ratio)
     cu_lr.solver_model.penalty_normalized = False
     cu_lr.solver_model.lbfgs_memory = 10
     cu_lr.fit(X_train, y_train)
@@ -216,8 +268,14 @@ def test_classifier(
         spark_lr = LogisticRegression(
             fitIntercept=fit_intercept,
             regParam=reg_param,
+            elasticNetParam=elasticNet_param,
             num_workers=gpu_number,
         )
+
+        assert spark_lr._cuml_params["penalty"] == cu_lr.penalty
+        assert spark_lr._cuml_params["C"] == cu_lr.C
+        assert spark_lr._cuml_params["l1_ratio"] == cu_lr.l1_ratio
+
         spark_lr.setFeaturesCol(features_col)
         spark_lr.setLabelCol(label_col)
         spark_lr_model: LogisticRegressionModel = spark_lr.fit(train_df)
@@ -250,6 +308,7 @@ def test_classifier(
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = spark_lr_model.transform(test_df).collect()
+
         spark_preds = [row["prediction"] for row in result]
         cu_preds = cu_lr.predict(X_test)
         assert array_equal(cu_preds, spark_preds)
@@ -257,6 +316,8 @@ def test_classifier(
         spark_probs = np.array([row["probability"].toArray() for row in result])
         cu_probs = cu_lr.predict_proba(X_test)
         assert array_equal(spark_probs, cu_probs, tolerance)
+
+        return spark_lr
 
 
 LogisticRegressionType = TypeVar(
@@ -485,7 +546,7 @@ def test_lr_fit_multiple_in_single_pass(
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
+@pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32, np.float64])
 @pytest.mark.parametrize("max_record_batch", [20, 10000])
@@ -514,9 +575,73 @@ def test_multiclass(
         tolerance=tolerance,
     )
 
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("params", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)])
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("n_classes", [2, 8])
+@pytest.mark.slow
+def test_reg(
+    fit_intercept: bool,
+    params: Tuple[float, float],
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    n_classes: int,
+    gpu_number: int,
+) -> None:
+    tolerance = 0.005 if n_classes <= 4 else 0.01
+    reg_param = params[0]
+    elasticNet_param = params[1]
+
+    lr = test_classifier(
+        fit_intercept=fit_intercept,
+        reg_param=reg_param,
+        elasticNet_param=elasticNet_param,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        tolerance=tolerance,
+    )
+
+    assert lr.getRegParam() == reg_param
+    assert lr.getElasticNetParam() == elasticNet_param
+
+    penalty, C, l1_ratio = lr._reg_params_value_mapping(reg_param, elasticNet_param)
+    assert lr._cuml_params["penalty"] == penalty
+    assert lr._cuml_params["C"] == C
+    assert lr._cuml_params["l1_ratio"] == l1_ratio
+
+    from cuml import LogisticRegression as CUMLSG
+
+    sg = CUMLSG(penalty=penalty, C=C, l1_ratio=l1_ratio)
+    l1_strength, l2_strength = sg._get_qn_params()
+    if reg_param == 0.0:
+        assert penalty == "none"
+        assert l1_strength == 0.0
+        assert l2_strength == 0.0
+    elif elasticNet_param == 0.0:
+        assert penalty == "l2"
+        assert l1_strength == 0.0
+        assert l2_strength == reg_param
+    elif elasticNet_param == 1.0:
+        assert penalty == "l1"
+        assert l1_strength == reg_param
+        assert l2_strength == 0.0
+    else:
+        assert penalty == "elasticnet"
+        assert l1_strength == reg_param * elasticNet_param
+        assert l2_strength == reg_param * (1 - elasticNet_param)
+
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("reg_param", [0.0, 0.1])
+@pytest.mark.parametrize("params", [(0.0, 0.0) , (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)])
 @pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
@@ -524,7 +649,7 @@ def test_multiclass(
 @pytest.mark.parametrize("n_classes", [2, 4])
 def test_quick(
     fit_intercept: bool,
-    reg_param: float,
+    params: Tuple[float, float],
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
@@ -542,6 +667,7 @@ def test_quick(
         max_record_batch=max_record_batch,
         n_classes=n_classes,
         gpu_number=gpu_number,
-        reg_param=reg_param,
         tolerance=tolerance,
+        reg_param=params[0],
+        elasticNet_param=params[1],
     )

@@ -559,10 +559,10 @@ class LogisticRegressionClass(_CumlClass):
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
             "maxIter": "max_iter",
-            "regParam": "C",  # regParam = 1/C
+            "regParam": "C",
+            "elasticNetParam": "l1_ratio",
             "tol": "tol",
             "fitIntercept": "fit_intercept",
-            "elasticNetParam": None,
             "threshold": None,
             "thresholds": None,
             "standardization": "",  # Set to "" instead of None because cuml defaults to standardization = False
@@ -581,29 +581,43 @@ class LogisticRegressionClass(_CumlClass):
     def _param_value_mapping(
         cls,
     ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
-        def regParam_value_mapper(x: float) -> float:
-            # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
-            if x == 0.0:
-                logger = get_logger(cls)
-                logger.warning(
-                    "no regularization is not supported yet. if regParam is set to 0,"
-                    + "it will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny"
-                )
-
-                return 1.0 / np.finfo("float32").tiny.item()
-            else:
-                return 1.0 / x
-
-        return {"C": lambda x: regParam_value_mapper(x)}
+        return {"C": lambda x: 1 / x if x != 0.0 else 0.0}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
             "fit_intercept": True,
             "verbose": False,
             "C": 1.0,
+            "penalty": "l2",
+            "l1_ratio": None,
             "max_iter": 1000,
             "tol": 0.0001,
         }
+
+    # Given Spark params: regParam, elasticNetParam,
+    # return cuml params: penalty, C, l1_ratio
+    @classmethod
+    def _reg_params_value_mapping(
+        cls, reg_param: float, elasticNet_param: float
+    ) -> Tuple[str, float, float | None]:
+        if reg_param == 0.0:
+            penalty = "none"
+            C = 0.0
+            l1_ratio = None
+        elif elasticNet_param == 0.0:
+            penalty = "l2"
+            C = 1.0 / reg_param
+            l1_ratio = None
+        elif elasticNet_param == 1.0:
+            penalty = "l1"
+            C = 1.0 / reg_param
+            l1_ratio = None
+        else:
+            penalty = "elasticnet"
+            C = 1.0 / reg_param
+            l1_ratio = elasticNet_param
+
+        return (penalty, C, l1_ratio)
 
 
 class _LogisticRegressionCumlParams(
@@ -779,7 +793,8 @@ class LogisticRegression(
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
         maxIter: int = 100,
-        regParam: float = 0.0,  # NOTE: the default value of regParam is actually mapped to sys.float_info.min on GPU
+        regParam: float = 0.0,
+        elasticNetParam: float = 0.0,
         tol: float = 1e-6,
         fitIntercept: bool = True,
         num_workers: Optional[int] = None,
@@ -792,6 +807,7 @@ class LogisticRegression(
             )
             self._input_kwargs.pop("float32_inputs")
         super().__init__()
+        self._set_cuml_reg_params()
         self.set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:
@@ -803,6 +819,8 @@ class LogisticRegression(
         extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         array_order = self._fit_array_order()
+        reg_params_value_mapper = LogisticRegression._reg_params_value_mapping 
+
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -825,6 +843,14 @@ class LogisticRegression(
             )
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
+                reg_param = 1.0 / init_parameters["C"] if init_parameters["C"] != 0. else 0.
+                elasticNet_param = init_parameters["l1_ratio"]
+
+                penalty, C, l1_ratio = reg_params_value_mapper(reg_param, elasticNet_param)
+                init_parameters["penalty"] = penalty
+                init_parameters["C"] = C
+                init_parameters["l1_ratio"] = l1_ratio
+
                 logistic_regression = LogisticRegressionMG(
                     handle=params[param_alias.handle],
                     **init_parameters,
@@ -901,6 +927,21 @@ class LogisticRegression(
 
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
         return LogisticRegressionModel.from_row(result)
+
+    def _set_cuml_reg_params(self) -> "LogisticRegression":
+        penalty, C, l1_ratio = self._reg_params_value_mapping(
+            self.getRegParam(), self.getElasticNetParam()
+        )
+        self._cuml_params["penalty"] = penalty
+        self._cuml_params["C"] = C
+        self._cuml_params["l1_ratio"] = l1_ratio
+        return self
+
+    def set_params(self, **kwargs: Any) -> "LogisticRegression":
+        super().set_params(**kwargs)
+        if "regParam" in kwargs or "elasticNetParam" in kwargs:
+            self._set_cuml_reg_params()
+        return self
 
     def setMaxIter(self, value: int) -> "LogisticRegression":
         """
@@ -1042,13 +1083,19 @@ class LogisticRegressionModel(
         n_cols = self.n_cols
         dtype = self.dtype
 
+        penalty, C, l1_ratio = LogisticRegression._reg_params_value_mapping(
+            self.getRegParam(), self.getElasticNetParam()
+        )
+
         def _construct_lr() -> CumlT:
             import cupy as cp
             import numpy as np
             from cuml.internals.input_utils import input_to_cuml_array
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
-            lr = LogisticRegressionMG(output_type="numpy")
+            lr = LogisticRegressionMG(
+                penalty=penalty, C=C, l1_ratio=l1_ratio, output_type="numpy"
+            )
             lr.n_cols = n_cols
             lr.dtype = np.dtype(dtype)
 
