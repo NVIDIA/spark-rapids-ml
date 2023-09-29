@@ -9,6 +9,10 @@ if [[ -z $BENCHMARK_HOME ]]; then
     exit 1
 fi
 
+if [[ -z $WS_BENCHMARK_HOME ]]; then
+    echo "please expoert WS_BENCHMARK_HOME per README.md"
+    exit 1
+fi
 
 create_cluster() {
     cluster_type=$1
@@ -21,14 +25,16 @@ create_cluster() {
     then
         cluster_id=`echo $cluster_record | cut -d ' ' -f 1`
         echo "found cluster named $cluster_name and id $cluster_id deleting ..."
-        databricks clusters delete --cluster-id $cluster_id --profile $DB_PROFILE
+        databricks clusters delete $cluster_id --profile $DB_PROFILE
     fi
+    
+    INIT_SCRIPT_DIR="${WS_BENCHMARK_HOME}/init_scripts"
 
     # sourcing allows variable substitution (e.g. cluster name) into cluster json specs
     cluster_spec=`source ${cluster_type}_cluster_spec.sh`
     echo $cluster_spec
 
-    create_response=$( databricks clusters create --json "$cluster_spec" --profile $DB_PROFILE )
+    create_response=$( databricks clusters create --no-wait --json "$cluster_spec" --profile $DB_PROFILE )
 
     cluster_id=$( echo $create_response | grep cluster_id | cut -d \" -f 4 )
     if [ -z $cluster_id ]
@@ -42,14 +48,19 @@ create_cluster() {
     echo "waiting for cluster ${cluster_id} to start"
     while [[ $cluster_status != \"RUNNING\" ]]; do
         sleep 10
-        cluster_status=$( databricks clusters get --cluster-id $cluster_id --profile $DB_PROFILE | grep -o \"RUNNING\" )
+        cluster_status=$( databricks clusters get $cluster_id --profile $DB_PROFILE | grep -o \"RUNNING\" )
         echo -n "."
     done
 }
 
 get_run_status() {
-    status=$( databricks runs get-output --run-id $run_id --profile ${DB_PROFILE} | grep life_cycle_state | grep -o '\(TERMINATED\|ERROR\)' | head -n 1 )
+    status=$( databricks jobs get-run $run_id --profile ${DB_PROFILE} | grep life_cycle_state | grep -o '\(TERMINATED\|ERROR\)' | head -n 1 )
 }
+
+get_task_run_id() {
+    task_run_id=$( databricks jobs get-run $run_id --profile ${DB_PROFILE} | grep run_id | grep -o '\([0-9]*\)' | tail -n 1 )
+}
+
 
 run_bm() {
 
@@ -60,18 +71,23 @@ run_bm() {
 json_string=`cat <<EOF
 {
     "run_name": "$algorithm",
-    "existing_cluster_id": "${cluster_id}",
-    "spark_python_task": {
-            "python_file": "dbfs:${BENCHMARK_HOME}/scripts/benchmark_runner.py",
-            "parameters": [
-                ${params_delimited},
-                "--num_gpus",
-                "${num_gpus}",
-                "--num_cpus",
-                "${num_cpus}",
-                "--no_shutdown"
-            ]
+    "tasks": [
+        {
+            "task_key": "run_task",
+            "existing_cluster_id": "${cluster_id}",
+            "spark_python_task": {
+                "python_file": "dbfs:${BENCHMARK_HOME}/scripts/benchmark_runner.py",
+                "parameters": [
+                    ${params_delimited},
+                    "--num_gpus",
+                    "${num_gpus}",
+                    "--num_cpus",
+                    "${num_cpus}",
+                    "--no_shutdown"
+                ]
+            }
         }
+    ]               
 }
 EOF
 `
@@ -81,7 +97,7 @@ EOF
     TIME_LIMIT=3600
     fi
 
-    submit_response=$( databricks runs submit --json "$json_string" --profile ${DB_PROFILE} )
+    submit_response=$( databricks jobs submit --no-wait --json "$json_string" --profile ${DB_PROFILE} )
     echo ${submit_response} | grep run_id > /dev/null
     if [[ $? != 0 ]]; then
         echo "error submitting run"
@@ -101,14 +117,15 @@ EOF
         if [[ $TIME_LIMIT != "" ]] && (( $duration > $TIME_LIMIT ))
         then
             echo "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run"
-            databricks runs cancel --run-id $run_id --profile $DB_PROFILE
+            databricks jobs cancel-run $run_id --profile $DB_PROFILE
         fi
         sleep 10
         duration=$(( $duration + 10 ))
         get_run_status
     done
 
-    databricks runs get-output --run-id $run_id --profile ${DB_PROFILE}
+    get_task_run_id
+    databricks jobs get-run-output $task_run_id --profile ${DB_PROFILE}
     if [[ $status == "ERROR" ]]; then
         echo "An error was encountered during run.  Exiting."
         exit 1
