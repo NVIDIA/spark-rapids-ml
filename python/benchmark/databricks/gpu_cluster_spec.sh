@@ -3,7 +3,7 @@ cat <<EOF
 {
     "num_workers": $num_gpus,
     "cluster_name": "$cluster_name",
-    "spark_version": "11.3.x-gpu-ml-scala2.12",
+    "spark_version": "12.2.x-gpu-ml-scala2.12",
     "spark_conf": {
         "spark.task.resource.gpu.amount": "0.25",
         "spark.task.cpus": "1",
@@ -55,8 +55,8 @@ cat <<EOF
     "enable_elastic_disk": false,
     "init_scripts": [
         {
-            "dbfs": {
-                "destination": "dbfs:${BENCHMARK_HOME}/init_script/init-pip-cuda-11.8.sh"
+            "workspace": {
+                "destination": "${INIT_SCRIPT_DIR}/init-pip-cuda-11.8.sh"
             }
         }
     ],
