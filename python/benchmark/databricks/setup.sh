@@ -49,7 +49,6 @@ databricks workspace mkdirs ${INIT_SCRIPT_DIR} --profile ${DB_PROFILE} ${DB_OVER
 for init_script in init-pip-cuda-11.8.sh init-cpu.sh
 do
 # NOTE: on linux delete the .bu after -i
-# NOTE: the language specified for the workspace import doesn't seem to impact the upload in this case, but is a required option"
     sed -e "s#/path/to/spark-rapids-ml\.zip#${SPARK_RAPIDS_ML_ZIP}#g" -e "s#/path/to/benchmark\.zip#${BENCHMARK_ZIP}#g" $init_script > ${init_script}.updated && \
     databricks workspace import --format AUTO --content $(base64 -i ${init_script}.updated) ${INIT_SCRIPT_DIR}/${init_script} --profile ${DB_PROFILE} ${DB_OVERWRITE}
 done

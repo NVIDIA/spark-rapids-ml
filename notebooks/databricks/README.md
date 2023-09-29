@@ -1,7 +1,7 @@
 ## Running notebooks on Databricks
 
 If you already have a Databricks account, you can run the example notebooks on a Databricks cluster, as follows:
-- Install the latest [databricks-cli](https://docs.databricks.com/dev-tools/cli/index.html).
+- Install the latest [databricks-cli](https://docs.databricks.com/dev-tools/cli/index.html).  Note that Databricks has deprecated the legacy python based cli in favor of a self contained executable. Make sure the new version is first on the executables PATH after installation.
 - Configure it with your workspace URL and an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html).  For demonstration purposes, we will configure a new [connection profile](https://docs.databricks.com/dev-tools/cli/index.html#connection-profiles) named `spark-rapids-ml`.  If you already have a connection profile, just set the `PROFILE` environment variable accordingly and skip the configure step.
   ```bash
   export PROFILE=spark-rapids-ml
@@ -31,8 +31,8 @@ If you already have a Databricks account, you can run the example notebooks on a
 - Copy the modified `init-pip-cuda-11.8.sh` init script to your *workspace* (not DBFS) (ex. workspace directory: /Users/<databricks-user-name>/init_scripts).
   ```bash
   export WS_SAVE_DIR="/path/to/directory/in/workspace"
-  databricks workspace mkdirs $WS_SAVE_DIR --profile ${PROFILE}
-  databricks workspace import --format AUTO init-pip-cuda-11.8.sh ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
+  databricks workspace mkdirs ${WS_SAVE_DIR} --profile ${PROFILE}
+  databricks workspace import --format AUTO --content $(base64 -i init-pip-cuda-11.8.sh) ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
   ```
 - Create a cluster using **Databricks 12.2 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
   - **Init Scripts**

@@ -20,16 +20,16 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
     ```
 4. Next, in [this](./) directory, run the following to upload the files required to run the benchmarks:
     ```bash
-    #change below to desired dbfs location WITHOUT DBFS URI for uploading benchmarking related files
+    # change below to desired dbfs location WITHOUT DBFS URI for uploading benchmarking related files
     export BENCHMARK_HOME=/path/to/benchmark/files/in/dbfs
 
-    # The below is mainly for cluster init script as databricks requires these to be stored in the workspace.
+    # need separate directory for cluster init script as databricks requires these to be stored in the workspace and not dbfs
     # ex: /Users/<databricks-user-name>/benchmark
     export WS_BENCHMARK_HOME=/path/to/benchmark/files/in/workspace
 
     ./setup.sh
     ```
-    This will create and copy the files into a DBFS folder at the path specified by `BENCHMARK_HOME` and a cluster init script to the workspace folder specified by `WS_BENCHMARK_HOME`.   The script will not overwrite existing files and instead simply print the error message returned from databricks.  If overwrite is desired, first deleted the files and/or directories using `databricks fs rm [-r] <dbfs path>` for the dbfs files and `databricks workspace rm [-r] <workspace ath>` for the workspace files.
+    This will create and copy the files into a DBFS directory at the path specified by `BENCHMARK_HOME` and a cluster init script to the workspace directory specified by `WS_BENCHMARK_HOME`.   The script will not overwrite existing files and instead simply print the error message returned from databricks.  If overwrite is desired, first deleted the files and/or directories using `databricks fs rm [-r] <dbfs path>` for the dbfs files and `databricks workspace delete [--recursive] <workspace path>` for the workspace files.
     Note: Export `BENCHMARK_HOME`, `WS_BENCHMARK_HOME` and `DB_PROFILE` in any new/different shell in which subsequent steps may be run.
 
 ## Running the benchmarks
