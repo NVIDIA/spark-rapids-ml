@@ -28,8 +28,8 @@ cat <<EOF
     "enable_elastic_disk": false,
     "init_scripts": [
         {
-            "dbfs": {
-                "destination": "dbfs:${BENCHMARK_HOME}/init_script/init-cpu.sh"
+            "workspace": {
+                "destination": "${INIT_SCRIPT_DIR}/init-cpu.sh"
             }
         }
     ],
