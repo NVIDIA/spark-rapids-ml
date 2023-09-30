@@ -544,6 +544,267 @@ def test_lr_fit_multiple_in_single_pass(
                 assert models[i].getOrDefault(k.name) == v
                 assert single_model.getOrDefault(k.name) == v
 
+@pytest.mark.compat
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat_multinomial(
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    tmp_path: str,
+) -> None:
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+    X = np.array(
+        [
+            [1.0, 2.0],
+            [1.0, 3.0],
+            [2.0, 1.0],
+            [3.0, 1.0],
+            [-1.0, -2.0],
+            [-1.0, -3.0],
+            [-2.0, -1.0],
+            [-3.0, -1.0],
+        ]
+    )
+    y = np.array(
+        [
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            3.0,
+            3.0,
+            2.0,
+            2.0,
+        ]
+    )
+    data_type = np.float32
+
+    num_rows = len(X)
+    weight = np.ones([num_rows])
+
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        mdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        mdf = mdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        mdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        mdf = mdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        assert _LogisticRegression().getRegParam() == 0.0
+        if lr_types[0] is SparkLogisticRegression:
+            mlor = _LogisticRegression(
+                regParam=0.1,
+                elasticNetParam=0.2,
+                family="multinomial",
+                standardization=False,
+            )
+        else:
+            warnings.warn("spark rapids ml does not accept standardization")
+            mlor = _LogisticRegression(
+                regParam=0.1, elasticNetParam=0.2, family="multinomial"
+            )
+
+        assert mlor.getRegParam() == 0.1
+        assert mlor.getElasticNetParam() == 0.2
+
+        mlor.setFeaturesCol("features")
+        mlor.setLabelCol("label")
+
+        if isinstance(mlor, SparkLogisticRegression):
+            mlor.setWeightCol("weight")
+
+        mlor_model = mlor.fit(mdf)
+
+        mlor_model.setProbabilityCol("newProbability")
+        assert mlor_model.getProbabilityCol() == "newProbability"
+
+        coef_mat = mlor_model.coefficientMatrix.toArray()
+        intercept_vec = mlor_model.interceptVector.toArray()
+
+        coef_ground = [
+            [0.96766883, -0.06190176],
+            [-0.06183558, 0.96774077],
+            [-0.96773398, 0.06184808],
+            [0.06187553, -0.96768212],
+        ]
+
+        intercept_ground = [
+            1.78813821e-07,
+            2.82220935e-05,
+            1.44387586e-05,
+            4.82081663e-09,
+        ]
+        assert array_equal(coef_mat, np.array(coef_ground))
+        assert array_equal(intercept_vec, intercept_ground)
+
+        example = mdf.head()
+        if example:
+            mlor_model.predict(example.features)
+            mlor_model.predictRaw(example.features)
+            mlor_model.predictProbability(example.features)
+
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert mlor_model.hasSummary
+            mlor_model.evaluate(mdf).accuracy == mlor_model.summary.accuracy
+        else:
+            assert not mlor_model.hasSummary
+            with pytest.raises(RuntimeError, match="No training summary available"):
+                mlor_model.summary
+            assert mlor_model.classes_ == [0.0, 1.0, 2.0, 3.0]
+
+        # test transform
+        output_df = mlor_model.transform(mdf)
+        assert isinstance(output_df.schema["features"].dataType, VectorUDT)
+
+        # TODO: support (1) weight and rawPrediction (2) newProbability column is before prediction column
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert output_df.schema.fieldNames() == [
+                "weight",
+                "label",
+                "features",
+                "rawPrediction",
+                "newProbability",
+                "prediction",
+            ]
+            assert (
+                output_df.schema.simpleString()
+                == "struct<weight:float,label:float,features:vector,rawPrediction:vector,newProbability:vector,prediction:double>"
+            )
+        else:
+            assert output_df.schema.fieldNames() == [
+                "weight",
+                "label",
+                "features",
+                "prediction",
+                "newProbability",
+            ]
+            assert (
+                output_df.schema.simpleString()
+                == "struct<weight:float,label:float,features:vector,prediction:double,newProbability:vector>"
+            )
+
+        output_res = output_df.collect()
+        assert array_equal(
+            [row.prediction for row in output_res],
+            [1.0, 1.0, 0.0, 0.0, 3.0, 3.0, 2.0, 2.0],
+        )
+
+        assert array_equal(
+            output_res[0].newProbability.toArray(),
+            [0.24686976, 0.69117839, 0.04564774, 0.01630411],
+        )
+        assert array_equal(
+            output_res[1].newProbability.toArray(),
+            [0.11019694, 0.86380164, 0.02305966, 0.00294177],
+        )
+        assert array_equal(
+            output_res[2].newProbability.toArray(),
+            [0.69117839, 0.24686976, 0.01630411, 0.04564774],
+        )
+        assert array_equal(
+            output_res[3].newProbability.toArray(),
+            [0.86380164, 0.11019694, 0.00294177, 0.02305966],
+        )
+        assert array_equal(
+            output_res[4].newProbability.toArray(),
+            [0.04564774, 0.01630411, 0.24686976, 0.69117839],
+        )
+        assert array_equal(
+            output_res[5].newProbability.toArray(),
+            [0.02305966, 0.00294177, 0.11019694, 0.86380164],
+        )
+        assert array_equal(
+            output_res[6].newProbability.toArray(),
+            [0.01630352, 0.04563958, 0.6912151, 0.24684186],
+        )
+        assert array_equal(
+            output_res[7].newProbability.toArray(),
+            [0.00294145, 0.02305316, 0.86383104, 0.11017438],
+        )
+
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert array_equal(
+                output_res[0].rawPrediction.toArray(),
+                [0.84395339, 1.87349042, -0.84395339, -1.87349042],
+            )
+            assert array_equal(
+                output_res[1].rawPrediction.toArray(),
+                [0.78209218, 2.84116623, -0.78209218, -2.84116623],
+            )
+            assert array_equal(
+                output_res[2].rawPrediction.toArray(),
+                [1.87349042, 0.84395339, -1.87349042, -0.84395339],
+            )
+            assert array_equal(
+                output_res[3].rawPrediction.toArray(),
+                [2.84116623, 0.78209218, -2.84116623, -0.78209218],
+            )
+            assert array_equal(
+                output_res[4].rawPrediction.toArray(),
+                [-0.84395339, -1.87349042, 0.84395339, 1.87349042],
+            )
+            assert array_equal(
+                output_res[5].rawPrediction.toArray(),
+                [-0.78209218, -2.84116623, 0.78209218, 2.84116623],
+            )
+            assert array_equal(
+                output_res[6].rawPrediction.toArray(),
+                [-1.87349042, -0.84395339, 1.87349042, 0.84395339],
+            )
+            assert array_equal(
+                output_res[7].rawPrediction.toArray(),
+                [-2.84116623, -0.78209218, 2.84116623, 0.78209218],
+            )
+
+        else:
+            warnings.warn(
+                "transform of spark rapids ml currently does not support rawPredictionCol"
+            )
+
+        mlor_path = tmp_path + "/m_log_reg"
+        mlor.save(mlor_path)
+
+        mlor2 = _LogisticRegression.load(mlor_path)
+        assert mlor2.getRegParam() == mlor.getRegParam()
+        assert mlor2.getElasticNetParam() == mlor.getElasticNetParam()
+
+        model_path = tmp_path + "/m_log_reg_model"
+        mlor_model.save(model_path)
+
+        model2 = _LogisticRegressionModel.load(model_path)
+        assert array_equal(
+            model2.coefficientMatrix.toArray(), mlor_model.coefficientMatrix.toArray()
+        )
+        assert model2.interceptVector == mlor_model.interceptVector
+        assert model2.transform(mdf).collect() == output_res
+        assert model2.numFeatures == 2
+
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["vector"])
@@ -576,7 +837,8 @@ def test_multiclass(
     )
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("params", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)])
+@pytest.mark.parametrize("reg_param", [0.0, 0.1])
+@pytest.mark.parametrize("elasticNet_param", [0.0, 1.0, 0.2])
 @pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
@@ -585,7 +847,8 @@ def test_multiclass(
 @pytest.mark.slow
 def test_reg(
     fit_intercept: bool,
-    params: Tuple[float, float],
+    reg_param: float,
+    elasticNet_param: float,
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
@@ -594,8 +857,6 @@ def test_reg(
     gpu_number: int,
 ) -> None:
     tolerance = 0.005 if n_classes <= 4 else 0.01
-    reg_param = params[0]
-    elasticNet_param = params[1]
 
     lr = test_classifier(
         fit_intercept=fit_intercept,
