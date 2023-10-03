@@ -329,7 +329,7 @@ def test_nearest_neighbors(
     # set average norm to be 1 to allow comparisons with default error thresholds
     # below
     ave_norm_X = np.average(np.linalg.norm(X, ord=2, axis=1))
-    X = X/ave_norm_X
+    X = X / ave_norm_X
 
     # obtain cuml results
     from cuml import NearestNeighbors as cuNN
