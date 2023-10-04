@@ -121,17 +121,27 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             "standardization": params["standardization"],
         }
 
-        if model.numClasses == 2:
-            evaluator_train: Union[
-                BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-            ] = (
-                MulticlassClassificationEvaluator()
-                .setMetricName("logLoss")  # type:ignore
-                .setPredictionCol(prediction_col)
-                .setProbabilityCol(probability_col)
-                .setLabelCol(label_name)
-            )
+        evaluator_train: Union[
+            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
+        ] = (
+            MulticlassClassificationEvaluator()
+            .setMetricName("logLoss")  # type:ignore
+            .setPredictionCol(prediction_col)
+            .setProbabilityCol(probability_col)
+            .setLabelCol(label_name)
+        )
 
+        # TODO: add l1 regularization penalty term to full objective for when we support it
+        log_loss = evaluator_train.evaluate(train_df_with_preds)
+        coefficients = model.coefficientMatrix.toArray()
+        coefs_l1 = np.sum(np.abs(coefficients))
+        coefs_l2 = np.sum(coefficients**2)
+
+        train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
+        results["train_full_objective"] = train_full_objective
+        print(f"{benchmark_string} train_full_objective: {train_full_objective}")
+
+        if model.numClasses == 2:
             evaluator_test: Union[
                 BinaryClassificationEvaluator, MulticlassClassificationEvaluator
             ] = (
@@ -140,31 +150,25 @@ class BenchmarkLogisticRegression(BenchmarkBase):
                 .setLabelCol(label_name)
             )
 
-            log_loss = evaluator_train.evaluate(train_df_with_preds)
-            coefficients = np.array(model.coefficients)
-            coefs_l1 = np.sum(np.abs(coefficients))
-            coefs_l2 = np.sum(coefficients**2)
-
-            # TODO: add l1 regularization penalty term to full objective for when we support it
-            train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
-
             eval_auc = evaluator_test.evaluate(eval_df_with_preds)
 
-            print(f"{benchmark_string} train_full_objective: {train_full_objective}")
             print(f"{benchmark_string} eval_auc: {eval_auc}")
 
-            results["train_full_objective"] = train_full_objective
             results["eval_auc"] = eval_auc
         else:
-            evaluator = (
+            evaluator_test = (
                 MulticlassClassificationEvaluator()
+                .setMetricName("accuracy")
                 .setPredictionCol(prediction_col)
                 .setLabelCol(label_name)
             )
 
-            accuracy = evaluator.evaluate(eval_df_with_preds)
+            # default to accuracy metric
+            metric_value = evaluator_test.evaluate(eval_df_with_preds)
 
-            print(f"{benchmark_string} accuracy: {accuracy}")
-            results["accuracy"] = accuracy
+            print(
+                f"{benchmark_string} {evaluator_test.getMetricName()}: {metric_value}"
+            )
+            results[evaluator_test.getMetricName()] = metric_value
 
         return results
