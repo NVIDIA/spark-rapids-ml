@@ -844,7 +844,7 @@ class LogisticRegression(
                 model = {
                     "coef_": logistic_regression.coef_.tolist(),
                     "intercept_": logistic_regression.intercept_.tolist(),
-                    "classes_": [logistic_regression.classes_.tolist()],
+                    "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": logistic_regression.n_cols,
                     "dtype": logistic_regression.dtype.name,
                 }
@@ -889,16 +889,9 @@ class LogisticRegression(
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
             [
-<<<<<<< HEAD
-                StructField(
-                    "coef_", ArrayType(ArrayType(DoubleType(), False), False), False
-                ),
-                StructField("intercept_", ArrayType(DoubleType(), False), False),
-=======
                 StructField("coef_", ArrayType(ArrayType(DoubleType()), False), False),
                 StructField("intercept_", ArrayType(DoubleType()), False),
                 StructField("classes_", ArrayType(DoubleType()), False),
->>>>>>> ab720c5 (support multi-classes)
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
             ]
