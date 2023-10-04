@@ -372,7 +372,7 @@ def test_nearest_neighbors(
         # test kneighbors: compare squared distances
         # note that single node and multi node may run slightly different kernels resulting
         # in different distances.  This is especially an issue for self distances which don't come out
-        # to be 0 necessarily due to expanded form of calculation (|x-y|^2 = |x| + |y| - 2 <x,y>).
+        # to be 0 necessarily due to expanded form of calculation (|x-y|^2 = |x|^2 + |y|^2 - 2 <x,y>).
         # sqrt amplifies this error so we compare Euclidean distance squared and expect error to be below
         # default threshold in array_equal
         assert len(distances) == len(cuml_distances)
