@@ -86,6 +86,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             print(f"total iterations: {model.summary.totalIterations}")
             print(f"objective history: {model.summary.objectiveHistory}")
         else:
+            print(f"total iterations: {model.num_iters}")
             print("model does not have hasSummary attribute")
 
         eval_df = train_df if transform_df is None else transform_df
@@ -163,7 +164,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
                 .setLabelCol(label_name)
             )
 
-            # default to accuracy metric
             metric_value = evaluator_test.evaluate(eval_df_with_preds)
 
             print(

@@ -847,6 +847,7 @@ class LogisticRegression(
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": logistic_regression.n_cols,
                     "dtype": logistic_regression.dtype.name,
+                    "num_iters": logistic_regression.solver_model.num_iters,
                 }
                 del logistic_regression
                 return model
@@ -894,6 +895,7 @@ class LogisticRegression(
                 StructField("classes_", ArrayType(DoubleType()), False),
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
+                StructField("num_iters", IntegerType(), False),
             ]
         )
 
@@ -942,6 +944,7 @@ class LogisticRegressionModel(
         classes_: List[float],
         n_cols: int,
         dtype: str,
+        num_iters: int,
     ) -> None:
         super().__init__(
             dtype=dtype,
@@ -949,12 +952,14 @@ class LogisticRegressionModel(
             coef_=coef_,
             intercept_=intercept_,
             classes_=classes_,
+            num_iters=num_iters,
         )
         self.coef_ = coef_
         self.intercept_ = intercept_
         self.classes_ = classes_
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
         self.num_classes = len(self.classes_)
+        self.num_iters = num_iters
 
     def cpu(self) -> SparkLogisticRegressionModel:
         """Return the PySpark ML LogisticRegressionModel"""
