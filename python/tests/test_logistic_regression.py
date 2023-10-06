@@ -10,7 +10,7 @@ from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import Vectors, VectorUDT
+from pyspark.ml.linalg import DenseMatrix, DenseVector, SparseVector, Vectors, VectorUDT
 from pyspark.ml.param import Param
 from pyspark.sql import Row
 from pyspark.sql.functions import array, col
@@ -413,11 +413,17 @@ def test_compat(
         assert blor_model.getRawPredictionCol() == "newRawPrediction"
         assert blor_model.getProbabilityCol() == "newProbability"
 
-        coefficients = blor_model.coefficients.toArray()
-        intercept = blor_model.intercept
+        assert isinstance(blor_model.coefficients, DenseVector)
+        assert array_equal(blor_model.coefficients.toArray(), [-2.42377087, 2.42377087])
+        assert blor_model.intercept == pytest.approx(0, abs=1e-6)
 
-        assert array_equal(coefficients, [-2.42377087, 2.42377087])
-        assert intercept == pytest.approx(0, abs=1e-6)
+        assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
+        assert array_equal(
+            blor_model.coefficientMatrix.toArray(),
+            np.array([[-2.42377087, 2.42377087]]),
+        )
+        assert isinstance(blor_model.interceptVector, DenseVector)
+        assert array_equal(blor_model.interceptVector.toArray(), [0.0])
 
         example = bdf.head()
         if example:
@@ -544,6 +550,7 @@ def test_lr_fit_multiple_in_single_pass(
                 assert models[i].getOrDefault(k.name) == v
                 assert single_model.getOrDefault(k.name) == v
 
+
 @pytest.mark.compat
 @pytest.mark.parametrize(
     "lr_types",
@@ -627,7 +634,7 @@ def test_compat_multinomial(
         else:
             warnings.warn("spark rapids ml does not accept standardization")
             mlor = _LogisticRegression(
-                regParam=0.1, elasticNetParam=0.2, family="multinomial"
+                regParam=0.1, elasticNetParam=0.2, family="multimonial"
             )
 
         assert mlor.getRegParam() == 0.1
@@ -644,7 +651,27 @@ def test_compat_multinomial(
         mlor_model.setProbabilityCol("newProbability")
         assert mlor_model.getProbabilityCol() == "newProbability"
 
+        with pytest.raises(
+            Exception,
+            match="Multinomial models contain a matrix of coefficients, use coefficientMatrix instead.",
+        ):
+            mlor_model.coefficients
+
+        with pytest.raises(
+            Exception,
+            match="Multinomial models contain a vector of intercepts, use interceptVector instead.",
+        ):
+            mlor_model.intercept
+
+        assert isinstance(mlor_model.coefficientMatrix, DenseMatrix)
         coef_mat = mlor_model.coefficientMatrix.toArray()
+
+        # TODO support correct type of interceptVector
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert isinstance(mlor_model.interceptVector, SparseVector)
+        else:
+            assert isinstance(mlor_model.interceptVector, DenseVector)
+
         intercept_vec = mlor_model.interceptVector.toArray()
 
         coef_ground = [

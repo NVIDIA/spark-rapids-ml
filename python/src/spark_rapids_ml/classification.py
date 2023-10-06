@@ -819,8 +819,7 @@ class LogisticRegression(
         extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         array_order = self._fit_array_order()
-        reg_params_value_mapper = LogisticRegression._reg_params_value_mapping 
-
+        reg_params_value_mapper = LogisticRegression._reg_params_value_mapping
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -843,10 +842,18 @@ class LogisticRegression(
             )
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
-                reg_param = 1.0 / init_parameters["C"] if init_parameters["C"] != 0. else 0.
-                elasticNet_param = init_parameters["l1_ratio"]
+                reg_param = (
+                    1.0 / init_parameters["C"] if init_parameters["C"] != 0.0 else 0.0
+                )
+                elasticNet_param = (
+                    init_parameters["l1_ratio"]
+                    if init_parameters["l1_ratio"] is not None
+                    else 0.0
+                )
 
-                penalty, C, l1_ratio = reg_params_value_mapper(reg_param, elasticNet_param)
+                penalty, C, l1_ratio = reg_params_value_mapper(
+                    reg_param, elasticNet_param
+                )
                 init_parameters["penalty"] = penalty
                 init_parameters["C"] = C
                 init_parameters["l1_ratio"] = l1_ratio
