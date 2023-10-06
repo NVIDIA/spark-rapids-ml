@@ -66,7 +66,7 @@ unset SPARK_HOME
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
-num_classes=${num_classes:-2}
+num_classes=${num_classes:-10}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
 gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
@@ -363,14 +363,10 @@ fi
 
 # Logistic Regression Classification
 if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
-    data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet
 
-    if [[ $num_classes != 2 ]]; then
-        data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
-    fi
+    data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
 
     if [[ ! -d ${data_path} ]]; then
-    # same data set as random forest classifier
         python $gen_data_script classification \
             --n_informative $( expr $num_cols / 3 )  \
             --n_redundant $( expr $num_cols / 3 ) \

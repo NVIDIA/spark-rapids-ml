@@ -122,9 +122,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             "standardization": params["standardization"],
         }
 
-        evaluator_train: Union[
-            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-        ] = (
+        evaluator_train = (
             MulticlassClassificationEvaluator()
             .setMetricName("logLoss")  # type:ignore
             .setPredictionCol(prediction_col)
@@ -143,9 +141,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         print(f"{benchmark_string} train_full_objective: {train_full_objective}")
 
         if model.numClasses == 2:
-            evaluator_test: Union[
-                BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-            ] = (
+            evaluator_test = (
                 BinaryClassificationEvaluator()
                 .setRawPredictionCol(probability_col)
                 .setLabelCol(label_name)
@@ -157,18 +153,18 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
             results["eval_auc"] = eval_auc
         else:
-            evaluator_test = (
+            evaluator_test_multiclass = (
                 MulticlassClassificationEvaluator()
                 .setMetricName("accuracy")
                 .setPredictionCol(prediction_col)
                 .setLabelCol(label_name)
             )
 
-            metric_value = evaluator_test.evaluate(eval_df_with_preds)
+            metric_value = evaluator_test_multiclass.evaluate(eval_df_with_preds)
 
             print(
-                f"{benchmark_string} {evaluator_test.getMetricName()}: {metric_value}"
+                f"{benchmark_string} {evaluator_test_multiclass.getMetricName()}: {metric_value}"
             )
-            results[evaluator_test.getMetricName()] = metric_value
+            results[evaluator_test_multiclass.getMetricName()] = metric_value
 
         return results

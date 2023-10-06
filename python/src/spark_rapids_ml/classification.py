@@ -54,7 +54,7 @@ from pyspark.ml.classification import (
     _LogisticRegressionParams,
     _RandomForestClassifierParams,
 )
-from pyspark.ml.linalg import DenseMatrix, Matrices, Matrix, Vector, Vectors
+from pyspark.ml.linalg import DenseMatrix, Matrix, Vector, Vectors
 from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
@@ -1045,8 +1045,7 @@ class LogisticRegressionModel(
         def _construct_lr() -> CumlT:
             import cupy as cp
             import numpy as np
-            from cuml.internals.global_settings import GlobalSettings
-            from cuml.internals.input_utils import CumlArray, input_to_cuml_array
+            from cuml.internals.input_utils import input_to_cuml_array
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
             lr = LogisticRegressionMG(output_type="numpy")
@@ -1055,7 +1054,7 @@ class LogisticRegressionModel(
 
             gpu_intercept_ = cp.array(intercept_, order="C", dtype=dtype)
             gpu_coef_ = cp.array(coef_, order="F", dtype=dtype).T
-            gpu_stacked = GlobalSettings().xpy.vstack([gpu_coef_, gpu_intercept_])
+            gpu_stacked = cp.vstack([gpu_coef_, gpu_intercept_])
             lr.solver_model._coef_ = input_to_cuml_array(gpu_stacked, order="C").array
 
             lr.penalty_normalized = False
