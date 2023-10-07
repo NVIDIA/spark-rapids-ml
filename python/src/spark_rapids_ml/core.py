@@ -551,8 +551,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                 if len(sizes) == 0 or all(sz == 0 for sz in sizes):
                     raise RuntimeError(
-                        "A python worker received no data.  Please increase amount of data or use fewer workers."
+                        "A python worker received no data.  Please ensure no empty partitions by increasing amount of data, using fewer workers, or repartitioning."
                     )
+
+                # not syncing here can result in hangs and unkilled python workers if error in data loading (e.g. empty partition)
+                context.barrier()
 
                 params[param_alias.handle] = cc.handle
                 params[param_alias.part_sizes] = sizes
