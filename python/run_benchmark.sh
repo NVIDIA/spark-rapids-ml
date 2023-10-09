@@ -66,7 +66,6 @@ unset SPARK_HOME
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
-num_classes_list=${num_classes:-"2 10"}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
 gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
@@ -305,16 +304,20 @@ fi
 
 # Random Forest Classification
 if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+    num_classes=2
+    data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
+
+    if [[ ! -d ${data_path} ]]; then
         python $gen_data_script classification \
             --n_informative $( expr $num_cols / 3 )  \
             --n_redundant $( expr $num_cols / 3 ) \
+            --n_classes ${num_classes} \
             --num_rows $num_rows \
             --num_cols $num_cols \
             --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+            --output_dir "${data_path}" \
             $common_confs
     fi
 
@@ -326,8 +329,8 @@ if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --num_runs $num_runs \
-        --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
-        --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --train_path "${data_path}" \
+        --transform_path "${data_path}" \
         --report_path "report_rf_classifier_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
@@ -363,6 +366,7 @@ fi
 
 # Logistic Regression Classification
 if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
+    num_classes_list=${num_classes_list:-"2 10"}
 
     for num_classes in ${num_classes_list}; do
 
