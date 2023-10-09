@@ -331,6 +331,7 @@ LogisticRegressionModelType = TypeVar(
 
 
 @pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
@@ -339,6 +340,7 @@ LogisticRegressionModelType = TypeVar(
     ],
 )
 def test_compat(
+    fit_intercept: bool,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
     tmp_path: str,
 ) -> None:
@@ -382,10 +384,12 @@ def test_compat(
 
         assert _LogisticRegression().getRegParam() == 0.0
         if lr_types[0] is SparkLogisticRegression:
-            blor = _LogisticRegression(regParam=0.1, standardization=False)
+            blor = _LogisticRegression(
+                regParam=0.1, fitIntercept=fit_intercept, standardization=False
+            )
         else:
             warnings.warn("spark rapids ml does not accept standardization")
-            blor = _LogisticRegression(regParam=0.1)
+            blor = _LogisticRegression(regParam=0.1, fitIntercept=fit_intercept)
 
         assert blor.getRegParam() == 0.1
 
@@ -552,6 +556,7 @@ def test_lr_fit_multiple_in_single_pass(
 
 
 @pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
@@ -560,6 +565,7 @@ def test_lr_fit_multiple_in_single_pass(
     ],
 )
 def test_compat_multinomial(
+    fit_intercept: bool,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
     tmp_path: str,
 ) -> None:
@@ -628,13 +634,17 @@ def test_compat_multinomial(
             mlor = _LogisticRegression(
                 regParam=0.1,
                 elasticNetParam=0.2,
+                fitIntercept=fit_intercept,
                 family="multinomial",
                 standardization=False,
             )
         else:
             warnings.warn("spark rapids ml does not accept standardization")
             mlor = _LogisticRegression(
-                regParam=0.1, elasticNetParam=0.2, family="multimonial"
+                regParam=0.1,
+                elasticNetParam=0.2,
+                fitIntercept=fit_intercept,
+                family="multimonial",
             )
 
         assert mlor.getRegParam() == 0.1
@@ -666,10 +676,13 @@ def test_compat_multinomial(
         assert isinstance(mlor_model.coefficientMatrix, DenseMatrix)
         coef_mat = mlor_model.coefficientMatrix.toArray()
 
-        # TODO support correct type of interceptVector
-        if isinstance(mlor_model, SparkLogisticRegressionModel):
+        if fit_intercept == False:
+            assert isinstance(mlor_model.interceptVector, SparseVector)
+        elif isinstance(mlor_model, SparkLogisticRegressionModel):
+            # Note Spark returns a SparseVector of all zeroes
             assert isinstance(mlor_model.interceptVector, SparseVector)
         else:
+            # Note Spark Rapids ML returns a DenseVector of tiny non-zeroes
             assert isinstance(mlor_model.interceptVector, DenseVector)
 
         intercept_vec = mlor_model.interceptVector.toArray()

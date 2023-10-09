@@ -1061,6 +1061,9 @@ class LogisticRegressionModel(
     def coefficientMatrix(self) -> Matrix:
         """
         Model coefficients.
+        Note Spark CPU uses denseCoefficientMatrix.compressed that may return a sparse vector
+        if there are many zero values. Since the compressed function is not available in pyspark,
+        Spark Rapids ML always returns a dense vector.
         """
 
         n_rows = len(self.coef_)
@@ -1075,7 +1078,16 @@ class LogisticRegressionModel(
         """
         Model intercept.
         """
-        return Vectors.dense(cast(list, self.intercept_))
+        nnz = np.count_nonzero(self.intercept_)
+
+        # spark returns interceptVec.compressed
+        # According spark doc, a dense vector needs 8 * size + 8 bytes, while a sparse vector needs 12 * nnz + 20 bytes.
+        if 1.5 * (nnz + 1.0) < len(self.intercept_):
+            size = len(self.intercept_)
+            data_m = {p[0]: p[1] for p in enumerate(self.intercept_)}
+            return Vectors.sparse(size, data_m)
+        else:
+            return Vectors.dense(cast(list, self.intercept_))
 
     @property
     def numClasses(self) -> int:
