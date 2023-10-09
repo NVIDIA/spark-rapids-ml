@@ -1057,9 +1057,6 @@ class LogisticRegressionModel(
             gpu_stacked = cp.vstack([gpu_coef_, gpu_intercept_])
             lr.solver_model._coef_ = input_to_cuml_array(gpu_stacked, order="C").array
 
-            lr.penalty_normalized = False
-            lr.lbfgs_memory = 10
-
             lr.classes_ = input_to_cuml_array(
                 np.array(classes_, order="F").astype(dtype)
             ).array

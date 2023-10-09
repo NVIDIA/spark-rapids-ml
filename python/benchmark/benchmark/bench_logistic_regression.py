@@ -132,7 +132,11 @@ class BenchmarkLogisticRegression(BenchmarkBase):
 
         # TODO: add l1 regularization penalty term to full objective for when we support it
         log_loss = evaluator_train.evaluate(train_df_with_preds)
-        coefficients = model.coefficientMatrix.toArray()
+        coefficients = (
+            np.array(model.coefficients)
+            if model.numClasses == 2
+            else model.coefficientMatrix.toArray()
+        )
         coefs_l1 = np.sum(np.abs(coefficients))
         coefs_l2 = np.sum(coefficients**2)
 
