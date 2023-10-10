@@ -599,19 +599,21 @@ class LogisticRegressionClass(_CumlClass):
     @classmethod
     def _reg_params_value_mapping(
         cls, reg_param: float, elasticNet_param: float
-    ) -> Tuple[str, float, float | None]:
+    ) -> Tuple[str, float, float]:
+        # Note cuml ignores l1_ratio and when penalty is "none", "l2", and "l1"
+        # Spark Rapids ML sets it to elasticNet_param to be compatible with Spark
         if reg_param == 0.0:
             penalty = "none"
             C = 0.0
-            l1_ratio = None
+            l1_ratio = elasticNet_param
         elif elasticNet_param == 0.0:
             penalty = "l2"
             C = 1.0 / reg_param
-            l1_ratio = None
+            l1_ratio = elasticNet_param
         elif elasticNet_param == 1.0:
             penalty = "l1"
             C = 1.0 / reg_param
-            l1_ratio = None
+            l1_ratio = elasticNet_param
         else:
             penalty = "elasticnet"
             C = 1.0 / reg_param
@@ -961,6 +963,12 @@ class LogisticRegression(
         Sets the value of :py:attr:`regParam`.
         """
         return self.set_params(regParam=value)
+
+    def setElasticNetParam(self, value: float) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`regParam`.
+        """
+        return self.set_params(elasticNetParam=value)
 
     def setTol(self, value: float) -> "LogisticRegression":
         """

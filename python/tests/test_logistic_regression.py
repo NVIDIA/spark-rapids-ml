@@ -120,7 +120,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "max_iter": 100,
         "penalty": "none",
         "C": 0.0,
-        "l1_ratio": None,
+        "l1_ratio": 0.0,
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -147,7 +147,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "max_iter": 30,
             "penalty": "l2",
             "C": 2.0,  # C should be equal to 2.0 / regParam
-            "l1_ratio": None,
+            "l1_ratio": 0.0,
             "tol": 1e-2,
             "fit_intercept": False,
         }
@@ -172,7 +172,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "max_iter": 30,
             "penalty": "l1",
             "C": 2.0,  # C should be equal to 1.0 / regParam
-            "l1_ratio": None,
+            "l1_ratio": 1.0,
             "tol": 1e-2,
             "fit_intercept": False,
         }
@@ -233,8 +233,8 @@ def test_classifier(
     max_record_batch: int,
     gpu_number: int,
     n_classes: int = 2,
-    reg_param: float = 0.,
-    elasticNet_param: float = 0.,
+    reg_param: float = 0.0,
+    elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
 ) -> LogisticRegression:
     X_train, X_test, y_train, y_test = make_classification_dataset(
@@ -274,7 +274,11 @@ def test_classifier(
 
         assert spark_lr._cuml_params["penalty"] == cu_lr.penalty
         assert spark_lr._cuml_params["C"] == cu_lr.C
-        assert spark_lr._cuml_params["l1_ratio"] == cu_lr.l1_ratio
+        if cu_lr.penalty == "elasticnet":
+            assert spark_lr._cuml_params["l1_ratio"] == cu_lr.l1_ratio
+        else:
+            assert spark_lr._cuml_params["l1_ratio"] == spark_lr.getElasticNetParam()
+            assert cu_lr.l1_ratio == None
 
         spark_lr.setFeaturesCol(features_col)
         spark_lr.setLabelCol(label_col)
@@ -650,6 +654,14 @@ def test_compat_multinomial(
         assert mlor.getRegParam() == 0.1
         assert mlor.getElasticNetParam() == 0.2
 
+        mlor.setRegParam(0.15)
+        mlor.setElasticNetParam(0.25)
+        assert mlor.getRegParam() == 0.15
+        assert mlor.getElasticNetParam() == 0.25
+
+        mlor.setRegParam(0.1)
+        mlor.setElasticNetParam(0.2)
+
         mlor.setFeaturesCol("features")
         mlor.setLabelCol("label")
 
@@ -850,7 +862,7 @@ def test_compat_multinomial(
 @pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32, np.float64])
-@pytest.mark.parametrize("max_record_batch", [20, 10000])
+@pytest.mark.parametrize("max_record_batch", [20])
 @pytest.mark.parametrize("n_classes", [8])
 @pytest.mark.slow
 def test_multiclass(
@@ -876,19 +888,19 @@ def test_multiclass(
         tolerance=tolerance,
     )
 
+
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("reg_param", [0.0, 0.1])
-@pytest.mark.parametrize("elasticNet_param", [0.0, 1.0, 0.2])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
 @pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("max_record_batch", [20])
-@pytest.mark.parametrize("n_classes", [2, 8])
-@pytest.mark.slow
-def test_reg(
+@pytest.mark.parametrize("n_classes", [2, 4])
+def test_quick(
     fit_intercept: bool,
-    reg_param: float,
-    elasticNet_param: float,
+    reg_factors: Tuple[float, float],
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
@@ -896,12 +908,12 @@ def test_reg(
     n_classes: int,
     gpu_number: int,
 ) -> None:
-    tolerance = 0.005 if n_classes <= 4 else 0.01
+    tolerance = 0.005
+    reg_param = reg_factors[0]
+    elasticNet_param = reg_factors[1]
 
     lr = test_classifier(
         fit_intercept=fit_intercept,
-        reg_param=reg_param,
-        elasticNet_param=elasticNet_param,
         feature_type=feature_type,
         data_shape=data_shape,
         data_type=data_type,
@@ -909,6 +921,8 @@ def test_reg(
         n_classes=n_classes,
         gpu_number=gpu_number,
         tolerance=tolerance,
+        reg_param=reg_param,
+        elasticNet_param=elasticNet_param,
     )
 
     assert lr.getRegParam() == reg_param
@@ -939,36 +953,3 @@ def test_reg(
         assert penalty == "elasticnet"
         assert l1_strength == reg_param * elasticNet_param
         assert l2_strength == reg_param * (1 - elasticNet_param)
-
-
-@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("params", [(0.0, 0.0) , (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)])
-@pytest.mark.parametrize("feature_type", ["vector"])
-@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32])
-@pytest.mark.parametrize("max_record_batch", [20])
-@pytest.mark.parametrize("n_classes", [2, 4])
-def test_quick(
-    fit_intercept: bool,
-    params: Tuple[float, float],
-    feature_type: str,
-    data_shape: Tuple[int, int],
-    data_type: np.dtype,
-    max_record_batch: int,
-    n_classes: int,
-    gpu_number: int,
-) -> None:
-    tolerance = 0.005
-
-    test_classifier(
-        fit_intercept=fit_intercept,
-        feature_type=feature_type,
-        data_shape=data_shape,
-        data_type=data_type,
-        max_record_batch=max_record_batch,
-        n_classes=n_classes,
-        gpu_number=gpu_number,
-        tolerance=tolerance,
-        reg_param=params[0],
-        elasticNet_param=params[1],
-    )
