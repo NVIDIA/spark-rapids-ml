@@ -65,7 +65,6 @@ If you already have a Databricks account, you can run the example notebooks on a
     - **Environment variables**
       ```
       LIBCUDF_CUFILE_POLICY=OFF
-      LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64
       NCCL_DEBUG=INFO
       ```
 - Start the configured cluster.

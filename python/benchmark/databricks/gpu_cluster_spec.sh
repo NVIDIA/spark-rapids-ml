@@ -48,7 +48,6 @@ cat <<EOF
     },
     "spark_env_vars": {
         "LIBCUDF_CUFILE_POLICY": "OFF",
-        "LD_LIBRARY_PATH": "/usr/local/cuda/compat:/usr/local/cuda/lib64",
         "NCCL_DEBUG": "INFO"
     },
     "autotermination_minutes": 30,
