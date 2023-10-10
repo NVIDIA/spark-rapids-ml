@@ -28,7 +28,10 @@ If you already have a Databricks account, you can run the example notebooks on a
   - updates the CUDA runtime to 11.8 (required for Spark Rapids ML dependencies).
   - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
   - installs various `cuXX` dependencies via pip.
-- Copy the modified `init-pip-cuda-11.8.sh` init script to your *workspace* (not DBFS) (ex. workspace directory: /Users/<databricks-user-name>/init_scripts).
+
+  **Note**: as of the last update of this README, Azure Databricks requires a CUDA driver forward compatibility package.  Uncomment the designated lines for this in the init script.  AWS Databricks does not need this and leave the lines commented in that case.
+
+- Copy the modified `init-pip-cuda-11.8.sh` init script to your *workspace* (not DBFS) (ex. workspace directory: /Users/< databricks-user-name >/init_scripts).
   ```bash
   export WS_SAVE_DIR="/path/to/directory/in/workspace"
   databricks workspace mkdirs ${WS_SAVE_DIR} --profile ${PROFILE}
@@ -65,8 +68,11 @@ If you already have a Databricks account, you can run the example notebooks on a
     - **Environment variables**
       ```
       LIBCUDF_CUFILE_POLICY=OFF
-      LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64
       NCCL_DEBUG=INFO
+      ```
+    - **Additional Environment variable for Azure Databricks**
+      ```
+      LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64
       ```
 - Start the configured cluster.
 - Select your workspace and upload the desired [notebook](../) via `Import` in the drop down menu for your workspace.
