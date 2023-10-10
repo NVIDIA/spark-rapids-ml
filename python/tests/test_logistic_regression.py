@@ -175,7 +175,6 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32, np.float64])
 @pytest.mark.parametrize("max_record_batch", [100, 10000])
-@pytest.mark.parametrize("n_classes", [2])
 @pytest.mark.slow
 def test_classifier(
     fit_intercept: bool,
@@ -183,12 +182,11 @@ def test_classifier(
     data_shape: Tuple[int, int],
     data_type: np.dtype,
     max_record_batch: int,
-    n_classes: int,
     gpu_number: int,
+    n_classes: int = 2,
+    reg_param: float = 0.0,
+    tolerance: float = 0.001,
 ) -> None:
-    tolerance = 0.001
-    reg_param = np.finfo("float32").tiny.item()
-
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -201,7 +199,11 @@ def test_classifier(
 
     from cuml import LogisticRegression as cuLR
 
-    cu_lr = cuLR(fit_intercept=fit_intercept, C=1 / reg_param)
+    penalty = "l2" if reg_param != 0.0 else "none"
+    C = 1.0 / reg_param if reg_param != 0.0 else 0.0
+    cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C)
+    cu_lr.solver_model.penalty_normalized = False
+    cu_lr.solver_model.lbfgs_memory = 10
     cu_lr.fit(X_train, y_train)
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
@@ -227,15 +229,22 @@ def test_classifier(
         assert array_equal(np.array(spark_lr_model.coef_), cu_lr.coef_, tolerance)
         assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)
 
-        assert len(spark_lr_model.coef_) == 1
-        assert len(cu_lr.coef_) == 1
-        assert array_equal(spark_lr_model.coef_[0], cu_lr.coef_[0], tolerance)
-        assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)
+        if n_classes == 2:
+            assert len(spark_lr_model.coef_) == 1
+            assert len(cu_lr.coef_) == 1
+            assert array_equal(
+                spark_lr_model.coefficients.toArray(), cu_lr.coef_[0], tolerance
+            )
+            assert spark_lr_model.intercept == pytest.approx(
+                cu_lr.intercept_[0], tolerance
+            )
 
         assert array_equal(
-            spark_lr_model.coefficients.toArray(), cu_lr.coef_[0], tolerance
+            spark_lr_model.coefficientMatrix.toArray(), cu_lr.coef_, tolerance
         )
-        assert spark_lr_model.intercept == pytest.approx(cu_lr.intercept_[0], tolerance)
+        assert array_equal(
+            spark_lr_model.interceptVector.toArray(), cu_lr.intercept_, tolerance
+        )
 
         # test transform
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
@@ -243,7 +252,11 @@ def test_classifier(
         result = spark_lr_model.transform(test_df).collect()
         spark_preds = [row["prediction"] for row in result]
         cu_preds = cu_lr.predict(X_test)
-        assert array_equal(cu_preds, spark_preds, 1e-3)
+        assert array_equal(cu_preds, spark_preds)
+
+        spark_probs = np.array([row["probability"].toArray() for row in result])
+        cu_probs = cu_lr.predict_proba(X_test)
+        assert array_equal(spark_probs, cu_probs, tolerance)
 
 
 LogisticRegressionType = TypeVar(
@@ -469,3 +482,66 @@ def test_lr_fit_multiple_in_single_pass(
             for k, v in param_map.items():
                 assert models[i].getOrDefault(k.name) == v
                 assert single_model.getOrDefault(k.name) == v
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32, np.float64])
+@pytest.mark.parametrize("max_record_batch", [20, 10000])
+@pytest.mark.parametrize("n_classes", [8])
+@pytest.mark.slow
+def test_multiclass(
+    fit_intercept: bool,
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    n_classes: int,
+    gpu_number: int,
+) -> None:
+    tolerance = 0.005
+
+    test_classifier(
+        fit_intercept=fit_intercept,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        reg_param=0.1,
+        tolerance=tolerance,
+    )
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("reg_param", [0.0, 0.1])
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("n_classes", [2, 4])
+def test_quick(
+    fit_intercept: bool,
+    reg_param: float,
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    n_classes: int,
+    gpu_number: int,
+) -> None:
+    tolerance = 0.005
+
+    test_classifier(
+        fit_intercept=fit_intercept,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        reg_param=reg_param,
+        tolerance=tolerance,
+    )

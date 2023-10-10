@@ -86,6 +86,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             print(f"total iterations: {model.summary.totalIterations}")
             print(f"objective history: {model.summary.objectiveHistory}")
         else:
+            print(f"total iterations: {model.num_iters}")
             print("model does not have hasSummary attribute")
 
         eval_df = train_df if transform_df is None else transform_df
@@ -109,44 +110,9 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             MulticlassClassificationEvaluator,
         )
 
-        # TODO: support multiple classes
-        # binary classification
-        evaluator_train: Union[
-            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-        ] = (
-            MulticlassClassificationEvaluator()
-            .setMetricName("logLoss")  # type:ignore
-            .setPredictionCol(prediction_col)
-            .setProbabilityCol(probability_col)
-            .setLabelCol(label_name)
-        )
-
-        evaluator_test: Union[
-            BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-        ] = (
-            BinaryClassificationEvaluator()
-            .setRawPredictionCol(probability_col)
-            .setLabelCol(label_name)
-        )
-
-        log_loss = evaluator_train.evaluate(train_df_with_preds)
-        coefficients = np.array(model.coefficients)
-        coefs_l1 = np.sum(np.abs(coefficients))
-        coefs_l2 = np.sum(coefficients**2)
-
-        # TODO: add l1 regularization penalty term to full objective for when we support it
-        train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
-
-        eval_auc = evaluator_test.evaluate(eval_df_with_preds)
-
-        print(f"{benchmark_string} train_full_objective: {train_full_objective}")
-        print(f"{benchmark_string} eval_auc: {eval_auc}")
-
         results = {
             "fit_time": fit_time,
             "transform_time": transform_time,
-            "train_full_objective": train_full_objective,
-            "eval_auc": eval_auc,
             "num_gpus": self.args.num_gpus,
             "num_cpus": self.args.num_cpus,
             "train_path": self.args.train_path,
@@ -155,5 +121,54 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             "regParam": params["regParam"],
             "standardization": params["standardization"],
         }
+
+        evaluator_train = (
+            MulticlassClassificationEvaluator()
+            .setMetricName("logLoss")  # type:ignore
+            .setPredictionCol(prediction_col)
+            .setProbabilityCol(probability_col)
+            .setLabelCol(label_name)
+        )
+
+        # TODO: add l1 regularization penalty term to full objective for when we support it
+        log_loss = evaluator_train.evaluate(train_df_with_preds)
+        coefficients = (
+            np.array(model.coefficients)
+            if model.numClasses == 2
+            else model.coefficientMatrix.toArray()
+        )
+        coefs_l1 = np.sum(np.abs(coefficients))
+        coefs_l2 = np.sum(coefficients**2)
+
+        train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
+        results["train_full_objective"] = train_full_objective
+        print(f"{benchmark_string} train_full_objective: {train_full_objective}")
+
+        if model.numClasses == 2:
+            evaluator_test = (
+                BinaryClassificationEvaluator()
+                .setRawPredictionCol(probability_col)
+                .setLabelCol(label_name)
+            )
+
+            eval_auc = evaluator_test.evaluate(eval_df_with_preds)
+
+            print(f"{benchmark_string} eval_auc: {eval_auc}")
+
+            results["eval_auc"] = eval_auc
+        else:
+            evaluator_test_multiclass = (
+                MulticlassClassificationEvaluator()
+                .setMetricName("accuracy")
+                .setPredictionCol(prediction_col)
+                .setLabelCol(label_name)
+            )
+
+            metric_value = evaluator_test_multiclass.evaluate(eval_df_with_preds)
+
+            print(
+                f"{benchmark_string} {evaluator_test_multiclass.getMetricName()}: {metric_value}"
+            )
+            results[evaluator_test_multiclass.getMetricName()] = metric_value
 
         return results
