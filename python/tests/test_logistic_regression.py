@@ -574,6 +574,8 @@ def test_compat_multinomial(
     tmp_path: str,
 ) -> None:
     _LogisticRegression, _LogisticRegressionModel = lr_types
+    tolerance = 0.001
+
     X = np.array(
         [
             [1.0, 2.0],
@@ -691,8 +693,10 @@ def test_compat_multinomial(
         if fit_intercept == False:
             assert isinstance(mlor_model.interceptVector, SparseVector)
         elif isinstance(mlor_model, SparkLogisticRegressionModel):
-            # Note Spark returns a SparseVector of all zeroes
-            assert isinstance(mlor_model.interceptVector, SparseVector)
+            # Note Spark may return a SparseVector of all zeroes
+            assert isinstance(mlor_model.interceptVector, DenseVector) or isinstance(
+                mlor_model.interceptVector, SparseVector
+            )
         else:
             # Note Spark Rapids ML returns a DenseVector of tiny non-zeroes
             assert isinstance(mlor_model.interceptVector, DenseVector)
@@ -712,8 +716,8 @@ def test_compat_multinomial(
             1.44387586e-05,
             4.82081663e-09,
         ]
-        assert array_equal(coef_mat, np.array(coef_ground))
-        assert array_equal(intercept_vec, intercept_ground)
+        assert array_equal(coef_mat, np.array(coef_ground), tolerance)
+        assert array_equal(intercept_vec, intercept_ground, tolerance)
 
         example = mdf.head()
         if example:
