@@ -150,7 +150,13 @@ class CumlContext:
         if not self.enable:
             return
         assert self._nccl_comm is not None
-        self._nccl_comm.destroy()
+
+        # if no exception cleanup nicely, otherwise abort
+        if not args[0]:
+            self._nccl_comm.destroy()
+        else:
+            self._nccl_comm.abort()
+
         del self._nccl_comm
 
         del self._handle
