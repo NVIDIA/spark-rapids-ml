@@ -539,9 +539,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
-                    pdf[alias.row_number]
-                    if alias.row_number in pdf.columns
-                    else None
+                    pdf[alias.row_number] if alias.row_number in pdf.columns else None
                 )
                 inputs.append((features, label, row_number))
 
