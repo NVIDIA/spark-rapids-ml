@@ -600,7 +600,7 @@ class LogisticRegressionClass(_CumlClass):
     def _reg_params_value_mapping(
         cls, reg_param: float, elasticNet_param: float
     ) -> Tuple[str, float, float]:
-        # Note cuml ignores l1_ratio and when penalty is "none", "l2", and "l1"
+        # Note cuml ignores l1_ratio when penalty is "none", "l2", and "l1"
         # Spark Rapids ML sets it to elasticNet_param to be compatible with Spark
         if reg_param == 0.0:
             penalty = "none"
@@ -821,7 +821,6 @@ class LogisticRegression(
         extra_params: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         array_order = self._fit_array_order()
-        reg_params_value_mapper = LogisticRegression._reg_params_value_mapping
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -844,21 +843,17 @@ class LogisticRegression(
             )
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
-                reg_param = (
-                    1.0 / init_parameters["C"] if init_parameters["C"] != 0.0 else 0.0
-                )
-                elasticNet_param = (
-                    init_parameters["l1_ratio"]
-                    if init_parameters["l1_ratio"] is not None
-                    else 0.0
-                )
+                if init_parameters["C"] == 0.0:
+                    init_parameters["penalty"] = "none"
 
-                penalty, C, l1_ratio = reg_params_value_mapper(
-                    reg_param, elasticNet_param
-                )
-                init_parameters["penalty"] = penalty
-                init_parameters["C"] = C
-                init_parameters["l1_ratio"] = l1_ratio
+                elif init_parameters["l1_ratio"] == 0.0:
+                    init_parameters["penalty"] = "l2"
+
+                elif init_parameters["l1_ratio"] == 1.0:
+                    init_parameters["penalty"] = "l1"
+
+                else:
+                    init_parameters["penalty"] = "elasticnet"
 
                 logistic_regression = LogisticRegressionMG(
                     handle=params[param_alias.handle],
@@ -1110,19 +1105,13 @@ class LogisticRegressionModel(
         n_cols = self.n_cols
         dtype = self.dtype
 
-        penalty, C, l1_ratio = LogisticRegression._reg_params_value_mapping(
-            self.getRegParam(), self.getElasticNetParam()
-        )
-
         def _construct_lr() -> CumlT:
             import cupy as cp
             import numpy as np
             from cuml.internals.input_utils import input_to_cuml_array
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
-            lr = LogisticRegressionMG(
-                penalty=penalty, C=C, l1_ratio=l1_ratio, output_type="numpy"
-            )
+            lr = LogisticRegressionMG(output_type="numpy")
             lr.n_cols = n_cols
             lr.dtype = np.dtype(dtype)
 

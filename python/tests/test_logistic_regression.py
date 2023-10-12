@@ -35,7 +35,7 @@ from .utils import (
 )
 
 
-def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
+def test_toy_example(gpu_number: int) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
     data = [
@@ -81,11 +81,9 @@ def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
         assert_transform(lr_model)
 
         # test with regParam set to 0
-        caplog.clear()
         lr_regParam_zero = LogisticRegression(
             regParam=0.0,
         )
-        assert not "no regularization is not supported yet" in caplog.text
 
         lr_regParam_zero.setProbabilityCol(probability_col)
 
@@ -98,9 +96,7 @@ def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
         assert lr_regParam_zero.getRegParam() == 0.1
         assert lr_regParam_zero.cuml_params["C"] == 1.0 / 0.1
 
-        caplog.clear()
         lr_regParam_zero.setRegParam(0.0)
-        assert not "no regularization is not supported yet" in caplog.text
 
         assert lr_regParam_zero.getRegParam() == 0.0
         assert lr_regParam_zero.cuml_params["C"] == 0.0
@@ -146,7 +142,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         {
             "max_iter": 30,
             "penalty": "l2",
-            "C": 2.0,  # C should be equal to 2.0 / regParam
+            "C": 2.0,  # C should be equal to 1.0 / regParam
             "l1_ratio": 0.0,
             "tol": 1e-2,
             "fit_intercept": False,

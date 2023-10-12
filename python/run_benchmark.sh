@@ -386,12 +386,44 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
                 $common_confs
         fi
 
-        echo "$sep algo: logistic regression $sep"
+        family="Binomial"
+        if [ ${num_classes} -gt 2 ]; then
+            family="Multinomial"
+        fi
+
+        echo "$sep algo: ${family} logistic regression - l2 regularization $sep"
         python ./benchmark/benchmark_runner.py logistic_regression \
             --standardization False \
             --maxIter 200 \
             --tol 1e-30 \
             --regParam 0.00001 \
+            --elasticNetParam 0 \
+            --num_gpus $num_gpus \
+            --num_cpus $num_cpus \
+            --num_runs $num_runs \
+            --train_path ${data_path} \
+            --transform_path ${data_path} \
+            --report_path "report_logistic_regression_${cluster_type}.csv" \
+            $common_confs $spark_rapids_confs \
+            ${EXTRA_ARGS}
+    done
+
+    for num_classes in ${num_classes_list}; do
+
+        data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
+
+        family="Binomial"
+        if [ ${num_classes} -gt 2 ]; then
+            family="Multinomial"
+        fi
+
+        echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
+        python ./benchmark/benchmark_runner.py logistic_regression \
+            --standardization False \
+            --maxIter 200 \
+            --tol 1e-30 \
+            --regParam 0.00001 \
+            --elasticNetParam 0.2 \
             --num_gpus $num_gpus \
             --num_cpus $num_cpus \
             --num_runs $num_runs \
