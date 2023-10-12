@@ -503,7 +503,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             from pyspark import BarrierTaskContext
 
             logger = get_logger(cls)
-            logger.info("Initializing cuml context")
 
             import cupy as cp
 
@@ -522,38 +521,37 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             # set gpu device
             _CumlCommon.set_gpu_device(context, is_local)
 
+            # handle the input
+            # inputs = [(X, Optional(y)), (X, Optional(y))]
+            logger.info("Loading data into python worker memory")
+            inputs = []
+            sizes = []
+            for pdf in pdf_iter:
+                sizes.append(pdf.shape[0])
+                if multi_col_names:
+                    features = np.array(pdf[multi_col_names], order=array_order)
+                else:
+                    features = np.array(list(pdf[alias.data]), order=array_order)
+                # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
+                # invoking cupy array on the list
+                if cuda_managed_mem_enabled:
+                    features = cp.array(features)
+
+                label = pdf[alias.label] if alias.label in pdf.columns else None
+                row_number = (
+                    pdf[alias.row_number] if alias.row_number in pdf.columns else None
+                )
+                inputs.append((features, label, row_number))
+
+            if len(sizes) == 0 or all(sz == 0 for sz in sizes):
+                raise RuntimeError(
+                    "A python worker received no data.  Please increase amount of data or use fewer workers."
+                )
+
+            logger.info("Initializing cuml context")
             with CumlContext(
                 partition_id, num_workers, context, enable_nccl, require_ucx
             ) as cc:
-                # handle the input
-                # inputs = [(X, Optional(y)), (X, Optional(y))]
-                logger.info("Loading data into python worker memory")
-                inputs = []
-                sizes = []
-                for pdf in pdf_iter:
-                    sizes.append(pdf.shape[0])
-                    if multi_col_names:
-                        features = np.array(pdf[multi_col_names], order=array_order)
-                    else:
-                        features = np.array(list(pdf[alias.data]), order=array_order)
-                    # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
-                    # invoking cupy array on the list
-                    if cuda_managed_mem_enabled:
-                        features = cp.array(features)
-
-                    label = pdf[alias.label] if alias.label in pdf.columns else None
-                    row_number = (
-                        pdf[alias.row_number]
-                        if alias.row_number in pdf.columns
-                        else None
-                    )
-                    inputs.append((features, label, row_number))
-
-                if len(sizes) == 0 or all(sz == 0 for sz in sizes):
-                    raise RuntimeError(
-                        "A python worker received no data.  Please increase amount of data or use fewer workers."
-                    )
-
                 params[param_alias.handle] = cc.handle
                 params[param_alias.part_sizes] = sizes
                 params[param_alias.num_cols] = dimension

@@ -326,7 +326,7 @@ def test_nearest_neighbors(
         random_state=0,
     )  # make_blobs creates a random dataset of isotropic gaussian blobs.
 
-    # set average norm to be 1 to allow comparisons with default error thresholds
+    # set average norm sq to be 1 to allow comparisons with default error thresholds
     # below
     root_ave_norm_sq = np.sqrt(np.average(np.linalg.norm(X, ord=2, axis=1) ** 2))
     X = X / root_ave_norm_sq
