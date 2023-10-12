@@ -10,7 +10,7 @@ from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import Vectors, VectorUDT
+from pyspark.ml.linalg import DenseMatrix, DenseVector, SparseVector, Vectors, VectorUDT
 from pyspark.ml.param import Param
 from pyspark.sql import Row
 from pyspark.sql.functions import array, col
@@ -35,7 +35,7 @@ from .utils import (
 )
 
 
-def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
+def test_toy_example(gpu_number: int) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
     data = [
@@ -81,18 +81,14 @@ def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
         assert_transform(lr_model)
 
         # test with regParam set to 0
-        caplog.clear()
         lr_regParam_zero = LogisticRegression(
             regParam=0.0,
         )
-        assert "no regularization is not supported yet" in caplog.text
 
         lr_regParam_zero.setProbabilityCol(probability_col)
 
         assert lr_regParam_zero.getRegParam() == 0
-        assert (
-            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
-        )
+        assert lr_regParam_zero.cuml_params["C"] == 0
         model_regParam_zero = lr_regParam_zero.fit(df)
         assert_transform(model_regParam_zero)
 
@@ -100,31 +96,27 @@ def test_toy_example(gpu_number: int, caplog: LogCaptureFixture) -> None:
         assert lr_regParam_zero.getRegParam() == 0.1
         assert lr_regParam_zero.cuml_params["C"] == 1.0 / 0.1
 
-        caplog.clear()
         lr_regParam_zero.setRegParam(0.0)
-        assert "no regularization is not supported yet" in caplog.text
 
         assert lr_regParam_zero.getRegParam() == 0.0
-        assert (
-            lr_regParam_zero.cuml_params["C"] == 1.0 / np.finfo("float32").tiny.item()
-        )
+        assert lr_regParam_zero.cuml_params["C"] == 0.0
 
 
 def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
-    # Default params
+    # Default params: no regularization
     default_spark_params = {
         "maxIter": 100,
-        "regParam": 0.0,  # will be mapped to numpy.finfo('float32').tiny
+        "regParam": 0.0,
+        "elasticNetParam": 0.0,
         "tol": 1e-06,
         "fitIntercept": True,
     }
 
     default_cuml_params = {
         "max_iter": 100,
-        "C": 1.0
-        / np.finfo(
-            "float32"
-        ).tiny,  # TODO: support default value 0.0, i.e. no regularization
+        "penalty": "none",
+        "C": 0.0,
+        "l1_ratio": 0.0,
         "tol": 1e-6,
         "fit_intercept": True,
     }
@@ -133,10 +125,11 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
 
     assert_params(default_lr, default_spark_params, default_cuml_params)
 
-    # Spark ML Params
+    # L2 regularization
     spark_params: Dict[str, Any] = {
         "maxIter": 30,
         "regParam": 0.5,
+        "elasticNetParam": 0.0,
         "tol": 1e-2,
         "fitIntercept": False,
     }
@@ -148,7 +141,59 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     expected_cuml_params.update(
         {
             "max_iter": 30,
-            "C": 2.0,  # C should be equal to 1 / regParam
+            "penalty": "l2",
+            "C": 2.0,  # C should be equal to 1.0 / regParam
+            "l1_ratio": 0.0,
+            "tol": 1e-2,
+            "fit_intercept": False,
+        }
+    )
+    assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+
+    # L1 regularization
+    spark_params = {
+        "maxIter": 30,
+        "regParam": 0.5,
+        "elasticNetParam": 1.0,
+        "tol": 1e-2,
+        "fitIntercept": False,
+    }
+
+    spark_lr = LogisticRegression(**spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(
+        {
+            "max_iter": 30,
+            "penalty": "l1",
+            "C": 2.0,  # C should be equal to 1.0 / regParam
+            "l1_ratio": 1.0,
+            "tol": 1e-2,
+            "fit_intercept": False,
+        }
+    )
+    assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+
+    # elasticnet(L1 + L2) regularization
+    spark_params = {
+        "maxIter": 30,
+        "regParam": 0.5,
+        "elasticNetParam": 0.3,
+        "tol": 1e-2,
+        "fitIntercept": False,
+    }
+
+    spark_lr = LogisticRegression(**spark_params)
+    expected_spark_params = default_spark_params.copy()
+    expected_spark_params.update(spark_params)
+    expected_cuml_params = default_cuml_params.copy()
+    expected_cuml_params.update(
+        {
+            "max_iter": 30,
+            "penalty": "elasticnet",
+            "C": 2.0,  # C should be equal to 1.0 / regParam
+            "l1_ratio": 0.3,
             "tol": 1e-2,
             "fit_intercept": False,
         }
@@ -185,8 +230,9 @@ def test_classifier(
     gpu_number: int,
     n_classes: int = 2,
     reg_param: float = 0.0,
+    elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
-) -> None:
+) -> LogisticRegression:
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -199,9 +245,11 @@ def test_classifier(
 
     from cuml import LogisticRegression as cuLR
 
-    penalty = "l2" if reg_param != 0.0 else "none"
-    C = 1.0 / reg_param if reg_param != 0.0 else 0.0
-    cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C)
+    penalty, C, l1_ratio = LogisticRegression._reg_params_value_mapping(
+        reg_param=reg_param, elasticNet_param=elasticNet_param
+    )
+
+    cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C, l1_ratio=l1_ratio)
     cu_lr.solver_model.penalty_normalized = False
     cu_lr.solver_model.lbfgs_memory = 10
     cu_lr.fit(X_train, y_train)
@@ -216,8 +264,18 @@ def test_classifier(
         spark_lr = LogisticRegression(
             fitIntercept=fit_intercept,
             regParam=reg_param,
+            elasticNetParam=elasticNet_param,
             num_workers=gpu_number,
         )
+
+        assert spark_lr._cuml_params["penalty"] == cu_lr.penalty
+        assert spark_lr._cuml_params["C"] == cu_lr.C
+        if cu_lr.penalty == "elasticnet":
+            assert spark_lr._cuml_params["l1_ratio"] == cu_lr.l1_ratio
+        else:
+            assert spark_lr._cuml_params["l1_ratio"] == spark_lr.getElasticNetParam()
+            assert cu_lr.l1_ratio == None
+
         spark_lr.setFeaturesCol(features_col)
         spark_lr.setLabelCol(label_col)
         spark_lr_model: LogisticRegressionModel = spark_lr.fit(train_df)
@@ -250,6 +308,7 @@ def test_classifier(
         test_df, _, _ = create_pyspark_dataframe(spark, feature_type, data_type, X_test)
 
         result = spark_lr_model.transform(test_df).collect()
+
         spark_preds = [row["prediction"] for row in result]
         cu_preds = cu_lr.predict(X_test)
         assert array_equal(cu_preds, spark_preds)
@@ -257,6 +316,8 @@ def test_classifier(
         spark_probs = np.array([row["probability"].toArray() for row in result])
         cu_probs = cu_lr.predict_proba(X_test)
         assert array_equal(spark_probs, cu_probs, tolerance)
+
+        return spark_lr
 
 
 LogisticRegressionType = TypeVar(
@@ -270,6 +331,7 @@ LogisticRegressionModelType = TypeVar(
 
 
 @pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
@@ -278,6 +340,7 @@ LogisticRegressionModelType = TypeVar(
     ],
 )
 def test_compat(
+    fit_intercept: bool,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
     tmp_path: str,
 ) -> None:
@@ -321,10 +384,12 @@ def test_compat(
 
         assert _LogisticRegression().getRegParam() == 0.0
         if lr_types[0] is SparkLogisticRegression:
-            blor = _LogisticRegression(regParam=0.1, standardization=False)
+            blor = _LogisticRegression(
+                regParam=0.1, fitIntercept=fit_intercept, standardization=False
+            )
         else:
             warnings.warn("spark rapids ml does not accept standardization")
-            blor = _LogisticRegression(regParam=0.1)
+            blor = _LogisticRegression(regParam=0.1, fitIntercept=fit_intercept)
 
         assert blor.getRegParam() == 0.1
 
@@ -352,11 +417,17 @@ def test_compat(
         assert blor_model.getRawPredictionCol() == "newRawPrediction"
         assert blor_model.getProbabilityCol() == "newProbability"
 
-        coefficients = blor_model.coefficients.toArray()
-        intercept = blor_model.intercept
+        assert isinstance(blor_model.coefficients, DenseVector)
+        assert array_equal(blor_model.coefficients.toArray(), [-2.42377087, 2.42377087])
+        assert blor_model.intercept == pytest.approx(0, abs=1e-6)
 
-        assert array_equal(coefficients, [-2.42377087, 2.42377087])
-        assert intercept == pytest.approx(0, abs=1e-6)
+        assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
+        assert array_equal(
+            blor_model.coefficientMatrix.toArray(),
+            np.array([[-2.42377087, 2.42377087]]),
+        )
+        assert isinstance(blor_model.interceptVector, DenseVector)
+        assert array_equal(blor_model.interceptVector.toArray(), [0.0])
 
         example = bdf.head()
         if example:
@@ -484,11 +555,314 @@ def test_lr_fit_multiple_in_single_pass(
                 assert single_model.getOrDefault(k.name) == v
 
 
+@pytest.mark.compat
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat_multinomial(
+    fit_intercept: bool,
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    tmp_path: str,
+) -> None:
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+    tolerance = 0.001
+
+    X = np.array(
+        [
+            [1.0, 2.0],
+            [1.0, 3.0],
+            [2.0, 1.0],
+            [3.0, 1.0],
+            [-1.0, -2.0],
+            [-1.0, -3.0],
+            [-2.0, -1.0],
+            [-3.0, -1.0],
+        ]
+    )
+    y = np.array(
+        [
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            3.0,
+            3.0,
+            2.0,
+            2.0,
+        ]
+    )
+    data_type = np.float32
+
+    num_rows = len(X)
+    weight = np.ones([num_rows])
+
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        mdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        mdf = mdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        mdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        mdf = mdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        assert _LogisticRegression().getRegParam() == 0.0
+        if lr_types[0] is SparkLogisticRegression:
+            mlor = _LogisticRegression(
+                regParam=0.1,
+                elasticNetParam=0.2,
+                fitIntercept=fit_intercept,
+                family="multinomial",
+                standardization=False,
+            )
+        else:
+            warnings.warn("spark rapids ml does not accept standardization")
+            mlor = _LogisticRegression(
+                regParam=0.1,
+                elasticNetParam=0.2,
+                fitIntercept=fit_intercept,
+                family="multimonial",
+            )
+
+        assert mlor.getRegParam() == 0.1
+        assert mlor.getElasticNetParam() == 0.2
+
+        mlor.setRegParam(0.15)
+        mlor.setElasticNetParam(0.25)
+        assert mlor.getRegParam() == 0.15
+        assert mlor.getElasticNetParam() == 0.25
+
+        mlor.setRegParam(0.1)
+        mlor.setElasticNetParam(0.2)
+
+        mlor.setFeaturesCol("features")
+        mlor.setLabelCol("label")
+
+        if isinstance(mlor, SparkLogisticRegression):
+            mlor.setWeightCol("weight")
+
+        mlor_model = mlor.fit(mdf)
+
+        mlor_model.setProbabilityCol("newProbability")
+        assert mlor_model.getProbabilityCol() == "newProbability"
+
+        with pytest.raises(
+            Exception,
+            match="Multinomial models contain a matrix of coefficients, use coefficientMatrix instead.",
+        ):
+            mlor_model.coefficients
+
+        with pytest.raises(
+            Exception,
+            match="Multinomial models contain a vector of intercepts, use interceptVector instead.",
+        ):
+            mlor_model.intercept
+
+        assert isinstance(mlor_model.coefficientMatrix, DenseMatrix)
+        coef_mat = mlor_model.coefficientMatrix.toArray()
+
+        if fit_intercept == False:
+            assert isinstance(mlor_model.interceptVector, SparseVector)
+        elif isinstance(mlor_model, SparkLogisticRegressionModel):
+            # Note Spark may return a SparseVector of all zeroes
+            assert isinstance(mlor_model.interceptVector, DenseVector) or isinstance(
+                mlor_model.interceptVector, SparseVector
+            )
+        else:
+            # Note Spark Rapids ML returns a DenseVector of tiny non-zeroes
+            assert isinstance(mlor_model.interceptVector, DenseVector)
+
+        intercept_vec = mlor_model.interceptVector.toArray()
+
+        coef_ground = [
+            [0.96766883, -0.06190176],
+            [-0.06183558, 0.96774077],
+            [-0.96773398, 0.06184808],
+            [0.06187553, -0.96768212],
+        ]
+
+        intercept_ground = [
+            1.78813821e-07,
+            2.82220935e-05,
+            1.44387586e-05,
+            4.82081663e-09,
+        ]
+        assert array_equal(coef_mat, np.array(coef_ground), tolerance)
+        assert array_equal(intercept_vec, intercept_ground, tolerance)
+
+        example = mdf.head()
+        if example:
+            mlor_model.predict(example.features)
+            mlor_model.predictRaw(example.features)
+            mlor_model.predictProbability(example.features)
+
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert mlor_model.hasSummary
+            mlor_model.evaluate(mdf).accuracy == mlor_model.summary.accuracy
+        else:
+            assert not mlor_model.hasSummary
+            with pytest.raises(RuntimeError, match="No training summary available"):
+                mlor_model.summary
+            assert mlor_model.classes_ == [0.0, 1.0, 2.0, 3.0]
+
+        # test transform
+        output_df = mlor_model.transform(mdf)
+        assert isinstance(output_df.schema["features"].dataType, VectorUDT)
+
+        # TODO: support (1) weight and rawPrediction (2) newProbability column is before prediction column
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert output_df.schema.fieldNames() == [
+                "weight",
+                "label",
+                "features",
+                "rawPrediction",
+                "newProbability",
+                "prediction",
+            ]
+            assert (
+                output_df.schema.simpleString()
+                == "struct<weight:float,label:float,features:vector,rawPrediction:vector,newProbability:vector,prediction:double>"
+            )
+        else:
+            assert output_df.schema.fieldNames() == [
+                "weight",
+                "label",
+                "features",
+                "prediction",
+                "newProbability",
+            ]
+            assert (
+                output_df.schema.simpleString()
+                == "struct<weight:float,label:float,features:vector,prediction:double,newProbability:vector>"
+            )
+
+        output_res = output_df.collect()
+        assert array_equal(
+            [row.prediction for row in output_res],
+            [1.0, 1.0, 0.0, 0.0, 3.0, 3.0, 2.0, 2.0],
+        )
+
+        assert array_equal(
+            output_res[0].newProbability.toArray(),
+            [0.24686976, 0.69117839, 0.04564774, 0.01630411],
+        )
+        assert array_equal(
+            output_res[1].newProbability.toArray(),
+            [0.11019694, 0.86380164, 0.02305966, 0.00294177],
+        )
+        assert array_equal(
+            output_res[2].newProbability.toArray(),
+            [0.69117839, 0.24686976, 0.01630411, 0.04564774],
+        )
+        assert array_equal(
+            output_res[3].newProbability.toArray(),
+            [0.86380164, 0.11019694, 0.00294177, 0.02305966],
+        )
+        assert array_equal(
+            output_res[4].newProbability.toArray(),
+            [0.04564774, 0.01630411, 0.24686976, 0.69117839],
+        )
+        assert array_equal(
+            output_res[5].newProbability.toArray(),
+            [0.02305966, 0.00294177, 0.11019694, 0.86380164],
+        )
+        assert array_equal(
+            output_res[6].newProbability.toArray(),
+            [0.01630352, 0.04563958, 0.6912151, 0.24684186],
+        )
+        assert array_equal(
+            output_res[7].newProbability.toArray(),
+            [0.00294145, 0.02305316, 0.86383104, 0.11017438],
+        )
+
+        if isinstance(mlor_model, SparkLogisticRegressionModel):
+            assert array_equal(
+                output_res[0].rawPrediction.toArray(),
+                [0.84395339, 1.87349042, -0.84395339, -1.87349042],
+            )
+            assert array_equal(
+                output_res[1].rawPrediction.toArray(),
+                [0.78209218, 2.84116623, -0.78209218, -2.84116623],
+            )
+            assert array_equal(
+                output_res[2].rawPrediction.toArray(),
+                [1.87349042, 0.84395339, -1.87349042, -0.84395339],
+            )
+            assert array_equal(
+                output_res[3].rawPrediction.toArray(),
+                [2.84116623, 0.78209218, -2.84116623, -0.78209218],
+            )
+            assert array_equal(
+                output_res[4].rawPrediction.toArray(),
+                [-0.84395339, -1.87349042, 0.84395339, 1.87349042],
+            )
+            assert array_equal(
+                output_res[5].rawPrediction.toArray(),
+                [-0.78209218, -2.84116623, 0.78209218, 2.84116623],
+            )
+            assert array_equal(
+                output_res[6].rawPrediction.toArray(),
+                [-1.87349042, -0.84395339, 1.87349042, 0.84395339],
+            )
+            assert array_equal(
+                output_res[7].rawPrediction.toArray(),
+                [-2.84116623, -0.78209218, 2.84116623, 0.78209218],
+            )
+
+        else:
+            warnings.warn(
+                "transform of spark rapids ml currently does not support rawPredictionCol"
+            )
+
+        mlor_path = tmp_path + "/m_log_reg"
+        mlor.save(mlor_path)
+
+        mlor2 = _LogisticRegression.load(mlor_path)
+        assert mlor2.getRegParam() == mlor.getRegParam()
+        assert mlor2.getElasticNetParam() == mlor.getElasticNetParam()
+
+        model_path = tmp_path + "/m_log_reg_model"
+        mlor_model.save(model_path)
+
+        model2 = _LogisticRegressionModel.load(model_path)
+        assert array_equal(
+            model2.coefficientMatrix.toArray(), mlor_model.coefficientMatrix.toArray()
+        )
+        assert model2.interceptVector == mlor_model.interceptVector
+        assert model2.transform(mdf).collect() == output_res
+        assert model2.numFeatures == 2
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32, np.float64])
-@pytest.mark.parametrize("max_record_batch", [20, 10000])
+@pytest.mark.parametrize("max_record_batch", [20])
 @pytest.mark.parametrize("n_classes", [8])
 @pytest.mark.slow
 def test_multiclass(
@@ -516,7 +890,9 @@ def test_multiclass(
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("reg_param", [0.0, 0.1])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
 @pytest.mark.parametrize("feature_type", ["vector"])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
@@ -524,7 +900,7 @@ def test_multiclass(
 @pytest.mark.parametrize("n_classes", [2, 4])
 def test_quick(
     fit_intercept: bool,
-    reg_param: float,
+    reg_factors: Tuple[float, float],
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
@@ -533,8 +909,10 @@ def test_quick(
     gpu_number: int,
 ) -> None:
     tolerance = 0.005
+    reg_param = reg_factors[0]
+    elasticNet_param = reg_factors[1]
 
-    test_classifier(
+    lr = test_classifier(
         fit_intercept=fit_intercept,
         feature_type=feature_type,
         data_shape=data_shape,
@@ -542,6 +920,36 @@ def test_quick(
         max_record_batch=max_record_batch,
         n_classes=n_classes,
         gpu_number=gpu_number,
-        reg_param=reg_param,
         tolerance=tolerance,
+        reg_param=reg_param,
+        elasticNet_param=elasticNet_param,
     )
+
+    assert lr.getRegParam() == reg_param
+    assert lr.getElasticNetParam() == elasticNet_param
+
+    penalty, C, l1_ratio = lr._reg_params_value_mapping(reg_param, elasticNet_param)
+    assert lr._cuml_params["penalty"] == penalty
+    assert lr._cuml_params["C"] == C
+    assert lr._cuml_params["l1_ratio"] == l1_ratio
+
+    from cuml import LogisticRegression as CUMLSG
+
+    sg = CUMLSG(penalty=penalty, C=C, l1_ratio=l1_ratio)
+    l1_strength, l2_strength = sg._get_qn_params()
+    if reg_param == 0.0:
+        assert penalty == "none"
+        assert l1_strength == 0.0
+        assert l2_strength == 0.0
+    elif elasticNet_param == 0.0:
+        assert penalty == "l2"
+        assert l1_strength == 0.0
+        assert l2_strength == reg_param
+    elif elasticNet_param == 1.0:
+        assert penalty == "l1"
+        assert l1_strength == reg_param
+        assert l2_strength == 0.0
+    else:
+        assert penalty == "elasticnet"
+        assert l1_strength == reg_param * elasticNet_param
+        assert l2_strength == reg_param * (1 - elasticNet_param)

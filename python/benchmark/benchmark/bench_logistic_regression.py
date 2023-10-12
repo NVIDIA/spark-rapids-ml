@@ -36,7 +36,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
                 "labelCol",
                 "predictionCol",
                 "weightCol",
-                "elasticNetParam",
                 "threshold",
                 "thresholds",
                 "aggregationDepth",
@@ -119,6 +118,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             "maxIter": params["maxIter"],
             "tol": params["tol"],
             "regParam": params["regParam"],
+            "elasticNetParam": params["elasticNetParam"],
             "standardization": params["standardization"],
         }
 
@@ -140,7 +140,11 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         coefs_l1 = np.sum(np.abs(coefficients))
         coefs_l2 = np.sum(coefficients**2)
 
-        train_full_objective = log_loss + 0.5 * lr.getRegParam() * coefs_l2
+        elasticnet_param = lr.getElasticNetParam()
+        train_full_objective = log_loss + lr.getRegParam() * (
+            0.5 * (1 - elasticnet_param) * coefs_l2 + elasticnet_param * coefs_l1
+        )
+
         results["train_full_objective"] = train_full_objective
         print(f"{benchmark_string} train_full_objective: {train_full_objective}")
 

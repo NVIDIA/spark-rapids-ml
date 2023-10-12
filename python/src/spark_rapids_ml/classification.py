@@ -559,10 +559,10 @@ class LogisticRegressionClass(_CumlClass):
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         return {
             "maxIter": "max_iter",
-            "regParam": "C",  # regParam = 1/C
+            "regParam": "C",
+            "elasticNetParam": "l1_ratio",
             "tol": "tol",
             "fitIntercept": "fit_intercept",
-            "elasticNetParam": None,
             "threshold": None,
             "thresholds": None,
             "standardization": "",  # Set to "" instead of None because cuml defaults to standardization = False
@@ -581,29 +581,45 @@ class LogisticRegressionClass(_CumlClass):
     def _param_value_mapping(
         cls,
     ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
-        def regParam_value_mapper(x: float) -> float:
-            # TODO: remove this checking and set regParam to 0.0 once no regularization is supported
-            if x == 0.0:
-                logger = get_logger(cls)
-                logger.warning(
-                    "no regularization is not supported yet. if regParam is set to 0,"
-                    + "it will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny"
-                )
-
-                return 1.0 / np.finfo("float32").tiny.item()
-            else:
-                return 1.0 / x
-
-        return {"C": lambda x: regParam_value_mapper(x)}
+        return {"C": lambda x: 1 / x if x != 0.0 else 0.0}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
             "fit_intercept": True,
             "verbose": False,
             "C": 1.0,
+            "penalty": "l2",
+            "l1_ratio": None,
             "max_iter": 1000,
             "tol": 0.0001,
         }
+
+    # Given Spark params: regParam, elasticNetParam,
+    # return cuml params: penalty, C, l1_ratio
+    @classmethod
+    def _reg_params_value_mapping(
+        cls, reg_param: float, elasticNet_param: float
+    ) -> Tuple[str, float, float]:
+        # Note cuml ignores l1_ratio when penalty is "none", "l2", and "l1"
+        # Spark Rapids ML sets it to elasticNet_param to be compatible with Spark
+        if reg_param == 0.0:
+            penalty = "none"
+            C = 0.0
+            l1_ratio = elasticNet_param
+        elif elasticNet_param == 0.0:
+            penalty = "l2"
+            C = 1.0 / reg_param
+            l1_ratio = elasticNet_param
+        elif elasticNet_param == 1.0:
+            penalty = "l1"
+            C = 1.0 / reg_param
+            l1_ratio = elasticNet_param
+        else:
+            penalty = "elasticnet"
+            C = 1.0 / reg_param
+            l1_ratio = elasticNet_param
+
+        return (penalty, C, l1_ratio)
 
 
 class _LogisticRegressionCumlParams(
@@ -779,7 +795,8 @@ class LogisticRegression(
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
         maxIter: int = 100,
-        regParam: float = 0.0,  # NOTE: the default value of regParam is actually mapped to sys.float_info.min on GPU
+        regParam: float = 0.0,
+        elasticNetParam: float = 0.0,
         tol: float = 1e-6,
         fitIntercept: bool = True,
         num_workers: Optional[int] = None,
@@ -792,6 +809,7 @@ class LogisticRegression(
             )
             self._input_kwargs.pop("float32_inputs")
         super().__init__()
+        self._set_cuml_reg_params()
         self.set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:
@@ -825,6 +843,18 @@ class LogisticRegression(
             )
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
+                if init_parameters["C"] == 0.0:
+                    init_parameters["penalty"] = "none"
+
+                elif init_parameters["l1_ratio"] == 0.0:
+                    init_parameters["penalty"] = "l2"
+
+                elif init_parameters["l1_ratio"] == 1.0:
+                    init_parameters["penalty"] = "l1"
+
+                else:
+                    init_parameters["penalty"] = "elasticnet"
+
                 logistic_regression = LogisticRegressionMG(
                     handle=params[param_alias.handle],
                     **init_parameters,
@@ -902,6 +932,21 @@ class LogisticRegression(
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
         return LogisticRegressionModel.from_row(result)
 
+    def _set_cuml_reg_params(self) -> "LogisticRegression":
+        penalty, C, l1_ratio = self._reg_params_value_mapping(
+            self.getRegParam(), self.getElasticNetParam()
+        )
+        self._cuml_params["penalty"] = penalty
+        self._cuml_params["C"] = C
+        self._cuml_params["l1_ratio"] = l1_ratio
+        return self
+
+    def set_params(self, **kwargs: Any) -> "LogisticRegression":
+        super().set_params(**kwargs)
+        if "regParam" in kwargs or "elasticNetParam" in kwargs:
+            self._set_cuml_reg_params()
+        return self
+
     def setMaxIter(self, value: int) -> "LogisticRegression":
         """
         Sets the value of :py:attr:`maxIter`.
@@ -913,6 +958,12 @@ class LogisticRegression(
         Sets the value of :py:attr:`regParam`.
         """
         return self.set_params(regParam=value)
+
+    def setElasticNetParam(self, value: float) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`regParam`.
+        """
+        return self.set_params(elasticNetParam=value)
 
     def setTol(self, value: float) -> "LogisticRegression":
         """
@@ -1013,6 +1064,9 @@ class LogisticRegressionModel(
     def coefficientMatrix(self) -> Matrix:
         """
         Model coefficients.
+        Note Spark CPU uses denseCoefficientMatrix.compressed that may return a sparse vector
+        if there are many zero values. Since the compressed function is not available in pyspark,
+        Spark Rapids ML always returns a dense vector.
         """
 
         n_rows = len(self.coef_)
@@ -1027,7 +1081,16 @@ class LogisticRegressionModel(
         """
         Model intercept.
         """
-        return Vectors.dense(cast(list, self.intercept_))
+        nnz = np.count_nonzero(self.intercept_)
+
+        # spark returns interceptVec.compressed
+        # According spark doc, a dense vector needs 8 * size + 8 bytes, while a sparse vector needs 12 * nnz + 20 bytes.
+        if 1.5 * (nnz + 1.0) < len(self.intercept_):
+            size = len(self.intercept_)
+            data_m = {p[0]: p[1] for p in enumerate(self.intercept_)}
+            return Vectors.sparse(size, data_m)
+        else:
+            return Vectors.dense(cast(list, self.intercept_))
 
     @property
     def numClasses(self) -> int:
