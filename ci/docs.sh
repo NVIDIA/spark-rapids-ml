@@ -17,7 +17,7 @@
 
 # get version tag
 TAG=$(git describe --tag)
-if [[ $? != 0 ]]; then
+if [[ $? != 0 && $1 != "nightly" ]]; then
     echo "Can only deploy from a version tag."
     exit 1
 fi
@@ -28,9 +28,23 @@ set -ex
 pushd docs
 make html
 git worktree add --track -b gh-pages _site origin/gh-pages
-cp -r build/html/* _site/api/python
-cp -r site/* _site
-pushd _site
+if [[ $1 == "nightly" ]]; then
+dest=_site/nightly/site
+rm -rf $dest
+else
+dest=_site
+fi
+mkdir -p $dest/api/python
+cp -r build/html/* $dest/api/python
+cp -r site/* $dest
+pushd $dest
+if [[ $1 == "nightly" ]]; then
+# edit meta data in nightly .md files to keep nightly files from showing up in main site's nav bar
+# and correctly show in toc on nightly landing page
+find . -name '*.md' -exec sed -i -e '1 s/---/---\nlayout: minimal/' {} \;
+find . -maxdepth 1 -name '*.md' -exec sed -i -e '1 s/---/---\nparent: Nightly/' {} \;
+find . -maxdepth 2 -mindepth 2 -name '*.md' -exec sed -i -e '1 s/---/---\ngrand_parent: Nightly/' {} \;
+fi
 git add --all
 git commit -m "${TAG}"
 git push origin gh-pages
