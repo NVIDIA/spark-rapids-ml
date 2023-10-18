@@ -72,8 +72,8 @@ model.coefficients
 # from pyspark.ml.clustering import KMeans
 from spark_rapids_ml.clustering import KMeans
 from pyspark.ml.linalg import Vectors
-data = [Vectors.dense([0.0, 0.0]), Vectors.dense([1.0, 1.0]),
-        Vectors.dense([9.0, 8.0]), Vectors.dense([8.0, 9.0])]
+data = [(Vectors.dense([0.0, 0.0]),), (Vectors.dense([1.0, 1.0]),),
+        (Vectors.dense([9.0, 8.0]),), (Vectors.dense([8.0, 9.0]),)]
 df = spark.createDataFrame(data, ["features"])
 
 # number of partitions should match number of GPUs in Spark cluster
