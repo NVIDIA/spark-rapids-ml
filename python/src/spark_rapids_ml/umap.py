@@ -346,7 +346,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `n_neighbors`.
         """
-        return self.set_params(n_neighbors=value)
+        return self._set_params(n_neighbors=value)
 
     def getNComponents(self) -> int:
         """
@@ -358,7 +358,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `n_components`.
         """
-        return self.set_params(n_components=value)
+        return self._set_params(n_components=value)
 
     def getMetric(self) -> str:
         """
@@ -370,7 +370,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `metric`.
         """
-        return self.set_params(metric=value)
+        return self._set_params(metric=value)
 
     def getNEpochs(self) -> int:
         """
@@ -382,7 +382,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `n_epochs`.
         """
-        return self.set_params(n_epochs=value)
+        return self._set_params(n_epochs=value)
 
     def getLearningRate(self) -> float:
         """
@@ -394,7 +394,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `learning_rate`.
         """
-        return self.set_params(learning_rate=value)
+        return self._set_params(learning_rate=value)
 
     def getInit(self) -> str:
         """
@@ -406,7 +406,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `init`.
         """
-        return self.set_params(init=value)
+        return self._set_params(init=value)
 
     def getMinDist(self) -> float:
         """
@@ -418,7 +418,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `min_dist`.
         """
-        return self.set_params(min_dist=value)
+        return self._set_params(min_dist=value)
 
     def getSpread(self) -> float:
         """
@@ -430,7 +430,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `spread`.
         """
-        return self.set_params(spread=value)
+        return self._set_params(spread=value)
 
     def getSetOpMixRatio(self) -> float:
         """
@@ -442,7 +442,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `set_op_mix_ratio`.
         """
-        return self.set_params(set_op_mix_ratio=value)
+        return self._set_params(set_op_mix_ratio=value)
 
     def getLocalConnectivity(self) -> float:
         """
@@ -454,7 +454,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `local_connectivity`.
         """
-        return self.set_params(local_connectivity=value)
+        return self._set_params(local_connectivity=value)
 
     def getRepulsionStrength(self) -> float:
         """
@@ -466,7 +466,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `repulsion_strength`.
         """
-        return self.set_params(repulsion_strength=value)
+        return self._set_params(repulsion_strength=value)
 
     def getNegativeSampleRate(self) -> int:
         """
@@ -478,7 +478,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `negative_sample_rate`.
         """
-        return self.set_params(negative_sample_rate=value)
+        return self._set_params(negative_sample_rate=value)
 
     def getTransformQueueSize(self) -> float:
         """
@@ -490,7 +490,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `transform_queue_size`.
         """
-        return self.set_params(transform_queue_size=value)
+        return self._set_params(transform_queue_size=value)
 
     def getA(self) -> float:
         """
@@ -502,7 +502,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `a`.
         """
-        return self.set_params(a=value)
+        return self._set_params(a=value)
 
     def getB(self) -> float:
         """
@@ -514,7 +514,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `b`.
         """
-        return self.set_params(b=value)
+        return self._set_params(b=value)
 
     def getPrecomputedKNN(self) -> List[List[float]]:
         """
@@ -526,7 +526,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `precomputed_knn`.
         """
-        return self.set_params(precomputed_knn=value)
+        return self._set_params(precomputed_knn=value)
 
     def getRandomState(self) -> int:
         """
@@ -538,7 +538,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `random_state`.
         """
-        return self.set_params(random_state=value)
+        return self._set_params(random_state=value)
 
     def getSampleFraction(self) -> float:
         """
@@ -550,7 +550,7 @@ class _UMAPCumlParams(
         """
         Sets the value of `sample_fraction`.
         """
-        return self.set_params(sample_fraction=value)
+        return self._set_params(sample_fraction=value)
 
     def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
         """
@@ -569,22 +569,22 @@ class _UMAPCumlParams(
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`. Used when input vectors are stored in a single column.
         """
         if isinstance(value, str):
-            self.set_params(featuresCol=value)
+            self._set_params(featuresCol=value)
         else:
-            self.set_params(featuresCols=value)
+            self._set_params(featuresCols=value)
         return self
 
     def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns.
         """
-        return self.set_params(featuresCols=value)
+        return self._set_params(featuresCols=value)
 
     def setLabelCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`labelCol`.
         """
-        return self.set_params(labelCol=value)
+        return self._set_params(labelCol=value)
 
     def getOutputCol(self) -> str:
         """
@@ -596,7 +596,7 @@ class _UMAPCumlParams(
         """
         Sets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
         """
-        return self.set_params(outputCol=value)
+        return self._set_params(outputCol=value)
 
 
 class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
@@ -783,7 +783,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
             )
             kwargs.pop("float32_inputs")
-        self.set_params(**kwargs)
+        self._set_params(**kwargs)
         max_records_per_batch_str = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
         )
@@ -986,12 +986,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 rmm.reinitialize(managed_memory=True)
                 cp.cuda.set_allocator(rmm_cupy_allocator)
 
-            _CumlCommon.initialize_cuml_logging(cuml_verbose)
+            _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
             context = TaskContext.get()
 
             # set gpu device
-            _CumlCommon.set_gpu_device(context, is_local)
+            _CumlCommon._set_gpu_device(context, is_local)
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
@@ -1200,7 +1200,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             ]
         )
 
-    def get_model_attributes(self) -> Optional[Dict[str, Any]]:
+    def _get_model_attributes(self) -> Optional[Dict[str, Any]]:
         """
         Override parent method to bring broadcast variables to driver before JSON serialization.
         """
@@ -1236,7 +1236,7 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
             },
         )
         data_path = os.path.join(path, "data")
-        model_attributes = self.instance.get_model_attributes()
+        model_attributes = self.instance._get_model_attributes()
 
         if not os.path.exists(data_path):
             os.makedirs(data_path)

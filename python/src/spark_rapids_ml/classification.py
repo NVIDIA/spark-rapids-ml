@@ -322,7 +322,7 @@ class RandomForestClassifier(
         return label_col
 
     def _create_pyspark_model(self, result: Row) -> "RandomForestClassificationModel":
-        return RandomForestClassificationModel.from_row(result)
+        return RandomForestClassificationModel._from_row(result)
 
     def _is_classification(self) -> bool:
         return True
@@ -647,9 +647,9 @@ class _LogisticRegressionCumlParams(
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
         if isinstance(value, str):
-            self.set_params(featuresCol=value)
+            self._set_params(featuresCol=value)
         else:
-            self.set_params(featuresCols=value)
+            self._set_params(featuresCols=value)
         return self
 
     def setFeaturesCols(
@@ -658,7 +658,7 @@ class _LogisticRegressionCumlParams(
         """
         Sets the value of :py:attr:`featuresCols`.
         """
-        return self.set_params(featuresCols=value)
+        return self._set_params(featuresCols=value)
 
     def setLabelCol(
         self: "_LogisticRegressionCumlParams", value: str
@@ -666,7 +666,7 @@ class _LogisticRegressionCumlParams(
         """
         Sets the value of :py:attr:`labelCol`.
         """
-        return self.set_params(labelCol=value)
+        return self._set_params(labelCol=value)
 
     def setPredictionCol(
         self: "_LogisticRegressionCumlParams", value: str
@@ -674,7 +674,7 @@ class _LogisticRegressionCumlParams(
         """
         Sets the value of :py:attr:`predictionCol`.
         """
-        return self.set_params(predictionCol=value)
+        return self._set_params(predictionCol=value)
 
     def setProbabilityCol(
         self: "_LogisticRegressionCumlParams", value: str
@@ -682,7 +682,7 @@ class _LogisticRegressionCumlParams(
         """
         Sets the value of :py:attr:`probabilityCol`.
         """
-        return self.set_params(probabilityCol=value)
+        return self._set_params(probabilityCol=value)
 
     def setRawPredictionCol(
         self: "_LogisticRegressionCumlParams", value: str
@@ -707,12 +707,12 @@ class LogisticRegression(
     :py:class:`~pyspark.ml.tuning.TrainValidationSplit`/
     :py:class:`~pyspark.ml.classification.OneVsRest`
 
-    This currently supports the regularization options:
+    This supports multiple types of regularization:
 
     * none
     * L2 (ridge regression)
-
-    and two classes.
+    * L1 (lasso)
+    * L2 + L1 (elastic net)
 
     LogisticRegression automatically supports most of the parameters from both
     :py:class:`~pyspark.ml.classification.LogisticRegression`.
@@ -735,6 +735,9 @@ class LogisticRegression(
         The maximum number of iterations of the underlying L-BFGS algorithm.
     regParam:
         The regularization parameter.
+    elasticNetParam:
+        The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
+        the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
     tol:
         The convergence tolerance.
     fitIntercept:
@@ -810,7 +813,7 @@ class LogisticRegression(
             self._input_kwargs.pop("float32_inputs")
         super().__init__()
         self._set_cuml_reg_params()
-        self.set_params(**self._input_kwargs)
+        self._set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
@@ -930,7 +933,7 @@ class LogisticRegression(
         )
 
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
-        return LogisticRegressionModel.from_row(result)
+        return LogisticRegressionModel._from_row(result)
 
     def _set_cuml_reg_params(self) -> "LogisticRegression":
         penalty, C, l1_ratio = self._reg_params_value_mapping(
@@ -941,8 +944,8 @@ class LogisticRegression(
         self._cuml_params["l1_ratio"] = l1_ratio
         return self
 
-    def set_params(self, **kwargs: Any) -> "LogisticRegression":
-        super().set_params(**kwargs)
+    def _set_params(self, **kwargs: Any) -> "LogisticRegression":
+        super()._set_params(**kwargs)
         if "regParam" in kwargs or "elasticNetParam" in kwargs:
             self._set_cuml_reg_params()
         return self
@@ -951,31 +954,31 @@ class LogisticRegression(
         """
         Sets the value of :py:attr:`maxIter`.
         """
-        return self.set_params(maxIter=value)
+        return self._set_params(maxIter=value)
 
     def setRegParam(self, value: float) -> "LogisticRegression":
         """
         Sets the value of :py:attr:`regParam`.
         """
-        return self.set_params(regParam=value)
+        return self._set_params(regParam=value)
 
     def setElasticNetParam(self, value: float) -> "LogisticRegression":
         """
         Sets the value of :py:attr:`regParam`.
         """
-        return self.set_params(elasticNetParam=value)
+        return self._set_params(elasticNetParam=value)
 
     def setTol(self, value: float) -> "LogisticRegression":
         """
         Sets the value of :py:attr:`tol`.
         """
-        return self.set_params(tol=value)
+        return self._set_params(tol=value)
 
     def setFitIntercept(self, value: bool) -> "LogisticRegression":
         """
         Sets the value of :py:attr:`fitIntercept`.
         """
-        return self.set_params(fitIntercept=value)
+        return self._set_params(fitIntercept=value)
 
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True
