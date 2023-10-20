@@ -79,22 +79,22 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
         if isinstance(value, str):
-            self.set_params(inputCol=value)
+            self._set_params(inputCol=value)
         else:
-            self.set_params(inputCols=value)
+            self._set_params(inputCols=value)
         return self
 
     def setInputCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`inputCols`. Used when input vectors are stored as multiple feature columns.
         """
-        return self.set_params(inputCols=value)
+        return self._set_params(inputCols=value)
 
     def setOutputCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`outputCol`
         """
-        return self.set_params(outputCol=value)
+        return self._set_params(outputCol=value)
 
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
@@ -167,13 +167,13 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
-        self.set_params(**kwargs)
+        self._set_params(**kwargs)
 
     def setK(self, value: int) -> "PCA":
         """
         Sets the value of :py:attr:`k`.
         """
-        return self.set_params(k=value)
+        return self._set_params(k=value)
 
     def _get_cuml_fit_func(
         self,
@@ -242,7 +242,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         )
 
     def _create_pyspark_model(self, result: Row) -> "PCAModel":
-        return PCAModel.from_row(result)
+        return PCAModel._from_row(result)
 
 
 class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
@@ -297,7 +297,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         self.singular_values_ = singular_values_
         self._pca_ml_model: Optional[SparkPCAModel] = None
 
-        self.set_params(n_components=len(components_))
+        self._set_params(n_components=len(components_))
 
     @property
     def mean(self) -> List[float]:

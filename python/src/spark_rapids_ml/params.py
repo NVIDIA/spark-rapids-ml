@@ -219,7 +219,7 @@ class _CumlParams(_CumlClass, Params):
         instance._cuml_params = cuml_params
         return instance
 
-    def initialize_cuml_params(self) -> None:
+    def _initialize_cuml_params(self) -> None:
         """
         Set the default values of cuML parameters to match their Spark equivalents.
         """
@@ -233,7 +233,7 @@ class _CumlParams(_CumlClass, Params):
             if self.hasDefault(spark_param):
                 self._set_cuml_param(spark_param, self.getOrDefault(spark_param))
 
-    def set_params(self: P, **kwargs: Any) -> P:
+    def _set_params(self: P, **kwargs: Any) -> P:
         """
         Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
         and value mappings defined by the _CumlClass.

@@ -107,22 +107,22 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`. Used when input vectors are stored in a single column.
         """
         if isinstance(value, str):
-            self.set_params(featuresCol=value)
+            self._set_params(featuresCol=value)
         else:
-            self.set_params(featuresCols=value)
+            self._set_params(featuresCols=value)
         return self
 
     def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns.
         """
-        return self.set_params(featuresCols=value)
+        return self._set_params(featuresCols=value)
 
     def setPredictionCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`predictionCol`.
         """
-        self.set_params(predictionCol=value)
+        self._set_params(predictionCol=value)
         return self
 
 
@@ -222,19 +222,19 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
-        self.set_params(**kwargs)
+        self._set_params(**kwargs)
 
     def setK(self, value: int) -> "KMeans":
         """
         Sets the value of :py:attr:`k`.
         """
-        return self.set_params(k=value)
+        return self._set_params(k=value)
 
     def setMaxIter(self, value: int) -> "KMeans":
         """
         Sets the value of :py:attr:`maxIter`.
         """
-        return self.set_params(maxIter=value)
+        return self._set_params(maxIter=value)
 
     def setSeed(self, value: int) -> "KMeans":
         """
@@ -242,13 +242,13 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         """
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
-        return self.set_params(seed=value)
+        return self._set_params(seed=value)
 
     def setTol(self, value: float) -> "KMeans":
         """
         Sets the value of :py:attr:`tol`.
         """
-        return self.set_params(tol=value)
+        return self._set_params(tol=value)
 
     def setWeightCol(self, value: str) -> "KMeans":
         """
@@ -320,7 +320,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         )
 
     def _create_pyspark_model(self, result: Row) -> "KMeansModel":
-        return KMeansModel.from_row(result)
+        return KMeansModel._from_row(result)
 
 
 class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):

@@ -198,7 +198,7 @@ class _CumlModelWriter(MLWriter):
             },
         )
         data_path = os.path.join(path, "data")
-        model_attributes = self.instance.get_model_attributes()
+        model_attributes = self.instance._get_model_attributes()
         model_attributes_str = json.dumps(model_attributes)
         self.sc.parallelize([model_attributes_str], 1).saveAsTextFile(data_path)
 
@@ -230,7 +230,7 @@ class _CumlCommon(MLWritable, MLReadable):
         super().__init__()
 
     @staticmethod
-    def set_gpu_device(
+    def _set_gpu_device(
         context: Optional[TaskContext], is_local: bool, is_transform: bool = False
     ) -> None:
         """
@@ -258,7 +258,7 @@ class _CumlCommon(MLWritable, MLReadable):
         cupy.cuda.Device(gpu_id).use()
 
     @staticmethod
-    def initialize_cuml_logging(verbose: Optional[Union[bool, int]]) -> None:
+    def _initialize_cuml_logging(verbose: Optional[Union[bool, int]]) -> None:
         """Initializes the logger for cuML.
 
         Parameters
@@ -295,7 +295,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
     def __init__(self) -> None:
         super().__init__()
-        self.initialize_cuml_params()
+        self._initialize_cuml_params()
 
     @abstractmethod
     def _out_schema(self) -> Union[StructType, str]:
@@ -513,13 +513,13 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 rmm.reinitialize(managed_memory=True)
                 cp.cuda.set_allocator(rmm_cupy_allocator)
 
-            _CumlCommon.initialize_cuml_logging(cuml_verbose)
+            _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
             context = BarrierTaskContext.get()
             partition_id = context.partitionId()
 
             # set gpu device
-            _CumlCommon.set_gpu_device(context, is_local)
+            _CumlCommon._set_gpu_device(context, is_local)
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
@@ -895,7 +895,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         Subclass must pass the model attributes which will be saved in model persistence.
         """
         super().__init__()
-        self.initialize_cuml_params()
+        self._initialize_cuml_params()
 
         # model_data is the native data which will be saved for model persistence
         self._model_attributes = model_attributes
@@ -908,12 +908,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         """Return the equivalent PySpark CPU model"""
         raise NotImplementedError()
 
-    def get_model_attributes(self) -> Optional[Dict[str, Any]]:
+    def _get_model_attributes(self) -> Optional[Dict[str, Any]]:
         """Return model attributes as a dictionary."""
         return self._model_attributes
 
     @classmethod
-    def from_row(cls, model_attributes: Row):  # type: ignore
+    def _from_row(cls, model_attributes: Row):  # type: ignore
         """
         Default to pass all the attributes of the model to the model constructor,
         So please make sure if the constructor can accept all of them.
@@ -1076,7 +1076,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
             context = TaskContext.get()
 
-            _CumlCommon.set_gpu_device(context, is_local, True)
+            _CumlCommon._set_gpu_device(context, is_local, True)
 
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()
@@ -1206,7 +1206,7 @@ class _CumlModelWithColumns(_CumlModel):
             from pyspark import TaskContext
 
             context = TaskContext.get()
-            _CumlCommon.set_gpu_device(context, is_local, True)
+            _CumlCommon._set_gpu_device(context, is_local, True)
             cuml_objects = construct_cuml_object_func()
             cuml_object = (
                 cuml_objects[0] if isinstance(cuml_objects, list) else cuml_objects

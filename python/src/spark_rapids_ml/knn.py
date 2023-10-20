@@ -95,7 +95,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         """
         Sets the value of `k`.
         """
-        self.set_params(k=value)
+        self._set_params(k=value)
         return self
 
     def setInputCol(self: P, value: Union[str, List[str]]) -> P:
@@ -103,22 +103,22 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
         """
         if isinstance(value, str):
-            self.set_params(inputCol=value)
+            self._set_params(inputCol=value)
         else:
-            self.set_params(inputCols=value)
+            self._set_params(inputCols=value)
         return self
 
     def setInputCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`inputCols`. Used when input vectors are stored as multiple feature columns.
         """
-        return self.set_params(inputCols=value)
+        return self._set_params(inputCols=value)
 
     def setIdCol(self: P, value: str) -> P:
         """
         Sets the value of `id_col`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
         """
-        self.set_params(id_col=value)
+        self._set_params(id_col=value)
         return self
 
     def getIdCol(self) -> str:
@@ -259,13 +259,13 @@ class NearestNeighbors(
             kwargs.pop("float32_inputs")
 
         super().__init__()
-        self.set_params(**kwargs)
+        self._set_params(**kwargs)
         self._label_isdata = 0
         self._label_isquery = 1
-        self.set_params(labelCol=alias.label)
+        self._set_params(labelCol=alias.label)
 
     def _create_pyspark_model(self, result: Row) -> "NearestNeighborsModel":
-        return NearestNeighborsModel.from_row(result)
+        return NearestNeighborsModel._from_row(result)
 
     def _fit(self, item_df: DataFrame) -> "NearestNeighborsModel":
         self._item_df_withid = self._ensureIdCol(item_df)
