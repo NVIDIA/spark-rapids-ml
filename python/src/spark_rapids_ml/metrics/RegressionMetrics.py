@@ -167,7 +167,7 @@ class RegressionMetrics:
         return RegressionMetrics(_SummarizerBuffer(mean, m2n, m2, l1, total_cnt))
 
     @classmethod
-    def from_rows(cls, num_models: int, rows: List[Row]) -> List["RegressionMetrics"]:
+    def _from_rows(cls, num_models: int, rows: List[Row]) -> List["RegressionMetrics"]:
         """The rows must contain pred.model_index, and mean/m2n/m2/l1/total_count"""
         metrics: List[Optional["RegressionMetrics"]] = [None] * num_models
 

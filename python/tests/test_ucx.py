@@ -63,7 +63,7 @@ def test_ucx_over_nccl(
             rank = context.partitionId()
 
             # ucx requires nccl, and nccl initialization requires gpu assignment
-            _CumlCommon.set_gpu_device(context, is_local)
+            _CumlCommon._set_gpu_device(context, is_local)
             with CumlContext(
                 rank=rank,
                 nranks=gpu_number,

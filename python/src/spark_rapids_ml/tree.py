@@ -155,16 +155,16 @@ class _RandomForestCumlParams(
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
         if isinstance(value, str):
-            self.set_params(featuresCol=value)
+            self._set_params(featuresCol=value)
         else:
-            self.set_params(featuresCols=value)
+            self._set_params(featuresCols=value)
         return self
 
     def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`.
         """
-        return self.set_params(featuresCols=value)
+        return self._set_params(featuresCols=value)
 
     def setLabelCol(self: P, value: str) -> P:
         """
@@ -190,43 +190,43 @@ class _RandomForestEstimatorParams(_RandomForestCumlParams):
         """
         Sets the value of :py:attr:`bootstrap`.
         """
-        return self.set_params(bootstrap=value)
+        return self._set_params(bootstrap=value)
 
     def setFeatureSubsetStrategy(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`featureSubsetStrategy`.
         """
-        return self.set_params(featureSubsetStrategy=value)
+        return self._set_params(featureSubsetStrategy=value)
 
     def setImpurity(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`impurity`.
         """
-        return self.set_params(impurity=value)  # type: ignore
+        return self._set_params(impurity=value)  # type: ignore
 
     def setMaxBins(self: P, value: int) -> P:
         """
         Sets the value of :py:attr:`maxBins`.
         """
-        return self.set_params(maxBins=value)
+        return self._set_params(maxBins=value)
 
     def setMaxDepth(self: P, value: int) -> P:
         """
         Sets the value of :py:attr:`maxDepth`.
         """
-        return self.set_params(maxDepth=value)
+        return self._set_params(maxDepth=value)
 
     def setMinInstancesPerNode(self: P, value: int) -> P:
         """
         Sets the value of :py:attr:`minInstancesPerNode`.
         """
-        return self.set_params(minInstancesPerNode=value)
+        return self._set_params(minInstancesPerNode=value)
 
     def setNumTrees(self: P, value: int) -> P:
         """
         Sets the value of :py:attr:`numTrees`.
         """
-        return self.set_params(numTrees=value)
+        return self._set_params(numTrees=value)
 
     def setSeed(self: P, value: int) -> P:
         """
@@ -234,7 +234,7 @@ class _RandomForestEstimatorParams(_RandomForestCumlParams):
         """
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
-        return self.set_params(seed=value)
+        return self._set_params(seed=value)
 
 
 class _RandomForestEstimator(
@@ -243,7 +243,7 @@ class _RandomForestEstimator(
 ):
     def __init__(self, **kwargs: Any):
         super().__init__()
-        self.set_params(**kwargs)
+        self._set_params(**kwargs)
         if "n_streams" not in kwargs:
             # cuML will throw exception when running on a node with multi-gpus when n_streams > 0
             self._set_cuml_value("n_streams", 1)
@@ -597,7 +597,7 @@ class _RandomForestModel(
         first_model = models[0]
         treelite_models = [model._treelite_model for model in models]
         model_jsons = [model._model_json for model in models]
-        attrs = first_model.get_model_attributes()
+        attrs = first_model._get_model_attributes()
         assert attrs is not None
         attrs["treelite_model"] = treelite_models
         attrs["model_json"] = model_jsons
