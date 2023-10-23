@@ -15,39 +15,51 @@
 # limitations under the License.
 #
 
-# get version tag
-TAG=$(git describe --tag)
-if [[ $? != 0 && $1 != "nightly" ]]; then
-    echo "Can only deploy from a version tag."
-    exit 1
+if [[ $1 == "nightly" ]]; then
+    TAG=$(git log -1 --format="%h")
+else
+    # get version tag
+    TAG=$(git describe --tag)
+    if [[ $? != 0 ]]; then
+        echo "Can only deploy stable release docs from a version tag."
+        exit 1
+    fi
 fi
 
 set -ex
 
 # build and publish docs
 pushd docs
+make clean
 make html
 git worktree add --track -b gh-pages _site origin/gh-pages
+
+api_dest=""
+pushd _site
 if [[ $1 == "nightly" ]]; then
-dest=_site/nightly/site
-rm -rf $dest
+    # set api_dest to trigger copy only if commit has changed since last update
+    prev_commit_mesg=$( git log -1 --format="%s" )
+    if [[ $prev_commit_mesg != $TAG ]]; then
+        api_dest=api/python-draft
+    fi
 else
-dest=_site
+    # release copy
+    api_dest=api/python
+    # also copy site wide changes for release
+    cp -r ../site/* .
 fi
-mkdir -p $dest/api/python
-cp -r build/html/* $dest/api/python
-cp -r site/* $dest
-pushd $dest
-if [[ $1 == "nightly" ]]; then
-# edit meta data in nightly .md files to keep nightly files from showing up in main site's nav bar
-# and correctly show in toc on nightly landing page
-find . -name '*.md' -exec sed -i -e '1 s/---/---\nlayout: minimal/' {} \;
-find . -maxdepth 1 -name '*.md' -exec sed -i -e '1 s/---/---\nparent: Nightly/' {} \;
-find . -maxdepth 2 -mindepth 2 -name '*.md' -exec sed -i -e '1 s/---/---\ngrand_parent: Nightly/' {} \;
+
+# in _site
+if [[ -n $api_dest ]]; then
+    mkdir -p $api_dest
+    cp -r ../build/html/* $api_dest/
+
+    git add --all
+
+    git commit -m "${TAG}"
+    git push origin gh-pages
 fi
-git add --all
-git commit -m "${TAG}"
-git push origin gh-pages
+
 popd #_site
 git worktree remove _site
 popd

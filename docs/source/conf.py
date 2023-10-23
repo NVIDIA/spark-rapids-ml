@@ -41,6 +41,8 @@ intersphinx_mapping = {
 
 html_theme = 'pydata_sphinx_theme'
 
+html_show_sourcelink = False
+
 import inspect
 from spark_rapids_ml.utils import _unsupported_methods_attributes
 
