@@ -34,14 +34,10 @@ make clean
 make html
 git worktree add --track -b gh-pages _site origin/gh-pages
 
-api_dest=""
 pushd _site
 if [[ $1 == "nightly" ]]; then
-    # set api_dest to trigger copy only if commit has changed since last update
-    prev_commit_mesg=$( git log -1 --format="%s" )
-    if [[ $prev_commit_mesg != $TAG ]]; then
-        api_dest=api/python-draft
-    fi
+    # draft copy
+    api_dest=api/python-draft
 else
     # release copy
     api_dest=api/python
@@ -50,16 +46,16 @@ else
 fi
 
 # in _site
-if [[ -n $api_dest ]]; then
-    mkdir -p $api_dest
-    cp -r ../build/html/* $api_dest/
+mkdir -p $api_dest
+cp -r ../build/html/* $api_dest/
 
-    git add --all
-
+git add --all
+dff=$(git diff --staged --stat)
+if [[ -n $dff ]]; then
     git commit -m "${TAG}"
     git push origin gh-pages
 fi
 
 popd #_site
-git worktree remove _site
+git worktree remove _site --force
 popd
