@@ -15,25 +15,47 @@
 # limitations under the License.
 #
 
-# get version tag
-TAG=$(git describe --tag)
-if [[ $? != 0 ]]; then
-    echo "Can only deploy from a version tag."
-    exit 1
+if [[ $1 == "nightly" ]]; then
+    TAG=$(git log -1 --format="%h")
+else
+    # get version tag
+    TAG=$(git describe --tag)
+    if [[ $? != 0 ]]; then
+        echo "Can only deploy stable release docs from a version tag."
+        exit 1
+    fi
 fi
 
 set -ex
 
 # build and publish docs
 pushd docs
+make clean
 make html
 git worktree add --track -b gh-pages _site origin/gh-pages
-cp -r build/html/* _site/api/python
-cp -r site/* _site
+
 pushd _site
+if [[ $1 == "nightly" ]]; then
+    # draft copy
+    api_dest=api/python-draft
+else
+    # release copy
+    api_dest=api/python
+    # also copy site wide changes for release
+    cp -r ../site/* .
+fi
+
+# in _site
+mkdir -p $api_dest
+cp -r ../build/html/* $api_dest/
+
 git add --all
-git commit -m "${TAG}"
-git push origin gh-pages
+dff=$(git diff --staged --stat)
+if [[ -n $dff ]]; then
+    git commit -m "${TAG}"
+    git push origin gh-pages
+fi
+
 popd #_site
-git worktree remove _site
+git worktree remove _site --force
 popd

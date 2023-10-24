@@ -45,8 +45,13 @@ pip install -r requirements_dev.txt && pip install -e .
 ./run_benchmark.sh $bench_args
 
 # check compatibility with Spark 3.3 in nightly run
+# also push draft release docs to gh-pages
 if [[ $type == "nightly" ]]; then
     pip uninstall pyspark -y
     pip install pyspark~=3.3.0
     ./run_benchmark.sh $bench_args
+    # if everything passed till now update draft release docs in gh-pages
+    # need to invoke docs.sh from top level of repo
+    cd .. # top level of repo
+    ci/docs.sh nightly
 fi

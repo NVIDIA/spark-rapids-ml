@@ -4,4 +4,6 @@ nav_order: 5
 ---
 # API Documentation
 
-- [Python API](python)
+- Python API 
+  - [Stable Release](python)
+  - [Draft](python-draft)
