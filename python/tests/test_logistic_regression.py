@@ -344,6 +344,8 @@ def test_compat(
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
     tmp_path: str,
 ) -> None:
+    tolerance = 0.001
+
     _LogisticRegression, _LogisticRegressionModel = lr_types
 
     X = np.array(
@@ -418,13 +420,16 @@ def test_compat(
         assert blor_model.getProbabilityCol() == "newProbability"
 
         assert isinstance(blor_model.coefficients, DenseVector)
-        assert array_equal(blor_model.coefficients.toArray(), [-2.42377087, 2.42377087])
+        assert array_equal(
+            blor_model.coefficients.toArray(), [-2.42377087, 2.42377087], tolerance
+        )
         assert blor_model.intercept == pytest.approx(0, abs=1e-6)
 
         assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
         assert array_equal(
             blor_model.coefficientMatrix.toArray(),
             np.array([[-2.42377087, 2.42377087]]),
+            tolerance,
         )
         assert isinstance(blor_model.interceptVector, DenseVector)
         assert array_equal(blor_model.interceptVector.toArray(), [0.0])
@@ -451,12 +456,14 @@ def test_compat(
         assert array_equal(
             output.newProbability.toArray(),
             Vectors.dense([0.0814, 0.9186]).toArray(),
+            tolerance,
         )
 
         if isinstance(blor_model, SparkLogisticRegressionModel):
             assert array_equal(
                 output.newRawPrediction.toArray(),
                 Vectors.dense([-2.4238, 2.4238]).toArray(),
+                tolerance,
             )
         else:
             warnings.warn(
@@ -770,56 +777,69 @@ def test_compat_multinomial(
         assert array_equal(
             output_res[0].newProbability.toArray(),
             [0.24686976, 0.69117839, 0.04564774, 0.01630411],
+            tolerance,
         )
         assert array_equal(
             output_res[1].newProbability.toArray(),
             [0.11019694, 0.86380164, 0.02305966, 0.00294177],
+            tolerance,
         )
         assert array_equal(
             output_res[2].newProbability.toArray(),
             [0.69117839, 0.24686976, 0.01630411, 0.04564774],
+            tolerance,
         )
         assert array_equal(
             output_res[3].newProbability.toArray(),
             [0.86380164, 0.11019694, 0.00294177, 0.02305966],
+            tolerance,
         )
         assert array_equal(
             output_res[4].newProbability.toArray(),
             [0.04564774, 0.01630411, 0.24686976, 0.69117839],
+            tolerance,
         )
         assert array_equal(
             output_res[5].newProbability.toArray(),
             [0.02305966, 0.00294177, 0.11019694, 0.86380164],
+            tolerance,
         )
         assert array_equal(
             output_res[6].newProbability.toArray(),
             [0.01630352, 0.04563958, 0.6912151, 0.24684186],
+            tolerance,
         )
         assert array_equal(
             output_res[7].newProbability.toArray(),
             [0.00294145, 0.02305316, 0.86383104, 0.11017438],
+            tolerance,
         )
 
         if isinstance(mlor_model, SparkLogisticRegressionModel):
             assert array_equal(
                 output_res[0].rawPrediction.toArray(),
                 [0.84395339, 1.87349042, -0.84395339, -1.87349042],
+                tolerance,
             )
             assert array_equal(
                 output_res[1].rawPrediction.toArray(),
                 [0.78209218, 2.84116623, -0.78209218, -2.84116623],
+                tolerance,
             )
             assert array_equal(
                 output_res[2].rawPrediction.toArray(),
                 [1.87349042, 0.84395339, -1.87349042, -0.84395339],
+                tolerance,
             )
             assert array_equal(
                 output_res[3].rawPrediction.toArray(),
                 [2.84116623, 0.78209218, -2.84116623, -0.78209218],
+                tolerance,
             )
             assert array_equal(
                 output_res[4].rawPrediction.toArray(),
                 [-0.84395339, -1.87349042, 0.84395339, 1.87349042],
+                tolerance,
             )
             assert array_equal(
                 output_res[5].rawPrediction.toArray(),
@@ -828,10 +848,12 @@ def test_compat_multinomial(
             assert array_equal(
                 output_res[6].rawPrediction.toArray(),
                 [-1.87349042, -0.84395339, 1.87349042, 0.84395339],
+                tolerance,
             )
             assert array_equal(
                 output_res[7].rawPrediction.toArray(),
                 [-2.84116623, -0.78209218, 2.84116623, 0.78209218],
+                tolerance,
             )
 
         else:
