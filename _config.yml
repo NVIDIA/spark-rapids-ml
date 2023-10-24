@@ -52,3 +52,4 @@ exclude:
 
 include:
   - _static
+  - _sphinx*
