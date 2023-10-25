@@ -19,7 +19,7 @@ if [[ $1 == "nightly" ]]; then
     TAG=$(git log -1 --format="%h")
 else
     # get version tag
-    TAG=$(git describe --tag)
+    TAG="v$VERSION"
     if [[ $? != 0 ]]; then
         echo "Can only deploy stable release docs from a version tag."
         exit 1
@@ -51,9 +51,11 @@ cp -r ../build/html/* $api_dest/
 
 git add --all
 dff=$(git diff --staged --stat)
+repo_url=$(git config --get remote.origin.url)
+url=${repo_url#https://}
 if [[ -n $dff ]]; then
     git commit -m "${TAG}"
-    git push origin gh-pages
+    git push -f https://nvauto:${GITHUB_TOKEN}@${url} gh-pages
 fi
 
 popd #_site
