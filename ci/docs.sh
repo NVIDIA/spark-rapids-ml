@@ -53,7 +53,7 @@ git add --all
 dff=$(git diff --staged --stat)
 repo_url=$(git config --get remote.origin.url)
 url=${repo_url#https://}
-github_account=${GITHUB_ACCOUNT:"nvauto"}
+github_account=${GITHUB_ACCOUNT:-nvauto}
 if [[ -n $dff ]]; then
     git commit -m "${TAG}"
     git push -f https://${github_account}:${GITHUB_TOKEN}@${url} gh-pages
