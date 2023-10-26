@@ -17,6 +17,7 @@
 
 if [[ $1 == "nightly" ]]; then
     TAG=$(git log -1 --format="%h")
+    BRANCH=$(git branch --show-current)
 else
     # get version tag
     TAG="v$VERSION"
@@ -51,7 +52,7 @@ repo_url=$(git config --get remote.origin.url)
 url=${repo_url#https://}
 github_account=${GITHUB_ACCOUNT:-nvauto}
 if [[ -n $dff ]]; then
-    git commit -m "${TAG}"
+    git commit -m "Update draft api docs to commit ${TAG} on ${BRANCH}"
     git push -f https://${github_account}:${GITHUB_TOKEN}@${url} gh-pages
 fi
 
