@@ -54,12 +54,4 @@ if [[ $type == "nightly" ]]; then
     # need to invoke docs.sh from top level of repo
     cd .. # top level of repo
     ci/docs.sh nightly
-elif [[ $type == "release" ]]; then
-    pip uninstall pyspark -y
-    pip install pyspark~=3.3.0
-    ./run_benchmark.sh $bench_args
-    # if everything passed till now update draft release docs in gh-pages
-    # need to invoke docs.sh from top level of repo
-    cd .. # top level of repo
-    ci/docs.sh
 fi

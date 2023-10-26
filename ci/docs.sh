@@ -20,10 +20,6 @@ if [[ $1 == "nightly" ]]; then
 else
     # get version tag
     TAG="v$VERSION"
-    if [[ $? != 0 ]]; then
-        echo "Can only deploy stable release docs from a version tag."
-        exit 1
-    fi
 fi
 
 set -ex
