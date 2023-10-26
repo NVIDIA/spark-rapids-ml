@@ -22,7 +22,7 @@ case $type in
   "pre-merge" | "")
     ut_args=""
     ;;
-  "nightly")
+  "nightly" | "release")
     ut_args="--runslow"
     ;;
   *)
