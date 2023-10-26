@@ -1,0 +1,1077 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>CrossValidator &#8212; spark-rapids-ml 23.10.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=c5ced968eda925caa686" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=c5ced968eda925caa686" />
+  <script src="../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=c5ced968eda925caa686"></script>
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/spark_rapids_ml.tuning.CrossValidator';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="UMAP" href="spark_rapids_ml.umap.UMAP.html" />
+    <link rel="prev" title="NearestNeighborsModel" href="spark_rapids_ml.knn.NearestNeighborsModel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../spark_rapids_ml.html">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../spark_rapids_ml.html">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCA.html">PCA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCAModel.html">PCAModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegression.html">LogisticRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegressionModel.html">LogisticRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassifier.html">RandomForestClassifier</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.LinearRegression.html">LinearRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.LinearRegressionModel.html">LinearRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressor.html">RandomForestRegressor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressionModel.html">RandomForestRegressionModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighbors.html">NearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighborsModel.html">NearestNeighborsModel</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">CrossValidator</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAP.html">UMAP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAPModel.html">UMAPModel</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../spark_rapids_ml.html" class="nav-link">Spark Rapids ML</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">CrossValidator</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="crossvalidator">
+<h1>CrossValidator<a class="headerlink" href="#crossvalidator" title="Permalink to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.tuning.</span></span><span class="sig-name descname"><span class="pre">CrossValidator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Estimator</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimatorParamMaps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.Evaluator.html#pyspark.ml.evaluation.Evaluator" title="(in PySpark vmaster)"><span class="pre">Evaluator</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numFolds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallelism</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collectSubModels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foldCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator" title="Permalink to this definition">#</a></dt>
+<dd><p>K-fold cross validation performs model selection by splitting the dataset into a set of
+non-overlapping randomly partitioned folds which are used as separate training and test datasets
+e.g., with k=3 folds, K-fold cross validation will generate 3 (training, test) dataset pairs,
+each of which uses 2/3 of the data for training and 1/3 for testing. Each fold is used as the
+test set exactly once.</p>
+<p>It is the gpu version CrossValidator which fits multiple models in a single pass for a single
+training dataset and transforms/evaluates in a single pass for multiple models.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.tuning</span> <span class="kn">import</span> <span class="n">ParamGridBuilder</span><span class="p">,</span> <span class="n">CrossValidatorModel</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.evaluation</span> <span class="kn">import</span> <span class="n">MulticlassClassificationEvaluator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.tuning</span> <span class="kn">import</span> <span class="n">CrossValidator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.classification</span> <span class="kn">import</span> <span class="n">RandomForestClassifier</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">[(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]),</span> <span class="mf">0.0</span><span class="p">),</span>
+<span class="gp">... </span>     <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">0.4</span><span class="p">]),</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="gp">... </span>     <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">0.5</span><span class="p">]),</span> <span class="mf">0.0</span><span class="p">),</span>
+<span class="gp">... </span>     <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">0.6</span><span class="p">]),</span> <span class="mf">2.0</span><span class="p">),</span>
+<span class="gp">... </span>     <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">1.0</span><span class="p">]),</span> <span class="mf">1.0</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rfc</span> <span class="o">=</span> <span class="n">RandomForestClassifier</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">grid</span> <span class="o">=</span> <span class="n">ParamGridBuilder</span><span class="p">()</span><span class="o">.</span><span class="n">addGrid</span><span class="p">(</span><span class="n">rfc</span><span class="o">.</span><span class="n">maxBins</span><span class="p">,</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">])</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">evaluator</span> <span class="o">=</span> <span class="n">MulticlassClassificationEvaluator</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">CrossValidator</span><span class="p">(</span><span class="n">estimator</span><span class="o">=</span><span class="n">rfc</span><span class="p">,</span> <span class="n">estimatorParamMaps</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">evaluator</span><span class="o">=</span><span class="n">evaluator</span><span class="p">,</span>
+<span class="gp">... </span>                    <span class="n">parallelism</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvModel</span> <span class="o">=</span> <span class="n">cv</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvModel</span><span class="o">.</span><span class="n">getNumFolds</span><span class="p">()</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvModel</span><span class="o">.</span><span class="n">avgMetrics</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">1.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">cvModel</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+<span class="go">1.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model_path</span> <span class="o">=</span> <span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;/model&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvModel</span><span class="o">.</span><span class="n">write</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvModelRead</span> <span class="o">=</span> <span class="n">CrossValidatorModel</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cvModelRead</span><span class="o">.</span><span class="n">avgMetrics</span>
+<span class="go">[1.0, 1.0]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">cvModel</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+<span class="go">1.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">cvModelRead</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
+<span class="go">1.0</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.clear" title="spark_rapids_ml.tuning.CrossValidator.clear"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code></a>(param)</p></td>
+<td><p>Clears a param from the param map if it has been explicitly set.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.copy" title="spark_rapids_ml.tuning.CrossValidator.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
+<td><p>Creates a copy of this instance with a randomly generated uid and some extra params.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.explainParam" title="spark_rapids_ml.tuning.CrossValidator.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
+<td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.explainParams" title="spark_rapids_ml.tuning.CrossValidator.explainParams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code></a>()</p></td>
+<td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.extractParamMap" title="spark_rapids_ml.tuning.CrossValidator.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
+<td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.fit" title="spark_rapids_ml.tuning.CrossValidator.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(dataset[, params])</p></td>
+<td><p>Fits a model to the input dataset with optional parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.fitMultiple" title="spark_rapids_ml.tuning.CrossValidator.fitMultiple"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fitMultiple</span></code></a>(dataset, paramMaps)</p></td>
+<td><p>Fits a model to the input dataset for each param map in <cite>paramMaps</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getCollectSubModels" title="spark_rapids_ml.tuning.CrossValidator.getCollectSubModels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getCollectSubModels</span></code></a>()</p></td>
+<td><p>Gets the value of collectSubModels or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getEstimator" title="spark_rapids_ml.tuning.CrossValidator.getEstimator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getEstimator</span></code></a>()</p></td>
+<td><p>Gets the value of estimator or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getEstimatorParamMaps" title="spark_rapids_ml.tuning.CrossValidator.getEstimatorParamMaps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getEstimatorParamMaps</span></code></a>()</p></td>
+<td><p>Gets the value of estimatorParamMaps or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getEvaluator" title="spark_rapids_ml.tuning.CrossValidator.getEvaluator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getEvaluator</span></code></a>()</p></td>
+<td><p>Gets the value of evaluator or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getFoldCol" title="spark_rapids_ml.tuning.CrossValidator.getFoldCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFoldCol</span></code></a>()</p></td>
+<td><p>Gets the value of foldCol or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getNumFolds" title="spark_rapids_ml.tuning.CrossValidator.getNumFolds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getNumFolds</span></code></a>()</p></td>
+<td><p>Gets the value of numFolds or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getOrDefault" title="spark_rapids_ml.tuning.CrossValidator.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
+<td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getParallelism" title="spark_rapids_ml.tuning.CrossValidator.getParallelism"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParallelism</span></code></a>()</p></td>
+<td><p>Gets the value of parallelism or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getParam" title="spark_rapids_ml.tuning.CrossValidator.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
+<td><p>Gets a param by its name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.getSeed" title="spark_rapids_ml.tuning.CrossValidator.getSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code></a>()</p></td>
+<td><p>Gets the value of seed or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.hasDefault" title="spark_rapids_ml.tuning.CrossValidator.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
+<td><p>Checks whether a param has a default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.hasParam" title="spark_rapids_ml.tuning.CrossValidator.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
+<td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.isDefined" title="spark_rapids_ml.tuning.CrossValidator.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.isSet" title="spark_rapids_ml.tuning.CrossValidator.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.load" title="spark_rapids_ml.tuning.CrossValidator.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.read" title="spark_rapids_ml.tuning.CrossValidator.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
+<td><p>Returns an MLReader instance for this class.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.save" title="spark_rapids_ml.tuning.CrossValidator.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
+<td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.set" title="spark_rapids_ml.tuning.CrossValidator.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
+<td><p>Sets a parameter in the embedded param map.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setCollectSubModels" title="spark_rapids_ml.tuning.CrossValidator.setCollectSubModels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setCollectSubModels</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.collectSubModels" title="spark_rapids_ml.tuning.CrossValidator.collectSubModels"><code class="xref py py-attr docutils literal notranslate"><span class="pre">collectSubModels</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setEstimator" title="spark_rapids_ml.tuning.CrossValidator.setEstimator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setEstimator</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.estimator" title="spark_rapids_ml.tuning.CrossValidator.estimator"><code class="xref py py-attr docutils literal notranslate"><span class="pre">estimator</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setEstimatorParamMaps" title="spark_rapids_ml.tuning.CrossValidator.setEstimatorParamMaps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setEstimatorParamMaps</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps" title="spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps"><code class="xref py py-attr docutils literal notranslate"><span class="pre">estimatorParamMaps</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setEvaluator" title="spark_rapids_ml.tuning.CrossValidator.setEvaluator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setEvaluator</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.evaluator" title="spark_rapids_ml.tuning.CrossValidator.evaluator"><code class="xref py py-attr docutils literal notranslate"><span class="pre">evaluator</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setFoldCol" title="spark_rapids_ml.tuning.CrossValidator.setFoldCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFoldCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.foldCol" title="spark_rapids_ml.tuning.CrossValidator.foldCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">foldCol</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setNumFolds" title="spark_rapids_ml.tuning.CrossValidator.setNumFolds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setNumFolds</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.numFolds" title="spark_rapids_ml.tuning.CrossValidator.numFolds"><code class="xref py py-attr docutils literal notranslate"><span class="pre">numFolds</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setParallelism" title="spark_rapids_ml.tuning.CrossValidator.setParallelism"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setParallelism</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.parallelism" title="spark_rapids_ml.tuning.CrossValidator.parallelism"><code class="xref py py-attr docutils literal notranslate"><span class="pre">parallelism</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setParams" title="spark_rapids_ml.tuning.CrossValidator.setParams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setParams</span></code></a>(*[, estimator, ...])</p></td>
+<td><p>setParams(self, *, estimator=None, estimatorParamMaps=None, evaluator=None, numFolds=3,                  seed=None, parallelism=1, collectSubModels=False, foldCol=&quot;&quot;): Sets params for cross validator.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.setSeed" title="spark_rapids_ml.tuning.CrossValidator.setSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSeed</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.seed" title="spark_rapids_ml.tuning.CrossValidator.seed"><code class="xref py py-attr docutils literal notranslate"><span class="pre">seed</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.write" title="spark_rapids_ml.tuning.CrossValidator.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<td><p>Returns an MLWriter instance for this ML instance.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.collectSubModels" title="spark_rapids_ml.tuning.CrossValidator.collectSubModels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">collectSubModels</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.estimator" title="spark_rapids_ml.tuning.CrossValidator.estimator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimator</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps" title="spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimatorParamMaps</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.evaluator" title="spark_rapids_ml.tuning.CrossValidator.evaluator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluator</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.foldCol" title="spark_rapids_ml.tuning.CrossValidator.foldCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">foldCol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.numFolds" title="spark_rapids_ml.tuning.CrossValidator.numFolds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numFolds</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.parallelism" title="spark_rapids_ml.tuning.CrossValidator.parallelism"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parallelism</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.params" title="spark_rapids_ml.tuning.CrossValidator.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
+<td><p>Returns all params ordered by name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.seed" title="spark_rapids_ml.tuning.CrossValidator.seed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seed</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods Documentation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.clear" title="Permalink to this definition">#</a></dt>
+<dd><p>Clears a param from the param map if it has been explicitly set.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator" title="spark_rapids_ml.tuning.CrossValidator"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.copy" title="Permalink to this definition">#</a></dt>
+<dd><p>Creates a copy of this instance with a randomly generated uid
+and some extra params. This copies creates a deep copy of
+the embedded paramMap, and copies the embedded and extra parameters over.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.4.0.</span></p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">dict, optional</span></dt><dd><p>Extra parameters to copy to the new instance</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator" title="spark_rapids_ml.tuning.CrossValidator"><code class="xref py py-class docutils literal notranslate"><span class="pre">CrossValidator</span></code></a></dt><dd><p>Copy of this instance</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.explainParam">
+<span class="sig-name descname"><span class="pre">explainParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.explainParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Explains a single param and returns its name, doc, and optional
+default value and user-supplied value in a string.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.explainParams">
+<span class="sig-name descname"><span class="pre">explainParams</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.explainParams" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the documentation of all params with their optionally
+default values and user-supplied values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.extractParamMap">
+<span class="sig-name descname"><span class="pre">extractParamMap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ParamMap</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.extractParamMap" title="Permalink to this definition">#</a></dt>
+<dd><p>Extracts the embedded default param values and user-supplied
+values, and then merges them with extra values from input into
+a flat param map, where the latter value is used if there exist
+conflicts, i.e., with ordering: default param values &lt;
+user-supplied values &lt; extra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">dict, optional</span></dt><dd><p>extra param values</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>merged param map</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">M</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">M</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.fit" title="Permalink to this definition">#</a></dt>
+<dd><p>Fits a model to the input dataset with optional parameters.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.3.0.</span></p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>dataset</strong><span class="classifier"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></span></dt><dd><p>input dataset.</p>
+</dd>
+<dt><strong>params</strong><span class="classifier">dict or list or tuple, optional</span></dt><dd><p>an optional param map that overrides embedded params. If a list/tuple of
+param maps is given, this calls fit on each param map and returns a list of
+models.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">Transformer</span></code> or a list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Transformer</span></code></dt><dd><p>fitted model(s)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.fitMultiple">
+<span class="sig-name descname"><span class="pre">fitMultiple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paramMaps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">M</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.fitMultiple" title="Permalink to this definition">#</a></dt>
+<dd><p>Fits a model to the input dataset for each param map in <cite>paramMaps</cite>.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.3.0.</span></p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>dataset</strong><span class="classifier"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></span></dt><dd><p>input dataset.</p>
+</dd>
+<dt><strong>paramMaps</strong><span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.Sequence</span></code></span></dt><dd><p>A Sequence of param maps.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">_FitMultipleIterator</span></code></dt><dd><p>A thread safe iterable which contains one model for each param map. Each
+call to <cite>next(modelIterator)</cite> will return <cite>(index, model)</cite> where model was fit
+using <cite>paramMaps[index]</cite>. <cite>index</cite> values may not be sequential.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getCollectSubModels">
+<span class="sig-name descname"><span class="pre">getCollectSubModels</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getCollectSubModels" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of collectSubModels or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getEstimator">
+<span class="sig-name descname"><span class="pre">getEstimator</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Estimator</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getEstimator" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of estimator or its default value.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.0.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getEstimatorParamMaps">
+<span class="sig-name descname"><span class="pre">getEstimatorParamMaps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getEstimatorParamMaps" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of estimatorParamMaps or its default value.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.0.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getEvaluator">
+<span class="sig-name descname"><span class="pre">getEvaluator</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.Evaluator.html#pyspark.ml.evaluation.Evaluator" title="(in PySpark vmaster)"><span class="pre">Evaluator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getEvaluator" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of evaluator or its default value.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.0.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getFoldCol">
+<span class="sig-name descname"><span class="pre">getFoldCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getFoldCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of foldCol or its default value.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 3.1.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getNumFolds">
+<span class="sig-name descname"><span class="pre">getNumFolds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getNumFolds" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of numFolds or its default value.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.4.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getOrDefault">
+<span class="sig-name descname"><span class="pre">getOrDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getOrDefault" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of a param in the user-supplied param map or its
+default value. Raises an error if neither is set.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getParallelism">
+<span class="sig-name descname"><span class="pre">getParallelism</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getParallelism" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of parallelism or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getParam">
+<span class="sig-name descname"><span class="pre">getParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets a param by its name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.getSeed">
+<span class="sig-name descname"><span class="pre">getSeed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.getSeed" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of seed or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.hasDefault">
+<span class="sig-name descname"><span class="pre">hasDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.hasDefault" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param has a default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.hasParam">
+<span class="sig-name descname"><span class="pre">hasParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.hasParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Tests whether this instance contains a param with a given
+(string) name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.isDefined">
+<span class="sig-name descname"><span class="pre">isDefined</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.isDefined" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param is explicitly set by user or has
+a default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.isSet">
+<span class="sig-name descname"><span class="pre">isSet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.isSet" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param is explicitly set by user.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator" title="spark_rapids_ml.tuning.CrossValidator"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.load" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.read">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CrossValidatorReader</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.read" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns an MLReader instance for this class.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.3.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.save" title="Permalink to this definition">#</a></dt>
+<dd><p>Save this ML instance to the given path, a shortcut of ‘write().save(path)’.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.set" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets a parameter in the embedded param map.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setCollectSubModels">
+<span class="sig-name descname"><span class="pre">setCollectSubModels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setCollectSubModels" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.collectSubModels" title="spark_rapids_ml.tuning.CrossValidator.collectSubModels"><code class="xref py py-attr docutils literal notranslate"><span class="pre">collectSubModels</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setEstimator">
+<span class="sig-name descname"><span class="pre">setEstimator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Estimator</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setEstimator" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.estimator" title="spark_rapids_ml.tuning.CrossValidator.estimator"><code class="xref py py-attr docutils literal notranslate"><span class="pre">estimator</span></code></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.0.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setEstimatorParamMaps">
+<span class="sig-name descname"><span class="pre">setEstimatorParamMaps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator" title="spark_rapids_ml.tuning.CrossValidator"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setEstimatorParamMaps" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps" title="spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps"><code class="xref py py-attr docutils literal notranslate"><span class="pre">estimatorParamMaps</span></code></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.0.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setEvaluator">
+<span class="sig-name descname"><span class="pre">setEvaluator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.Evaluator.html#pyspark.ml.evaluation.Evaluator" title="(in PySpark vmaster)"><span class="pre">Evaluator</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setEvaluator" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.evaluator" title="spark_rapids_ml.tuning.CrossValidator.evaluator"><code class="xref py py-attr docutils literal notranslate"><span class="pre">evaluator</span></code></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.0.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setFoldCol">
+<span class="sig-name descname"><span class="pre">setFoldCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setFoldCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.foldCol" title="spark_rapids_ml.tuning.CrossValidator.foldCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">foldCol</span></code></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 3.1.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setNumFolds">
+<span class="sig-name descname"><span class="pre">setNumFolds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setNumFolds" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.numFolds" title="spark_rapids_ml.tuning.CrossValidator.numFolds"><code class="xref py py-attr docutils literal notranslate"><span class="pre">numFolds</span></code></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.4.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setParallelism">
+<span class="sig-name descname"><span class="pre">setParallelism</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setParallelism" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.parallelism" title="spark_rapids_ml.tuning.CrossValidator.parallelism"><code class="xref py py-attr docutils literal notranslate"><span class="pre">parallelism</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setParams">
+<span class="sig-name descname"><span class="pre">setParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Estimator</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimatorParamMaps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.Evaluator.html#pyspark.ml.evaluation.Evaluator" title="(in PySpark vmaster)"><span class="pre">Evaluator</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numFolds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallelism</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collectSubModels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foldCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator" title="spark_rapids_ml.tuning.CrossValidator"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setParams" title="Permalink to this definition">#</a></dt>
+<dd><p>setParams(self, *, estimator=None, estimatorParamMaps=None, evaluator=None, numFolds=3,                  seed=None, parallelism=1, collectSubModels=False, foldCol=””):
+Sets params for cross validator.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.4.0.</span></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.setSeed">
+<span class="sig-name descname"><span class="pre">setSeed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.tuning.CrossValidator.html#pyspark.ml.tuning.CrossValidator" title="(in PySpark vmaster)"><span class="pre">CrossValidator</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.setSeed" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.tuning.CrossValidator.seed" title="spark_rapids_ml.tuning.CrossValidator.seed"><code class="xref py py-attr docutils literal notranslate"><span class="pre">seed</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLWriter.html#pyspark.ml.util.MLWriter" title="(in PySpark vmaster)"><span class="pre">MLWriter</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.write" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns an MLWriter instance for this ML instance.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 2.3.0.</span></p>
+</div>
+</dd></dl>
+
+<p class="rubric">Attributes Documentation</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.collectSubModels">
+<span class="sig-name descname"><span class="pre">collectSubModels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='collectSubModels',</span> <span class="pre">doc='Param</span> <span class="pre">for</span> <span class="pre">whether</span> <span class="pre">to</span> <span class="pre">collect</span> <span class="pre">a</span> <span class="pre">list</span> <span class="pre">of</span> <span class="pre">sub-models</span> <span class="pre">trained</span> <span class="pre">during</span> <span class="pre">tuning.</span> <span class="pre">If</span> <span class="pre">set</span> <span class="pre">to</span> <span class="pre">false,</span> <span class="pre">then</span> <span class="pre">only</span> <span class="pre">the</span> <span class="pre">single</span> <span class="pre">best</span> <span class="pre">sub-model</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">available</span> <span class="pre">after</span> <span class="pre">fitting.</span> <span class="pre">If</span> <span class="pre">set</span> <span class="pre">to</span> <span class="pre">true,</span> <span class="pre">then</span> <span class="pre">all</span> <span class="pre">sub-models</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">available.</span> <span class="pre">Warning:</span> <span class="pre">For</span> <span class="pre">large</span> <span class="pre">models,</span> <span class="pre">collecting</span> <span class="pre">all</span> <span class="pre">sub-models</span> <span class="pre">can</span> <span class="pre">cause</span> <span class="pre">OOMs</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">Spark</span> <span class="pre">driver.')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.collectSubModels" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.estimator">
+<span class="sig-name descname"><span class="pre">estimator</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">Estimator</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='estimator',</span> <span class="pre">doc='estimator</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">cross-validated')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.estimator" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps">
+<span class="sig-name descname"><span class="pre">estimatorParamMaps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'ParamMap'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='estimatorParamMaps',</span> <span class="pre">doc='estimator</span> <span class="pre">param</span> <span class="pre">maps')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.evaluator">
+<span class="sig-name descname"><span class="pre">evaluator</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">Evaluator</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='evaluator',</span> <span class="pre">doc='evaluator</span> <span class="pre">used</span> <span class="pre">to</span> <span class="pre">select</span> <span class="pre">hyper-parameters</span> <span class="pre">that</span> <span class="pre">maximize</span> <span class="pre">the</span> <span class="pre">validator</span> <span class="pre">metric')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.evaluator" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.foldCol">
+<span class="sig-name descname"><span class="pre">foldCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='foldCol',</span> <span class="pre">doc=&quot;Param</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">column</span> <span class="pre">name</span> <span class="pre">of</span> <span class="pre">user</span> <span class="pre">specified</span> <span class="pre">fold</span> <span class="pre">number.</span> <span class="pre">Once</span> <span class="pre">this</span> <span class="pre">is</span> <span class="pre">specified,</span> <span class="pre">:py:class:`CrossValidator`</span> <span class="pre">won't</span> <span class="pre">do</span> <span class="pre">random</span> <span class="pre">k-fold</span> <span class="pre">split.</span> <span class="pre">Note</span> <span class="pre">that</span> <span class="pre">this</span> <span class="pre">column</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">integer</span> <span class="pre">type</span> <span class="pre">with</span> <span class="pre">range</span> <span class="pre">[0,</span> <span class="pre">numFolds)</span> <span class="pre">and</span> <span class="pre">Spark</span> <span class="pre">will</span> <span class="pre">throw</span> <span class="pre">exception</span> <span class="pre">on</span> <span class="pre">out-of-range</span> <span class="pre">fold</span> <span class="pre">numbers.&quot;)</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.foldCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.numFolds">
+<span class="sig-name descname"><span class="pre">numFolds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='numFolds',</span> <span class="pre">doc='number</span> <span class="pre">of</span> <span class="pre">folds</span> <span class="pre">for</span> <span class="pre">cross</span> <span class="pre">validation')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.numFolds" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.parallelism">
+<span class="sig-name descname"><span class="pre">parallelism</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='parallelism',</span> <span class="pre">doc='the</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">threads</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">when</span> <span class="pre">running</span> <span class="pre">parallel</span> <span class="pre">algorithms</span> <span class="pre">(&gt;=</span> <span class="pre">1).')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.parallelism" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.params">
+<span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.params" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns all params ordered by name. The default implementation
+uses <code class="xref py py-func docutils literal notranslate"><span class="pre">dir()</span></code> to get all attributes of type
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Param</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.tuning.CrossValidator.seed">
+<span class="sig-name descname"><span class="pre">seed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='seed',</span> <span class="pre">doc='random</span> <span class="pre">seed.')</span></em><a class="headerlink" href="#spark_rapids_ml.tuning.CrossValidator.seed" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="spark_rapids_ml.knn.NearestNeighborsModel.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">NearestNeighborsModel</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="spark_rapids_ml.umap.UMAP.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">UMAP</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator"><code class="docutils literal notranslate"><span class="pre">CrossValidator</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.clear"><code class="docutils literal notranslate"><span class="pre">CrossValidator.clear()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.copy"><code class="docutils literal notranslate"><span class="pre">CrossValidator.copy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.explainParam"><code class="docutils literal notranslate"><span class="pre">CrossValidator.explainParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.explainParams"><code class="docutils literal notranslate"><span class="pre">CrossValidator.explainParams()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.extractParamMap"><code class="docutils literal notranslate"><span class="pre">CrossValidator.extractParamMap()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.fit"><code class="docutils literal notranslate"><span class="pre">CrossValidator.fit()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.fitMultiple"><code class="docutils literal notranslate"><span class="pre">CrossValidator.fitMultiple()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getCollectSubModels"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getCollectSubModels()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getEstimator"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getEstimator()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getEstimatorParamMaps"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getEstimatorParamMaps()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getEvaluator"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getEvaluator()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getFoldCol"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getFoldCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getNumFolds"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getNumFolds()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getOrDefault"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getOrDefault()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getParallelism"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getParallelism()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getParam"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.getSeed"><code class="docutils literal notranslate"><span class="pre">CrossValidator.getSeed()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.hasDefault"><code class="docutils literal notranslate"><span class="pre">CrossValidator.hasDefault()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.hasParam"><code class="docutils literal notranslate"><span class="pre">CrossValidator.hasParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.isDefined"><code class="docutils literal notranslate"><span class="pre">CrossValidator.isDefined()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.isSet"><code class="docutils literal notranslate"><span class="pre">CrossValidator.isSet()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.load"><code class="docutils literal notranslate"><span class="pre">CrossValidator.load()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.read"><code class="docutils literal notranslate"><span class="pre">CrossValidator.read()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.save"><code class="docutils literal notranslate"><span class="pre">CrossValidator.save()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.set"><code class="docutils literal notranslate"><span class="pre">CrossValidator.set()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setCollectSubModels"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setCollectSubModels()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setEstimator"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setEstimator()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setEstimatorParamMaps"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setEstimatorParamMaps()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setEvaluator"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setEvaluator()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setFoldCol"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setFoldCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setNumFolds"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setNumFolds()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setParallelism"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setParallelism()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setParams"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setParams()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.setSeed"><code class="docutils literal notranslate"><span class="pre">CrossValidator.setSeed()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.write"><code class="docutils literal notranslate"><span class="pre">CrossValidator.write()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.collectSubModels"><code class="docutils literal notranslate"><span class="pre">CrossValidator.collectSubModels</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.estimator"><code class="docutils literal notranslate"><span class="pre">CrossValidator.estimator</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.estimatorParamMaps"><code class="docutils literal notranslate"><span class="pre">CrossValidator.estimatorParamMaps</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.evaluator"><code class="docutils literal notranslate"><span class="pre">CrossValidator.evaluator</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.foldCol"><code class="docutils literal notranslate"><span class="pre">CrossValidator.foldCol</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.numFolds"><code class="docutils literal notranslate"><span class="pre">CrossValidator.numFolds</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.parallelism"><code class="docutils literal notranslate"><span class="pre">CrossValidator.parallelism</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.params"><code class="docutils literal notranslate"><span class="pre">CrossValidator.params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.tuning.CrossValidator.seed"><code class="docutils literal notranslate"><span class="pre">CrossValidator.seed</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=c5ced968eda925caa686"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=c5ced968eda925caa686"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright 2023, NVIDIA.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.2.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

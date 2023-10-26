@@ -1,0 +1,560 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Spark Rapids ML &#8212; spark-rapids-ml 23.10.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=c5ced968eda925caa686" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=c5ced968eda925caa686" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=c5ced968eda925caa686" />
+  <script src="_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=c5ced968eda925caa686"></script>
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'spark_rapids_ml';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="PCA" href="api/feature/spark_rapids_ml.feature.PCA.html" />
+    <link rel="prev" title="Welcome to spark-rapids-ml’s documentation!" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="#">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </nav>
+  
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item"><nav class="navbar-nav">
+  <p class="sidebar-header-items__title"
+     role="heading"
+     aria-level="1"
+     aria-label="Site Navigation">
+    Site Navigation
+  </p>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="#">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCA.html">PCA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCAModel.html">PCAModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.classification.LogisticRegression.html">LogisticRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.classification.LogisticRegressionModel.html">LogisticRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.classification.RandomForestClassifier.html">RandomForestClassifier</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.regression.LinearRegression.html">LinearRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.regression.LinearRegressionModel.html">LinearRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.regression.RandomForestRegressor.html">RandomForestRegressor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html">RandomForestRegressionModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighbors.html">NearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighborsModel.html">NearestNeighborsModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.tuning.CrossValidator.html">CrossValidator</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.umap.UMAP.html">UMAP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.umap.UMAPModel.html">UMAPModel</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Spark Rapids ML</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article" role="main">
+                  
+  <section id="spark-rapids-ml">
+<h1>Spark Rapids ML<a class="headerlink" href="#spark-rapids-ml" title="Permalink to this heading">#</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<section id="feature">
+<h2>Feature<a class="headerlink" href="#feature" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA" title="spark_rapids_ml.feature.PCA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PCA</span></code></a>(**kwargs)</p></td>
+<td><p>PCA algorithm learns principal component vectors to project high-dimensional vectors into low-dimensional vectors, while preserving the similarity of the vectors.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel" title="spark_rapids_ml.feature.PCAModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PCAModel</span></code></a>(mean_, components_, ...)</p></td>
+<td><p>Applies dimensionality reduction on an input DataFrame.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classification">
+<h2>Classification<a class="headerlink" href="#classification" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression" title="spark_rapids_ml.classification.LogisticRegression"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LogisticRegression</span></code></a>(*[, featuresCol, ...])</p></td>
+<td><p>LogisticRegression is a machine learning model where the response y is modeled by the sigmoid (or softmax for more than 2 classes) function applied to a linear combination of the features in X.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel" title="spark_rapids_ml.classification.LogisticRegressionModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LogisticRegressionModel</span></code></a>(coef_, intercept_, ...)</p></td>
+<td><p>Model fitted by <a class="reference internal" href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression" title="spark_rapids_ml.classification.LogisticRegression"><code class="xref py py-class docutils literal notranslate"><span class="pre">LogisticRegression</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier" title="spark_rapids_ml.classification.RandomForestClassifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RandomForestClassifier</span></code></a>(*[, featuresCol, ...])</p></td>
+<td><p>RandomForestClassifier implements a Random Forest classifier model which fits multiple decision tree classifiers in an ensemble.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel" title="spark_rapids_ml.classification.RandomForestClassificationModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RandomForestClassificationModel</span></code></a>(n_cols, ...)</p></td>
+<td><p>Model fitted by <a class="reference internal" href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier" title="spark_rapids_ml.classification.RandomForestClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestClassifier</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="clustering">
+<h2>Clustering<a class="headerlink" href="#clustering" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans" title="spark_rapids_ml.clustering.KMeans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KMeans</span></code></a>(**kwargs)</p></td>
+<td><p>KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel" title="spark_rapids_ml.clustering.KMeansModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KMeansModel</span></code></a>(cluster_centers_, n_cols, dtype)</p></td>
+<td><p>KMeans gpu model for clustering input vectors to learned k centers.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="regression">
+<h2>Regression<a class="headerlink" href="#regression" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression" title="spark_rapids_ml.regression.LinearRegression"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LinearRegression</span></code></a>(*[, featuresCol, labelCol, ...])</p></td>
+<td><p>LinearRegression is a machine learning model where the response y is modeled by a linear combination of the predictors in X.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel" title="spark_rapids_ml.regression.LinearRegressionModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LinearRegressionModel</span></code></a>(coef_, intercept_, ...)</p></td>
+<td><p>Model fitted by <a class="reference internal" href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression" title="spark_rapids_ml.regression.LinearRegression"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearRegression</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor" title="spark_rapids_ml.regression.RandomForestRegressor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a>(*[, featuresCol, ...])</p></td>
+<td><p>RandomForestRegressor implements a Random Forest regressor model which fits multiple decision tree in an ensemble.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel" title="spark_rapids_ml.regression.RandomForestRegressionModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RandomForestRegressionModel</span></code></a>(n_cols, dtype, ...)</p></td>
+<td><p>Model fitted by <a class="reference internal" href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor" title="spark_rapids_ml.regression.RandomForestRegressor"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="nearest-neighbors">
+<h2>Nearest Neighbors<a class="headerlink" href="#nearest-neighbors" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors" title="spark_rapids_ml.knn.NearestNeighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NearestNeighbors</span></code></a>(**kwargs)</p></td>
+<td><p>NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each query vector.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel" title="spark_rapids_ml.knn.NearestNeighborsModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NearestNeighborsModel</span></code></a>(item_df_withid, ...)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="tuning">
+<h2>Tuning<a class="headerlink" href="#tuning" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator" title="spark_rapids_ml.tuning.CrossValidator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CrossValidator</span></code></a>(*[, estimator, ...])</p></td>
+<td><p>K-fold cross validation performs model selection by splitting the dataset into a set of non-overlapping randomly partitioned folds which are used as separate training and test datasets e.g., with k=3 folds, K-fold cross validation will generate 3 (training, test) dataset pairs, each of which uses 2/3 of the data for training and 1/3 for testing.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="umap">
+<h2>UMAP<a class="headerlink" href="#umap" title="Permalink to this heading">#</a></h2>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP" title="spark_rapids_ml.umap.UMAP"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UMAP</span></code></a>(**kwargs)</p></td>
+<td><p>Uniform Manifold Approximation and Projection (UMAP) is a dimension reduction technique used for low-dimensional data visualization and general non-linear dimension reduction.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel" title="spark_rapids_ml.umap.UMAPModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UMAPModel</span></code></a>(embedding_, raw_data_, n_cols, dtype)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Welcome to spark-rapids-ml’s documentation!</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="api/feature/spark_rapids_ml.feature.PCA.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">PCA</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature">Feature</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#classification">Classification</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#clustering">Clustering</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#regression">Regression</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nearest-neighbors">Nearest Neighbors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning">Tuning</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#umap">UMAP</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=c5ced968eda925caa686"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=c5ced968eda925caa686"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+  <p class="copyright">
+    
+      © Copyright 2023, NVIDIA.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item"><p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.2.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

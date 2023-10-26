@@ -1,0 +1,183 @@
+﻿..  Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+..    http://www.apache.org/licenses/LICENSE-2.0
+
+..  Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+
+LinearRegressionModel
+================================================
+
+.. currentmodule:: spark_rapids_ml.regression
+
+.. autoclass:: LinearRegressionModel
+    :no-private-members:
+
+    
+      
+    
+
+    
+    
+
+    .. rubric:: Methods
+
+    .. autosummary::
+    
+       ~LinearRegressionModel.clear
+       ~LinearRegressionModel.copy
+       ~LinearRegressionModel.cpu
+       ~LinearRegressionModel.evaluate
+       ~LinearRegressionModel.explainParam
+       ~LinearRegressionModel.explainParams
+       ~LinearRegressionModel.extractParamMap
+       ~LinearRegressionModel.getElasticNetParam
+       ~LinearRegressionModel.getFeaturesCol
+       ~LinearRegressionModel.getFeaturesCols
+       ~LinearRegressionModel.getFitIntercept
+       ~LinearRegressionModel.getLabelCol
+       ~LinearRegressionModel.getLoss
+       ~LinearRegressionModel.getMaxIter
+       ~LinearRegressionModel.getOrDefault
+       ~LinearRegressionModel.getParam
+       ~LinearRegressionModel.getPredictionCol
+       ~LinearRegressionModel.getRegParam
+       ~LinearRegressionModel.getSolver
+       ~LinearRegressionModel.getStandardization
+       ~LinearRegressionModel.getTol
+       ~LinearRegressionModel.hasDefault
+       ~LinearRegressionModel.hasParam
+       ~LinearRegressionModel.isDefined
+       ~LinearRegressionModel.isSet
+       ~LinearRegressionModel.load
+       ~LinearRegressionModel.predict
+       ~LinearRegressionModel.read
+       ~LinearRegressionModel.save
+       ~LinearRegressionModel.set
+       ~LinearRegressionModel.setFeaturesCol
+       ~LinearRegressionModel.setFeaturesCols
+       ~LinearRegressionModel.setLabelCol
+       ~LinearRegressionModel.setPredictionCol
+       ~LinearRegressionModel.transform
+       ~LinearRegressionModel.write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes
+
+    .. autosummary::
+    
+       ~LinearRegressionModel.coefficients
+       ~LinearRegressionModel.cuml_params
+       ~LinearRegressionModel.elasticNetParam
+       ~LinearRegressionModel.featuresCol
+       ~LinearRegressionModel.featuresCols
+       ~LinearRegressionModel.fitIntercept
+       ~LinearRegressionModel.hasSummary
+       ~LinearRegressionModel.intercept
+       ~LinearRegressionModel.labelCol
+       ~LinearRegressionModel.loss
+       ~LinearRegressionModel.maxIter
+       ~LinearRegressionModel.numFeatures
+       ~LinearRegressionModel.num_workers
+       ~LinearRegressionModel.params
+       ~LinearRegressionModel.predictionCol
+       ~LinearRegressionModel.regParam
+       ~LinearRegressionModel.scale
+       ~LinearRegressionModel.solver
+       ~LinearRegressionModel.standardization
+       ~LinearRegressionModel.tol
+
+    
+    
+
+    
+    
+
+    .. rubric:: Methods Documentation
+
+    
+    .. automethod:: clear
+    .. automethod:: copy
+    .. automethod:: cpu
+    .. automethod:: evaluate
+    .. automethod:: explainParam
+    .. automethod:: explainParams
+    .. automethod:: extractParamMap
+    .. automethod:: getElasticNetParam
+    .. automethod:: getFeaturesCol
+    .. automethod:: getFeaturesCols
+    .. automethod:: getFitIntercept
+    .. automethod:: getLabelCol
+    .. automethod:: getLoss
+    .. automethod:: getMaxIter
+    .. automethod:: getOrDefault
+    .. automethod:: getParam
+    .. automethod:: getPredictionCol
+    .. automethod:: getRegParam
+    .. automethod:: getSolver
+    .. automethod:: getStandardization
+    .. automethod:: getTol
+    .. automethod:: hasDefault
+    .. automethod:: hasParam
+    .. automethod:: isDefined
+    .. automethod:: isSet
+    .. automethod:: load
+    .. automethod:: predict
+    .. automethod:: read
+    .. automethod:: save
+    .. automethod:: set
+    .. automethod:: setFeaturesCol
+    .. automethod:: setFeaturesCols
+    .. automethod:: setLabelCol
+    .. automethod:: setPredictionCol
+    .. automethod:: transform
+    .. automethod:: write
+
+    
+    
+
+    
+    
+
+    .. rubric:: Attributes Documentation
+
+    
+    .. autoattribute:: coefficients
+    .. autoattribute:: cuml_params
+    .. autoattribute:: elasticNetParam
+    .. autoattribute:: featuresCol
+    .. autoattribute:: featuresCols
+    .. autoattribute:: fitIntercept
+    .. autoattribute:: hasSummary
+    .. autoattribute:: intercept
+    .. autoattribute:: labelCol
+    .. autoattribute:: loss
+    .. autoattribute:: maxIter
+    .. autoattribute:: numFeatures
+    .. autoattribute:: num_workers
+    .. autoattribute:: params
+    .. autoattribute:: predictionCol
+    .. autoattribute:: regParam
+    .. autoattribute:: scale
+    .. autoattribute:: solver
+    .. autoattribute:: standardization
+    .. autoattribute:: tol
+
+    
+    
