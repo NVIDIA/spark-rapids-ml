@@ -53,7 +53,7 @@ from .core import (
     _TransformFunc,
     alias,
     param_alias,
-    transform_evaluate,
+    transform_evaluate_metric,
 )
 from .params import P, _CumlClass, _CumlParams
 from .utils import _concat_and_free, get_logger
@@ -568,7 +568,7 @@ class NearestNeighborsModel(
         )
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric: Optional[str] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         raise NotImplementedError(
             "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."

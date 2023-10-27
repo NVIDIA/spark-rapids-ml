@@ -36,21 +36,24 @@ class MulticlassMetrics:
         "recallByLabel",
         "fMeasureByLabel",
         "hammingLoss",
+        "logLoss",
     ]
 
     # This class is aligning with MulticlassMetrics scala version.
 
     def __init__(
         self,
-        tp: Dict[float, float],
-        fp: Dict[float, float],
-        label: Dict[float, float],
-        label_count: int,
+        tp: Dict[float, float] = {},
+        fp: Dict[float, float] = {},
+        label: Dict[float, float] = {},
+        label_count: int = 0,
+        log_loss: float = -1,
     ) -> None:
         self._tp_by_class = tp
         self._fp_by_class = fp
         self._label_count_by_class = label
         self._label_count = label_count
+        self._log_loss = log_loss
 
     def _precision(self, label: float) -> float:
         """Returns precision for a given label (category)"""
@@ -127,6 +130,10 @@ class MulticlassMetrics:
         denominator = self._label_count
         return numerator / denominator
 
+    def log_loss(self) -> float:
+        """Returns log loss"""
+        return self._log_loss / self._label_count
+
     def evaluate(self, evaluator: MulticlassClassificationEvaluator) -> float:
         metric_name = evaluator.getMetricName()
         if metric_name == "f1":
@@ -155,5 +162,7 @@ class MulticlassMetrics:
             return self._f_measure(evaluator.getMetricLabel(), evaluator.getBeta())
         elif metric_name == "hammingLoss":
             return self.hamming_loss()
+        elif metric_name == "logLoss":
+            return self.log_loss()
         else:
             raise ValueError(f"Unsupported metric name, found {metric_name}")

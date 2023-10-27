@@ -20,40 +20,62 @@ import pandas as pd
 import pytest
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
 
+from spark_rapids_ml.core import transform_evaluate_metric
 from spark_rapids_ml.metrics.MulticlassMetrics import MulticlassMetrics
 from spark_rapids_ml.metrics.RegressionMetrics import RegressionMetrics
 
 from .sparksession import CleanSparkSession
 
 
-def get_multi_class_metrics(pdf: pd.DataFrame, num_classes: int) -> MulticlassMetrics:
-    confusion = pdf.groupby(["label", "prediction"]).size().reset_index(name="total")
+def get_multi_class_metrics(
+    pdf: pd.DataFrame, num_classes: int, eval_metric: str
+) -> MulticlassMetrics:
+    if eval_metric == transform_evaluate_metric.accuracy_like:
+        confusion = (
+            pdf["label", "prediction"]
+            .groupby(["label", "prediction"])
+            .size()
+            .reset_index(name="total")
+        )
 
-    tp_by_class = {}
-    fp_by_class = {}
-    label_count_by_class = {}
-    label_count = 0
+        tp_by_class = {}
+        fp_by_class = {}
+        label_count_by_class = {}
+        label_count = 0
 
-    for i in range(num_classes):
-        tp_by_class[float(i)] = 0.0
-        label_count_by_class[float(i)] = 0.0
-        fp_by_class[float(i)] = 0.0
+        for i in range(num_classes):
+            tp_by_class[float(i)] = 0.0
+            label_count_by_class[float(i)] = 0.0
+            fp_by_class[float(i)] = 0.0
 
-    for index, row in confusion.iterrows():
-        label_count += row.total
-        label_count_by_class[row.label] += row.total
+        for index, row in confusion.iterrows():
+            label_count += row.total
+            label_count_by_class[row.label] += row.total
 
-        if row.label == row.prediction:
-            tp_by_class[row.label] += row.total
-        else:
-            fp_by_class[row.prediction] += row.total
+            if row.label == row.prediction:
+                tp_by_class[row.label] += row.total
+            else:
+                fp_by_class[row.prediction] += row.total
 
-    return MulticlassMetrics(
-        tp=tp_by_class,
-        fp=fp_by_class,
-        label=label_count_by_class,
-        label_count=label_count,
-    )
+        return MulticlassMetrics(
+            tp=tp_by_class,
+            fp=fp_by_class,
+            label=label_count_by_class,
+            label_count=label_count,
+        )
+    else:
+        from sklearn.metrics import log_loss
+
+        _log_loss = log_loss(
+            np.array(pdf["label"]), np.array(pdf["probability"]), normalize=False
+        )
+
+        label_count = len(pdf["label"])
+
+        return MulticlassMetrics(
+            label_count=label_count,
+            log_loss=_log_loss,
+        )
 
 
 @pytest.mark.parametrize("num_classes", [4])
@@ -71,7 +93,18 @@ def test_multi_class_metrics(
         np.random.randint(0, num_classes, size=(1000, 2)), columns=columns
     ).astype(np.float64)
 
-    metrics = get_multi_class_metrics(pdf, num_classes)
+    probabilities = np.random.rand(1000, num_classes)
+    probabilities[range(1000), list(pdf["label"].astype(np.integer))] = 2.0
+    probabilities = probabilities / np.sum(probabilities, axis=1).reshape(-1, 1)
+
+    pdf["probabilities"] = pd.Series(list(probabilities))
+
+    eval_metric = (
+        transform_evaluate_metric.log_loss
+        if metric_name == "logLoss"
+        else transform_evaluate_metric.accuracy_like
+    )
+    metrics = get_multi_class_metrics(pdf, num_classes, eval_metric)
 
     with CleanSparkSession() as spark:
         sdf = spark.createDataFrame(
@@ -80,6 +113,7 @@ def test_multi_class_metrics(
         evaluator = MulticlassClassificationEvaluator(
             predictionCol="prediction",
             labelCol="label",
+            probabilityCol="probabilities",
         )
 
         evaluator.setMetricName(metric_name)  # type: ignore
