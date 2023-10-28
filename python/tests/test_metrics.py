@@ -67,7 +67,9 @@ def get_multi_class_metrics(
         from sklearn.metrics import log_loss
 
         _log_loss = log_loss(
-            np.array(pdf["label"]), np.array(list(pdf["probabilities"])), normalize=False
+            np.array(pdf["label"]),
+            np.array(list(pdf["probabilities"])),
+            normalize=False,
         )
 
         label_count = len(pdf["label"])
@@ -107,9 +109,7 @@ def test_multi_class_metrics(
     metrics = get_multi_class_metrics(pdf, num_classes, eval_metric)
 
     with CleanSparkSession() as spark:
-        sdf = spark.createDataFrame(
-            pdf
-        )
+        sdf = spark.createDataFrame(pdf)
         evaluator = MulticlassClassificationEvaluator(
             predictionCol="prediction",
             labelCol="label",

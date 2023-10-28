@@ -476,7 +476,7 @@ class RandomForestClassificationModel(
 
                 _log_loss = log_loss(
                     np.array(input[alias.label]),
-                    np.array(transformed[pred.probability]),
+                    np.array(list(transformed[pred.probability])),
                     normalize=False,
                 )
 
@@ -564,7 +564,6 @@ class RandomForestClassificationModel(
                 {} for _ in range(num_models)
             ]
             label_count = [0 for _ in range(num_models)]
-            log_loss = [0.0 for _ in range(num_models)]
 
             for i in range(num_models):
                 for j in range(self._num_classes):
@@ -575,7 +574,6 @@ class RandomForestClassificationModel(
             for row in rows:
                 label_count[row.model_index] += row.total
                 label_count_by_class[row.model_index][row.label] += row.total
-                log_loss[row.model_index] += row.log_loss
 
                 if row.label == row.prediction:
                     tp_by_class[row.model_index][row.label] += row.total
@@ -589,7 +587,6 @@ class RandomForestClassificationModel(
                     fp=fp_by_class[i],
                     label=label_count_by_class[i],
                     label_count=label_count[i],
-                    log_loss=log_loss[i],
                 )
                 scores.append(metrics.evaluate(evaluator))
         else:

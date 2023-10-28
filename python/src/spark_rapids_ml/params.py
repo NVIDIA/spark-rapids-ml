@@ -355,7 +355,7 @@ class _CumlParams(_CumlClass, Params):
         """
         num_workers = 1
         try:
-            spark = SparkSession.getActiveSession()
+            spark = _get_spark_session()
             if spark:
                 sc = spark.sparkContext
                 if _is_local(sc):
