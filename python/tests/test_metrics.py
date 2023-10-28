@@ -32,7 +32,7 @@ def get_multi_class_metrics(
 ) -> MulticlassMetrics:
     if eval_metric == transform_evaluate_metric.accuracy_like:
         confusion = (
-            pdf["label", "prediction"]
+            pdf[["label", "prediction"]]
             .groupby(["label", "prediction"])
             .size()
             .reset_index(name="total")
@@ -67,7 +67,7 @@ def get_multi_class_metrics(
         from sklearn.metrics import log_loss
 
         _log_loss = log_loss(
-            np.array(pdf["label"]), np.array(pdf["probability"]), normalize=False
+            np.array(pdf["label"]), np.array(list(pdf["probabilities"])), normalize=False
         )
 
         label_count = len(pdf["label"])
@@ -97,7 +97,7 @@ def test_multi_class_metrics(
     probabilities[range(1000), list(pdf["label"].astype(np.integer))] = 2.0
     probabilities = probabilities / np.sum(probabilities, axis=1).reshape(-1, 1)
 
-    pdf["probabilities"] = pd.Series(list(probabilities))
+    pdf["probabilities"] = list(probabilities)
 
     eval_metric = (
         transform_evaluate_metric.log_loss
@@ -108,7 +108,7 @@ def test_multi_class_metrics(
 
     with CleanSparkSession() as spark:
         sdf = spark.createDataFrame(
-            pdf.to_numpy().tolist(), ", ".join([f"{n} double" for n in columns])
+            pdf
         )
         evaluator = MulticlassClassificationEvaluator(
             predictionCol="prediction",
