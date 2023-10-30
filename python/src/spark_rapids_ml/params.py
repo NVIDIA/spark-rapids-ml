@@ -27,6 +27,7 @@ from typing import (
     Union,
 )
 
+from pyspark import SparkContext
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
@@ -355,7 +356,7 @@ class _CumlParams(_CumlClass, Params):
         """
         num_workers = 1
         try:
-            spark = SparkSession.getActiveSession()
+            spark = _get_spark_session()
             if spark:
                 sc = spark.sparkContext
                 if _is_local(sc):
