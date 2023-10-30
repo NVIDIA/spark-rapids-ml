@@ -56,7 +56,7 @@ from pyspark.ml.classification import (
     _RandomForestClassifierParams,
 )
 from pyspark.ml.linalg import DenseMatrix, Matrix, Vector, Vectors
-from pyspark.ml.param.shared import HasProbabilityCol, HasRawPredictionCol
+from pyspark.ml.param.shared import HasLabelCol, HasProbabilityCol, HasRawPredictionCol
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
@@ -100,6 +100,188 @@ from .utils import (
 )
 
 T = TypeVar("T")
+
+
+class _ClassificationModelEvaluationMixIn:
+    # https://github.com/python/mypy/issues/5868#issuecomment-437690894 to bypass mypy checking
+    _this_model: Union["RandomForestClassificationModel", "LogisticRegressionModel"]
+
+    # def _get_num_models(self) -> int:
+    #     raise NotImplementedError()
+
+    # def getLabelCol(self) -> str:
+    #     raise NotImplementedError()
+
+    # def _transform_evaluate_internal(
+    #     self,
+    #     dataset: DataFrame,
+    #     schema: Union[StructType, str],
+    #     eval_metric_info: Optional[EvalMetricInfo] = None,
+    # ) -> DataFrame:
+    #     raise NotImplementedError()
+
+    # _num_classes = 0
+
+    def _get_evaluate_fn(self, eval_metric_info: EvalMetricInfo) -> _EvaluateFunc:
+        def _evaluate(
+            input: TransformInputType,
+            transformed: TransformInputType,
+        ) -> pd.DataFrame:
+            # calculate the count of (label, prediction)
+            # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
+
+            if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
+                comb = pd.DataFrame(
+                    {
+                        "label": input[alias.label],
+                        "prediction": transformed[pred.prediction],
+                    }
+                )
+                confusion = (
+                    comb.groupby(["label", "prediction"])
+                    .size()
+                    .reset_index(name="total")
+                )
+
+                return confusion
+            else:
+                # once data is maintained on gpu replace with cuml.metrics.log_loss
+                from spark_rapids_ml.metrics.MulticlassMetrics import log_loss
+
+                _log_loss = log_loss(
+                    np.array(input[alias.label]),
+                    np.array(list(transformed[pred.probability])),
+                    eval_metric_info.eps,
+                )
+
+                _log_loss_pdf = pd.DataFrame(
+                    {"total": [len(input[alias.label])], "log_loss": [_log_loss]}
+                )
+
+                return _log_loss_pdf
+
+        return _evaluate
+
+    def _transformEvaluate(
+        self,
+        dataset: DataFrame,
+        evaluator: Evaluator,
+        params: Optional["ParamMap"] = None,
+    ) -> List[float]:
+        """
+        Transforms and evaluates the input dataset with optional parameters in a single pass.
+
+        Parameters
+        ----------
+        dataset : :py:class:`pyspark.sql.DataFrame`
+            a dataset that contains labels/observations and predictions
+        evaluator: :py:class:`pyspark.ml.evaluation.Evaluator`
+            an evaluator user intends to use
+        params : dict, optional
+            an optional param map that overrides embedded params
+
+        Returns
+        -------
+        list of float
+            metrics
+        """
+
+        if not isinstance(evaluator, MulticlassClassificationEvaluator):
+            raise NotImplementedError(f"{evaluator} is unsupported yet.")
+
+        if (
+            evaluator.getMetricName()
+            not in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
+        ):
+            raise NotImplementedError(
+                f"{evaluator.getMetricName()} is not supported yet."
+            )
+
+        if self._this_model.getLabelCol() not in dataset.schema.names:
+            raise RuntimeError("Label column is not existing.")
+
+        dataset = dataset.withColumnRenamed(self._this_model.getLabelCol(), alias.label)
+
+        if evaluator.getMetricName() == "logLoss":
+            schema = StructType(
+                [
+                    StructField(pred.model_index, IntegerType()),
+                    StructField("total", FloatType()),
+                    StructField("log_loss", FloatType()),
+                ]
+            )
+
+            eval_metric_info = EvalMetricInfo(
+                eval_metric=transform_evaluate_metric.log_loss, eps=evaluator.getEps()
+            )
+        else:
+            schema = StructType(
+                [
+                    StructField(pred.model_index, IntegerType()),
+                    StructField("label", FloatType()),
+                    StructField("prediction", FloatType()),
+                    StructField("total", FloatType()),
+                ]
+            )
+            eval_metric_info = EvalMetricInfo(
+                eval_metric=transform_evaluate_metric.accuracy_like
+            )
+        # TBD: use toPandas and pandas df operations below
+        rows = self._this_model._transform_evaluate_internal(
+            dataset, schema, eval_metric_info
+        ).collect()
+
+        num_models = self._this_model._get_num_models()
+
+        if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
+            tp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
+            fp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
+            label_count_by_class: List[Dict[float, float]] = [
+                {} for _ in range(num_models)
+            ]
+            label_count = [0 for _ in range(num_models)]
+
+            for i in range(num_models):
+                for j in range(self._this_model._num_classes):
+                    tp_by_class[i][float(j)] = 0.0
+                    label_count_by_class[i][float(j)] = 0.0
+                    fp_by_class[i][float(j)] = 0.0
+
+            for row in rows:
+                label_count[row.model_index] += row.total
+                label_count_by_class[row.model_index][row.label] += row.total
+
+                if row.label == row.prediction:
+                    tp_by_class[row.model_index][row.label] += row.total
+                else:
+                    fp_by_class[row.model_index][row.prediction] += row.total
+
+            scores = []
+            for i in range(num_models):
+                metrics = MulticlassMetrics(
+                    tp=tp_by_class[i],
+                    fp=fp_by_class[i],
+                    label=label_count_by_class[i],
+                    label_count=label_count[i],
+                )
+                scores.append(metrics.evaluate(evaluator))
+        else:
+            # logLoss metric
+            label_count = [0 for _ in range(num_models)]
+            log_loss = [0.0 for _ in range(num_models)]
+            for row in rows:
+                label_count[row.model_index] += row.total
+                log_loss[row.model_index] += row.log_loss
+
+            scores = []
+            for i in range(num_models):
+                metrics = MulticlassMetrics(
+                    label_count=label_count[i],
+                    log_loss=log_loss[i],
+                )
+                scores.append(metrics.evaluate(evaluator))
+
+        return scores
 
 
 class _RFClassifierParams(
@@ -339,6 +521,7 @@ class RandomForestClassifier(
 
 
 class RandomForestClassificationModel(
+    _ClassificationModelEvaluationMixIn,
     _RandomForestClassifierClass,
     _RandomForestModel,
     _RandomForestCumlParams,
@@ -366,6 +549,7 @@ class RandomForestClassificationModel(
         self._num_classes = num_classes
         self._model_json = model_json
         self._rf_spark_model: Optional[SparkRandomForestClassificationModel] = None
+        self._this_model = self
 
     def cpu(self) -> SparkRandomForestClassificationModel:
         """Return the PySpark ML RandomForestClassificationModel"""
@@ -386,6 +570,11 @@ class RandomForestClassificationModel(
             self._rf_spark_model = SparkRandomForestClassificationModel(java_rf_model)
             self._copyValues(self._rf_spark_model)
         return self._rf_spark_model
+
+    def _get_num_models(self) -> int:
+        return (
+            len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
+        )
 
     def _is_classification(self) -> bool:
         return True
@@ -452,175 +641,11 @@ class RandomForestClassificationModel(
 
             return pd.DataFrame(data)
 
-        _evaluate = None
-        if eval_metric_info:
-
-            def _evaluate(
-                input: TransformInputType,
-                transformed: TransformInputType,
-            ) -> pd.DataFrame:
-                # calculate the count of (label, prediction)
-                # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
-
-                if (
-                    eval_metric_info.eval_metric
-                    == transform_evaluate_metric.accuracy_like
-                ):
-                    comb = pd.DataFrame(
-                        {
-                            "label": input[alias.label],
-                            "prediction": transformed[pred.prediction],
-                        }
-                    )
-                    confusion = (
-                        comb.groupby(["label", "prediction"])
-                        .size()
-                        .reset_index(name="total")
-                    )
-
-                    return confusion
-                else:
-                    # once data is maintained on gpu replace with cuml.metrics.log_loss
-                    from spark_rapids_ml.metrics.MulticlassMetrics import log_loss
-
-                    _log_loss = log_loss(
-                        np.array(input[alias.label]),
-                        np.array(list(transformed[pred.probability])),
-                        eval_metric_info.eps,
-                    )
-
-                    _log_loss_pdf = pd.DataFrame(
-                        {"total": [len(input[alias.label])], "log_loss": [_log_loss]}
-                    )
-
-                    return _log_loss_pdf
+        _evaluate = (
+            self._get_evaluate_fn(eval_metric_info) if eval_metric_info else None
+        )
 
         return _construct_rf, _predict, _evaluate
-
-    def _transformEvaluate(
-        self,
-        dataset: DataFrame,
-        evaluator: Evaluator,
-        params: Optional["ParamMap"] = None,
-    ) -> List[float]:
-        """
-        Transforms and evaluates the input dataset with optional parameters in a single pass.
-
-        Parameters
-        ----------
-        dataset : :py:class:`pyspark.sql.DataFrame`
-            a dataset that contains labels/observations and predictions
-        evaluator: :py:class:`pyspark.ml.evaluation.Evaluator`
-            an evaluator user intends to use
-        params : dict, optional
-            an optional param map that overrides embedded params
-
-        Returns
-        -------
-        list of float
-            metrics
-        """
-
-        if not isinstance(evaluator, MulticlassClassificationEvaluator):
-            raise NotImplementedError(f"{evaluator} is unsupported yet.")
-
-        if (
-            evaluator.getMetricName()
-            not in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
-        ):
-            raise NotImplementedError(
-                f"{evaluator.getMetricName()} is not supported yet."
-            )
-
-        if self.getLabelCol() not in dataset.schema.names:
-            raise RuntimeError("Label column is not existing.")
-
-        dataset = dataset.withColumnRenamed(self.getLabelCol(), alias.label)
-
-        if evaluator.getMetricName() == "logLoss":
-            schema = StructType(
-                [
-                    StructField(pred.model_index, IntegerType()),
-                    StructField("total", FloatType()),
-                    StructField("log_loss", FloatType()),
-                ]
-            )
-
-            eval_metric_info = EvalMetricInfo(
-                eval_metric=transform_evaluate_metric.log_loss, eps=evaluator.getEps()
-            )
-        else:
-            schema = StructType(
-                [
-                    StructField(pred.model_index, IntegerType()),
-                    StructField("label", FloatType()),
-                    StructField("prediction", FloatType()),
-                    StructField("total", FloatType()),
-                ]
-            )
-            eval_metric_info = EvalMetricInfo(
-                eval_metric=transform_evaluate_metric.accuracy_like
-            )
-        # TBD: use toPandas and pandas df operations below
-        rows = (
-            super()
-            ._transform_evaluate_internal(dataset, schema, eval_metric_info)
-            .collect()
-        )
-
-        num_models = (
-            len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
-        )
-
-        if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
-            tp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-            fp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-            label_count_by_class: List[Dict[float, float]] = [
-                {} for _ in range(num_models)
-            ]
-            label_count = [0 for _ in range(num_models)]
-
-            for i in range(num_models):
-                for j in range(self._num_classes):
-                    tp_by_class[i][float(j)] = 0.0
-                    label_count_by_class[i][float(j)] = 0.0
-                    fp_by_class[i][float(j)] = 0.0
-
-            for row in rows:
-                label_count[row.model_index] += row.total
-                label_count_by_class[row.model_index][row.label] += row.total
-
-                if row.label == row.prediction:
-                    tp_by_class[row.model_index][row.label] += row.total
-                else:
-                    fp_by_class[row.model_index][row.prediction] += row.total
-
-            scores = []
-            for i in range(num_models):
-                metrics = MulticlassMetrics(
-                    tp=tp_by_class[i],
-                    fp=fp_by_class[i],
-                    label=label_count_by_class[i],
-                    label_count=label_count[i],
-                )
-                scores.append(metrics.evaluate(evaluator))
-        else:
-            # logLoss metric
-            label_count = [0 for _ in range(num_models)]
-            log_loss = [0.0 for _ in range(num_models)]
-            for row in rows:
-                label_count[row.model_index] += row.total
-                log_loss[row.model_index] += row.log_loss
-
-            scores = []
-            for i in range(num_models):
-                metrics = MulticlassMetrics(
-                    label_count=label_count[i],
-                    log_loss=log_loss[i],
-                )
-                scores.append(metrics.evaluate(evaluator))
-
-        return scores
 
 
 class LogisticRegressionClass(_CumlClass):
@@ -1052,9 +1077,20 @@ class LogisticRegression(
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True
 
+    def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
+        if (
+            isinstance(evaluator, MulticlassClassificationEvaluator)
+            and evaluator.getMetricName()
+            in MulticlassMetrics.SUPPORTED_MULTI_CLASS_METRIC_NAMES
+        ):
+            return True
+
+        return False
+
 
 class LogisticRegressionModel(
     LogisticRegressionClass,
+    _ClassificationModelEvaluationMixIn,
     _CumlModelWithPredictionCol,
     _LogisticRegressionCumlParams,
 ):
@@ -1062,8 +1098,8 @@ class LogisticRegressionModel(
 
     def __init__(
         self,
-        coef_: List[List[float]],
-        intercept_: List[float],
+        coef_: Union[List[List[float]], List[List[List[float]]]],
+        intercept_: Union[List[float], List[List[float]]],
         classes_: List[float],
         n_cols: int,
         dtype: str,
@@ -1081,8 +1117,9 @@ class LogisticRegressionModel(
         self.intercept_ = intercept_
         self.classes_ = classes_
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
-        self.num_classes = len(self.classes_)
+        self._num_classes = len(self.classes_)
         self.num_iters = num_iters
+        self._this_model = self
 
     def cpu(self) -> SparkLogisticRegressionModel:
         """Return the PySpark ML LogisticRegressionModel"""
@@ -1099,7 +1136,7 @@ class LogisticRegressionModel(
                     java_uid(sc, "logreg"),
                     _py2java(sc, self.coefficientMatrix),
                     _py2java(sc, self.interceptVector),
-                    self.num_classes,
+                    self._num_classes,
                     is_multinomial,
                 )
             )
@@ -1108,29 +1145,38 @@ class LogisticRegressionModel(
 
         return self._lr_spark_model
 
+    def _get_num_models(self) -> int:
+        return 1 if isinstance(self.intercept_[0], float) else len(self.intercept_)
+
     @property
     def coefficients(self) -> Vector:
         """
         Model coefficients.
         """
-        if len(self.coef_) == 1:
-            return Vectors.dense(cast(list, self.coef_[0]))
+        if isinstance(self.coef_[0][0], float):
+            if len(self.coef_) == 1:
+                return Vectors.dense(cast(list, self.coef_[0]))
+            else:
+                raise Exception(
+                    "Multinomial models contain a matrix of coefficients, use coefficientMatrix instead."
+                )
         else:
-            raise Exception(
-                "Multinomial models contain a matrix of coefficients, use coefficientMatrix instead."
-            )
+            raise Exception("coefficients not defined for multi-model instance")
 
     @property
     def intercept(self) -> float:
         """
         Model intercept.
         """
-        if len(self.intercept_) == 1:
-            return self.intercept_[0]
+        if isinstance(self.intercept_[0], float):
+            if len(self.intercept_) == 1:
+                return self.intercept_[0]
+            else:
+                raise Exception(
+                    "Multinomial models contain a vector of intercepts, use interceptVector instead."
+                )
         else:
-            raise Exception(
-                "Multinomial models contain a vector of intercepts, use interceptVector instead."
-            )
+            raise Exception("intercept not defined for multi-model instance")
 
     @property
     def coefficientMatrix(self) -> Matrix:
@@ -1141,32 +1187,39 @@ class LogisticRegressionModel(
         Spark Rapids ML always returns a dense vector.
         """
 
-        n_rows = len(self.coef_)
-        n_cols = len(self.coef_[0])
-        flat_coef = [c for row in self.coef_ for c in row]
-        return DenseMatrix(
-            numRows=n_rows, numCols=n_cols, values=flat_coef, isTransposed=True
-        )
+        if isinstance(self.coef_[0][0], float):
+            n_rows = len(self.coef_)
+            n_cols = len(self.coef_[0])
+            flat_coef = [cast(float, c) for row in self.coef_ for c in row]
+            return DenseMatrix(
+                numRows=n_rows, numCols=n_cols, values=flat_coef, isTransposed=True
+            )
+        else:
+            raise Exception("coefficientMatrix not defined for multi-model instance")
 
     @property
     def interceptVector(self) -> Vector:
         """
         Model intercept.
         """
-        nnz = np.count_nonzero(self.intercept_)
 
-        # spark returns interceptVec.compressed
-        # According spark doc, a dense vector needs 8 * size + 8 bytes, while a sparse vector needs 12 * nnz + 20 bytes.
-        if 1.5 * (nnz + 1.0) < len(self.intercept_):
-            size = len(self.intercept_)
-            data_m = {p[0]: p[1] for p in enumerate(self.intercept_)}
-            return Vectors.sparse(size, data_m)
+        if isinstance(self.intercept_[0], float):
+            nnz = np.count_nonzero(self.intercept_)
+
+            # spark returns interceptVec.compressed
+            # According spark doc, a dense vector needs 8 * size + 8 bytes, while a sparse vector needs 12 * nnz + 20 bytes.
+            if 1.5 * (nnz + 1.0) < len(self.intercept_):
+                size = len(self.intercept_)
+                data_m = {p[0]: cast(float, p[1]) for p in enumerate(self.intercept_)}
+                return Vectors.sparse(size, data_m)
+            else:
+                return Vectors.dense(cast(list, self.intercept_))
         else:
-            return Vectors.dense(cast(list, self.intercept_))
+            raise Exception("interceptVector not defined for multi-model instance")
 
     @property
     def numClasses(self) -> int:
-        return self.num_classes
+        return self._num_classes
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
@@ -1177,43 +1230,84 @@ class LogisticRegressionModel(
         n_cols = self.n_cols
         dtype = self.dtype
 
+        num_models = self._get_num_models()
+
         def _construct_lr() -> CumlT:
             import cupy as cp
             import numpy as np
             from cuml.internals.input_utils import input_to_cuml_array
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
-            lr = LogisticRegressionMG(output_type="numpy")
-            lr.n_cols = n_cols
-            lr.dtype = np.dtype(dtype)
+            _intercepts, _coefs = (
+                (intercept_, coef_) if num_models > 1 else ([intercept_], [coef_])
+            )
+            lrs = []
 
-            gpu_intercept_ = cp.array(intercept_, order="C", dtype=dtype)
-            gpu_coef_ = cp.array(coef_, order="F", dtype=dtype).T
-            gpu_stacked = cp.vstack([gpu_coef_, gpu_intercept_])
-            lr.solver_model._coef_ = input_to_cuml_array(gpu_stacked, order="C").array
+            for i in range(num_models):
+                lr = LogisticRegressionMG(output_type="numpy")
+                lr.n_cols = n_cols
+                lr.dtype = np.dtype(dtype)
 
-            lr.classes_ = input_to_cuml_array(
-                np.array(classes_, order="F").astype(dtype)
-            ).array
-            lr._num_classes = len(lr.classes_)
+                gpu_intercept_ = cp.array(_intercepts[i], order="C", dtype=dtype)
 
-            lr.loss = "sigmoid" if lr._num_classes <= 2 else "softmax"
-            lr.solver_model.qnparams = lr.create_qnparams()
+                gpu_coef_ = cp.array(_coefs[i], order="F", dtype=dtype).T
+                gpu_stacked = cp.vstack([gpu_coef_, gpu_intercept_])
+                lr.solver_model._coef_ = input_to_cuml_array(
+                    gpu_stacked, order="C"
+                ).array
 
-            return lr
+                lr.classes_ = input_to_cuml_array(
+                    np.array(classes_, order="F").astype(dtype)
+                ).array
+                lr._num_classes = len(lr.classes_)
+
+                lr.loss = "sigmoid" if lr._num_classes <= 2 else "softmax"
+                lr.solver_model.qnparams = lr.create_qnparams()
+                lrs.append(lr)
+
+            return lrs
+
+        _evaluate = (
+            self._get_evaluate_fn(eval_metric_info) if eval_metric_info else None
+        )
 
         def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
             data = {}
             data[pred.prediction] = lr.predict(pdf)
             probs = lr.predict_proba(pdf)
-            if isinstance(probs, pd.DataFrame):
-                data[pred.probability] = pd.Series(probs.values.tolist())
-            else:
-                # should be np.ndarray
-                data[pred.probability] = pd.Series(list(probs))
+            # non log-loss metric doesn't need probs.
+            if (
+                not eval_metric_info
+                or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
+            ):
+                probs = lr.predict_proba(pdf)
+                if isinstance(probs, pd.DataFrame):
+                    # For 2302, when input is multi-cols, the output will be DataFrame
+                    data[pred.probability] = pd.Series(probs.values.tolist())
+                else:
+                    # should be np.ndarray
+                    data[pred.probability] = pd.Series(list(probs))
+
             return pd.DataFrame(data)
 
-        return _construct_lr, _predict, None
+        return _construct_lr, _predict, _evaluate
+
+    @classmethod
+    def _combine(
+        cls: Type["LogisticRegressionModel"], models: List["LogisticRegressionModel"]  # type: ignore
+    ) -> "LogisticRegressionModel":
+        assert len(models) > 0 and all(isinstance(model, cls) for model in models)
+        first_model = models[0]
+        intercepts = [model.intercept_ for model in models]
+        coefs = [model.coef_ for model in models]
+        attrs = first_model._get_model_attributes()
+        assert attrs is not None
+        attrs["coef_"] = coefs
+        attrs["intercept_"] = intercepts
+        lr_model = cls(**attrs)
+        first_model._copyValues(lr_model)
+        first_model._copy_cuml_params(lr_model)
+        return lr_model
 
     @property
     def hasSummary(self) -> bool:
