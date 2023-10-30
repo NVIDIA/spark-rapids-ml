@@ -561,6 +561,95 @@ def test_compat(
         assert blor_model.numFeatures == 2
 
 
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat_standardization(
+    fit_intercept: bool,
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+) -> None:
+
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+
+    X = np.array(
+        [
+            [1.0, 3000.0],
+            [1.0, 4000.0],
+            [2.0, 1000.0],
+            [2.0, 2000.0],
+        ]
+    )
+    y = np.array(
+        [
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+        ]
+    )
+    num_rows = len(X)
+
+    weight = np.ones([num_rows])
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        bdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        bdf = bdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        blor = _LogisticRegression(
+            regParam=0.1, fitIntercept=fit_intercept, standardization=True
+        )
+
+        if isinstance(blor, SparkLogisticRegression):
+            blor.setWeightCol("weight")
+
+        blor_model = blor.fit(bdf)
+
+        blor_model.setFeaturesCol("features")
+        blor_model.setProbabilityCol("newProbability")
+        blor_model.setRawPredictionCol("newRawPrediction")
+
+        array_equal(
+            blor_model.coefficients.toArray(), [-2.42377087, 2.42377087], tolerance
+        )
+        assert array_equal(
+            blor_model.coefficientMatrix.toArray(),
+            np.array([[-2.42377087, 2.42377087]]),
+            tolerance,
+        )
+        assert array_equal(blor_model.interceptVector.toArray(), [0.0])
+
+        output_df = blor_model.transform(bdf)
+
+        if isinstance(blor_model, SparkLogisticRegressionModel):
+            assert array_equal(
+                output.newRawPrediction.toArray(),
+                Vectors.dense([-2.4238, 2.4238]).toArray(),
+                tolerance,
+            )
+        else:
+            warnings.warn(
+                "transform of spark rapids ml currently does not support rawPredictionCol"
+            )
+
+
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
