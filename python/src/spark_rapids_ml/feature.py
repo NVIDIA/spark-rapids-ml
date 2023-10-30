@@ -44,8 +44,8 @@ from .core import (
     _EvaluateFunc,
     _TransformFunc,
     param_alias,
-    transform_evaluate_metric,
 )
+from .metrics import EvalMetricInfo
 from .params import P, _CumlClass, _CumlParams
 from .utils import (
     PartitionDescriptor,
@@ -343,7 +343,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         return self._pca_ml_model
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, eval_metric: Optional[str] = None
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 

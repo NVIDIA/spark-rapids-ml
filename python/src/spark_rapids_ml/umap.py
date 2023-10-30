@@ -70,8 +70,8 @@ from .core import (
     _TransformFunc,
     alias,
     param_alias,
-    transform_evaluate_metric,
 )
+from .metrics import EvalMetricInfo
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
     _ArrayOrder,
@@ -1111,7 +1111,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         return res
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, eval_metric: Optional[str] = None
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params
         driver_embedding = self.embedding_

@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
 
-from spark_rapids_ml.core import transform_evaluate_metric
+from spark_rapids_ml.metrics import EvalMetricInfo, transform_evaluate_metric
 from spark_rapids_ml.metrics.MulticlassMetrics import MulticlassMetrics
 from spark_rapids_ml.metrics.RegressionMetrics import RegressionMetrics
 
@@ -28,9 +28,9 @@ from .sparksession import CleanSparkSession
 
 
 def get_multi_class_metrics(
-    pdf: pd.DataFrame, num_classes: int, eval_metric: str
+    pdf: pd.DataFrame, num_classes: int, eval_metric_info: EvalMetricInfo
 ) -> MulticlassMetrics:
-    if eval_metric == transform_evaluate_metric.accuracy_like:
+    if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
         confusion = (
             pdf[["label", "prediction"]]
             .groupby(["label", "prediction"])
@@ -64,12 +64,12 @@ def get_multi_class_metrics(
             label_count=label_count,
         )
     else:
-        from sklearn.metrics import log_loss
+        from spark_rapids_ml.metrics.MulticlassMetrics import log_loss
 
         _log_loss = log_loss(
             np.array(pdf["label"]),
             np.array(list(pdf["probabilities"])),
-            normalize=False,
+            eps=1.0e-15,
         )
 
         label_count = len(pdf["label"])
@@ -106,7 +106,9 @@ def test_multi_class_metrics(
         if metric_name == "logLoss"
         else transform_evaluate_metric.accuracy_like
     )
-    metrics = get_multi_class_metrics(pdf, num_classes, eval_metric)
+    metrics = get_multi_class_metrics(
+        pdf, num_classes, EvalMetricInfo(eval_metric=eval_metric)
+    )
 
     with CleanSparkSession() as spark:
         sdf = spark.createDataFrame(pdf)

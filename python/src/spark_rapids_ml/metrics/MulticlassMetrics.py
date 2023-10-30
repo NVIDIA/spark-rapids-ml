@@ -16,7 +16,19 @@
 
 from typing import Dict
 
+import numpy as np
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+
+
+# sklearn's version will not support fixed eps starting v1.5
+def log_loss(labels: np.ndarray, probs: np.ndarray, eps: float) -> float:
+    if np.any(labels < 0) or np.any(labels > probs.shape[1] - 1):
+        raise ValueError(f"labels must be in the range [0,{probs.shape[1]-1}]")
+    if np.any(probs < 0) or np.any(probs > 1.0):
+        raise ValueError("probs must be in the range [0.0, 1.0]")
+    probs_for_labels = probs[np.arange(probs.shape[0]), labels.astype(np.int32)]
+    probs_for_labels = np.maximum(probs_for_labels, eps)
+    return sum(-np.log(probs_for_labels))
 
 
 class MulticlassMetrics:

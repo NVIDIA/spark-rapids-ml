@@ -51,8 +51,8 @@ from .core import (
     _EvaluateFunc,
     _TransformFunc,
     param_alias,
-    transform_evaluate_metric,
 )
+from .metrics import EvalMetricInfo
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
     _concat_and_free,
@@ -552,7 +552,7 @@ class _RandomForestModel(
         return uid, java_trees
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, eval_metric: Optional[str] = None
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         treelite_model = self._treelite_model
         is_classification = self._is_classification()

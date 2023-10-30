@@ -30,6 +30,7 @@ from typing import (
 from pyspark.ml.common import _py2java
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
+from .metrics import EvalMetricInfo, transform_evaluate_metric
 from .metrics.MulticlassMetrics import MulticlassMetrics
 
 if TYPE_CHECKING:
@@ -81,7 +82,6 @@ from .core import (
     alias,
     param_alias,
     pred,
-    transform_evaluate_metric,
 )
 from .params import HasFeaturesCols, _CumlClass, _CumlParams
 from .tree import (
@@ -428,7 +428,7 @@ class RandomForestClassificationModel(
         return self.cpu().evaluate(dataset)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, eval_metric: Optional[str] = None
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         _construct_rf, _, _ = super()._get_cuml_transform_func(dataset)
 
@@ -438,7 +438,10 @@ class RandomForestClassificationModel(
             data[pred.prediction] = rf.predict(pdf)
 
             # non log-loss metric doesn't need probs.
-            if not eval_metric or eval_metric == transform_evaluate_metric.log_loss:
+            if (
+                not eval_metric_info
+                or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
+            ):
                 probs = rf.predict_proba(pdf)
                 if isinstance(probs, pd.DataFrame):
                     # For 2302, when input is multi-cols, the output will be DataFrame
@@ -449,42 +452,48 @@ class RandomForestClassificationModel(
 
             return pd.DataFrame(data)
 
-        def _evaluate(
-            input: TransformInputType,
-            transformed: TransformInputType,
-        ) -> pd.DataFrame:
-            # calculate the count of (label, prediction)
-            # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
+        _evaluate = None
+        if eval_metric_info:
 
-            if eval_metric == transform_evaluate_metric.accuracy_like:
-                comb = pd.DataFrame(
-                    {
-                        "label": input[alias.label],
-                        "prediction": transformed[pred.prediction],
-                    }
-                )
-                confusion = (
-                    comb.groupby(["label", "prediction"])
-                    .size()
-                    .reset_index(name="total")
-                )
+            def _evaluate(
+                input: TransformInputType,
+                transformed: TransformInputType,
+            ) -> pd.DataFrame:
+                # calculate the count of (label, prediction)
+                # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
 
-                return confusion
-            else:
-                # once data is maintained on gpu replace with cuml.metrics.log_loss
-                from sklearn.metrics import log_loss
+                if (
+                    eval_metric_info.eval_metric
+                    == transform_evaluate_metric.accuracy_like
+                ):
+                    comb = pd.DataFrame(
+                        {
+                            "label": input[alias.label],
+                            "prediction": transformed[pred.prediction],
+                        }
+                    )
+                    confusion = (
+                        comb.groupby(["label", "prediction"])
+                        .size()
+                        .reset_index(name="total")
+                    )
 
-                _log_loss = log_loss(
-                    np.array(input[alias.label]),
-                    np.array(list(transformed[pred.probability])),
-                    normalize=False,
-                )
+                    return confusion
+                else:
+                    # once data is maintained on gpu replace with cuml.metrics.log_loss
+                    from spark_rapids_ml.metrics.MulticlassMetrics import log_loss
 
-                _log_loss_pdf = pd.DataFrame(
-                    {"total": [len(input[alias.label])], "log_loss": [_log_loss]}
-                )
+                    _log_loss = log_loss(
+                        np.array(input[alias.label]),
+                        np.array(list(transformed[pred.probability])),
+                        eval_metric_info.eps,
+                    )
 
-                return _log_loss_pdf
+                    _log_loss_pdf = pd.DataFrame(
+                        {"total": [len(input[alias.label])], "log_loss": [_log_loss]}
+                    )
+
+                    return _log_loss_pdf
 
         return _construct_rf, _predict, _evaluate
 
@@ -537,7 +546,9 @@ class RandomForestClassificationModel(
                 ]
             )
 
-            eval_metric = transform_evaluate_metric.log_loss
+            eval_metric_info = EvalMetricInfo(
+                eval_metric=transform_evaluate_metric.log_loss, eps=evaluator.getEps()
+            )
         else:
             schema = StructType(
                 [
@@ -547,17 +558,21 @@ class RandomForestClassificationModel(
                     StructField("total", FloatType()),
                 ]
             )
-            eval_metric = transform_evaluate_metric.accuracy_like
+            eval_metric_info = EvalMetricInfo(
+                eval_metric=transform_evaluate_metric.accuracy_like
+            )
         # TBD: use toPandas and pandas df operations below
         rows = (
-            super()._transform_evaluate_internal(dataset, schema, eval_metric).collect()
+            super()
+            ._transform_evaluate_internal(dataset, schema, eval_metric_info)
+            .collect()
         )
 
         num_models = (
             len(self._treelite_model) if isinstance(self._treelite_model, list) else 1
         )
 
-        if eval_metric == transform_evaluate_metric.accuracy_like:
+        if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
             tp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
             fp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
             label_count_by_class: List[Dict[float, float]] = [
@@ -1154,7 +1169,7 @@ class LogisticRegressionModel(
         return self.num_classes
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, eval_metric: Optional[str] = None
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         coef_ = self.coef_
         intercept_ = self.intercept_

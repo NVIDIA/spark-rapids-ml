@@ -68,6 +68,7 @@ from pyspark.sql.types import (
 )
 
 from .common.cuml_context import CumlContext
+from .metrics import EvalMetricInfo
 from .params import _CumlParams
 from .utils import (
     _ArrayOrder,
@@ -129,14 +130,6 @@ param_alias = ParamAlias(
 )
 
 CumlModel = TypeVar("CumlModel", bound="_CumlModel")
-
-# Global parameter used by core and subclasses.
-TransformEvaluateMetric = namedtuple(
-    "TransformEvaluateMetric", ("accuracy_like", "log_loss", "regression")
-)
-transform_evaluate_metric = TransformEvaluateMetric(
-    "accuracy_like", "log_loss", "regression"
-)
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -929,8 +922,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
     def _get_cuml_transform_func(
         self,
         dataset: DataFrame,
-        eval_metric: Optional[str] = None,
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+        eval_metric_info: Optional[EvalMetricInfo] = None,
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc]]:
         """
         Subclass must implement this function to return three functions,
         1. a function to construct cuml counterpart instance
@@ -949,7 +942,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 ...
             ...
 
-            # please note that if eval_metric is None, the evaluate function will be None.
+            # please note that if eval_metric_info is None, the evaluate function will be None.
             return _construct_cuml_object, _cuml_transform, _evaluate
 
         _get_cuml_transform_func itself runs on the driver side, while the returned
@@ -1058,7 +1051,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         self,
         dataset: DataFrame,
         schema: Union[StructType, str],
-        eval_metric: Optional[str] = None,
+        eval_metric_info: Optional[EvalMetricInfo] = None,
     ) -> DataFrame:
         """Internal API to support transform and evaluation in a single pass"""
         dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
@@ -1070,7 +1063,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             construct_cuml_object_func,
             cuml_transform_func,
             evaluate_func,
-        ) = self._get_cuml_transform_func(dataset, eval_metric)
+        ) = self._get_cuml_transform_func(dataset, eval_metric_info)
         if evaluate_func:
             dataset = dataset.select(alias.label, *select_cols)
         else:
