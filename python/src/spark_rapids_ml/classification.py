@@ -106,22 +106,6 @@ class _ClassificationModelEvaluationMixIn:
     # https://github.com/python/mypy/issues/5868#issuecomment-437690894 to bypass mypy checking
     _this_model: Union["RandomForestClassificationModel", "LogisticRegressionModel"]
 
-    # def _get_num_models(self) -> int:
-    #     raise NotImplementedError()
-
-    # def getLabelCol(self) -> str:
-    #     raise NotImplementedError()
-
-    # def _transform_evaluate_internal(
-    #     self,
-    #     dataset: DataFrame,
-    #     schema: Union[StructType, str],
-    #     eval_metric_info: Optional[EvalMetricInfo] = None,
-    # ) -> DataFrame:
-    #     raise NotImplementedError()
-
-    # _num_classes = 0
-
     def _get_evaluate_fn(self, eval_metric_info: EvalMetricInfo) -> _EvaluateFunc:
         def _evaluate(
             input: TransformInputType,
