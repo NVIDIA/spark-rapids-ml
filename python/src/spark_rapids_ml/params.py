@@ -27,6 +27,7 @@ from typing import (
     Union,
 )
 
+from pyspark import SparkContext
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 
