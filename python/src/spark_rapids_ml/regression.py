@@ -62,8 +62,8 @@ from .core import (
     alias,
     param_alias,
     pred,
-    transform_evaluate,
 )
+from .metrics import EvalMetricInfo, transform_evaluate_metric
 from .metrics.RegressionMetrics import RegressionMetrics, reg_metrics
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .tree import (
@@ -129,7 +129,11 @@ class _RegressionModelEvaluationMixIn:
             ]
         )
 
-        rows = self._this_model._transform_evaluate_internal(dataset, schema).collect()
+        rows = self._this_model._transform_evaluate_internal(
+            dataset,
+            schema,
+            EvalMetricInfo(eval_metric=transform_evaluate_metric.regression),
+        ).collect()
 
         metrics = RegressionMetrics._from_rows(num_models, rows)
         return [metric.evaluate(evaluator) for metric in metrics]
@@ -698,7 +702,7 @@ class LinearRegressionModel(
         return self.cpu().evaluate(dataset)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         coef_ = self.coef_
         intercept_ = self.intercept_
@@ -1006,9 +1010,11 @@ class RandomForestRegressionModel(
         return False
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
-        _construct_rf, _predict, _ = super()._get_cuml_transform_func(dataset, category)
+        _construct_rf, _predict, _ = super()._get_cuml_transform_func(
+            dataset, eval_metric_info
+        )
         return _construct_rf, _predict, self._calculate_regression_metrics
 
     def _transformEvaluate(
