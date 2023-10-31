@@ -16,7 +16,19 @@
 
 from typing import Dict
 
+import numpy as np
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+
+
+# sklearn's version will not support fixed eps starting v1.5
+def log_loss(labels: np.ndarray, probs: np.ndarray, eps: float) -> float:
+    if np.any(labels < 0) or np.any(labels > probs.shape[1] - 1):
+        raise ValueError(f"labels must be in the range [0,{probs.shape[1]-1}]")
+    if np.any(probs < 0) or np.any(probs > 1.0):
+        raise ValueError("probs must be in the range [0.0, 1.0]")
+    probs_for_labels = probs[np.arange(probs.shape[0]), labels.astype(np.int32)]
+    probs_for_labels = np.maximum(probs_for_labels, eps)
+    return sum(-np.log(probs_for_labels))
 
 
 class MulticlassMetrics:
@@ -36,21 +48,24 @@ class MulticlassMetrics:
         "recallByLabel",
         "fMeasureByLabel",
         "hammingLoss",
+        "logLoss",
     ]
 
     # This class is aligning with MulticlassMetrics scala version.
 
     def __init__(
         self,
-        tp: Dict[float, float],
-        fp: Dict[float, float],
-        label: Dict[float, float],
-        label_count: int,
+        tp: Dict[float, float] = {},
+        fp: Dict[float, float] = {},
+        label: Dict[float, float] = {},
+        label_count: int = 0,
+        log_loss: float = -1,
     ) -> None:
         self._tp_by_class = tp
         self._fp_by_class = fp
         self._label_count_by_class = label
         self._label_count = label_count
+        self._log_loss = log_loss
 
     def _precision(self, label: float) -> float:
         """Returns precision for a given label (category)"""
@@ -127,6 +142,10 @@ class MulticlassMetrics:
         denominator = self._label_count
         return numerator / denominator
 
+    def log_loss(self) -> float:
+        """Returns log loss"""
+        return self._log_loss / self._label_count
+
     def evaluate(self, evaluator: MulticlassClassificationEvaluator) -> float:
         metric_name = evaluator.getMetricName()
         if metric_name == "f1":
@@ -155,5 +174,7 @@ class MulticlassMetrics:
             return self._f_measure(evaluator.getMetricLabel(), evaluator.getBeta())
         elif metric_name == "hammingLoss":
             return self.hamming_loss()
+        elif metric_name == "logLoss":
+            return self.log_loss()
         else:
             raise ValueError(f"Unsupported metric name, found {metric_name}")

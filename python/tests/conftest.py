@@ -66,6 +66,7 @@ _default_conf = {
     "spark.driver.memory": "5g",
     "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
     "spark.sql.pyspark.jvmStacktrace.enabled": "true",
+    "spark.sql.execution.arrow.pyspark.enabled": "true",
 }
 
 

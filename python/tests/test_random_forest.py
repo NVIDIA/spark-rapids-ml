@@ -15,7 +15,7 @@
 #
 import json
 import math
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pytest
@@ -816,20 +816,25 @@ def test_fit_multiple_in_single_pass(
 @pytest.mark.parametrize(
     "estimator_evaluator",
     [
-        (RandomForestClassifier, MulticlassClassificationEvaluator),
-        (RandomForestRegressor, RegressionEvaluator),
+        (RandomForestClassifier, MulticlassClassificationEvaluator, "accuracy"),
+        (RandomForestClassifier, MulticlassClassificationEvaluator, "logLoss"),
+        (RandomForestRegressor, RegressionEvaluator, None),
     ],
 )
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 def test_crossvalidator_random_forest(
-    estimator_evaluator: Tuple[RandomForest, RandomForestEvaluator],
+    estimator_evaluator: Tuple[
+        RandomForest,
+        RandomForestEvaluator,
+        Optional[str],
+    ],
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
 ) -> None:
-    RF, Evaluator = estimator_evaluator
+    RF, Evaluator, metric = estimator_evaluator
 
     # Train a toy model
 
@@ -862,6 +867,9 @@ def test_crossvalidator_random_forest(
 
         evaluator = Evaluator()
         evaluator.setLabelCol(label_col)
+
+        if metric:
+            evaluator.setMetricName(metric)  # type: ignore
 
         grid = (
             ParamGridBuilder()

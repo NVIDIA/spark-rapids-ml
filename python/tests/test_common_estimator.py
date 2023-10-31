@@ -34,8 +34,8 @@ from spark_rapids_ml.core import (
     _EvaluateFunc,
     _TransformFunc,
     param_alias,
-    transform_evaluate,
 )
+from spark_rapids_ml.metrics import EvalMetricInfo
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
 
@@ -272,7 +272,7 @@ class SparkRapidsMLDummyModel(
         return self._set(outputCols=value)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         model_attribute_a = self.model_attribute_a
 

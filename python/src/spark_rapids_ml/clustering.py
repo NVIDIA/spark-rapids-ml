@@ -41,8 +41,8 @@ from .core import (
     _EvaluateFunc,
     _TransformFunc,
     param_alias,
-    transform_evaluate,
 )
+from .metrics import EvalMetricInfo
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
     _ArrayOrder,
@@ -387,7 +387,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         return "C"
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 
