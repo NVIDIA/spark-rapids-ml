@@ -631,6 +631,7 @@ class RandomForestClassificationModel(
 
         return _construct_rf, _predict, _evaluate
 
+
 class LogisticRegressionClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
