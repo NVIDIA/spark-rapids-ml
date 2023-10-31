@@ -1225,7 +1225,7 @@ class _CumlModelWithColumns(_CumlModel):
         pred_col = predict_udf(struct(*select_cols))
 
         if self._is_single_pred(dataset.schema):
-            return dataset.withColumn(pred_name, pred_col)
+            return dataset.withColumn(pred_name, pred_col).drop(*tmp_cols)
         else:
             # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
             pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
