@@ -36,7 +36,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pyspark import RDD, TaskContext
+from pyspark import RDD, SparkConf, TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.evaluation import Evaluator
 from pyspark.ml.functions import array_to_vector, vector_to_array
@@ -696,59 +696,73 @@ class _CumlEstimator(Estimator, _CumlCaller):
         else:
             return super().fitMultiple(dataset, paramMaps)
 
+    def _skip_stage_level_scheduling(self, spark_version: str, conf: SparkConf) -> bool:
+        """Check if stage-level scheduling is not needed,
+        return true to skip stage-level scheduling"""
+
+        if spark_version < "3.4.0":
+            self.logger.info(
+                "Stage-level scheduling in spark-rapids-ml requires spark version 3.4.0+"
+            )
+            return True
+
+        if not _is_standalone_or_localcluster(conf):
+            self.logger.info(
+                "Stage-level scheduling in spark-rapids-ml requires spark standalone or "
+                "local-cluster mode"
+            )
+            return True
+
+        executor_cores = conf.get("spark.executor.cores")
+        executor_gpus = conf.get("spark.executor.resource.gpu.amount")
+        if executor_cores is None or executor_gpus is None:
+            self.logger.info(
+                "Stage-level scheduling in spark-rapids-ml requires spark.executor.cores, "
+                "spark.executor.resource.gpu.amount to be set."
+            )
+            return True
+
+        if int(executor_cores) == 1:
+            # there will be only 1 task running at any time.
+            self.logger.info(
+                "Stage-level scheduling in spark-rapids-ml requires spark.executor.cores > 1 "
+            )
+            return True
+
+        if int(executor_gpus) > 1:
+            # For spark.executor.resource.gpu.amount > 1, we suppose user knows how to configure
+            # to make spark-rapids-ml run successfully.
+            self.logger.info(
+                "Stage-level scheduling in spark-rapids-ml will not work "
+                "when spark.executor.resource.gpu.amount>1"
+            )
+            return True
+
+        task_gpu_amount = conf.get("spark.task.resource.gpu.amount")
+
+        if task_gpu_amount is None:
+            # The ETL tasks will not grab a gpu when spark.task.resource.gpu.amount is not set,
+            # but with stage-level scheduling, we can make training task grab the gpu.
+            return False
+
+        if float(task_gpu_amount) == float(executor_gpus):
+            # spark.executor.resource.gpu.amount=spark.task.resource.gpu.amount "
+            # results in only 1 task running at a time, which may cause perf issue.
+            return True
+
+        # We can enable stage-level scheduling
+        return False
+
     def _try_stage_level_scheduling(self, rdd: RDD) -> RDD:
         ss = _get_spark_session()
         sc = ss.sparkContext
 
-        if ss.version < "3.4.0":
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml requires spark version 3.4.0+"
-            )
-            return rdd
-        elif not _is_standalone_or_localcluster(sc):
-            # Only standalone or local-cluster supports stage-level scheduling with dynamic
-            # allocation disabled.
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml only works on spark standalone or "
-                "local cluster mode"
-            )
+        if self._skip_stage_level_scheduling(ss.version, sc.getConf()):
             return rdd
 
-        executor_cores = sc.getConf().get("spark.executor.cores")
-        executor_gpu_amount = sc.getConf().get("spark.executor.resource.gpu.amount")
-
-        if executor_cores is None or executor_gpu_amount is None:
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml requires spark.executor.cores, "
-                "spark.executor.resource.gpu.amount to be set "
-            )
-            return rdd
-
-        if int(executor_gpu_amount) > 1:
-            # For spark.executor.resource.gpu.amount>1, we suppose user knows how to configure
-            # to make spark-rapids-ml run successfully.
-            #
-            self.logger.warning(
-                "Stage level scheduling in spark-rapids-ml will not work "
-                "when spark.executor.resource.gpu.amount>1"
-            )
-            return rdd
-
-        task_gpu_amount = sc.getConf().get("spark.task.resource.gpu.amount")
-
-        if task_gpu_amount is None:
-            # if spark.task.resource.gpu.amount is not set, the default concurrent tasks
-            # with gpu requirement will be 1, which means 2 training tasks will never
-            # be scheduled into the same executor.
-            return rdd
-
-        if float(task_gpu_amount) == float(executor_gpu_amount):
-            self.logger.warning(
-                f"The configuration of cores (exec = {executor_gpu_amount} task = {task_gpu_amount}, "
-                f"runnable tasks = 1) will result in wasted resources due to resource gpu limiting"
-                f"the number of runnable tasks per executor to: 1. Please adjust your configuration."
-            )
-            return rdd
+        # executor_cores will not be None
+        executor_cores = ss.sparkContext.getConf().get("spark.executor.cores")
+        assert executor_cores is not None
 
         from pyspark.resource.profile import ResourceProfileBuilder
         from pyspark.resource.requests import TaskResourceRequests
@@ -763,10 +777,12 @@ class _CumlEstimator(Estimator, _CumlCaller):
         spark_plugins = ss.conf.get("spark.plugins", " ")
         assert spark_plugins is not None
         spark_rapids_sql_enabled = ss.conf.get("spark.rapids.sql.enabled", "true")
+        assert spark_rapids_sql_enabled is not None
+
         task_cores = (
             int(executor_cores)
             if "com.nvidia.spark.SQLPlugin" in spark_plugins
-            and "true" == spark_rapids_sql_enabled
+            and "true" == spark_rapids_sql_enabled.lower()
             else (int(executor_cores) // 2) + 1
         )
         # task_gpus means how many slots per gpu address the task requires,
