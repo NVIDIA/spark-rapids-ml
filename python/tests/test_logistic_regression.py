@@ -9,7 +9,10 @@ from pyspark.ml.classification import LogisticRegression as SparkLogisticRegress
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.evaluation import (
+    BinaryClassificationEvaluator,
+    MulticlassClassificationEvaluator,
+)
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import DenseMatrix, DenseVector, SparseVector, Vectors, VectorUDT
 from pyspark.ml.param import Param
@@ -766,10 +769,11 @@ def test_compat_multinomial(
                 "features",
                 "prediction",
                 "newProbability",
+                "rawPrediction",
             ]
             assert (
                 output_df.schema.simpleString()
-                == "struct<weight:float,label:float,features:vector,prediction:double,newProbability:vector>"
+                == "struct<weight:float,label:float,features:vector,prediction:double,newProbability:vector,rawPrediction:vector>"
             )
 
         output_res = output_df.collect()
@@ -981,7 +985,7 @@ def test_quick(
         assert l2_strength == reg_param * (1 - elasticNet_param)
 
 
-@pytest.mark.parametrize("metric_name", ["accuracy", "logLoss"])
+@pytest.mark.parametrize("metric_name", ["accuracy", "logLoss", "areaUnderROC"])
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
@@ -993,11 +997,13 @@ def test_crossvalidator_logistic_regression(
 ) -> None:
     # Train a toy model
 
+    n_classes = 2 if metric_name == "areaUnderROC" else 10
+
     X, _, y, _ = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
         ncols=data_shape[1],
-        n_classes=10,
+        n_classes=n_classes,
         n_informative=data_shape[1],
         n_redundant=0,
         n_repeated=0,
@@ -1013,8 +1019,12 @@ def test_crossvalidator_logistic_regression(
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_col)
 
-        evaluator = MulticlassClassificationEvaluator()
-        evaluator.setLabelCol(label_col)
+        evaluator = (
+            BinaryClassificationEvaluator()
+            if n_classes == 2
+            else MulticlassClassificationEvaluator()
+        )
+        evaluator.setLabelCol(label_col)  # type: ignore
         evaluator.setMetricName(metric_name)  # type: ignore
 
         grid = (
