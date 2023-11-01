@@ -46,6 +46,7 @@ from pyspark.ml.param.shared import (
     HasOutputCol,
     HasPredictionCol,
     HasProbabilityCol,
+    HasRawPredictionCol,
 )
 from pyspark.ml.util import (
     DefaultParamsReader,
@@ -1194,6 +1195,12 @@ class _CumlModelWithColumns(_CumlModel):
 
         return True if isinstance(self, HasProbabilityCol) else False
 
+    def _has_raw_pred_col(self) -> bool:
+        """This API is needed and can be overwritten by subclass which
+        hasn't implemented predict raw yet"""
+
+        return True if isinstance(self, HasRawPredictionCol) else False
+
     def _get_prediction_name(self) -> str:
         """Different algos have different prediction names,
         eg, PCA: value of outputCol param, RF/LR/Kmeans: value of predictionCol name"""
@@ -1264,6 +1271,16 @@ class _CumlModelWithColumns(_CumlModel):
                     array_to_vector(
                         getattr(col(pred_struct_col_name), pred.probability)
                     ),
+                )
+            # 2a. Handle raw prediction - as place holder we duplicate probability col
+            # for interop with default raw prediction col in spark evaluators. i.e. auc works
+            # equivalently with probabilities
+            # TBD replace with rawPredictions in individual algos when support is added
+            if self._has_raw_pred_col():
+                raw_pred_col = self.getOrDefault("rawPredictionCol")
+                dataset = dataset.withColumn(
+                    raw_pred_col,
+                    col(probability_col),
                 )
 
             # 3. Drop the unused column

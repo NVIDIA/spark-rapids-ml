@@ -295,7 +295,6 @@ class _RandomForestClassifierClass(_RandomForestClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         mapping = super()._param_mapping()
-        mapping["rawPredictionCol"] = ""
         return mapping
 
 
@@ -337,8 +336,10 @@ class RandomForestClassifier(
         The label column name.
     predictionCol:
         The prediction column name.
-    probabilityCol
+    probabilityCol:
         The column name for predicted class conditional probabilities.
+    rawPredictionCol:
+        The column name for class raw predictions - this is currently set equal to probabilityCol values.
     maxDepth:
         Maximum tree depth. Must be greater than 0.
     maxBins:
@@ -452,6 +453,7 @@ class RandomForestClassifier(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
+        rawPredictionCol: str = "rawPrediction",
         maxDepth: int = 5,
         maxBins: int = 32,
         minInstancesPerNode: int = 1,
@@ -652,7 +654,6 @@ class LogisticRegressionClass(_CumlClass):
             "lowerBoundsOnIntercepts": None,
             "upperBoundsOnIntercepts": None,
             "maxBlockSizeInMB": None,
-            "rawPredictionCol": "",
         }
 
     @classmethod
@@ -809,6 +810,8 @@ class LogisticRegression(
         The class prediction column name.
     probabilityCol:
         The probability prediction column name.
+    rawPredictionCol:
+        The column name for class raw predictions - this is currently set equal to probabilityCol values.
     maxIter:
         The maximum number of iterations of the underlying L-BFGS algorithm.
     regParam:
@@ -875,6 +878,7 @@ class LogisticRegression(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
+        rawPredictionCol: str = "rawPrediction",
         maxIter: int = 100,
         regParam: float = 0.0,
         elasticNetParam: float = 0.0,
