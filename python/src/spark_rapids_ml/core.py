@@ -516,8 +516,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
-            from pyspark import BarrierTaskContext
             import cupy as cp
+            from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
             partition_id = context.partitionId()
@@ -530,7 +530,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 import rmm
                 from rmm.allocators.cupy import rmm_cupy_allocator
 
-                rmm.reinitialize(managed_memory=True, devices=_CumlCommon._get_gpu_device(context, is_local))
+                rmm.reinitialize(
+                    managed_memory=True,
+                    devices=_CumlCommon._get_gpu_device(context, is_local),
+                )
                 cp.cuda.set_allocator(rmm_cupy_allocator)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
