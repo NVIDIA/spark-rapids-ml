@@ -269,7 +269,7 @@ class _CumlCommon(MLWritable, MLReadable):
 
         import cupy
 
-        gpu_id = _CumlCommon._get_gpu_id(context, is_local, is_transform)
+        gpu_id = _CumlCommon._get_gpu_device(context, is_local, is_transform)
 
         cupy.cuda.Device(gpu_id).use()
 
@@ -517,10 +517,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import BarrierTaskContext
-
-            logger = get_logger(cls)
-
             import cupy as cp
+
+            context = BarrierTaskContext.get()
+            partition_id = context.partitionId()
+            logger = get_logger(cls)
 
             # set gpu device
             _CumlCommon._set_gpu_device(context, is_local)
@@ -533,9 +534,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 cp.cuda.set_allocator(rmm_cupy_allocator)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
-
-            context = BarrierTaskContext.get()
-            partition_id = context.partitionId()
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
