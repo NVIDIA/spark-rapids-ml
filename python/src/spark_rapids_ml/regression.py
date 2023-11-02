@@ -301,7 +301,7 @@ class LinearRegression(
     Parameters
     ----------
 
-    featuresCol:
+    featuresCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
@@ -813,7 +813,7 @@ class RandomForestRegressor(
     Parameters
     ----------
 
-    featuresCol:
+    featuresCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.

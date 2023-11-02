@@ -76,7 +76,7 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
 
     def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
-        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
         """
         if isinstance(value, str):
             self._set_params(inputCol=value)
@@ -108,13 +108,11 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     ----------
     k: int
         the number of components, or equivalently the dimension that all vectors will be projected to.
-    inputCol: str
-        the name of the column that contains input vectors. inputCol should be set when input vectors
-        are stored in a single column of a dataframe.
 
-    inputCols: List[str]
-        the names of feature columns that form input vectors. inputCols should be set when input vectors
-        are stored as multiple feature columns of a dataframe.
+    inputCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
 
     outputCol: str
         the name of the column that stores output vectors. outputCol should be set when users expect to
@@ -252,6 +250,9 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
     Spark PCA does not automatically remove the mean of the input data, so use the
     :py:class::`~pyspark.ml.feature.StandardScaler` to center the input data before
     invoking transform.
+
+    The input vectors can be stored in three different formats: a column of vector,
+    a column of array, or multiple scalar columns.
 
     Examples
     --------

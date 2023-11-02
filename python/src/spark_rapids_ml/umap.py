@@ -710,13 +710,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         datasets must be subsampled to fit within the node's memory and execute in a reasonable time. Smaller fractions
         will result in faster training, but may result in sub-optimal embeddings.
 
-    featuresCol: str
-        The name of the column that contains input vectors. featuresCol should be set when input vectors are stored
-        in a single column of a dataframe.
-
-    featuresCols: List[str]
-        The names of the columns that contain input vectors. featuresCols should be set when input vectors are stored
-        in multiple columns of a dataframe.
+    featuresCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
 
     labelCol: str (optional)
         The name of the column that contains labels. If provided, supervised fitting will be performed, where labels
