@@ -227,11 +227,11 @@ class _CumlCommon(MLWritable, MLReadable):
         super().__init__()
 
     @staticmethod
-    def _set_gpu_device(
+    def _get_gpu_device(
         context: Optional[TaskContext], is_local: bool, is_transform: bool = False
-    ) -> None:
+    ) -> int:
         """
-        Set gpu device according to the spark task resources.
+        Get gpu device according to the spark task resources.
 
         If it is local mode, we use partition id as gpu id for training
         and (partition id ) % gpus for transform.
@@ -251,6 +251,25 @@ class _CumlCommon(MLWritable, MLReadable):
                 gpu_id = partition_id
         else:
             gpu_id = _get_gpu_id(context)
+
+        return gpu_id
+
+    @staticmethod
+    def _set_gpu_device(
+        context: Optional[TaskContext], is_local: bool, is_transform: bool = False
+    ) -> None:
+        """
+        Set gpu device according to the spark task resources.
+
+        If it is local mode, we use partition id as gpu id for training
+        and (partition id ) % gpus for transform.
+        """
+        # Get the GPU ID from resources
+        assert context is not None
+
+        import cupy
+
+        gpu_id = _CumlCommon._get_gpu_device(context, is_local, is_transform)
 
         cupy.cuda.Device(gpu_id).use()
 
@@ -497,26 +516,27 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            import cupy as cp
             from pyspark import BarrierTaskContext
 
+            context = BarrierTaskContext.get()
+            partition_id = context.partitionId()
             logger = get_logger(cls)
 
-            import cupy as cp
+            # set gpu device
+            _CumlCommon._set_gpu_device(context, is_local)
 
             if cuda_managed_mem_enabled:
                 import rmm
                 from rmm.allocators.cupy import rmm_cupy_allocator
 
-                rmm.reinitialize(managed_memory=True)
+                rmm.reinitialize(
+                    managed_memory=True,
+                    devices=_CumlCommon._get_gpu_device(context, is_local),
+                )
                 cp.cuda.set_allocator(rmm_cupy_allocator)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
-
-            context = BarrierTaskContext.get()
-            partition_id = context.partitionId()
-
-            # set gpu device
-            _CumlCommon._set_gpu_device(context, is_local)
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
