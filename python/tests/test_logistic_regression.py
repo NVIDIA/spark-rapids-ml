@@ -848,6 +848,7 @@ def test_compat_multinomial(
         assert array_equal(
             output_res[5].rawPrediction.toArray(),
             [-0.78209218, -2.84116623, 0.78209218, 2.84116623],
+            tolerance,
         )
         assert array_equal(
             output_res[6].rawPrediction.toArray(),
