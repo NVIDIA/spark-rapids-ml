@@ -80,10 +80,12 @@ def test_toy_example(gpu_number: int) -> None:
         def assert_transform(model: LogisticRegressionModel) -> None:
             preds_df_local = model.transform(df).collect()
             preds = [row["prediction"] for row in preds_df_local]
-            assert preds == [1.0, 1.0, 0.0, 0.0]
             probs = [row["probs"] for row in preds_df_local]
+            raw_preds = [row["rawPrediction"] for row in preds_df_local]
+            assert preds == [1.0, 1.0, 0.0, 0.0]
             assert len(probs) == len(preds)
             assert [p[1] > 0.5 for p in probs] == [True, True, False, False]
+            assert [p[1] > 0 for p in raw_preds] == [True, True, False, False]
 
         assert_transform(lr_model)
 
@@ -466,16 +468,11 @@ def test_compat(
             tolerance,
         )
 
-        if isinstance(blor_model, SparkLogisticRegressionModel):
-            assert array_equal(
-                output.newRawPrediction.toArray(),
-                Vectors.dense([-2.4238, 2.4238]).toArray(),
-                tolerance,
-            )
-        else:
-            warnings.warn(
-                "transform of spark rapids ml currently does not support rawPredictionCol"
-            )
+        array_equal(
+            output.newRawPrediction.toArray(),
+            Vectors.dense([-2.4238, 2.4238]).toArray(),
+            tolerance,
+        )
 
         blor_path = tmp_path + "/log_reg"
         blor.save(blor_path)
@@ -823,51 +820,45 @@ def test_compat_multinomial(
             tolerance,
         )
 
-        if isinstance(mlor_model, SparkLogisticRegressionModel):
-            assert array_equal(
-                output_res[0].rawPrediction.toArray(),
-                [0.84395339, 1.87349042, -0.84395339, -1.87349042],
-                tolerance,
-            )
-            assert array_equal(
-                output_res[1].rawPrediction.toArray(),
-                [0.78209218, 2.84116623, -0.78209218, -2.84116623],
-                tolerance,
-            )
-            assert array_equal(
-                output_res[2].rawPrediction.toArray(),
-                [1.87349042, 0.84395339, -1.87349042, -0.84395339],
-                tolerance,
-            )
-            assert array_equal(
-                output_res[3].rawPrediction.toArray(),
-                [2.84116623, 0.78209218, -2.84116623, -0.78209218],
-                tolerance,
-            )
-            assert array_equal(
-                output_res[4].rawPrediction.toArray(),
-                [-0.84395339, -1.87349042, 0.84395339, 1.87349042],
-                tolerance,
-            )
-            assert array_equal(
-                output_res[5].rawPrediction.toArray(),
-                [-0.78209218, -2.84116623, 0.78209218, 2.84116623],
-            )
-            assert array_equal(
-                output_res[6].rawPrediction.toArray(),
-                [-1.87349042, -0.84395339, 1.87349042, 0.84395339],
-                tolerance,
-            )
-            assert array_equal(
-                output_res[7].rawPrediction.toArray(),
-                [-2.84116623, -0.78209218, 2.84116623, 0.78209218],
-                tolerance,
-            )
-
-        else:
-            warnings.warn(
-                "transform of spark rapids ml currently does not support rawPredictionCol"
-            )
+        assert array_equal(
+            output_res[0].rawPrediction.toArray(),
+            [0.84395339, 1.87349042, -0.84395339, -1.87349042],
+            tolerance,
+        )
+        assert array_equal(
+            output_res[1].rawPrediction.toArray(),
+            [0.78209218, 2.84116623, -0.78209218, -2.84116623],
+            tolerance,
+        )
+        assert array_equal(
+            output_res[2].rawPrediction.toArray(),
+            [1.87349042, 0.84395339, -1.87349042, -0.84395339],
+            tolerance,
+        )
+        assert array_equal(
+            output_res[3].rawPrediction.toArray(),
+            [2.84116623, 0.78209218, -2.84116623, -0.78209218],
+            tolerance,
+        )
+        assert array_equal(
+            output_res[4].rawPrediction.toArray(),
+            [-0.84395339, -1.87349042, 0.84395339, 1.87349042],
+            tolerance,
+        )
+        assert array_equal(
+            output_res[5].rawPrediction.toArray(),
+            [-0.78209218, -2.84116623, 0.78209218, 2.84116623],
+        )
+        assert array_equal(
+            output_res[6].rawPrediction.toArray(),
+            [-1.87349042, -0.84395339, 1.87349042, 0.84395339],
+            tolerance,
+        )
+        assert array_equal(
+            output_res[7].rawPrediction.toArray(),
+            [-2.84116623, -0.78209218, 2.84116623, 0.78209218],
+            tolerance,
+        )
 
         mlor_path = tmp_path + "/m_log_reg"
         mlor.save(mlor_path)
