@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import List, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
@@ -86,7 +86,7 @@ def test_kmeans_params(
     assert_params(default_kmeans, default_spark_params, default_cuml_params)
 
     # Spark Params constructor
-    spark_params = {"k": 10, "maxIter": 100}
+    spark_params: Dict[str, Any] = {"k": 10, "maxIter": 100}
     spark_kmeans = KMeans(**spark_params)
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(spark_params)
@@ -95,7 +95,7 @@ def test_kmeans_params(
     assert_params(spark_kmeans, expected_spark_params, expected_cuml_params)
 
     # cuml_params constructor
-    cuml_params = {
+    cuml_params: Dict[str, Any] = {
         "n_clusters": 10,
         "max_iter": 100,
         "tol": 1e-1,
@@ -120,7 +120,7 @@ def test_kmeans_params(
     assert_params(loaded_kmeans, expected_spark_params, expected_cuml_params)
 
     # conflicting params
-    conflicting_params = {
+    conflicting_params: Dict[str, Any] = {
         "k": 2,
         "n_clusters": 10,
     }

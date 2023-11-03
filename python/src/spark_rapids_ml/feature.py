@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from pyspark import keyword_only
 from pyspark.ml.common import _py2java
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.feature import _PCAParams
@@ -118,6 +119,22 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         the name of the column that stores output vectors. outputCol should be set when users expect to
         store output vectors in a single column.
 
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+
+
 
     Examples
     --------
@@ -163,9 +180,19 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     >>> gpu_model = gpu_pca.fit(df)
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        k: Optional[int] = None,
+        inputCol: Optional[Union[str, List[str]]] = None,
+        outputCol: Optional[str] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
-        self._set_params(**kwargs)
+        self._set_params(**self._input_kwargs)
 
     def setK(self, value: int) -> "PCA":
         """
