@@ -100,7 +100,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
     def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
-        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
         """
         if isinstance(value, str):
             self._set_params(inputCol=value)
@@ -163,13 +163,10 @@ class NearestNeighbors(
     k: int (default = 5)
         the default number nearest neighbors to retrieve for each query.
 
-    inputCol: str
-        the name of the column that contains input vectors. inputCol should be set when feature vectors
-        are stored in a single column of a dataframe.
-
-    inputCols: List[str]
-        the names of feature columns that form input vectors. inputCols should be set when input vectors
-        are stored as multiple feature columns of a dataframe.
+    inputCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
 
     idCol: str
         the name of the column in a dataframe that uniquely identifies each vector. idCol should be set

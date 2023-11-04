@@ -104,7 +104,7 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
 
     def setFeaturesCol(self: P, value: Union[str, List[str]]) -> P:
         """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`. Used when input vectors are stored in a single column.
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`.
         """
         if isinstance(value, str):
             self._set_params(featuresCol=value)
@@ -149,11 +149,10 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     tol: float (default = 1e-4)
         early stopping criterion if centers do not change much after an iteration.
 
-    featuresCol: str
-        the name of the column that contains input vectors. featuresCol should be set when input vectors are stored in a single column of a dataframe.
-
-    featuresCols: List[str]
-        the names of feature columns that form input vectors. featureCols should be set when input vectors are stored as multiple feature columns of a dataframe.
+    featuresCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
 
     predictionCol: str
         the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
