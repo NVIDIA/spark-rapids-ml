@@ -358,6 +358,8 @@ document.write(`
 Spark PCA does not automatically remove the mean of the input data, so use the
 :py:class::<cite>~pyspark.ml.feature.StandardScaler</cite> to center the input data before
 invoking transform.</p>
+<p>The input vectors can be stored in three different formats: a column of vector,
+a column of array, or multiple scalar columns.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.feature</span> <span class="kn">import</span> <span class="n">PCA</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">],),</span>
@@ -640,7 +642,7 @@ a default value.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.setInputCol">
 <span class="sig-name descname"><span class="pre">setInputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.setInputCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCol" title="spark_rapids_ml.feature.PCAModel.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCols" title="spark_rapids_ml.feature.PCAModel.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>. Used when input vectors are stored in a single column.</p>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCol" title="spark_rapids_ml.feature.PCAModel.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCols" title="spark_rapids_ml.feature.PCAModel.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">

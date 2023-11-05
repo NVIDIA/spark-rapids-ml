@@ -360,16 +360,18 @@ aggregation automatically. However, it should be noted that only the euclidean
 distance (also known as L2 distance) is supported in the current implementations
 and the feature data type must be of the float type. All other data types will
 be converted into float during computation.</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
+<dd class="field-odd"><dl>
 <dt><strong>k: int (default = 5)</strong></dt><dd><p>the default number nearest neighbors to retrieve for each query.</p>
 </dd>
-<dt><strong>inputCol: str</strong></dt><dd><p>the name of the column that contains input vectors. inputCol should be set when feature vectors
-are stored in a single column of a dataframe.</p>
-</dd>
-<dt><strong>inputCols: List[str]</strong></dt><dd><p>the names of feature columns that form input vectors. inputCols should be set when input vectors
-are stored as multiple feature columns of a dataframe.</p>
+<dt><strong>inputCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
+<li><p>When the value is a list of strings, the feature columns must be numeric types.</p></li>
+</ul>
+</div></blockquote>
 </dd>
 <dt><strong>idCol: str</strong></dt><dd><p>the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
 if such a column exists in the dataframe. If idCol is not set, a column with the name <cite>unique_id</cite>
@@ -762,7 +764,7 @@ a default value.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.setInputCol">
 <span class="sig-name descname"><span class="pre">setInputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.setInputCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCol" title="spark_rapids_ml.knn.NearestNeighbors.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCols" title="spark_rapids_ml.knn.NearestNeighbors.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>. Used when input vectors are stored in a single column.</p>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCol" title="spark_rapids_ml.knn.NearestNeighbors.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCols" title="spark_rapids_ml.knn.NearestNeighbors.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">

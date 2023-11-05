@@ -358,9 +358,9 @@ The algorithm initializes a set of k random centers then runs in iterations.
 In each iteration, KMeans assigns every point to its nearest center,
 then calculates a new set of k centers. KMeans often deals with large datasets.
 This class provides GPU acceleration for pyspark distributed KMeans.</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
+<dd class="field-odd"><dl>
 <dt><strong>k: int (default = 8)</strong></dt><dd><p>the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.</p>
 </dd>
 <dt><strong>maxIter: int (default = 300)</strong></dt><dd><p>the maximum iterations the algorithm will run to learn the k centers.
@@ -370,9 +370,13 @@ More iterations help generate more accurate centers.</p>
 </dd>
 <dt><strong>tol: float (default = 1e-4)</strong></dt><dd><p>early stopping criterion if centers do not change much after an iteration.</p>
 </dd>
-<dt><strong>featuresCol: str</strong></dt><dd><p>the name of the column that contains input vectors. featuresCol should be set when input vectors are stored in a single column of a dataframe.</p>
-</dd>
-<dt><strong>featuresCols: List[str]</strong></dt><dd><p>the names of feature columns that form input vectors. featureCols should be set when input vectors are stored as multiple feature columns of a dataframe.</p>
+<dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
+<li><p>When the value is a list of strings, the feature columns must be numeric types.</p></li>
+</ul>
+</div></blockquote>
 </dd>
 <dt><strong>predictionCol: str</strong></dt><dd><p>the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.</p>
 </dd>
@@ -804,7 +808,7 @@ a default value.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeans.setFeaturesCol">
 <span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeans.setFeaturesCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.featuresCol" title="spark_rapids_ml.clustering.KMeans.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.featuresCols" title="spark_rapids_ml.clustering.KMeans.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>. Used when input vectors are stored in a single column.</p>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.featuresCol" title="spark_rapids_ml.clustering.KMeans.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.featuresCols" title="spark_rapids_ml.clustering.KMeans.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">

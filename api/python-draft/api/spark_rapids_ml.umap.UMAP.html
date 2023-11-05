@@ -359,9 +359,9 @@ The algorithm finds a low dimensional embedding of the data that approximates an
 The fit() method constructs a KNN-graph representation of an input dataset and then optimizes a
 low dimensional embedding, and is performed on a single node. The transform() method transforms an input dataset
 into the optimized embedding space, and is performed distributedly.</p>
-<dl class="field-list simple">
+<dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
+<dd class="field-odd"><dl>
 <dt><strong>n_neighbors</strong><span class="classifier">float (optional, default=15)</span></dt><dd><p>The size of local neighborhood (in terms of number of neighboring sample points) used for
 manifold approximation. Larger values result in more global views of the manifold, while
 smaller values result in more local data being preserved. In general values should be in the range 2 to 100.</p>
@@ -448,11 +448,13 @@ reproducible results to 3 digits of precision, but will do so at the expense of 
 datasets must be subsampled to fit within the node’s memory and execute in a reasonable time. Smaller fractions
 will result in faster training, but may result in sub-optimal embeddings.</p>
 </dd>
-<dt><strong>featuresCol: str</strong></dt><dd><p>The name of the column that contains input vectors. featuresCol should be set when input vectors are stored
-in a single column of a dataframe.</p>
-</dd>
-<dt><strong>featuresCols: List[str]</strong></dt><dd><p>The names of the columns that contain input vectors. featuresCols should be set when input vectors are stored
-in multiple columns of a dataframe.</p>
+<dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
+<li><p>When the value is a list of strings, the feature columns must be numeric types.</p></li>
+</ul>
+</div></blockquote>
 </dd>
 <dt><strong>labelCol: str (optional)</strong></dt><dd><p>The name of the column that contains labels. If provided, supervised fitting will be performed, where labels
 will be taken into account when optimizing the embedding.</p>
