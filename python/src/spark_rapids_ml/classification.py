@@ -34,6 +34,7 @@ from .metrics import EvalMetricInfo, transform_evaluate_metric
 from .metrics.MulticlassMetrics import MulticlassMetrics
 
 if TYPE_CHECKING:
+    import cupy as cp
     from pyspark.ml._typing import ParamMap
 
 import numpy as np
@@ -295,7 +296,6 @@ class _RandomForestClassifierClass(_RandomForestClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         mapping = super()._param_mapping()
-        mapping["rawPredictionCol"] = ""
         return mapping
 
 
@@ -337,8 +337,10 @@ class RandomForestClassifier(
         The label column name.
     predictionCol:
         The prediction column name.
-    probabilityCol
+    probabilityCol:
         The column name for predicted class conditional probabilities.
+    rawPredictionCol:
+        The column name for class raw predictions - this is currently set equal to probabilityCol values.
     maxDepth:
         Maximum tree depth. Must be greater than 0.
     maxBins:
@@ -452,6 +454,7 @@ class RandomForestClassifier(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
+        rawPredictionCol: str = "rawPrediction",
         maxDepth: int = 5,
         maxBins: int = 32,
         minInstancesPerNode: int = 1,
@@ -563,6 +566,9 @@ class RandomForestClassificationModel(
     def _is_classification(self) -> bool:
         return True
 
+    def _use_prob_as_raw_pred_col(self) -> bool:
+        return True
+
     @property
     def hasSummary(self) -> bool:
         """Indicates whether a training summary exists for this model instance."""
@@ -652,7 +658,6 @@ class LogisticRegressionClass(_CumlClass):
             "lowerBoundsOnIntercepts": None,
             "upperBoundsOnIntercepts": None,
             "maxBlockSizeInMB": None,
-            "rawPredictionCol": "",
         }
 
     @classmethod
@@ -809,6 +814,8 @@ class LogisticRegression(
         The class prediction column name.
     probabilityCol:
         The probability prediction column name.
+    rawPredictionCol:
+        The column name for class raw predictions - this is currently set equal to probabilityCol values.
     maxIter:
         The maximum number of iterations of the underlying L-BFGS algorithm.
     regParam:
@@ -875,6 +882,7 @@ class LogisticRegression(
         labelCol: str = "label",
         predictionCol: str = "prediction",
         probabilityCol: str = "probability",
+        rawPredictionCol: str = "rawPrediction",
         maxIter: int = 100,
         regParam: float = 0.0,
         elasticNetParam: float = 0.0,
@@ -1216,6 +1224,32 @@ class LogisticRegressionModel(
 
         num_models = self._get_num_models()
 
+        # from cuml logistic_regression.pyx
+        def _predict_proba(scores: "cp.ndarray", _num_classes: int) -> "cp.ndarray":
+            import cupy as cp
+
+            if _num_classes == 2:
+                proba = cp.zeros((scores.shape[0], 2))
+                proba[:, 1] = 1 / (1 + cp.exp(-scores.ravel()))
+                proba[:, 0] = 1 - proba[:, 1]
+            elif _num_classes > 2:
+                max_scores = cp.max(scores, axis=1).reshape((-1, 1))
+                scores_shifted = scores - max_scores
+                proba = cp.exp(scores_shifted)
+                row_sum = cp.sum(proba, axis=1).reshape((-1, 1))
+                proba /= row_sum
+            return proba
+
+        def _predict_labels(scores: "cp.ndarray", _num_classes: int) -> "cp.ndarray":
+            import cupy as cp
+
+            _num_classes = max(scores.shape[1] if len(scores.shape) == 2 else 2, 2)
+            if _num_classes == 2:
+                predictions = (scores.ravel() > 0).astype("float32")
+            else:
+                predictions = cp.argmax(scores, axis=1)
+            return predictions
+
         def _construct_lr() -> CumlT:
             import cupy as cp
             import numpy as np
@@ -1228,7 +1262,7 @@ class LogisticRegressionModel(
             lrs = []
 
             for i in range(num_models):
-                lr = LogisticRegressionMG(output_type="numpy")
+                lr = LogisticRegressionMG(output_type="cupy")
                 lr.n_cols = n_cols
                 lr.dtype = np.dtype(dtype)
 
@@ -1256,21 +1290,30 @@ class LogisticRegressionModel(
         )
 
         def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
+            import cupy as cp
+
             data = {}
-            data[pred.prediction] = lr.predict(pdf)
-            probs = lr.predict_proba(pdf)
+            scores = lr.decision_function(pdf).T
+            assert isinstance(scores, cp.ndarray)
+            _num_classes = max(scores.shape[1] if len(scores.shape) == 2 else 2, 2)
+            data[pred.prediction] = pd.Series(
+                list(_predict_labels(scores, _num_classes).get())
+            )
             # non log-loss metric doesn't need probs.
             if (
                 not eval_metric_info
                 or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
             ):
-                probs = lr.predict_proba(pdf)
-                if isinstance(probs, pd.DataFrame):
-                    # For 2302, when input is multi-cols, the output will be DataFrame
-                    data[pred.probability] = pd.Series(probs.values.tolist())
-                else:
-                    # should be np.ndarray
-                    data[pred.probability] = pd.Series(list(probs))
+                data[pred.probability] = pd.Series(
+                    list(_predict_proba(scores, _num_classes).get())
+                )
+                if _num_classes == 2:
+                    raw_prediction = cp.zeros((scores.shape[0], 2))
+                    raw_prediction[:, 1] = scores.ravel()
+                    raw_prediction[:, 0] = -raw_prediction[:, 1]
+                elif _num_classes > 2:
+                    raw_prediction = scores
+                data[pred.raw_prediction] = pd.Series(list(cp.asnumpy(raw_prediction)))
 
             return pd.DataFrame(data)
 
