@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
+from pyspark import keyword_only
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.clustering import _KMeansParams
 from pyspark.ml.linalg import Vector
@@ -65,6 +66,8 @@ class KMeansClass(_CumlClass):
             "seed": "random_state",
             "tol": "tol",
             "weightCol": None,
+            "solver": "",
+            "maxBlockSizeInMB": "",
         }
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
@@ -139,6 +142,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     k: int (default = 8)
         the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.
 
+    initMode: str (default = "k-means||")
+        the algorithm to select initial centroids. It can be "k-means||" or "random".
+
     maxIter: int (default = 300)
         the maximum iterations the algorithm will run to learn the k centers.
         More iterations help generate more accurate centers.
@@ -156,6 +162,21 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
 
     predictionCol: str
         the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
+
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
 
     Examples
     --------
@@ -219,9 +240,23 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     >>> gpu_kmeans = gpu_kmeans.fit(df)
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        featuresCol: str = "features",
+        predictionCol: str = "prediction",
+        k: int = 2,
+        initMode: str = "k-means||",
+        tol: float = 0.0001,
+        maxIter: int = 20,
+        seed: Optional[int] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
-        self._set_params(**kwargs)
+        self._set_params(**self._input_kwargs)
 
     def setK(self, value: int) -> "KMeans":
         """

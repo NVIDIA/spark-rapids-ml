@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Tuple, Type, TypeVar
+from typing import Any, Dict, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
@@ -156,7 +156,7 @@ def test_pca_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -
     assert_params(default_pca, default_spark_params, default_cuml_params)
 
     # Spark Params constructor
-    spark_params = {"k": 2}
+    spark_params: Dict[str, Any] = {"k": 2}
     spark_pca = PCA(**spark_params)
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(spark_params)  # type: ignore
@@ -165,7 +165,7 @@ def test_pca_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -
     assert_params(spark_pca, expected_spark_params, expected_cuml_params)
 
     # cuml_params constructor
-    cuml_params = {
+    cuml_params: Dict[str, Any] = {
         "n_components": 5,
         "num_workers": 5,
         "svd_solver": "jacobi",
@@ -187,7 +187,7 @@ def test_pca_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -
     assert_params(custom_pca_loaded, expected_spark_params, expected_cuml_params)
 
     # Conflicting params
-    conflicting_params = {
+    conflicting_params: Dict[str, Any] = {
         "k": 1,
         "n_components": 2,
     }
