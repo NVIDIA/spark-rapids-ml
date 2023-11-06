@@ -722,6 +722,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
     outputCol: str (optional)
         The name of the column that contains embeddings. If not provided, the default name of "embedding" will be used.
 
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
     Examples
     --------
     >>> from spark_rapids_ml.umap import UMAP
@@ -773,14 +778,42 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    @pyspark.keyword_only
+    def __init__(
+        self,
+        *,
+        n_neighbors: Optional[float] = 15,
+        n_components: Optional[int] = 15,
+        metric: str = "euclidean",
+        n_epochs: Optional[int] = None,
+        learning_rate: Optional[float] = 1.0,
+        init: Optional[str] = "spectral",
+        min_dist: Optional[float] = 0.1,
+        spread: Optional[float] = 1.0,
+        set_op_mix_ratio: Optional[float] = 1.0,
+        local_connectivity: Optional[float] = 1.0,
+        repulsion_strength: Optional[float] = 1.0,
+        negative_sample_rate: Optional[int] = 5,
+        transform_queue_size: Optional[float] = 1.0,
+        a: Optional[float] = None,
+        b: Optional[float] = None,
+        precomputed_knn: Optional[List[List[float]]] = None,
+        random_state: Optional[int] = None,
+        sample_fraction: Optional[float] = 1.0,
+        featuresCol: Optional[Union[str, List[str]]] = None,
+        labelCol: Optional[str] = None,
+        outputCol: Optional[str] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
-        if not kwargs.get("float32_inputs", True):
+        if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
             )
-            kwargs.pop("float32_inputs")
-        self._set_params(**kwargs)
+            self._input_kwargs.pop("float32_inputs")
+        self._set_params(**self._input_kwargs)
         max_records_per_batch_str = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
         )

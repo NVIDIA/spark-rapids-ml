@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
+from pyspark import keyword_only
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -75,7 +76,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
     def __init__(self) -> None:
         super().__init__()
-        self._setDefault(id_col=alias.row_number)
+        self._setDefault(idCol=alias.row_number)
 
     k = Param(
         Params._dummy(),
@@ -84,9 +85,9 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         typeConverter=TypeConverters.toInt,
     )
 
-    id_col = Param(
+    idCol = Param(
         Params._dummy(),
-        "id_col",
+        "idCol",
         "id column name.",
         typeConverter=TypeConverters.toString,
     )
@@ -116,22 +117,22 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
 
     def setIdCol(self: P, value: str) -> P:
         """
-        Sets the value of `id_col`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
+        Sets the value of `idCol`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
         """
-        self._set_params(id_col=value)
+        self._set_params(idCol=value)
         return self
 
     def getIdCol(self) -> str:
         """
-        Gets the value of `id_col`.
+        Gets the value of `idCol`.
         """
-        return self.getOrDefault(self.id_col)
+        return self.getOrDefault(self.idCol)
 
     def _ensureIdCol(self, df: DataFrame) -> DataFrame:
         """
         Ensure an id column exists in the input dataframe. Add the column if not exists.
         """
-        if not self.isSet("id_col") and self.getIdCol() in df.columns:
+        if not self.isSet("idCol") and self.getIdCol() in df.columns:
             raise ValueError(
                 f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
                 + "Please specify an id column"
@@ -140,7 +141,7 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         id_col_name = self.getIdCol()
         df_withid = (
             df
-            if self.isSet("id_col")
+            if self.isSet("idCol")
             else df.select(monotonically_increasing_id().alias(id_col_name), "*")
         )
         return df_withid
@@ -172,6 +173,21 @@ class NearestNeighbors(
         the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
         if such a column exists in the dataframe. If idCol is not set, a column with the name `unique_id`
         will be automatically added to the dataframe and used as unique identifier for each vector.
+
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
 
     Examples
     --------
@@ -248,15 +264,25 @@ class NearestNeighbors(
     >>> gpu_model = gpu_knn.fit(data_df)
     """
 
-    def __init__(self, **kwargs: Any) -> None:
-        if not kwargs.get("float32_inputs", True):
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        k: Optional[int] = None,
+        inputCol: Optional[Union[str, List[str]]] = None,
+        idCol: Optional[str] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
+        if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
             )
-            kwargs.pop("float32_inputs")
+            self._input_kwargs.pop("float32_inputs")
 
         super().__init__()
-        self._set_params(**kwargs)
+        self._set_params(**self._input_kwargs)
         self._label_isdata = 0
         self._label_isquery = 1
         self._set_params(labelCol=alias.label)
@@ -370,8 +396,8 @@ class NearestNeighborsModel(
 
         select_cols.append(col(alias.label))
 
-        if self.hasParam("id_col") and self.isDefined("id_col"):
-            id_col_name = self.getOrDefault("id_col")
+        if self.hasParam("idCol") and self.isDefined("idCol"):
+            id_col_name = self.getOrDefault("idCol")
             select_cols.append(col(id_col_name).alias(alias.row_number))
         else:
             select_cols.append(col(alias.row_number))
@@ -630,7 +656,7 @@ class NearestNeighborsModel(
             == query_df_struct[f"query_df.{id_col_name}"],
         )
 
-        if self.isSet(self.id_col):
+        if self.isSet(self.idCol):
             knnjoin_df = knnjoin_df.select("item_df", "query_df", distCol)
         else:
             knnjoin_df = knnjoin_df.select(
