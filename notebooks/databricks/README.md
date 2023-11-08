@@ -29,8 +29,6 @@ If you already have a Databricks account, you can run the example notebooks on a
   - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
   - installs various `cuXX` dependencies via pip.
 
-  **Note**: as of the last update of this README, Azure Databricks requires a CUDA driver forward compatibility package.  Uncomment the designated lines for this in the init script.  AWS Databricks does not need this and leave the lines commented in that case.
-
 - Copy the modified `init-pip-cuda-11.8.sh` init script to your *workspace* (not DBFS) (ex. workspace directory: /Users/< databricks-user-name >/init_scripts).
   ```bash
   export WS_SAVE_DIR="/path/to/directory/in/workspace"
