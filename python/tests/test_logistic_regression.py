@@ -658,7 +658,7 @@ def test_compat_multinomial(
                 regParam=0.1,
                 elasticNetParam=0.2,
                 fitIntercept=fit_intercept,
-                family="multimonial",
+                family="multinomial",
             )
 
         assert mlor.getRegParam() == 0.1

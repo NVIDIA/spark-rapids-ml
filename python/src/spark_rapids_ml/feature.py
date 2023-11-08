@@ -15,10 +15,12 @@
 #
 
 import itertools
+from abc import ABCMeta
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import pyspark
 from pyspark import keyword_only
 from pyspark.ml.common import _py2java
 from pyspark.ml.feature import PCAModel as SparkPCAModel
@@ -68,6 +70,9 @@ class PCAClass(_CumlClass):
             "verbose": False,
             "whiten": False,
         }
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return pyspark.ml.feature.PCA
 
 
 class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):

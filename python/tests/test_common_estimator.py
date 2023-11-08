@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+from abc import ABCMeta
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -233,6 +234,9 @@ class SparkRapidsMLDummy(
         assert result.model_attribute_a == 1024
         assert result.model_attribute_b == "hello dummy"
         return SparkRapidsMLDummyModel._from_row(result)
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return None
 
 
 class SparkRapidsMLDummyModel(

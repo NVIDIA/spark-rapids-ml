@@ -16,7 +16,7 @@
 import json
 import os
 import threading
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import (
     TYPE_CHECKING,
@@ -302,6 +302,16 @@ class _CumlCommon(MLWritable, MLReadable):
 
             cuml_logger.set_level(log_level)
 
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        """
+        Subclass should override to return corresponding pyspark.ml class
+        Ex. logistic regression should return pyspark.ml.classification.LogisticRegression
+        Return None if no corresponding class in pyspark, e.g. knn
+        """
+        raise NotImplementedError(
+            "pyspark.ml class corresponding to estimator not specified."
+        )
+
 
 class _CumlCaller(_CumlParams, _CumlCommon):
     """
@@ -421,36 +431,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         return (True, False)
 
     def _validate_parameters(self) -> None:
-        cls_name = self.__class__.__name__
+        cls_name = self._pyspark_class()
 
-        pyspark_est: Optional[JavaParams] = None
-
-        # Is there a better way for the dynamic imports?
-        if "LogisticRegression" in cls_name:
-            from pyspark.ml.classification import LogisticRegression
-
-            pyspark_est = LogisticRegression()
-        elif "RandomForestClassifier" in cls_name:
-            from pyspark.ml.classification import RandomForestClassifier
-
-            pyspark_est = RandomForestClassifier()
-        elif "RandomForestRegressor" in cls_name:
-            from pyspark.ml.regression import RandomForestRegressor
-
-            pyspark_est = RandomForestRegressor()
-        elif "LinearRegression" in cls_name:
-            from pyspark.ml.regression import LinearRegression
-
-            pyspark_est = LinearRegression()
-        elif "PCA" in cls_name:
-            from pyspark.ml.feature import PCA
-
-            pyspark_est = PCA()
-        elif "KMeans" in cls_name:
-            from pyspark.ml.clustering import KMeans
-
-            pyspark_est = KMeans()
-        if pyspark_est is not None:
+        if cls_name is not None:
+            pyspark_est = cls_name()
             # Both pyspark and cuml may have a parameter with the same name,
             # but cuml might have additional optional values that can be set.
             # If we transfer these cuml-specific values to the Spark JVM,

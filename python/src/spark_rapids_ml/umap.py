@@ -16,6 +16,7 @@
 
 import json
 import os
+from abc import ABCMeta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -112,6 +113,9 @@ class UMAPClass(_CumlClass):
             "random_state": None,
             "verbose": False,
         }
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return None
 
 
 class _UMAPCumlParams(
