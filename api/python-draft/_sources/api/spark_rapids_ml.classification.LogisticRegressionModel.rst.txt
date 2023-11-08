@@ -52,6 +52,7 @@ LogisticRegressionModel
        ~LogisticRegressionModel.getParam
        ~LogisticRegressionModel.getPredictionCol
        ~LogisticRegressionModel.getProbabilityCol
+       ~LogisticRegressionModel.getRawPredictionCol
        ~LogisticRegressionModel.getRegParam
        ~LogisticRegressionModel.getTol
        ~LogisticRegressionModel.hasDefault
@@ -70,6 +71,7 @@ LogisticRegressionModel
        ~LogisticRegressionModel.setLabelCol
        ~LogisticRegressionModel.setPredictionCol
        ~LogisticRegressionModel.setProbabilityCol
+       ~LogisticRegressionModel.setRawPredictionCol
        ~LogisticRegressionModel.transform
        ~LogisticRegressionModel.write
 
@@ -101,6 +103,7 @@ LogisticRegressionModel
        ~LogisticRegressionModel.params
        ~LogisticRegressionModel.predictionCol
        ~LogisticRegressionModel.probabilityCol
+       ~LogisticRegressionModel.rawPredictionCol
        ~LogisticRegressionModel.regParam
        ~LogisticRegressionModel.summary
        ~LogisticRegressionModel.tol
@@ -131,6 +134,7 @@ LogisticRegressionModel
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getProbabilityCol
+    .. automethod:: getRawPredictionCol
     .. automethod:: getRegParam
     .. automethod:: getTol
     .. automethod:: hasDefault
@@ -149,6 +153,7 @@ LogisticRegressionModel
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
+    .. automethod:: setRawPredictionCol
     .. automethod:: transform
     .. automethod:: write
 
@@ -179,6 +184,7 @@ LogisticRegressionModel
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: probabilityCol
+    .. autoattribute:: rawPredictionCol
     .. autoattribute:: regParam
     .. autoattribute:: summary
     .. autoattribute:: tol

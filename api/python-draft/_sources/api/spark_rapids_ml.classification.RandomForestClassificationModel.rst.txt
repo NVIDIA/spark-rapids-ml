@@ -55,6 +55,7 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.getParam
        ~RandomForestClassificationModel.getPredictionCol
        ~RandomForestClassificationModel.getProbabilityCol
+       ~RandomForestClassificationModel.getRawPredictionCol
        ~RandomForestClassificationModel.getSeed
        ~RandomForestClassificationModel.hasDefault
        ~RandomForestClassificationModel.hasParam
@@ -73,6 +74,7 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.setLabelCol
        ~RandomForestClassificationModel.setPredictionCol
        ~RandomForestClassificationModel.setProbabilityCol
+       ~RandomForestClassificationModel.setRawPredictionCol
        ~RandomForestClassificationModel.transform
        ~RandomForestClassificationModel.write
 
@@ -106,6 +108,7 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.params
        ~RandomForestClassificationModel.predictionCol
        ~RandomForestClassificationModel.probabilityCol
+       ~RandomForestClassificationModel.rawPredictionCol
        ~RandomForestClassificationModel.seed
        ~RandomForestClassificationModel.supportedFeatureSubsetStrategies
        ~RandomForestClassificationModel.supportedImpurities
@@ -143,6 +146,7 @@ RandomForestClassificationModel
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getProbabilityCol
+    .. automethod:: getRawPredictionCol
     .. automethod:: getSeed
     .. automethod:: hasDefault
     .. automethod:: hasParam
@@ -161,6 +165,7 @@ RandomForestClassificationModel
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
+    .. automethod:: setRawPredictionCol
     .. automethod:: transform
     .. automethod:: write
 
@@ -193,6 +198,7 @@ RandomForestClassificationModel
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: probabilityCol
+    .. autoattribute:: rawPredictionCol
     .. autoattribute:: seed
     .. autoattribute:: supportedFeatureSubsetStrategies
     .. autoattribute:: supportedImpurities

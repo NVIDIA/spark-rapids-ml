@@ -353,7 +353,7 @@ document.write(`
 <h2>Feature<a class="headerlink" href="#feature" title="Permalink to this heading">#</a></h2>
 <table class="autosummary longtable table autosummary">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA" title="spark_rapids_ml.feature.PCA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PCA</span></code></a>(**kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA" title="spark_rapids_ml.feature.PCA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PCA</span></code></a>(*[, k, inputCol, outputCol, ...])</p></td>
 <td><p>PCA algorithm learns principal component vectors to project high-dimensional vectors into low-dimensional vectors, while preserving the similarity of the vectors.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel" title="spark_rapids_ml.feature.PCAModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PCAModel</span></code></a>(mean_, components_, ...)</p></td>
@@ -385,7 +385,7 @@ document.write(`
 <h2>Clustering<a class="headerlink" href="#clustering" title="Permalink to this heading">#</a></h2>
 <table class="autosummary longtable table autosummary">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans" title="spark_rapids_ml.clustering.KMeans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KMeans</span></code></a>(**kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans" title="spark_rapids_ml.clustering.KMeans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KMeans</span></code></a>(*[, featuresCol, predictionCol, k, ...])</p></td>
 <td><p>KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel" title="spark_rapids_ml.clustering.KMeansModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KMeansModel</span></code></a>(cluster_centers_, n_cols, dtype)</p></td>
