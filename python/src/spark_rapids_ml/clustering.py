@@ -57,7 +57,7 @@ from .utils import (
 class KMeansClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
+        param_map = {
             "distanceMeasure": None,
             "initMode": "init",
             "k": "n_clusters",
@@ -69,6 +69,15 @@ class KMeansClass(_CumlClass):
             "solver": "",
             "maxBlockSizeInMB": "",
         }
+
+        import pyspark
+        from packaging import version
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            param_map.pop("solver")
+            param_map.pop("maxBlockSizeInMB")
+
+        return param_map
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {

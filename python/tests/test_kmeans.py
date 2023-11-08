@@ -328,7 +328,14 @@ def test_kmeans_spark_compat(
         ]
         df = spark.createDataFrame(data, ["features", "weighCol"])
 
-        kmeans = _KMeans(k=2)
+        import pyspark
+        from packaging import version
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            kmeans = _KMeans(k=2)
+        else:
+            kmeans = _KMeans(k=2, solver="auto", maxBlockSizeInMB=0)
+
         kmeans.setSeed(1)
         kmeans.setMaxIter(10)
         if isinstance(kmeans, SparkKMeans):
