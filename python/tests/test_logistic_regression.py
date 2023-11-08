@@ -1047,7 +1047,7 @@ def test_crossvalidator_logistic_regression(
         )
         spark_cv_model = spark_cv.fit(df)
 
-        assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics, tolerance=0.0005)
+        assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics, 0.0005)
 
 
 def test_parameters_validation() -> None:
