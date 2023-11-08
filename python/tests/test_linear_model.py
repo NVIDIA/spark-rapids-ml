@@ -167,9 +167,7 @@ def test_linear_regression_params(
 
     # Unsupported value
     spark_params = {"solver": "l-bfgs"}
-    with pytest.raises(
-        ValueError, match="solver given invalid value l-bfgs"
-    ):
+    with pytest.raises(ValueError, match="solver given invalid value l-bfgs"):
         unsupported_lr = LinearRegression(**spark_params)
 
     # make sure no warning when enabling float64 inputs
