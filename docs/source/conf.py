@@ -9,7 +9,7 @@
 project = 'spark-rapids-ml'
 copyright = '2023, NVIDIA'
 author = 'NVIDIA'
-release = '23.8.0'
+release = '23.10.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -40,6 +40,8 @@ intersphinx_mapping = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'pydata_sphinx_theme'
+
+html_show_sourcelink = False
 
 import inspect
 from spark_rapids_ml.utils import _unsupported_methods_attributes

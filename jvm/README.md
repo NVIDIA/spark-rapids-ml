@@ -95,7 +95,7 @@ repository, usually in your `~/.m2/repository`.
 Add the artifact jar to the Spark, for example:
 ```bash
 ML_JAR="target/rapids-4-spark-ml_2.12-23.08.0-SNAPSHOT.jar"
-PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/23.08.1-SNAPSHOT/rapids-4-spark_2.12-23.08.1-SNAPSHOT.jar"
+PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/23.08.2-SNAPSHOT/rapids-4-spark_2.12-23.08.2-SNAPSHOT.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \

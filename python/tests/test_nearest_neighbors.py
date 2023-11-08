@@ -326,6 +326,11 @@ def test_nearest_neighbors(
         random_state=0,
     )  # make_blobs creates a random dataset of isotropic gaussian blobs.
 
+    # set average norm sq to be 1 to allow comparisons with default error thresholds
+    # below
+    root_ave_norm_sq = np.sqrt(np.average(np.linalg.norm(X, ord=2, axis=1) ** 2))
+    X = X / root_ave_norm_sq
+
     # obtain cuml results
     from cuml import NearestNeighbors as cuNN
 
@@ -364,10 +369,18 @@ def test_nearest_neighbors(
             item_df_withid.select(alias.row_number).toPandas()[alias.row_number]
         )
 
-        # test kneighbors: compare distances
+        # test kneighbors: compare squared distances
+        # note that single node and multi node may run slightly different kernels resulting
+        # in different distances.  This is especially an issue for self distances which don't come out
+        # to be 0 necessarily due to expanded form of calculation (|x-y|^2 = |x|^2 + |y|^2 - 2 <x,y>).
+        # sqrt amplifies this error so we compare Euclidean distance squared and expect error to be below
+        # default threshold in array_equal
         assert len(distances) == len(cuml_distances)
+        np_distances = np.array(distances)
+        np_distances *= np_distances
+        cuml_distances *= cuml_distances
         for i in range(len(distances)):
-            assert array_equal(distances[i], cuml_distances[i])
+            assert array_equal(np_distances[i], cuml_distances[i])
 
         # test exactNearestNeighborsJoin
         with pytest.raises(ValueError):

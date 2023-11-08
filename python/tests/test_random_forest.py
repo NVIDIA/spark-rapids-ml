@@ -15,7 +15,7 @@
 #
 import json
 import math
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 import pytest
@@ -25,7 +25,11 @@ from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
 )
 from pyspark.ml.classification import RandomForestClassifier as SparkRFClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
+from pyspark.ml.evaluation import (
+    BinaryClassificationEvaluator,
+    MulticlassClassificationEvaluator,
+    RegressionEvaluator,
+)
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.param import Param
 from pyspark.ml.regression import RandomForestRegressionModel as SparkRFRegressionModel
@@ -598,17 +602,16 @@ def test_random_forest_classifier_spark_compat(
             if isinstance(model, SparkRFClassificationModel):
                 assert result.prediction == 0.0
                 assert np.argmax(result.probability) == 0
+                assert np.argmax(result.newRawPrediction) == 0
             else:
                 # TODO: investigate difference
                 assert result.prediction == 1.0
                 assert np.argmax(result.probability) == 1
+                assert np.argmax(result.newRawPrediction) == 1
 
         if isinstance(model, SparkRFClassificationModel):
-            assert np.argmax(result.newRawPrediction) == 0
             assert result.leafId == Vectors.dense([0.0, 0.0, 0.0])
         else:
-            with pytest.raises((NotImplementedError, AttributeError)):
-                assert np.argmax(result.newRawPrediction) == 0
             with pytest.raises((NotImplementedError, AttributeError)):
                 assert result.leafId == Vectors.dense([0.0, 0.0, 0.0])
 
@@ -816,20 +819,27 @@ def test_fit_multiple_in_single_pass(
 @pytest.mark.parametrize(
     "estimator_evaluator",
     [
-        (RandomForestClassifier, MulticlassClassificationEvaluator),
-        (RandomForestRegressor, RegressionEvaluator),
+        (RandomForestClassifier, 4, MulticlassClassificationEvaluator, "accuracy"),
+        (RandomForestClassifier, 4, MulticlassClassificationEvaluator, "logLoss"),
+        (RandomForestClassifier, 2, BinaryClassificationEvaluator, "areaUnderROC"),
+        (RandomForestRegressor, None, RegressionEvaluator, None),
     ],
 )
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
 def test_crossvalidator_random_forest(
-    estimator_evaluator: Tuple[RandomForest, RandomForestEvaluator],
+    estimator_evaluator: Tuple[
+        RandomForest,
+        Optional[int],
+        RandomForestEvaluator,
+        Optional[str],
+    ],
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
 ) -> None:
-    RF, Evaluator = estimator_evaluator
+    RF, n_classes, Evaluator, metric = estimator_evaluator
 
     # Train a toy model
 
@@ -838,7 +848,7 @@ def test_crossvalidator_random_forest(
             datatype=data_type,
             nrows=data_shape[0],
             ncols=data_shape[1],
-            n_classes=4,
+            n_classes=n_classes,
             n_informative=data_shape[1],
             n_redundant=0,
             n_repeated=0,
@@ -862,6 +872,9 @@ def test_crossvalidator_random_forest(
 
         evaluator = Evaluator()
         evaluator.setLabelCol(label_col)
+
+        if metric:
+            evaluator.setMetricName(metric)  # type: ignore
 
         grid = (
             ParamGridBuilder()

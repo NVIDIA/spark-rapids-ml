@@ -42,7 +42,7 @@ local_threads=${local_threads:-4}
 num_gpus=1
 if [[ $cluster_type == "gpu" || $cluster_type == "gpu_etl" ]]; then
     num_cpus=0
-    if [ -n $CUDA_VISIBLE_DEVICES ]; then
+    if [[ -n $CUDA_VISIBLE_DEVICES ]]; then
         num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
     fi
 elif [[ $cluster_type == "cpu" ]]; then
@@ -99,7 +99,7 @@ EOF
 
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=23.08.1
+SPARK_RAPIDS_VERSION=23.08.2
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
@@ -304,16 +304,20 @@ fi
 
 # Random Forest Classification
 if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+    num_classes=2
+    data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
+
+    if [[ ! -d ${data_path} ]]; then
         python $gen_data_script classification \
             --n_informative $( expr $num_cols / 3 )  \
             --n_redundant $( expr $num_cols / 3 ) \
+            --n_classes ${num_classes} \
             --num_rows $num_rows \
             --num_cols $num_cols \
             --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+            --output_dir "${data_path}" \
             $common_confs
     fi
 
@@ -325,8 +329,8 @@ if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --num_runs $num_runs \
-        --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
-        --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
+        --train_path "${data_path}" \
+        --transform_path "${data_path}" \
         --report_path "report_rf_classifier_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
@@ -362,34 +366,73 @@ fi
 
 # Logistic Regression Classification
 if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d ${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet ]]; then
-    # same data set as random forest classifier
-        python $gen_data_script classification \
-            --n_informative $( expr $num_cols / 3 )  \
-            --n_redundant $( expr $num_cols / 3 ) \
-            --num_rows $num_rows \
-            --num_cols $num_cols \
-            --output_num_files $output_num_files \
-            --dtype "float32" \
-            --feature_type "array" \
-            --output_dir "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
-            $common_confs
-    fi
+    num_classes_list=${num_classes_list:-"2 10"}
 
-    echo "$sep algo: logistic regression $sep"
-    python ./benchmark/benchmark_runner.py logistic_regression \
-        --standardization False \
-        --maxIter 200 \
-        --tol 1e-30 \
-        --regParam 0.00001 \
-        --num_gpus $num_gpus \
-        --num_cpus $num_cpus \
-        --num_runs $num_runs \
-        --train_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
-        --transform_path "${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32.parquet" \
-        --report_path "report_logistic_regression_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+    for num_classes in ${num_classes_list}; do
+
+        data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
+
+        if [[ ! -d ${data_path} ]]; then
+            python $gen_data_script classification \
+                --n_informative $( expr $num_cols / 3 )  \
+                --n_redundant $( expr $num_cols / 3 ) \
+                --n_classes ${num_classes} \
+                --num_rows $num_rows \
+                --num_cols $num_cols \
+                --output_num_files $output_num_files \
+                --dtype "float32" \
+                --feature_type "array" \
+                --output_dir ${data_path} \
+                $common_confs
+        fi
+
+        family="Binomial"
+        if [ ${num_classes} -gt 2 ]; then
+            family="Multinomial"
+        fi
+
+        echo "$sep algo: ${family} logistic regression - l2 regularization $sep"
+        python ./benchmark/benchmark_runner.py logistic_regression \
+            --standardization False \
+            --maxIter 200 \
+            --tol 1e-30 \
+            --regParam 0.00001 \
+            --elasticNetParam 0 \
+            --num_gpus $num_gpus \
+            --num_cpus $num_cpus \
+            --num_runs $num_runs \
+            --train_path ${data_path} \
+            --transform_path ${data_path} \
+            --report_path "report_logistic_regression_${cluster_type}.csv" \
+            $common_confs $spark_rapids_confs \
+            ${EXTRA_ARGS}
+    done
+
+    for num_classes in ${num_classes_list}; do
+
+        data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
+
+        family="Binomial"
+        if [ ${num_classes} -gt 2 ]; then
+            family="Multinomial"
+        fi
+
+        echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
+        python ./benchmark/benchmark_runner.py logistic_regression \
+            --standardization False \
+            --maxIter 200 \
+            --tol 1e-30 \
+            --regParam 0.00001 \
+            --elasticNetParam 0.2 \
+            --num_gpus $num_gpus \
+            --num_cpus $num_cpus \
+            --num_runs $num_runs \
+            --train_path ${data_path} \
+            --transform_path ${data_path} \
+            --report_path "report_logistic_regression_${cluster_type}.csv" \
+            $common_confs $spark_rapids_confs \
+            ${EXTRA_ARGS}
+    done
 fi
 
 # UMAP

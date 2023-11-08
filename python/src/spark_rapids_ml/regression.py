@@ -62,8 +62,8 @@ from .core import (
     alias,
     param_alias,
     pred,
-    transform_evaluate,
 )
+from .metrics import EvalMetricInfo, transform_evaluate_metric
 from .metrics.RegressionMetrics import RegressionMetrics, reg_metrics
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .tree import (
@@ -129,13 +129,17 @@ class _RegressionModelEvaluationMixIn:
             ]
         )
 
-        rows = self._this_model._transform_evaluate_internal(dataset, schema).collect()
+        rows = self._this_model._transform_evaluate_internal(
+            dataset,
+            schema,
+            EvalMetricInfo(eval_metric=transform_evaluate_metric.regression),
+        ).collect()
 
-        metrics = RegressionMetrics.from_rows(num_models, rows)
+        metrics = RegressionMetrics._from_rows(num_models, rows)
         return [metric.evaluate(evaluator) for metric in metrics]
 
     @staticmethod
-    def calculate_regression_metrics(
+    def _calculate_regression_metrics(
         input: TransformInputType,
         transformed: TransformInputType,
     ) -> pd.DataFrame:
@@ -238,28 +242,28 @@ class _LinearRegressionCumlParams(
         Sets the value of :py:attr:`featuresCol` or :py:attr:`featureCols`.
         """
         if isinstance(value, str):
-            self.set_params(featuresCol=value)
+            self._set_params(featuresCol=value)
         else:
-            self.set_params(featuresCols=value)
+            self._set_params(featuresCols=value)
         return self
 
     def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`.
         """
-        return self.set_params(featuresCols=value)
+        return self._set_params(featuresCols=value)
 
     def setLabelCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`labelCol`.
         """
-        return self.set_params(labelCol=value)
+        return self._set_params(labelCol=value)
 
     def setPredictionCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`predictionCol`.
         """
-        return self.set_params(predictionCol=value)
+        return self._set_params(predictionCol=value)
 
 
 class LinearRegression(
@@ -297,7 +301,7 @@ class LinearRegression(
     Parameters
     ----------
 
-    featuresCol:
+    featuresCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
@@ -413,43 +417,43 @@ class LinearRegression(
         **kwargs: Any,
     ):
         super().__init__()
-        self.set_params(**self._input_kwargs)
+        self._set_params(**self._input_kwargs)
 
     def setMaxIter(self, value: int) -> "LinearRegression":
         """
         Sets the value of :py:attr:`maxIter`.
         """
-        return self.set_params(maxIter=value)
+        return self._set_params(maxIter=value)
 
     def setRegParam(self, value: float) -> "LinearRegression":
         """
         Sets the value of :py:attr:`regParam`.
         """
-        return self.set_params(regParam=value)
+        return self._set_params(regParam=value)
 
     def setElasticNetParam(self, value: float) -> "LinearRegression":
         """
         Sets the value of :py:attr:`elasticNetParam`.
         """
-        return self.set_params(elasticNetParam=value)
+        return self._set_params(elasticNetParam=value)
 
     def setLoss(self, value: str) -> "LinearRegression":
         """
         Sets the value of :py:attr:`loss`.
         """
-        return self.set_params(loss=value)
+        return self._set_params(loss=value)
 
     def setStandardization(self, value: bool) -> "LinearRegression":
         """
         Sets the value of :py:attr:`standardization`.
         """
-        return self.set_params(standardization=value)
+        return self._set_params(standardization=value)
 
     def setTol(self, value: float) -> "LinearRegression":
         """
         Sets the value of :py:attr:`tol`.
         """
-        return self.set_params(tol=value)
+        return self._set_params(tol=value)
 
     def _pre_process_data(
         self, dataset: DataFrame
@@ -608,7 +612,7 @@ class LinearRegression(
         )
 
     def _create_pyspark_model(self, result: Row) -> "LinearRegressionModel":
-        return LinearRegressionModel.from_row(result)
+        return LinearRegressionModel._from_row(result)
 
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True
@@ -686,17 +690,19 @@ class LinearRegressionModel(
         return 1.0
 
     def predict(self, value: T) -> float:
-        """cuML doesn't support predicting 1 single sample.
-        Fall back to PySpark ML LinearRegressionModel"""
+        """predict a single sample"""
+        # cuML doesn't support predicting 1 single sample.
+        # Fall back to PySpark ML LinearRegressionModel
         return self.cpu().predict(value)
 
     def evaluate(self, dataset: DataFrame) -> LinearRegressionSummary:
-        """cuML doesn't support evaluating.
-        Fall back to PySpark ML LinearRegressionModel"""
+        """evaluate model on dataset"""
+        # cuML doesn't support evaluating.
+        # Fall back to PySpark ML LinearRegressionModel
         return self.cpu().evaluate(dataset)
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         coef_ = self.coef_
         intercept_ = self.intercept_
@@ -727,7 +733,7 @@ class LinearRegressionModel(
             ret = lr.predict(pdf)
             return pd.Series(ret)
 
-        return _construct_lr, _predict, self.calculate_regression_metrics
+        return _construct_lr, _predict, self._calculate_regression_metrics
 
     @classmethod
     def _combine(
@@ -807,7 +813,7 @@ class RandomForestRegressor(
     Parameters
     ----------
 
-    featuresCol:
+    featuresCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
@@ -946,7 +952,7 @@ class RandomForestRegressor(
         return False
 
     def _create_pyspark_model(self, result: Row) -> "RandomForestRegressionModel":
-        return RandomForestRegressionModel.from_row(result)
+        return RandomForestRegressionModel._from_row(result)
 
     def _supportsTransformEvaluate(self, evaluator: Evaluator) -> bool:
         return True if isinstance(evaluator, RegressionEvaluator) else False
@@ -1004,10 +1010,12 @@ class RandomForestRegressionModel(
         return False
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
-        _construct_rf, _predict, _ = super()._get_cuml_transform_func(dataset, category)
-        return _construct_rf, _predict, self.calculate_regression_metrics
+        _construct_rf, _predict, _ = super()._get_cuml_transform_func(
+            dataset, eval_metric_info
+        )
+        return _construct_rf, _predict, self._calculate_regression_metrics
 
     def _transformEvaluate(
         self,

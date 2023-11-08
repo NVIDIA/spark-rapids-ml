@@ -48,8 +48,8 @@ from spark_rapids_ml.regression import LinearRegression
 from pyspark.ml.linalg import Vectors
 
 df = spark.createDataFrame([
-     (1.0, 2.0, Vectors.dense(1.0, 0.0)),
-     (0.0, 2.0, Vectors.dense(0.0, 1.0))], ["label", "weight", "features"])
+     (1.0, Vectors.dense(1.0, 0.0)),
+     (0.0, Vectors.dense(0.0, 1.0))], ["label", "features"])
 
 # number of partitions should match number of GPUs in Spark cluster
 df = df.repartition(1)
@@ -72,9 +72,9 @@ model.coefficients
 # from pyspark.ml.clustering import KMeans
 from spark_rapids_ml.clustering import KMeans
 from pyspark.ml.linalg import Vectors
-data = [(Vectors.dense([0.0, 0.0]), 2.0), (Vectors.dense([1.0, 1.0]), 2.0),
-        (Vectors.dense([9.0, 8.0]), 2.0), (Vectors.dense([8.0, 9.0]), 2.0)]
-df = spark.createDataFrame(data, ["features", "weighCol"])
+data = [(Vectors.dense([0.0, 0.0]),), (Vectors.dense([1.0, 1.0]),),
+        (Vectors.dense([9.0, 8.0]),), (Vectors.dense([8.0, 9.0]),)]
+df = spark.createDataFrame(data, ["features"])
 
 # number of partitions should match number of GPUs in Spark cluster
 df = df.repartition(1)
@@ -93,13 +93,13 @@ print(centers)
 model.setPredictionCol("newPrediction")
 transformed = model.transform(df)
 transformed.show()
-# +--------+----------+-------------+
-# |weighCol|  features|newPrediction|
-# +--------+----------+-------------+
-# |     2.0|[0.0, 0.0]|            1|
-# |     2.0|[1.0, 1.0]|            1|
-# |     2.0|[9.0, 8.0]|            0|
-# |     2.0|[8.0, 9.0]|            0|
+# +----------+-------------+
+# |  features|newPrediction|
+# +----------+-------------+
+# |[0.0, 0.0]|            1|
+# |[1.0, 1.0]|            1|
+# |[9.0, 8.0]|            0|
+# |[8.0, 9.0]|            0|
 # +--------+----------+-------------+
 rows[0].newPrediction == rows[1].newPrediction
 # True

@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from pyspark import keyword_only
 from pyspark.ml.common import _py2java
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.feature import _PCAParams
@@ -44,8 +45,8 @@ from .core import (
     _EvaluateFunc,
     _TransformFunc,
     param_alias,
-    transform_evaluate,
 )
+from .metrics import EvalMetricInfo
 from .params import P, _CumlClass, _CumlParams
 from .utils import (
     PartitionDescriptor,
@@ -76,25 +77,25 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
 
     def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
-        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`. Used when input vectors are stored in a single column.
+        Sets the value of :py:attr:`inputCol` or :py:attr:`inputCols`.
         """
         if isinstance(value, str):
-            self.set_params(inputCol=value)
+            self._set_params(inputCol=value)
         else:
-            self.set_params(inputCols=value)
+            self._set_params(inputCols=value)
         return self
 
     def setInputCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`inputCols`. Used when input vectors are stored as multiple feature columns.
         """
-        return self.set_params(inputCols=value)
+        return self._set_params(inputCols=value)
 
     def setOutputCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`outputCol`
         """
-        return self.set_params(outputCol=value)
+        return self._set_params(outputCol=value)
 
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
@@ -108,17 +109,31 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     ----------
     k: int
         the number of components, or equivalently the dimension that all vectors will be projected to.
-    inputCol: str
-        the name of the column that contains input vectors. inputCol should be set when input vectors
-        are stored in a single column of a dataframe.
 
-    inputCols: List[str]
-        the names of feature columns that form input vectors. inputCols should be set when input vectors
-        are stored as multiple feature columns of a dataframe.
+    inputCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
 
     outputCol: str
         the name of the column that stores output vectors. outputCol should be set when users expect to
         store output vectors in a single column.
+
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+
 
 
     Examples
@@ -165,15 +180,25 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     >>> gpu_model = gpu_pca.fit(df)
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        k: Optional[int] = None,
+        inputCol: Optional[Union[str, List[str]]] = None,
+        outputCol: Optional[str] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
-        self.set_params(**kwargs)
+        self._set_params(**self._input_kwargs)
 
     def setK(self, value: int) -> "PCA":
         """
         Sets the value of :py:attr:`k`.
         """
-        return self.set_params(k=value)
+        return self._set_params(k=value)
 
     def _get_cuml_fit_func(
         self,
@@ -242,7 +267,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         )
 
     def _create_pyspark_model(self, result: Row) -> "PCAModel":
-        return PCAModel.from_row(result)
+        return PCAModel._from_row(result)
 
 
 class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
@@ -252,6 +277,9 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
     Spark PCA does not automatically remove the mean of the input data, so use the
     :py:class::`~pyspark.ml.feature.StandardScaler` to center the input data before
     invoking transform.
+
+    The input vectors can be stored in three different formats: a column of vector,
+    a column of array, or multiple scalar columns.
 
     Examples
     --------
@@ -297,7 +325,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         self.singular_values_ = singular_values_
         self._pca_ml_model: Optional[SparkPCAModel] = None
 
-        self.set_params(n_components=len(components_))
+        self._set_params(n_components=len(components_))
 
     @property
     def mean(self) -> List[float]:
@@ -343,7 +371,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         return self._pca_ml_model
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 

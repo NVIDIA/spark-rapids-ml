@@ -4,9 +4,9 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
 
 ## Setup
 
-1. Install [databricks-cli](https://docs.databricks.com/dev-tools/cli/index.html) on your local workstation.
+1. Install latest [databricks-cli](https://docs.databricks.com/dev-tools/cli/index.html) on your local workstation.   Note that Databricks has deprecated the legacy python based cli in favor of a self contained executable.  Make sure the new version is first on the executables PATH.
     ```bash
-    pip install databricks-cli --upgrade
+    curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
     ```
 
 2. Generate an [access token](https://docs.databricks.com/dev-tools/api/latest/authentication.html) for your Databricks workspace in the `User Settings` section of the workspace UI.
@@ -15,23 +15,22 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
     ```bash
     export DB_PROFILE=aws
     databricks configure --token --profile $DB_PROFILE
-    # 
+    # Host: <copy-and-paste databricks workspace url>
     # Token: <copy-and-paste access token from UI>
     ```
-
-4. Configure the Databricks cli to use the jobs 2.0 api.
+4. Next, in [this](./) directory, run the following to upload the files required to run the benchmarks:
     ```bash
-    databricks jobs configure --version=2.0 --profile $DB_PROFILE
-    ```
-
-5. Next, in [this](./) directory, run the following to upload the files required to run the benchmarks:
-    ```bash
-    #change below to desired dbfs location WITHOUT DBFS URI for uploading benchmarking related files
+    # change below to desired dbfs location WITHOUT DBFS URI for uploading benchmarking related files
     export BENCHMARK_HOME=/path/to/benchmark/files/in/dbfs
+
+    # need separate directory for cluster init script as databricks requires these to be stored in the workspace and not dbfs
+    # ex: /Users/<databricks-user-name>/benchmark
+    export WS_BENCHMARK_HOME=/path/to/benchmark/files/in/workspace
+
     ./setup.sh
     ```
-    This will create and copy the files into a DBFS folder at the path specified by `BENCHMARK_HOME`.
-    Note: Export `BENCHMARK_HOME` and `DB_PROFILE` in any new/different shell in which subsequent steps may be run.
+    This will create and copy the files into a DBFS directory at the path specified by `BENCHMARK_HOME` and a cluster init script to the workspace directory specified by `WS_BENCHMARK_HOME`.   The script will not overwrite existing files and instead simply print the error message returned from databricks.  If overwrite is desired, first deleted the files and/or directories using `databricks fs rm [-r] <dbfs path>` for the dbfs files and `databricks workspace delete [--recursive] <workspace path>` for the workspace files.
+    Note: Export `BENCHMARK_HOME`, `WS_BENCHMARK_HOME` and `DB_PROFILE` in any new/different shell in which subsequent steps may be run.
 
 ## Running the benchmarks
 
@@ -54,7 +53,7 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
 
 4. **Cancelling** a run:  Hit `Ctrl-C` and then cancel the run with the last printed `runid` (check using `tail benchmark_log`) by executing:
   ```bash
-  databricks runs cancel --run-id <runid> --profile $DB_PROFILE
+  databricks jobs cancel-run <runid> --profile $DB_PROFILE
   ```
 
 5. The created clusters are configured to terminate after 30 min, but can be manually terminated or deleted via the Databricks UI.

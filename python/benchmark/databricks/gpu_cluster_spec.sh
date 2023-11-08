@@ -3,13 +3,13 @@ cat <<EOF
 {
     "num_workers": $num_gpus,
     "cluster_name": "$cluster_name",
-    "spark_version": "11.3.x-gpu-ml-scala2.12",
+    "spark_version": "12.2.x-gpu-ml-scala2.12",
     "spark_conf": {
         "spark.task.resource.gpu.amount": "0.25",
         "spark.task.cpus": "1",
         "spark.databricks.delta.preview.enabled": "true",
         "spark.python.worker.reuse": "true",
-        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-23.08.1.jar:/databricks/spark/python",
+        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-23.08.2.jar:/databricks/spark/python",
         "spark.sql.files.minPartitionNum": "2",
         "spark.sql.execution.arrow.maxRecordsPerBatch": "10000",
         "spark.executor.cores": "8",
@@ -48,15 +48,14 @@ cat <<EOF
     },
     "spark_env_vars": {
         "LIBCUDF_CUFILE_POLICY": "OFF",
-        "LD_LIBRARY_PATH": "/usr/local/cuda/compat:/usr/local/cuda/lib64",
         "NCCL_DEBUG": "INFO"
     },
     "autotermination_minutes": 30,
     "enable_elastic_disk": false,
     "init_scripts": [
         {
-            "dbfs": {
-                "destination": "dbfs:${BENCHMARK_HOME}/init_script/init-pip-cuda-11.8.sh"
+            "workspace": {
+                "destination": "${INIT_SCRIPT_DIR}/init-pip-cuda-11.8.sh"
             }
         }
     ],

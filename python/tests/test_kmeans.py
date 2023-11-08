@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import List, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 import numpy as np
 import pytest
@@ -86,7 +86,7 @@ def test_kmeans_params(
     assert_params(default_kmeans, default_spark_params, default_cuml_params)
 
     # Spark Params constructor
-    spark_params = {"k": 10, "maxIter": 100}
+    spark_params: Dict[str, Any] = {"k": 10, "maxIter": 100}
     spark_kmeans = KMeans(**spark_params)
     expected_spark_params = default_spark_params.copy()
     expected_spark_params.update(spark_params)
@@ -95,7 +95,7 @@ def test_kmeans_params(
     assert_params(spark_kmeans, expected_spark_params, expected_cuml_params)
 
     # cuml_params constructor
-    cuml_params = {
+    cuml_params: Dict[str, Any] = {
         "n_clusters": 10,
         "max_iter": 100,
         "tol": 1e-1,
@@ -120,7 +120,7 @@ def test_kmeans_params(
     assert_params(loaded_kmeans, expected_spark_params, expected_cuml_params)
 
     # conflicting params
-    conflicting_params = {
+    conflicting_params: Dict[str, Any] = {
         "k": 2,
         "n_clusters": 10,
     }
@@ -182,7 +182,7 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
 
         # test transform function
         label_df = kmeans_model.transform(df)
-        assert "features" in label_df.columns
+        assert ["features", "prediction"] == sorted(label_df.columns)
 
         o_col = kmeans_model.getPredictionCol()
         labels = [row[o_col] for row in label_df.collect()]
@@ -328,7 +328,14 @@ def test_kmeans_spark_compat(
         ]
         df = spark.createDataFrame(data, ["features", "weighCol"])
 
-        kmeans = _KMeans(k=2)
+        import pyspark
+        from packaging import version
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            kmeans = _KMeans(k=2)
+        else:
+            kmeans = _KMeans(k=2, solver="auto", maxBlockSizeInMB=0)
+
         kmeans.setSeed(1)
         kmeans.setMaxIter(10)
         if isinstance(kmeans, SparkKMeans):

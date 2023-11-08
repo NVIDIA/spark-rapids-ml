@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
+from pyspark import keyword_only
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.clustering import _KMeansParams
 from pyspark.ml.linalg import Vector
@@ -41,8 +42,8 @@ from .core import (
     _EvaluateFunc,
     _TransformFunc,
     param_alias,
-    transform_evaluate,
 )
+from .metrics import EvalMetricInfo
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
     _ArrayOrder,
@@ -56,7 +57,7 @@ from .utils import (
 class KMeansClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
+        param_map = {
             "distanceMeasure": None,
             "initMode": "init",
             "k": "n_clusters",
@@ -65,7 +66,18 @@ class KMeansClass(_CumlClass):
             "seed": "random_state",
             "tol": "tol",
             "weightCol": None,
+            "solver": "",
+            "maxBlockSizeInMB": "",
         }
+
+        import pyspark
+        from packaging import version
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            param_map.pop("solver")
+            param_map.pop("maxBlockSizeInMB")
+
+        return param_map
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -104,25 +116,25 @@ class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):
 
     def setFeaturesCol(self: P, value: Union[str, List[str]]) -> P:
         """
-        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`. Used when input vectors are stored in a single column.
+        Sets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`.
         """
         if isinstance(value, str):
-            self.set_params(featuresCol=value)
+            self._set_params(featuresCol=value)
         else:
-            self.set_params(featuresCols=value)
+            self._set_params(featuresCols=value)
         return self
 
     def setFeaturesCols(self: P, value: List[str]) -> P:
         """
         Sets the value of :py:attr:`featuresCols`. Used when input vectors are stored as multiple feature columns.
         """
-        return self.set_params(featuresCols=value)
+        return self._set_params(featuresCols=value)
 
     def setPredictionCol(self: P, value: str) -> P:
         """
         Sets the value of :py:attr:`predictionCol`.
         """
-        self.set_params(predictionCol=value)
+        self._set_params(predictionCol=value)
         return self
 
 
@@ -139,6 +151,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     k: int (default = 8)
         the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.
 
+    initMode: str (default = "k-means||")
+        the algorithm to select initial centroids. It can be "k-means||" or "random".
+
     maxIter: int (default = 300)
         the maximum iterations the algorithm will run to learn the k centers.
         More iterations help generate more accurate centers.
@@ -149,14 +164,28 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     tol: float (default = 1e-4)
         early stopping criterion if centers do not change much after an iteration.
 
-    featuresCol: str
-        the name of the column that contains input vectors. featuresCol should be set when input vectors are stored in a single column of a dataframe.
-
-    featuresCols: List[str]
-        the names of feature columns that form input vectors. featureCols should be set when input vectors are stored as multiple feature columns of a dataframe.
+    featuresCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
 
     predictionCol: str
         the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
+
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
 
     Examples
     --------
@@ -220,21 +249,35 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     >>> gpu_kmeans = gpu_kmeans.fit(df)
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        featuresCol: str = "features",
+        predictionCol: str = "prediction",
+        k: int = 2,
+        initMode: str = "k-means||",
+        tol: float = 0.0001,
+        maxIter: int = 20,
+        seed: Optional[int] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
         super().__init__()
-        self.set_params(**kwargs)
+        self._set_params(**self._input_kwargs)
 
     def setK(self, value: int) -> "KMeans":
         """
         Sets the value of :py:attr:`k`.
         """
-        return self.set_params(k=value)
+        return self._set_params(k=value)
 
     def setMaxIter(self, value: int) -> "KMeans":
         """
         Sets the value of :py:attr:`maxIter`.
         """
-        return self.set_params(maxIter=value)
+        return self._set_params(maxIter=value)
 
     def setSeed(self, value: int) -> "KMeans":
         """
@@ -242,13 +285,13 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         """
         if value > 0x07FFFFFFF:
             raise ValueError("cuML seed value must be a 32-bit integer.")
-        return self.set_params(seed=value)
+        return self._set_params(seed=value)
 
     def setTol(self, value: float) -> "KMeans":
         """
         Sets the value of :py:attr:`tol`.
         """
-        return self.set_params(tol=value)
+        return self._set_params(tol=value)
 
     def setWeightCol(self, value: str) -> "KMeans":
         """
@@ -320,7 +363,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         )
 
     def _create_pyspark_model(self, result: Row) -> "KMeansModel":
-        return KMeansModel.from_row(result)
+        return KMeansModel._from_row(result)
 
 
 class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
@@ -387,7 +430,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         return "C"
 
     def _get_cuml_transform_func(
-        self, dataset: DataFrame, category: str = transform_evaluate.transform
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         cuml_alg_params = self.cuml_params.copy()
 

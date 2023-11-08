@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     import cupy as cp
 
 import numpy as np
-from pyspark import BarrierTaskContext, SparkContext, TaskContext
+from pyspark import BarrierTaskContext, SparkConf, SparkContext, TaskContext
 from pyspark.sql import SparkSession
 
 _ArrayOrder = Literal["C", "F"]
@@ -73,8 +73,8 @@ def _is_local(sc: SparkContext) -> bool:
     return sc._jsc.sc().isLocal()  # type: ignore
 
 
-def _is_standalone_or_localcluster(sc: SparkContext) -> bool:
-    master = sc.getConf().get("spark.master")
+def _is_standalone_or_localcluster(conf: SparkConf) -> bool:
+    master = conf.get("spark.master")
     return master is not None and (
         master.startswith("spark://") or master.startswith("local-cluster")
     )
