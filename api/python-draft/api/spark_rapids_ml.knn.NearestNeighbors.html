@@ -352,7 +352,7 @@ document.write(`
 <h1>NearestNeighbors<a class="headerlink" href="#nearestneighbors" title="Permalink to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">NearestNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">NearestNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors" title="Permalink to this definition">#</a></dt>
 <dd><p>NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each
 query vector. The main methods accept distributed CPU dataframes as inputs,
 leverage GPUs to accelerate computation, and take care of communication and
@@ -376,6 +376,21 @@ be converted into float during computation.</p>
 <dt><strong>idCol: str</strong></dt><dd><p>the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
 if such a column exists in the dataframe. If idCol is not set, a column with the name <cite>unique_id</cite>
 will be automatically added to the dataframe and used as unique identifier for each vector.</p>
+</dd>
+<dt><strong>num_workers:</strong></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task
+running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+cuML workers (i.e. GPUs in cluster) from the Spark environment.</p>
+</dd>
+<dt><strong>verbose:</strong></dt><dd></dd>
+<dt><strong>Logging level.</strong></dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code> - Disables all log messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code> - Enables only critical messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">2</span></code> - Enables all messages up to and including errors.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">3</span></code> - Enables all messages up to and including warnings.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">4</span> <span class="pre">or</span> <span class="pre">False</span></code> - Enables all messages up to and including information messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">5</span> <span class="pre">or</span> <span class="pre">True</span></code> - Enables all messages up to and including debug messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">6</span></code> - Enables all messages up to and including trace messages.</p></li>
+</ul>
 </dd>
 </dl>
 </dd>
@@ -481,7 +496,7 @@ will be automatically added to the dataframe and used as unique identifier for e
 <td><p>Fits multiple models to the input dataset for all param maps in a single pass.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.getIdCol" title="spark_rapids_ml.knn.NearestNeighbors.getIdCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getIdCol</span></code></a>()</p></td>
-<td><p>Gets the value of <cite>id_col</cite>.</p></td>
+<td><p>Gets the value of <cite>idCol</cite>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.getInputCol" title="spark_rapids_ml.knn.NearestNeighbors.getInputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCol</span></code></a>()</p></td>
 <td><p>Gets the value of inputCol or its default value.</p></td>
@@ -523,7 +538,7 @@ will be automatically added to the dataframe and used as unique identifier for e
 <td><p>Sets a parameter in the embedded param map.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.setIdCol" title="spark_rapids_ml.knn.NearestNeighbors.setIdCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setIdCol</span></code></a>(value)</p></td>
-<td><p>Sets the value of <cite>id_col</cite>.</p></td>
+<td><p>Sets the value of <cite>idCol</cite>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.setInputCol" title="spark_rapids_ml.knn.NearestNeighbors.setInputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInputCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCol" title="spark_rapids_ml.knn.NearestNeighbors.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCols" title="spark_rapids_ml.knn.NearestNeighbors.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>.</p></td>
@@ -545,7 +560,7 @@ will be automatically added to the dataframe and used as unique identifier for e
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.cuml_params" title="spark_rapids_ml.knn.NearestNeighbors.cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuml_params</span></code></a></p></td>
 <td><p>Returns the dictionary of parameters intended for the underlying cuML class.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.id_col" title="spark_rapids_ml.knn.NearestNeighbors.id_col"><code class="xref py py-obj docutils literal notranslate"><span class="pre">id_col</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.idCol" title="spark_rapids_ml.knn.NearestNeighbors.idCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">idCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighbors.inputCol" title="spark_rapids_ml.knn.NearestNeighbors.inputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inputCol</span></code></a></p></td>
@@ -672,7 +687,7 @@ using <cite>paramMaps[index]</cite>. <cite>index</cite> values may not be sequen
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.getIdCol">
 <span class="sig-name descname"><span class="pre">getIdCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.getIdCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the value of <cite>id_col</cite>.</p>
+<dd><p>Gets the value of <cite>idCol</cite>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -758,7 +773,7 @@ a default value.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.setIdCol">
 <span class="sig-name descname"><span class="pre">setIdCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.setIdCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <cite>id_col</cite>. If not set, an id column will be added with column name <cite>unique_id</cite>. The id column is used to specify nearest neighbor vectors by associated id value.</p>
+<dd><p>Sets the value of <cite>idCol</cite>. If not set, an id column will be added with column name <cite>unique_id</cite>. The id column is used to specify nearest neighbor vectors by associated id value.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -792,8 +807,8 @@ a default value.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.id_col">
-<span class="sig-name descname"><span class="pre">id_col</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='id_col',</span> <span class="pre">doc='id</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.id_col" title="Permalink to this definition">#</a></dt>
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighbors.idCol">
+<span class="sig-name descname"><span class="pre">idCol</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='idCol',</span> <span class="pre">doc='id</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighbors.idCol" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -906,7 +921,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.setK"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.setK()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.write"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.cuml_params"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.cuml_params</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.id_col"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.id_col</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.idCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.idCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.inputCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.inputCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.inputCols"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.inputCols</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighbors.k"><code class="docutils literal notranslate"><span class="pre">NearestNeighbors.k</span></code></a></li>

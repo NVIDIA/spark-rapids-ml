@@ -73,7 +73,7 @@ NearestNeighbors
     .. autosummary::
     
        ~NearestNeighbors.cuml_params
-       ~NearestNeighbors.id_col
+       ~NearestNeighbors.idCol
        ~NearestNeighbors.inputCol
        ~NearestNeighbors.inputCols
        ~NearestNeighbors.k
@@ -127,7 +127,7 @@ NearestNeighbors
 
     
     .. autoattribute:: cuml_params
-    .. autoattribute:: id_col
+    .. autoattribute:: idCol
     .. autoattribute:: inputCol
     .. autoattribute:: inputCols
     .. autoattribute:: k
