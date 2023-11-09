@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from abc import ABCMeta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,6 +29,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import pyspark
 from pyspark import Row, TaskContext, keyword_only
 from pyspark.ml.common import _py2java
 from pyspark.ml.evaluation import Evaluator, RegressionEvaluator
@@ -217,6 +219,9 @@ class LinearRegressionClass(_CumlClass):
             "tol": 0.001,
             "shuffle": True,
         }
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return pyspark.ml.regression.LinearRegression
 
 
 class _LinearRegressionCumlParams(
@@ -782,6 +787,9 @@ class _RandomForestRegressorClass(_RandomForestClass):
             x, None
         )
         return mapping
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return pyspark.ml.regression.RandomForestRegressor
 
 
 class RandomForestRegressor(

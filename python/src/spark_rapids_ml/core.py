@@ -16,7 +16,7 @@
 import json
 import os
 import threading
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import (
     TYPE_CHECKING,
@@ -56,6 +56,7 @@ from pyspark.ml.util import (
     MLWritable,
     MLWriter,
 )
+from pyspark.ml.wrapper import JavaParams
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.functions import col, struct
 from pyspark.sql.pandas.functions import pandas_udf
@@ -301,6 +302,16 @@ class _CumlCommon(MLWritable, MLReadable):
 
             cuml_logger.set_level(log_level)
 
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        """
+        Subclass should override to return corresponding pyspark.ml class
+        Ex. logistic regression should return pyspark.ml.classification.LogisticRegression
+        Return None if no corresponding class in pyspark, e.g. knn
+        """
+        raise NotImplementedError(
+            "pyspark.ml class corresponding to estimator not specified."
+        )
+
 
 class _CumlCaller(_CumlParams, _CumlCommon):
     """
@@ -419,6 +430,31 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return (True, False)
 
+    def _validate_parameters(self) -> None:
+        cls_name = self._pyspark_class()
+
+        if cls_name is not None:
+            pyspark_est = cls_name()
+            # Both pyspark and cuml may have a parameter with the same name,
+            # but cuml might have additional optional values that can be set.
+            # If we transfer these cuml-specific values to the Spark JVM,
+            # it would result in an exception.
+            # To avoid this issue, we skip transferring these parameters
+            # since the mapped parameters have been validated in _get_cuml_mapping_value.
+            cuml_est = self.copy()
+            cuml_params = cuml_est._param_value_mapping().keys()
+            param_mapping = cuml_est._param_mapping()
+            pyspark_params = [k for k, v in param_mapping.items() if v in cuml_params]
+            for p in pyspark_params:
+                cuml_est.clear(cuml_est.getParam(p))
+
+            cuml_est._copyValues(pyspark_est)
+            # validate the parameters
+            pyspark_est._transfer_params_to_java()
+
+            del pyspark_est
+            del cuml_est
+
     @abstractmethod
     def _get_cuml_fit_func(
         self,
@@ -468,6 +504,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         :class:`Transformer`
             fitted model
         """
+        self._validate_parameters()
 
         cls = self.__class__
 

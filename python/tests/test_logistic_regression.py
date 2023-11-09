@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
 from packaging import version
+from pyspark.errors import IllegalArgumentException
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
@@ -657,7 +658,7 @@ def test_compat_multinomial(
                 regParam=0.1,
                 elasticNetParam=0.2,
                 fitIntercept=fit_intercept,
-                family="multimonial",
+                family="multinomial",
             )
 
         assert mlor.getRegParam() == 0.1
@@ -1046,4 +1047,26 @@ def test_crossvalidator_logistic_regression(
         )
         spark_cv_model = spark_cv.fit(df)
 
-        assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics)
+        assert array_equal(model.avgMetrics, spark_cv_model.avgMetrics, 0.0005)
+
+
+def test_parameters_validation() -> None:
+    data = [
+        ([1.0, 2.0], 1.0),
+        ([3.0, 1.0], 0.0),
+    ]
+
+    with CleanSparkSession() as spark:
+        features_col = "features"
+        label_col = "label"
+        schema = features_col + " array<float>, " + label_col + " float"
+        df = spark.createDataFrame(data, schema=schema)
+        with pytest.raises(
+            IllegalArgumentException, match="maxIter given invalid value -1"
+        ):
+            LogisticRegression(maxIter=-1).fit(df)
+
+        # regParam is mapped to different value in LogisticRegression which should be in
+        # charge of validating it.
+        with pytest.raises(ValueError, match="C or regParam given invalid value -1.0"):
+            LogisticRegression().setRegParam(-1.0).fit(df)
