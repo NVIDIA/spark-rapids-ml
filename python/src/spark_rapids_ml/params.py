@@ -429,7 +429,16 @@ class _CumlParams(_CumlClass, Params):
 
         if cuml_param is not None:
             # if Spark Param is mapped to cuML parameter, set cuml_params
-            self._set_cuml_value(cuml_param, spark_value)
+            try:
+                self._set_cuml_value(cuml_param, spark_value)
+            except ValueError:
+                # create more informative message
+                param_ref_str = (
+                    cuml_param + " or " + spark_param
+                    if cuml_param != spark_param
+                    else spark_param
+                )
+                raise ValueError(f"{param_ref_str} given invalid value {spark_value}")
 
     def _get_cuml_mapping_value(self, k: str, v: Any) -> Any:
         value_map = self._param_value_mapping()

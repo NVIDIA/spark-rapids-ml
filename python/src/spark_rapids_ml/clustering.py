@@ -14,10 +14,12 @@
 # limitations under the License.
 #
 
+from abc import ABCMeta
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
+import pyspark
 from pyspark import keyword_only
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.clustering import _KMeansParams
@@ -91,6 +93,9 @@ class KMeansClass(_CumlClass):
             "oversampling_factor": 2.0,
             "max_samples_per_batch": 32768,
         }
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return pyspark.ml.clustering.KMeans
 
 
 class _KMeansCumlParams(_CumlParams, _KMeansParams, HasFeaturesCols):

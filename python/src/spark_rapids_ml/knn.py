@@ -15,6 +15,7 @@
 #
 
 import asyncio
+from abc import ABCMeta
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -67,6 +68,9 @@ class NearestNeighborsClass(_CumlClass):
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {"n_neighbors": 5, "verbose": False, "batch_size": 2000000}
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return None
 
 
 class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
