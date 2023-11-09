@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from abc import ABCMeta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -27,6 +28,7 @@ from typing import (
     cast,
 )
 
+import pyspark
 from pyspark.ml.common import _py2java
 from pyspark.ml.evaluation import Evaluator, MulticlassClassificationEvaluator
 
@@ -297,6 +299,9 @@ class _RandomForestClassifierClass(_RandomForestClass):
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
         mapping = super()._param_mapping()
         return mapping
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return pyspark.ml.classification.RandomForestClassifier
 
 
 class RandomForestClassifier(
@@ -664,7 +669,7 @@ class LogisticRegressionClass(_CumlClass):
     def _param_value_mapping(
         cls,
     ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
-        return {"C": lambda x: 1 / x if x != 0.0 else 0.0}
+        return {"C": lambda x: 1 / x if x > 0.0 else (0.0 if x == 0.0 else None)}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -703,6 +708,9 @@ class LogisticRegressionClass(_CumlClass):
             l1_ratio = elasticNet_param
 
         return (penalty, C, l1_ratio)
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return pyspark.ml.classification.LogisticRegression
 
 
 class _LogisticRegressionCumlParams(

@@ -19,6 +19,7 @@ from typing import Any, Dict, Tuple, Type, TypeVar
 import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.errors import IllegalArgumentException
 from pyspark.ml.feature import PCA as SparkPCA
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.functions import array_to_vector
@@ -410,3 +411,21 @@ def test_pca_spark_compat(
         assert loadedModel.pc == model.pc
         assert loadedModel.explainedVariance == model.explainedVariance
         assert loadedModel.transform(df).take(1) == model.transform(df).take(1)
+
+
+def test_parameters_validation() -> None:
+    data = [
+        ([1.0, 2.0], 1.0),
+        ([3.0, 1.0], 0.0),
+    ]
+
+    with CleanSparkSession() as spark:
+        features_col = "features"
+        label_col = "label"
+        schema = features_col + " array<float>, " + label_col + " float"
+        df = spark.createDataFrame(data, schema=schema)
+        with pytest.raises(IllegalArgumentException, match="k given invalid value -1"):
+            PCA(k=-1).fit(df)
+
+        with pytest.raises(IllegalArgumentException, match="k given invalid value -1"):
+            PCA().setK(-1).fit(df)
