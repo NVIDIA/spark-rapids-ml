@@ -49,6 +49,7 @@ pip install -r requirements_dev.txt && pip install -e .
 if [[ $type == "nightly" ]]; then
     pip uninstall pyspark -y
     pip install pyspark~=3.3.0
+    ./run_test.sh $ut_args
     ./run_benchmark.sh $bench_args
     # if everything passed till now update draft release docs in gh-pages
     # need to invoke docs.sh from top level of repo
