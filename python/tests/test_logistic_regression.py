@@ -2,10 +2,16 @@ from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 import cuml
 import numpy as np
+import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
 from packaging import version
-from pyspark.errors import IllegalArgumentException
+
+if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+    from pyspark.sql.utils import IllegalArgumentException  # type: ignore
+else:
+    from pyspark.errors import IllegalArgumentException  # type: ignore
+
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
