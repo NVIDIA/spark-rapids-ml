@@ -976,6 +976,12 @@ class LogisticRegression(
                     "dtype": logistic_regression.dtype.name,
                     "num_iters": logistic_regression.solver_model.num_iters,
                 }
+
+                if len(logistic_regression.classes_) == 1:
+                    if init_parameters["fit_intercept"] is True:
+                        model["coef_"] = [[0.0] * logistic_regression.n_cols]
+                        model["intercept_"] = [float("inf")]
+
                 del logistic_regression
                 return model
 
@@ -1027,6 +1033,16 @@ class LogisticRegression(
         )
 
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
+        if len(result["classes_"]) == 1:
+            if self.getFitIntercept() is False:
+                print(
+                    "WARNING: All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
+                )
+            else:
+                print(
+                    "WARNING: All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
+                )
+
         return LogisticRegressionModel._from_row(result)
 
     def _set_cuml_reg_params(self) -> "LogisticRegression":
