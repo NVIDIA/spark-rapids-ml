@@ -18,10 +18,17 @@ import math
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
+import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
 from cuml import accuracy_score
-from pyspark.errors import IllegalArgumentException
+from packaging import version
+
+if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+    from pyspark.sql.utils import IllegalArgumentException  # type: ignore
+else:
+    from pyspark.errors import IllegalArgumentException  # type: ignore
+
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRFClassificationModel,
 )
