@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>PCAModel &#8212; spark-rapids-ml 23.8.0 documentation</title>
+    <title>PCAModel &#8212; spark-rapids-ml 23.10.0 documentation</title>
   
   
   
@@ -19,12 +19,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
 
   
-  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -33,8 +33,9 @@
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6" />
+  <script src="../../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=365ca57ee442770a23c6"></script>
 
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
@@ -58,6 +59,15 @@
   
   
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
   
   <input type="checkbox"
           class="sidebar-toggle"
@@ -98,7 +108,8 @@
     <span class="fa-solid fa-bars"></span>
   </label>
   
-  <div class="navbar-header-items__start">
+  
+  <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
   
@@ -109,12 +120,12 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
+  
+    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
   
 </a></div>
     
   </div>
-  
   
   <div class="col-lg-9 navbar-header-items">
     
@@ -145,23 +156,25 @@
       
         <div class="navbar-item navbar-persistent--container">
           
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
         </div>
       
       
         <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -172,18 +185,20 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
     </div>
   
 
   
-    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
       <span class="fa-solid fa-outdent"></span>
     </label>
   
@@ -230,10 +245,10 @@ document.write(`
           <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -305,8 +320,8 @@ document.write(`
 
 
 
-<nav aria-label="Breadcrumbs">
-  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
     
     <li class="breadcrumb-item breadcrumb-home">
       <a href="../../index.html" class="nav-link" aria-label="Home">
@@ -343,6 +358,8 @@ document.write(`
 Spark PCA does not automatically remove the mean of the input data, so use the
 :py:class::<cite>~pyspark.ml.feature.StandardScaler</cite> to center the input data before
 invoking transform.</p>
+<p>The input vectors can be stored in three different formats: a column of vector,
+a column of array, or multiple scalar columns.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.feature</span> <span class="kn">import</span> <span class="n">PCA</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">],),</span>
@@ -383,41 +400,29 @@ invoking transform.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.extractParamMap" title="spark_rapids_ml.feature.PCAModel.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
 <td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.from_row" title="spark_rapids_ml.feature.PCAModel.from_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code></a>(model_attributes)</p></td>
-<td><p>Default to pass all the attributes of the model to the model constructor, So please make sure if the constructor can accept all of them.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getInputCol" title="spark_rapids_ml.feature.PCAModel.getInputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCol</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getInputCol" title="spark_rapids_ml.feature.PCAModel.getInputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCol</span></code></a>()</p></td>
 <td><p>Gets the value of inputCol or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getInputCols" title="spark_rapids_ml.feature.PCAModel.getInputCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCols</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getInputCols" title="spark_rapids_ml.feature.PCAModel.getInputCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCols</span></code></a>()</p></td>
 <td><p>Gets the value of inputCols or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getK" title="spark_rapids_ml.feature.PCAModel.getK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getK" title="spark_rapids_ml.feature.PCAModel.getK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code></a>()</p></td>
 <td><p>Gets the value of k or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getOrDefault" title="spark_rapids_ml.feature.PCAModel.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getOrDefault" title="spark_rapids_ml.feature.PCAModel.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
 <td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getOutputCol" title="spark_rapids_ml.feature.PCAModel.getOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOutputCol</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getOutputCol" title="spark_rapids_ml.feature.PCAModel.getOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOutputCol</span></code></a>()</p></td>
 <td><p>Gets the value of outputCol or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getParam" title="spark_rapids_ml.feature.PCAModel.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.getParam" title="spark_rapids_ml.feature.PCAModel.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
 <td><p>Gets a param by its name.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.get_model_attributes" title="spark_rapids_ml.feature.PCAModel.get_model_attributes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code></a>()</p></td>
-<td><p>Return model attributes as a dictionary.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.hasDefault" title="spark_rapids_ml.feature.PCAModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
 <td><p>Checks whether a param has a default value.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.hasParam" title="spark_rapids_ml.feature.PCAModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
 <td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.initialize_cuml_logging" title="spark_rapids_ml.feature.PCAModel.initialize_cuml_logging"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code></a>(verbose)</p></td>
-<td><p>Initializes the logger for cuML.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.initialize_cuml_params" title="spark_rapids_ml.feature.PCAModel.initialize_cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code></a>()</p></td>
-<td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.isDefined" title="spark_rapids_ml.feature.PCAModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
@@ -445,12 +450,6 @@ invoking transform.</p>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.setOutputCol" title="spark_rapids_ml.feature.PCAModel.setOutputCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setOutputCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.outputCol" title="spark_rapids_ml.feature.PCAModel.outputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">outputCol</span></code></a></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.set_gpu_device" title="spark_rapids_ml.feature.PCAModel.set_gpu_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code></a>(context, is_local[, is_transform])</p></td>
-<td><p>Set gpu device according to the spark task resources.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.set_params" title="spark_rapids_ml.feature.PCAModel.set_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code></a>(**kwargs)</p></td>
-<td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.transform" title="spark_rapids_ml.feature.PCAModel.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code></a>(dataset[, params])</p></td>
 <td><p>Transforms the input dataset with optional parameters.</p></td>
@@ -552,13 +551,6 @@ user-supplied values &lt; extra.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.from_row">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_attributes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Row</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.from_row" title="Permalink to this definition">#</a></dt>
-<dd><p>Default to pass all the attributes of the model to the model constructor,
-So please make sure if the constructor can accept all of them.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.getInputCol">
 <span class="sig-name descname"><span class="pre">getInputCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.getInputCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Gets the value of inputCol or its default value.</p>
@@ -599,12 +591,6 @@ default value. Raises an error if neither is set.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.get_model_attributes">
-<span class="sig-name descname"><span class="pre">get_model_attributes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.get_model_attributes" title="Permalink to this definition">#</a></dt>
-<dd><p>Return model attributes as a dictionary.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.hasDefault">
 <span class="sig-name descname"><span class="pre">hasDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.hasDefault" title="Permalink to this definition">#</a></dt>
 <dd><p>Checks whether a param has a default value.</p>
@@ -615,26 +601,6 @@ default value. Raises an error if neither is set.</p>
 <span class="sig-name descname"><span class="pre">hasParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.hasParam" title="Permalink to this definition">#</a></dt>
 <dd><p>Tests whether this instance contains a param with a given
 (string) name.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.initialize_cuml_logging">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_cuml_logging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.initialize_cuml_logging" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes the logger for cuML.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>verbose</strong><span class="classifier">Optional[Union[bool, int]]</span></dt><dd><p>If True, sets the log_level to 5.  If integer value, sets the log_level to the value.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.initialize_cuml_params">
-<span class="sig-name descname"><span class="pre">initialize_cuml_params</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.initialize_cuml_params" title="Permalink to this definition">#</a></dt>
-<dd><p>Set the default values of cuML parameters to match their Spark equivalents.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -676,7 +642,7 @@ a default value.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.setInputCol">
 <span class="sig-name descname"><span class="pre">setInputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.setInputCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCol" title="spark_rapids_ml.feature.PCAModel.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCols" title="spark_rapids_ml.feature.PCAModel.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>. Used when input vectors are stored in a single column.</p>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCol" title="spark_rapids_ml.feature.PCAModel.inputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.inputCols" title="spark_rapids_ml.feature.PCAModel.inputCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">inputCols</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -689,21 +655,6 @@ a default value.</p>
 <dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.setOutputCol">
 <span class="sig-name descname"><span class="pre">setOutputCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.setOutputCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.feature.PCAModel.outputCol" title="spark_rapids_ml.feature.PCAModel.outputCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">outputCol</span></code></a></p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.set_gpu_device">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">set_gpu_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">TaskContext</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.set_gpu_device" title="Permalink to this definition">#</a></dt>
-<dd><p>Set gpu device according to the spark task resources.</p>
-<p>If it is local mode, we use partition id as gpu id for training
-and (partition id ) % gpus for transform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.feature.PCAModel.set_params">
-<span class="sig-name descname"><span class="pre">set_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.feature.PCAModel.set_params" title="Permalink to this definition">#</a></dt>
-<dd><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
-and value mappings defined by the _CumlClass.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -807,11 +758,10 @@ Each column is one principal component.</p>
               
               
               
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
 <div class="prev-next-area">
     <a class="left-prev"
        href="spark_rapids_ml.feature.PCA.html"
@@ -831,10 +781,7 @@ Each column is one principal component.</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
-</div></div>
-  
 </div>
-
                 </footer>
               
             </div>
@@ -856,18 +803,14 @@ Each column is one principal component.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.explainParam"><code class="docutils literal notranslate"><span class="pre">PCAModel.explainParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.explainParams"><code class="docutils literal notranslate"><span class="pre">PCAModel.explainParams()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.extractParamMap"><code class="docutils literal notranslate"><span class="pre">PCAModel.extractParamMap()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.from_row"><code class="docutils literal notranslate"><span class="pre">PCAModel.from_row()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.getInputCol"><code class="docutils literal notranslate"><span class="pre">PCAModel.getInputCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.getInputCols"><code class="docutils literal notranslate"><span class="pre">PCAModel.getInputCols()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.getK"><code class="docutils literal notranslate"><span class="pre">PCAModel.getK()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.getOrDefault"><code class="docutils literal notranslate"><span class="pre">PCAModel.getOrDefault()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.getOutputCol"><code class="docutils literal notranslate"><span class="pre">PCAModel.getOutputCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.getParam"><code class="docutils literal notranslate"><span class="pre">PCAModel.getParam()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.get_model_attributes"><code class="docutils literal notranslate"><span class="pre">PCAModel.get_model_attributes()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.hasDefault"><code class="docutils literal notranslate"><span class="pre">PCAModel.hasDefault()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.hasParam"><code class="docutils literal notranslate"><span class="pre">PCAModel.hasParam()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.initialize_cuml_logging"><code class="docutils literal notranslate"><span class="pre">PCAModel.initialize_cuml_logging()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.initialize_cuml_params"><code class="docutils literal notranslate"><span class="pre">PCAModel.initialize_cuml_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.isDefined"><code class="docutils literal notranslate"><span class="pre">PCAModel.isDefined()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.isSet"><code class="docutils literal notranslate"><span class="pre">PCAModel.isSet()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.load"><code class="docutils literal notranslate"><span class="pre">PCAModel.load()</span></code></a></li>
@@ -877,8 +820,6 @@ Each column is one principal component.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.setInputCol"><code class="docutils literal notranslate"><span class="pre">PCAModel.setInputCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.setInputCols"><code class="docutils literal notranslate"><span class="pre">PCAModel.setInputCols()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.setOutputCol"><code class="docutils literal notranslate"><span class="pre">PCAModel.setOutputCol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.set_gpu_device"><code class="docutils literal notranslate"><span class="pre">PCAModel.set_gpu_device()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.set_params"><code class="docutils literal notranslate"><span class="pre">PCAModel.set_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.transform"><code class="docutils literal notranslate"><span class="pre">PCAModel.transform()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.write"><code class="docutils literal notranslate"><span class="pre">PCAModel.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.feature.PCAModel.cuml_params"><code class="docutils literal notranslate"><span class="pre">PCAModel.cuml_params</span></code></a></li>
@@ -896,14 +837,6 @@ Each column is one principal component.</p>
 </ul>
   </nav></div>
 
-  <div class="sidebar-secondary-item">
-  <div class="tocsection sourcelink">
-    <a href="../../_sources/api/feature/spark_rapids_ml.feature.PCAModel.rst.txt">
-      <i class="fa-solid fa-file-lines"></i> Show Source
-    </a>
-  </div>
-</div>
-
 </div></div>
               
             
@@ -917,8 +850,8 @@ Each column is one principal component.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -944,10 +877,11 @@ Each column is one principal component.</p>
     </div>
   
   
+  
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.3.
 </p></div>
       
     </div>

@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>LinearRegressionModel &#8212; spark-rapids-ml 23.8.0 documentation</title>
+    <title>LinearRegressionModel &#8212; spark-rapids-ml 23.10.0 documentation</title>
   
   
   
@@ -19,12 +19,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
 
   
-  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -33,8 +33,9 @@
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6" />
+  <script src="../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=365ca57ee442770a23c6"></script>
 
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
@@ -58,6 +59,15 @@
   
   
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
   
   <input type="checkbox"
           class="sidebar-toggle"
@@ -98,7 +108,8 @@
     <span class="fa-solid fa-bars"></span>
   </label>
   
-  <div class="navbar-header-items__start">
+  
+  <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
   
@@ -109,12 +120,12 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
+  
+    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
   
 </a></div>
     
   </div>
-  
   
   <div class="col-lg-9 navbar-header-items">
     
@@ -145,23 +156,25 @@
       
         <div class="navbar-item navbar-persistent--container">
           
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
         </div>
       
       
         <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -172,18 +185,20 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
     </div>
   
 
   
-    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
       <span class="fa-solid fa-outdent"></span>
     </label>
   
@@ -230,10 +245,10 @@ document.write(`
           <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -305,8 +320,8 @@ document.write(`
 
 
 
-<nav aria-label="Breadcrumbs">
-  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
     
     <li class="breadcrumb-item breadcrumb-home">
       <a href="../index.html" class="nav-link" aria-label="Home">
@@ -316,7 +331,7 @@ document.write(`
     
     <li class="breadcrumb-item"><a href="../spark_rapids_ml.html" class="nav-link">Spark Rapids ML</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page">LinearRegressionModel</li>
+    <li class="breadcrumb-item active" aria-current="page">LinearRegres...</li>
   </ul>
 </nav>
 </div>
@@ -342,32 +357,26 @@ document.write(`
 <p class="rubric">Methods</p>
 <table class="autosummary longtable table autosummary">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.calculate_regression_metrics" title="spark_rapids_ml.regression.LinearRegressionModel.calculate_regression_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_regression_metrics</span></code></a>(input, transformed)</p></td>
-<td><p>calculate the metrics: mean/m2n/m2/l1 ...</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.clear" title="spark_rapids_ml.regression.LinearRegressionModel.clear"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.clear" title="spark_rapids_ml.regression.LinearRegressionModel.clear"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code></a>(param)</p></td>
 <td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.copy" title="spark_rapids_ml.regression.LinearRegressionModel.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.copy" title="spark_rapids_ml.regression.LinearRegressionModel.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.cpu" title="spark_rapids_ml.regression.LinearRegressionModel.cpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.cpu" title="spark_rapids_ml.regression.LinearRegressionModel.cpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code></a>()</p></td>
 <td><p>Return the PySpark ML LinearRegressionModel</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.evaluate" title="spark_rapids_ml.regression.LinearRegressionModel.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a>(dataset)</p></td>
-<td><p>cuML doesn't support evaluating.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.evaluate" title="spark_rapids_ml.regression.LinearRegressionModel.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a>(dataset)</p></td>
+<td><p>evaluate model on dataset</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.explainParam" title="spark_rapids_ml.regression.LinearRegressionModel.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.explainParam" title="spark_rapids_ml.regression.LinearRegressionModel.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
 <td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.explainParams" title="spark_rapids_ml.regression.LinearRegressionModel.explainParams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.explainParams" title="spark_rapids_ml.regression.LinearRegressionModel.explainParams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code></a>()</p></td>
 <td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.extractParamMap" title="spark_rapids_ml.regression.LinearRegressionModel.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.extractParamMap" title="spark_rapids_ml.regression.LinearRegressionModel.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
 <td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.from_row" title="spark_rapids_ml.regression.LinearRegressionModel.from_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code></a>(model_attributes)</p></td>
-<td><p>Default to pass all the attributes of the model to the model constructor, So please make sure if the constructor can accept all of them.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.getElasticNetParam" title="spark_rapids_ml.regression.LinearRegressionModel.getElasticNetParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getElasticNetParam</span></code></a>()</p></td>
 <td><p>Gets the value of elasticNetParam or its default value.</p></td>
@@ -411,64 +420,49 @@ document.write(`
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.getTol" title="spark_rapids_ml.regression.LinearRegressionModel.getTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getTol</span></code></a>()</p></td>
 <td><p>Gets the value of tol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.get_model_attributes" title="spark_rapids_ml.regression.LinearRegressionModel.get_model_attributes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code></a>()</p></td>
-<td><p>Return model attributes as a dictionary.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.hasDefault" title="spark_rapids_ml.regression.LinearRegressionModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.hasDefault" title="spark_rapids_ml.regression.LinearRegressionModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
 <td><p>Checks whether a param has a default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.hasParam" title="spark_rapids_ml.regression.LinearRegressionModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.hasParam" title="spark_rapids_ml.regression.LinearRegressionModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
 <td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_logging" title="spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_logging"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code></a>(verbose)</p></td>
-<td><p>Initializes the logger for cuML.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_params" title="spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code></a>()</p></td>
-<td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.isDefined" title="spark_rapids_ml.regression.LinearRegressionModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.isDefined" title="spark_rapids_ml.regression.LinearRegressionModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.isSet" title="spark_rapids_ml.regression.LinearRegressionModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.isSet" title="spark_rapids_ml.regression.LinearRegressionModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.load" title="spark_rapids_ml.regression.LinearRegressionModel.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.load" title="spark_rapids_ml.regression.LinearRegressionModel.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
 <td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.predict" title="spark_rapids_ml.regression.LinearRegressionModel.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(value)</p></td>
-<td><p>cuML doesn't support predicting 1 single sample.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.predict" title="spark_rapids_ml.regression.LinearRegressionModel.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(value)</p></td>
+<td><p>predict a single sample</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.read" title="spark_rapids_ml.regression.LinearRegressionModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.read" title="spark_rapids_ml.regression.LinearRegressionModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.save" title="spark_rapids_ml.regression.LinearRegressionModel.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.save" title="spark_rapids_ml.regression.LinearRegressionModel.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
 <td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.set" title="spark_rapids_ml.regression.LinearRegressionModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.set" title="spark_rapids_ml.regression.LinearRegressionModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
 <td><p>Sets a parameter in the embedded param map.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCol" title="spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCol" title="spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.featuresCol" title="spark_rapids_ml.regression.LinearRegressionModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <code class="xref py py-attr docutils literal notranslate"><span class="pre">featureCols</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCols" title="spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCols" title="spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.featuresCols" title="spark_rapids_ml.regression.LinearRegressionModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setLabelCol" title="spark_rapids_ml.regression.LinearRegressionModel.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setLabelCol" title="spark_rapids_ml.regression.LinearRegressionModel.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.labelCol" title="spark_rapids_ml.regression.LinearRegressionModel.labelCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol" title="spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol" title="spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.predictionCol" title="spark_rapids_ml.regression.LinearRegressionModel.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.set_gpu_device" title="spark_rapids_ml.regression.LinearRegressionModel.set_gpu_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code></a>(context, is_local[, is_transform])</p></td>
-<td><p>Set gpu device according to the spark task resources.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.set_params" title="spark_rapids_ml.regression.LinearRegressionModel.set_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code></a>(**kwargs)</p></td>
-<td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.transform" title="spark_rapids_ml.regression.LinearRegressionModel.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code></a>(dataset[, params])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.transform" title="spark_rapids_ml.regression.LinearRegressionModel.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code></a>(dataset[, params])</p></td>
 <td><p>Transforms the input dataset with optional parameters.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.write" title="spark_rapids_ml.regression.LinearRegressionModel.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.write" title="spark_rapids_ml.regression.LinearRegressionModel.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -540,13 +534,6 @@ document.write(`
 </table>
 <p class="rubric">Methods Documentation</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.calculate_regression_metrics">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calculate_regression_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">cudf.DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transformed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">cudf.DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.calculate_regression_metrics" title="Permalink to this definition">#</a></dt>
-<dd><p>calculate the metrics: mean/m2n/m2/l1 …</p>
-<p>input must have <cite>alias.label</cite> column</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.clear">
 <span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.clear" title="Permalink to this definition">#</a></dt>
 <dd><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p>
@@ -566,8 +553,7 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.evaluate">
 <span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.LinearRegressionSummary.html#pyspark.ml.regression.LinearRegressionSummary" title="(in PySpark vmaster)"><span class="pre">LinearRegressionSummary</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.evaluate" title="Permalink to this definition">#</a></dt>
-<dd><p>cuML doesn’t support evaluating.
-Fall back to PySpark ML LinearRegressionModel</p>
+<dd><p>evaluate model on dataset</p>
 </dd></dl>
 
 <dl class="py method">
@@ -606,13 +592,6 @@ user-supplied values &lt; extra.</p>
 </dl>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.from_row">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_attributes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Row</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.from_row" title="Permalink to this definition">#</a></dt>
-<dd><p>Default to pass all the attributes of the model to the model constructor,
-So please make sure if the constructor can accept all of them.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -701,12 +680,6 @@ default value. Raises an error if neither is set.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.get_model_attributes">
-<span class="sig-name descname"><span class="pre">get_model_attributes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.get_model_attributes" title="Permalink to this definition">#</a></dt>
-<dd><p>Return model attributes as a dictionary.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.hasDefault">
 <span class="sig-name descname"><span class="pre">hasDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.hasDefault" title="Permalink to this definition">#</a></dt>
 <dd><p>Checks whether a param has a default value.</p>
@@ -717,26 +690,6 @@ default value. Raises an error if neither is set.</p>
 <span class="sig-name descname"><span class="pre">hasParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.hasParam" title="Permalink to this definition">#</a></dt>
 <dd><p>Tests whether this instance contains a param with a given
 (string) name.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_logging">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_cuml_logging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_logging" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes the logger for cuML.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>verbose</strong><span class="classifier">Optional[Union[bool, int]]</span></dt><dd><p>If True, sets the log_level to 5.  If integer value, sets the log_level to the value.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_params">
-<span class="sig-name descname"><span class="pre">initialize_cuml_params</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_params" title="Permalink to this definition">#</a></dt>
-<dd><p>Set the default values of cuML parameters to match their Spark equivalents.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -761,8 +714,7 @@ a default value.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.predict">
 <span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.predict" title="Permalink to this definition">#</a></dt>
-<dd><p>cuML doesn’t support predicting 1 single sample.
-Fall back to PySpark ML LinearRegressionModel</p>
+<dd><p>predict a single sample</p>
 </dd></dl>
 
 <dl class="py method">
@@ -804,21 +756,6 @@ Fall back to PySpark ML LinearRegressionModel</p>
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol">
 <span class="sig-name descname"><span class="pre">setPredictionCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegressionModel.predictionCol" title="spark_rapids_ml.regression.LinearRegressionModel.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.set_gpu_device">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">set_gpu_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">TaskContext</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.set_gpu_device" title="Permalink to this definition">#</a></dt>
-<dd><p>Set gpu device according to the spark task resources.</p>
-<p>If it is local mode, we use partition id as gpu id for training
-and (partition id ) % gpus for transform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegressionModel.set_params">
-<span class="sig-name descname"><span class="pre">set_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegressionModel.set_params" title="Permalink to this definition">#</a></dt>
-<dd><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
-and value mappings defined by the _CumlClass.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -972,11 +909,10 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
               
               
               
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
 <div class="prev-next-area">
     <a class="left-prev"
        href="spark_rapids_ml.regression.LinearRegression.html"
@@ -996,10 +932,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
-</div></div>
-  
 </div>
-
                 </footer>
               
             </div>
@@ -1015,7 +948,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.calculate_regression_metrics"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.calculate_regression_metrics()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.clear"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.clear()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.copy"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.copy()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.cpu"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.cpu()</span></code></a></li>
@@ -1023,7 +955,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.explainParam"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.explainParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.explainParams"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.explainParams()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.extractParamMap"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.extractParamMap()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.from_row"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.from_row()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.getElasticNetParam"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.getElasticNetParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.getFeaturesCol"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.getFeaturesCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.getFeaturesCols"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.getFeaturesCols()</span></code></a></li>
@@ -1038,11 +969,8 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.getSolver"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.getSolver()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.getStandardization"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.getStandardization()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.getTol"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.getTol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.get_model_attributes"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.get_model_attributes()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.hasDefault"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.hasDefault()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.hasParam"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.hasParam()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_logging"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.initialize_cuml_logging()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_params"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.initialize_cuml_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.isDefined"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.isDefined()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.isSet"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.isSet()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.load"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.load()</span></code></a></li>
@@ -1054,8 +982,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.setFeaturesCols"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.setFeaturesCols()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.setLabelCol"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.setLabelCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.setPredictionCol"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.setPredictionCol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.set_gpu_device"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.set_gpu_device()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.set_params"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.set_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.transform"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.transform()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.write"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegressionModel.coefficients"><code class="docutils literal notranslate"><span class="pre">LinearRegressionModel.coefficients</span></code></a></li>
@@ -1083,14 +1009,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 </ul>
   </nav></div>
 
-  <div class="sidebar-secondary-item">
-  <div class="tocsection sourcelink">
-    <a href="../_sources/api/spark_rapids_ml.regression.LinearRegressionModel.rst.txt">
-      <i class="fa-solid fa-file-lines"></i> Show Source
-    </a>
-  </div>
-</div>
-
 </div></div>
               
             
@@ -1104,8 +1022,8 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1131,10 +1049,11 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
     </div>
   
   
+  
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.3.
 </p></div>
       
     </div>

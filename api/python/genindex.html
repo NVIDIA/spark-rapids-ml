@@ -8,7 +8,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; spark-rapids-ml 23.8.0 documentation</title>
+    <title>Index &#8212; spark-rapids-ml 23.10.0 documentation</title>
   
   
   
@@ -18,12 +18,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
 
   
-  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -32,8 +32,9 @@
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6" />
+  <script src="_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=365ca57ee442770a23c6"></script>
 
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
     <script src="_static/jquery.js"></script>
@@ -55,6 +56,15 @@
   
   
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
   
   <input type="checkbox"
           class="sidebar-toggle"
@@ -95,7 +105,8 @@
     <span class="fa-solid fa-bars"></span>
   </label>
   
-  <div class="navbar-header-items__start">
+  
+  <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
   
@@ -106,12 +117,12 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
+  
+    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
   
 </a></div>
     
   </div>
-  
   
   <div class="col-lg-9 navbar-header-items">
     
@@ -142,23 +153,25 @@
       
         <div class="navbar-item navbar-persistent--container">
           
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
         </div>
       
       
         <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -169,13 +182,15 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
     </div>
   
 
@@ -223,10 +238,10 @@ document.write(`
           <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -320,12 +335,6 @@ document.write(`
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.calculate_regression_metrics">calculate_regression_metrics() (spark_rapids_ml.regression.LinearRegressionModel static method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.calculate_regression_metrics">(spark_rapids_ml.regression.RandomForestRegressionModel static method)</a>
-</li>
-      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.clear">clear() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -363,6 +372,8 @@ document.write(`
 </li>
       </ul></li>
       <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.clusterCenters">clusterCenters() (spark_rapids_ml.clustering.KMeansModel method)</a>
+</li>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.coefficientMatrix">coefficientMatrix (spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
 </li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.coefficients">coefficients (spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
 
@@ -470,9 +481,13 @@ document.write(`
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.elasticNetParam">elasticNetParam (spark_rapids_ml.regression.LinearRegression attribute)</a>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.elasticNetParam">elasticNetParam (spark_rapids_ml.classification.LogisticRegression attribute)</a>
 
       <ul>
+        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.elasticNetParam">(spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.elasticNetParam">(spark_rapids_ml.regression.LinearRegression attribute)</a>
+</li>
         <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.elasticNetParam">(spark_rapids_ml.regression.LinearRegressionModel attribute)</a>
 </li>
       </ul></li>
@@ -670,6 +685,8 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.featuresCols">(spark_rapids_ml.umap.UMAPModel attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.featureSubsetStrategy">featureSubsetStrategy (spark_rapids_ml.classification.RandomForestClassificationModel attribute)</a>
 
       <ul>
@@ -680,8 +697,6 @@ document.write(`
         <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.featureSubsetStrategy">(spark_rapids_ml.regression.RandomForestRegressor attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.fit">fit() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -734,48 +749,12 @@ document.write(`
       </ul></li>
       <li><a href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator.foldCol">foldCol (spark_rapids_ml.tuning.CrossValidator attribute)</a>
 </li>
-      <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.from_row">from_row() (spark_rapids_ml.classification.LogisticRegressionModel class method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.from_row">(spark_rapids_ml.classification.RandomForestClassificationModel class method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.from_row">(spark_rapids_ml.clustering.KMeansModel class method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel.from_row">(spark_rapids_ml.feature.PCAModel class method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.from_row">(spark_rapids_ml.knn.NearestNeighborsModel class method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.from_row">(spark_rapids_ml.regression.LinearRegressionModel class method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.from_row">(spark_rapids_ml.regression.RandomForestRegressionModel class method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.from_row">(spark_rapids_ml.umap.UMAPModel class method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.get_model_attributes">get_model_attributes() (spark_rapids_ml.classification.LogisticRegressionModel method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.get_model_attributes">(spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.get_model_attributes">(spark_rapids_ml.clustering.KMeansModel method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel.get_model_attributes">(spark_rapids_ml.feature.PCAModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.get_model_attributes">(spark_rapids_ml.knn.NearestNeighborsModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.get_model_attributes">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.get_model_attributes">(spark_rapids_ml.regression.RandomForestRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.get_model_attributes">(spark_rapids_ml.umap.UMAPModel method)</a>
-</li>
-      </ul></li>
       <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.getA">getA() (spark_rapids_ml.umap.UMAP method)</a>
 
       <ul>
@@ -800,9 +779,13 @@ document.write(`
       </ul></li>
       <li><a href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator.getCollectSubModels">getCollectSubModels() (spark_rapids_ml.tuning.CrossValidator method)</a>
 </li>
-      <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.getElasticNetParam">getElasticNetParam() (spark_rapids_ml.regression.LinearRegression method)</a>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.getElasticNetParam">getElasticNetParam() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
+        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.getElasticNetParam">(spark_rapids_ml.classification.LogisticRegressionModel method)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.getElasticNetParam">(spark_rapids_ml.regression.LinearRegression method)</a>
+</li>
         <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.getElasticNetParam">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
 </li>
       </ul></li>
@@ -998,12 +981,6 @@ document.write(`
         <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.getMaxBins">(spark_rapids_ml.regression.RandomForestRegressor method)</a>
 </li>
       </ul></li>
-      <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.getMaxBlockSizeInMB">getMaxBlockSizeInMB() (spark_rapids_ml.clustering.KMeans method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.getMaxBlockSizeInMB">(spark_rapids_ml.clustering.KMeansModel method)</a>
-</li>
-      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.getMaxDepth">getMaxDepth() (spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
 
       <ul>
@@ -1028,8 +1005,6 @@ document.write(`
         <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.getMaxIter">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.getMetric">getMetric() (spark_rapids_ml.umap.UMAP method)</a>
 
       <ul>
@@ -1042,6 +1017,8 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.getMinDist">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.getMinInstancesPerNode">getMinInstancesPerNode() (spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
 
       <ul>
@@ -1214,6 +1191,16 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.getRandomState">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.getRawPredictionCol">getRawPredictionCol() (spark_rapids_ml.classification.LogisticRegression method)</a>
+
+      <ul>
+        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.getRawPredictionCol">(spark_rapids_ml.classification.LogisticRegressionModel method)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.getRawPredictionCol">(spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.getRawPredictionCol">(spark_rapids_ml.classification.RandomForestClassifier method)</a>
+</li>
+      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.getRegParam">getRegParam() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -1258,13 +1245,9 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.getSetOpMixRatio">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
-      <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.getSolver">getSolver() (spark_rapids_ml.clustering.KMeans method)</a>
+      <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.getSolver">getSolver() (spark_rapids_ml.regression.LinearRegression method)</a>
 
       <ul>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.getSolver">(spark_rapids_ml.clustering.KMeansModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.getSolver">(spark_rapids_ml.regression.LinearRegression method)</a>
-</li>
         <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.getSolver">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
 </li>
       </ul></li>
@@ -1396,10 +1379,10 @@ document.write(`
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.id_col">id_col (spark_rapids_ml.knn.NearestNeighbors attribute)</a>
+      <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.idCol">idCol (spark_rapids_ml.knn.NearestNeighbors attribute)</a>
 
       <ul>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.id_col">(spark_rapids_ml.knn.NearestNeighborsModel attribute)</a>
+        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.idCol">(spark_rapids_ml.knn.NearestNeighborsModel attribute)</a>
 </li>
       </ul></li>
       <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.impurity">impurity (spark_rapids_ml.classification.RandomForestClassificationModel attribute)</a>
@@ -1418,74 +1401,6 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.init">(spark_rapids_ml.umap.UMAPModel attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.initialize_cuml_logging">initialize_cuml_logging() (spark_rapids_ml.classification.LogisticRegression static method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.initialize_cuml_logging">(spark_rapids_ml.classification.LogisticRegressionModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_logging">(spark_rapids_ml.classification.RandomForestClassificationModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.initialize_cuml_logging">(spark_rapids_ml.classification.RandomForestClassifier static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.initialize_cuml_logging">(spark_rapids_ml.clustering.KMeans static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_logging">(spark_rapids_ml.clustering.KMeansModel static method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA.initialize_cuml_logging">(spark_rapids_ml.feature.PCA static method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel.initialize_cuml_logging">(spark_rapids_ml.feature.PCAModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.initialize_cuml_logging">(spark_rapids_ml.knn.NearestNeighbors static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.initialize_cuml_logging">(spark_rapids_ml.knn.NearestNeighborsModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.initialize_cuml_logging">(spark_rapids_ml.regression.LinearRegression static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_logging">(spark_rapids_ml.regression.LinearRegressionModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.initialize_cuml_logging">(spark_rapids_ml.regression.RandomForestRegressionModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.initialize_cuml_logging">(spark_rapids_ml.regression.RandomForestRegressor static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.initialize_cuml_logging">(spark_rapids_ml.umap.UMAP static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.initialize_cuml_logging">(spark_rapids_ml.umap.UMAPModel static method)</a>
-</li>
-      </ul></li>
-      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.initialize_cuml_params">initialize_cuml_params() (spark_rapids_ml.classification.LogisticRegression method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.initialize_cuml_params">(spark_rapids_ml.classification.LogisticRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.initialize_cuml_params">(spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.initialize_cuml_params">(spark_rapids_ml.classification.RandomForestClassifier method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.initialize_cuml_params">(spark_rapids_ml.clustering.KMeans method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_params">(spark_rapids_ml.clustering.KMeansModel method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA.initialize_cuml_params">(spark_rapids_ml.feature.PCA method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel.initialize_cuml_params">(spark_rapids_ml.feature.PCAModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.initialize_cuml_params">(spark_rapids_ml.knn.NearestNeighbors method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.initialize_cuml_params">(spark_rapids_ml.knn.NearestNeighborsModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.initialize_cuml_params">(spark_rapids_ml.regression.LinearRegression method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.initialize_cuml_params">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.initialize_cuml_params">(spark_rapids_ml.regression.RandomForestRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.initialize_cuml_params">(spark_rapids_ml.regression.RandomForestRegressor method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.initialize_cuml_params">(spark_rapids_ml.umap.UMAP method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.initialize_cuml_params">(spark_rapids_ml.umap.UMAPModel method)</a>
-</li>
-      </ul></li>
       <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.initMode">initMode (spark_rapids_ml.clustering.KMeans attribute)</a>
 
       <ul>
@@ -1502,8 +1417,6 @@ document.write(`
         <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.inputCol">(spark_rapids_ml.knn.NearestNeighborsModel attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA.inputCols">inputCols (spark_rapids_ml.feature.PCA attribute)</a>
 
       <ul>
@@ -1520,6 +1433,8 @@ document.write(`
         <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.intercept">(spark_rapids_ml.regression.LinearRegressionModel attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.interceptVector">interceptVector (spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
+</li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.isDefined">isDefined() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -1556,6 +1471,8 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.isDefined">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.isSet">isSet() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -1732,12 +1649,6 @@ document.write(`
         <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.maxBins">(spark_rapids_ml.regression.RandomForestRegressor attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.maxBlockSizeInMB">maxBlockSizeInMB (spark_rapids_ml.clustering.KMeans attribute)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.maxBlockSizeInMB">(spark_rapids_ml.clustering.KMeansModel attribute)</a>
-</li>
-      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.maxDepth">maxDepth (spark_rapids_ml.classification.RandomForestClassificationModel attribute)</a>
 
       <ul>
@@ -1858,8 +1769,12 @@ document.write(`
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses">numClasses (spark_rapids_ml.classification.RandomForestClassificationModel attribute)</a>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.numClasses">numClasses (spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
+
+      <ul>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses">(spark_rapids_ml.classification.RandomForestClassificationModel attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.numFeatures">numFeatures (spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
 
       <ul>
@@ -2038,6 +1953,16 @@ document.write(`
 </li>
       <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.raw_data">raw_data (spark_rapids_ml.umap.UMAPModel attribute)</a>
 </li>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.rawPredictionCol">rawPredictionCol (spark_rapids_ml.classification.LogisticRegression attribute)</a>
+
+      <ul>
+        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.rawPredictionCol">(spark_rapids_ml.classification.LogisticRegressionModel attribute)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.rawPredictionCol">(spark_rapids_ml.classification.RandomForestClassificationModel attribute)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.rawPredictionCol">(spark_rapids_ml.classification.RandomForestClassifier attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.read">read() (spark_rapids_ml.classification.LogisticRegression class method)</a>
 
       <ul>
@@ -2194,78 +2119,10 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.set">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
-      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.set_gpu_device">set_gpu_device() (spark_rapids_ml.classification.LogisticRegression static method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.set_gpu_device">(spark_rapids_ml.classification.LogisticRegressionModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.set_gpu_device">(spark_rapids_ml.classification.RandomForestClassificationModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.set_gpu_device">(spark_rapids_ml.classification.RandomForestClassifier static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.set_gpu_device">(spark_rapids_ml.clustering.KMeans static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.set_gpu_device">(spark_rapids_ml.clustering.KMeansModel static method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA.set_gpu_device">(spark_rapids_ml.feature.PCA static method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel.set_gpu_device">(spark_rapids_ml.feature.PCAModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.set_gpu_device">(spark_rapids_ml.knn.NearestNeighbors static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.set_gpu_device">(spark_rapids_ml.knn.NearestNeighborsModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.set_gpu_device">(spark_rapids_ml.regression.LinearRegression static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.set_gpu_device">(spark_rapids_ml.regression.LinearRegressionModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.set_gpu_device">(spark_rapids_ml.regression.RandomForestRegressionModel static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.set_gpu_device">(spark_rapids_ml.regression.RandomForestRegressor static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.set_gpu_device">(spark_rapids_ml.umap.UMAP static method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.set_gpu_device">(spark_rapids_ml.umap.UMAPModel static method)</a>
-</li>
-      </ul></li>
       <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.set_op_mix_ratio">set_op_mix_ratio (spark_rapids_ml.umap.UMAP attribute)</a>
 
       <ul>
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.set_op_mix_ratio">(spark_rapids_ml.umap.UMAPModel attribute)</a>
-</li>
-      </ul></li>
-      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.set_params">set_params() (spark_rapids_ml.classification.LogisticRegression method)</a>
-
-      <ul>
-        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.set_params">(spark_rapids_ml.classification.LogisticRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.set_params">(spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.set_params">(spark_rapids_ml.classification.RandomForestClassifier method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.set_params">(spark_rapids_ml.clustering.KMeans method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.set_params">(spark_rapids_ml.clustering.KMeansModel method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCA.html#spark_rapids_ml.feature.PCA.set_params">(spark_rapids_ml.feature.PCA method)</a>
-</li>
-        <li><a href="api/feature/spark_rapids_ml.feature.PCAModel.html#spark_rapids_ml.feature.PCAModel.set_params">(spark_rapids_ml.feature.PCAModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.set_params">(spark_rapids_ml.knn.NearestNeighbors method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.set_params">(spark_rapids_ml.knn.NearestNeighborsModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.set_params">(spark_rapids_ml.regression.LinearRegression method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.set_params">(spark_rapids_ml.regression.LinearRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html#spark_rapids_ml.regression.RandomForestRegressionModel.set_params">(spark_rapids_ml.regression.RandomForestRegressionModel method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.RandomForestRegressor.html#spark_rapids_ml.regression.RandomForestRegressor.set_params">(spark_rapids_ml.regression.RandomForestRegressor method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.set_params">(spark_rapids_ml.umap.UMAP method)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.set_params">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
       <li><a href="api/spark_rapids_ml.umap.UMAP.html#spark_rapids_ml.umap.UMAP.setA">setA() (spark_rapids_ml.umap.UMAP method)</a>
@@ -2288,8 +2145,12 @@ document.write(`
       </ul></li>
       <li><a href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator.setCollectSubModels">setCollectSubModels() (spark_rapids_ml.tuning.CrossValidator method)</a>
 </li>
-      <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.setElasticNetParam">setElasticNetParam() (spark_rapids_ml.regression.LinearRegression method)</a>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.setElasticNetParam">setElasticNetParam() (spark_rapids_ml.classification.LogisticRegression method)</a>
+
+      <ul>
+        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.setElasticNetParam">(spark_rapids_ml.regression.LinearRegression method)</a>
 </li>
+      </ul></li>
       <li><a href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator.setEstimator">setEstimator() (spark_rapids_ml.tuning.CrossValidator method)</a>
 </li>
       <li><a href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator.setEstimatorParamMaps">setEstimatorParamMaps() (spark_rapids_ml.tuning.CrossValidator method)</a>
@@ -2358,8 +2219,6 @@ document.write(`
 </li>
       <li><a href="api/spark_rapids_ml.tuning.CrossValidator.html#spark_rapids_ml.tuning.CrossValidator.setFoldCol">setFoldCol() (spark_rapids_ml.tuning.CrossValidator method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors.setIdCol">setIdCol() (spark_rapids_ml.knn.NearestNeighbors method)</a>
 
       <ul>
@@ -2408,6 +2267,8 @@ document.write(`
         <li><a href="api/spark_rapids_ml.knn.NearestNeighborsModel.html#spark_rapids_ml.knn.NearestNeighborsModel.setK">(spark_rapids_ml.knn.NearestNeighborsModel method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.setLabelCol">setLabelCol() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -2572,6 +2433,16 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.setRandomState">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
+      <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.setRawPredictionCol">setRawPredictionCol() (spark_rapids_ml.classification.LogisticRegression method)</a>
+
+      <ul>
+        <li><a href="api/spark_rapids_ml.classification.LogisticRegressionModel.html#spark_rapids_ml.classification.LogisticRegressionModel.setRawPredictionCol">(spark_rapids_ml.classification.LogisticRegressionModel method)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html#spark_rapids_ml.classification.RandomForestClassificationModel.setRawPredictionCol">(spark_rapids_ml.classification.RandomForestClassificationModel method)</a>
+</li>
+        <li><a href="api/spark_rapids_ml.classification.RandomForestClassifier.html#spark_rapids_ml.classification.RandomForestClassifier.setRawPredictionCol">(spark_rapids_ml.classification.RandomForestClassifier method)</a>
+</li>
+      </ul></li>
       <li><a href="api/spark_rapids_ml.classification.LogisticRegression.html#spark_rapids_ml.classification.LogisticRegression.setRegParam">setRegParam() (spark_rapids_ml.classification.LogisticRegression method)</a>
 
       <ul>
@@ -2628,13 +2499,9 @@ document.write(`
         <li><a href="api/spark_rapids_ml.umap.UMAPModel.html#spark_rapids_ml.umap.UMAPModel.setTransformQueueSize">(spark_rapids_ml.umap.UMAPModel method)</a>
 </li>
       </ul></li>
-      <li><a href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans.solver">solver (spark_rapids_ml.clustering.KMeans attribute)</a>
+      <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.solver">solver (spark_rapids_ml.regression.LinearRegression attribute)</a>
 
       <ul>
-        <li><a href="api/spark_rapids_ml.clustering.KMeansModel.html#spark_rapids_ml.clustering.KMeansModel.solver">(spark_rapids_ml.clustering.KMeansModel attribute)</a>
-</li>
-        <li><a href="api/spark_rapids_ml.regression.LinearRegression.html#spark_rapids_ml.regression.LinearRegression.solver">(spark_rapids_ml.regression.LinearRegression attribute)</a>
-</li>
         <li><a href="api/spark_rapids_ml.regression.LinearRegressionModel.html#spark_rapids_ml.regression.LinearRegressionModel.solver">(spark_rapids_ml.regression.LinearRegressionModel attribute)</a>
 </li>
       </ul></li>
@@ -2805,16 +2672,12 @@ document.write(`
               
               
               
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
 <div class="prev-next-area">
-</div></div>
-  
 </div>
-
                 </footer>
               
             </div>
@@ -2832,8 +2695,8 @@ document.write(`
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+  <script src="_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -2859,10 +2722,11 @@ document.write(`
     </div>
   
   
+  
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.3.
 </p></div>
       
     </div>

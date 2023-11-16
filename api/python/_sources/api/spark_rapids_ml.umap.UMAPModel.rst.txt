@@ -41,7 +41,6 @@ UMAPModel
        ~UMAPModel.explainParam
        ~UMAPModel.explainParams
        ~UMAPModel.extractParamMap
-       ~UMAPModel.from_row
        ~UMAPModel.getA
        ~UMAPModel.getB
        ~UMAPModel.getFeaturesCol
@@ -66,11 +65,8 @@ UMAPModel
        ~UMAPModel.getSetOpMixRatio
        ~UMAPModel.getSpread
        ~UMAPModel.getTransformQueueSize
-       ~UMAPModel.get_model_attributes
        ~UMAPModel.hasDefault
        ~UMAPModel.hasParam
-       ~UMAPModel.initialize_cuml_logging
-       ~UMAPModel.initialize_cuml_params
        ~UMAPModel.isDefined
        ~UMAPModel.isSet
        ~UMAPModel.load
@@ -99,8 +95,6 @@ UMAPModel
        ~UMAPModel.setSetOpMixRatio
        ~UMAPModel.setSpread
        ~UMAPModel.setTransformQueueSize
-       ~UMAPModel.set_gpu_device
-       ~UMAPModel.set_params
        ~UMAPModel.transform
        ~UMAPModel.write
 
@@ -157,7 +151,6 @@ UMAPModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getA
     .. automethod:: getB
     .. automethod:: getFeaturesCol
@@ -182,11 +175,8 @@ UMAPModel
     .. automethod:: getSetOpMixRatio
     .. automethod:: getSpread
     .. automethod:: getTransformQueueSize
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -215,8 +205,6 @@ UMAPModel
     .. automethod:: setSetOpMixRatio
     .. automethod:: setSpread
     .. automethod:: setTransformQueueSize
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: transform
     .. automethod:: write
 

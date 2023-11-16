@@ -42,7 +42,7 @@ LogisticRegressionModel
        ~LogisticRegressionModel.explainParam
        ~LogisticRegressionModel.explainParams
        ~LogisticRegressionModel.extractParamMap
-       ~LogisticRegressionModel.from_row
+       ~LogisticRegressionModel.getElasticNetParam
        ~LogisticRegressionModel.getFeaturesCol
        ~LogisticRegressionModel.getFeaturesCols
        ~LogisticRegressionModel.getFitIntercept
@@ -52,13 +52,11 @@ LogisticRegressionModel
        ~LogisticRegressionModel.getParam
        ~LogisticRegressionModel.getPredictionCol
        ~LogisticRegressionModel.getProbabilityCol
+       ~LogisticRegressionModel.getRawPredictionCol
        ~LogisticRegressionModel.getRegParam
        ~LogisticRegressionModel.getTol
-       ~LogisticRegressionModel.get_model_attributes
        ~LogisticRegressionModel.hasDefault
        ~LogisticRegressionModel.hasParam
-       ~LogisticRegressionModel.initialize_cuml_logging
-       ~LogisticRegressionModel.initialize_cuml_params
        ~LogisticRegressionModel.isDefined
        ~LogisticRegressionModel.isSet
        ~LogisticRegressionModel.load
@@ -73,8 +71,7 @@ LogisticRegressionModel
        ~LogisticRegressionModel.setLabelCol
        ~LogisticRegressionModel.setPredictionCol
        ~LogisticRegressionModel.setProbabilityCol
-       ~LogisticRegressionModel.set_gpu_device
-       ~LogisticRegressionModel.set_params
+       ~LogisticRegressionModel.setRawPredictionCol
        ~LogisticRegressionModel.transform
        ~LogisticRegressionModel.write
 
@@ -88,20 +85,25 @@ LogisticRegressionModel
 
     .. autosummary::
     
+       ~LogisticRegressionModel.coefficientMatrix
        ~LogisticRegressionModel.coefficients
        ~LogisticRegressionModel.cuml_params
+       ~LogisticRegressionModel.elasticNetParam
        ~LogisticRegressionModel.featuresCol
        ~LogisticRegressionModel.featuresCols
        ~LogisticRegressionModel.fitIntercept
        ~LogisticRegressionModel.hasSummary
        ~LogisticRegressionModel.intercept
+       ~LogisticRegressionModel.interceptVector
        ~LogisticRegressionModel.labelCol
        ~LogisticRegressionModel.maxIter
+       ~LogisticRegressionModel.numClasses
        ~LogisticRegressionModel.numFeatures
        ~LogisticRegressionModel.num_workers
        ~LogisticRegressionModel.params
        ~LogisticRegressionModel.predictionCol
        ~LogisticRegressionModel.probabilityCol
+       ~LogisticRegressionModel.rawPredictionCol
        ~LogisticRegressionModel.regParam
        ~LogisticRegressionModel.summary
        ~LogisticRegressionModel.tol
@@ -122,7 +124,7 @@ LogisticRegressionModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
+    .. automethod:: getElasticNetParam
     .. automethod:: getFeaturesCol
     .. automethod:: getFeaturesCols
     .. automethod:: getFitIntercept
@@ -132,13 +134,11 @@ LogisticRegressionModel
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getProbabilityCol
+    .. automethod:: getRawPredictionCol
     .. automethod:: getRegParam
     .. automethod:: getTol
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -153,8 +153,7 @@ LogisticRegressionModel
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
+    .. automethod:: setRawPredictionCol
     .. automethod:: transform
     .. automethod:: write
 
@@ -167,20 +166,25 @@ LogisticRegressionModel
     .. rubric:: Attributes Documentation
 
     
+    .. autoattribute:: coefficientMatrix
     .. autoattribute:: coefficients
     .. autoattribute:: cuml_params
+    .. autoattribute:: elasticNetParam
     .. autoattribute:: featuresCol
     .. autoattribute:: featuresCols
     .. autoattribute:: fitIntercept
     .. autoattribute:: hasSummary
     .. autoattribute:: intercept
+    .. autoattribute:: interceptVector
     .. autoattribute:: labelCol
     .. autoattribute:: maxIter
+    .. autoattribute:: numClasses
     .. autoattribute:: numFeatures
     .. autoattribute:: num_workers
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: probabilityCol
+    .. autoattribute:: rawPredictionCol
     .. autoattribute:: regParam
     .. autoattribute:: summary
     .. autoattribute:: tol

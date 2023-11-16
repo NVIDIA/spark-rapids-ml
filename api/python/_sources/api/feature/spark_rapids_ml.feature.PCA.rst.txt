@@ -50,8 +50,6 @@ PCA
        ~PCA.getParam
        ~PCA.hasDefault
        ~PCA.hasParam
-       ~PCA.initialize_cuml_logging
-       ~PCA.initialize_cuml_params
        ~PCA.isDefined
        ~PCA.isSet
        ~PCA.load
@@ -62,8 +60,6 @@ PCA
        ~PCA.setInputCols
        ~PCA.setK
        ~PCA.setOutputCol
-       ~PCA.set_gpu_device
-       ~PCA.set_params
        ~PCA.write
 
     
@@ -108,8 +104,6 @@ PCA
     .. automethod:: getParam
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -120,8 +114,6 @@ PCA
     .. automethod:: setInputCols
     .. automethod:: setK
     .. automethod:: setOutputCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: write
 
     

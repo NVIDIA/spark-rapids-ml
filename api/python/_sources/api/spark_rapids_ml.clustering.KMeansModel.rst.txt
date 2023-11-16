@@ -42,24 +42,18 @@ KMeansModel
        ~KMeansModel.explainParam
        ~KMeansModel.explainParams
        ~KMeansModel.extractParamMap
-       ~KMeansModel.from_row
        ~KMeansModel.getFeaturesCol
        ~KMeansModel.getFeaturesCols
        ~KMeansModel.getInitMode
        ~KMeansModel.getK
-       ~KMeansModel.getMaxBlockSizeInMB
        ~KMeansModel.getMaxIter
        ~KMeansModel.getOrDefault
        ~KMeansModel.getParam
        ~KMeansModel.getPredictionCol
        ~KMeansModel.getSeed
-       ~KMeansModel.getSolver
        ~KMeansModel.getTol
-       ~KMeansModel.get_model_attributes
        ~KMeansModel.hasDefault
        ~KMeansModel.hasParam
-       ~KMeansModel.initialize_cuml_logging
-       ~KMeansModel.initialize_cuml_params
        ~KMeansModel.isDefined
        ~KMeansModel.isSet
        ~KMeansModel.load
@@ -70,8 +64,6 @@ KMeansModel
        ~KMeansModel.setFeaturesCol
        ~KMeansModel.setFeaturesCols
        ~KMeansModel.setPredictionCol
-       ~KMeansModel.set_gpu_device
-       ~KMeansModel.set_params
        ~KMeansModel.transform
        ~KMeansModel.write
 
@@ -91,14 +83,12 @@ KMeansModel
        ~KMeansModel.hasSummary
        ~KMeansModel.initMode
        ~KMeansModel.k
-       ~KMeansModel.maxBlockSizeInMB
        ~KMeansModel.maxIter
        ~KMeansModel.numFeatures
        ~KMeansModel.num_workers
        ~KMeansModel.params
        ~KMeansModel.predictionCol
        ~KMeansModel.seed
-       ~KMeansModel.solver
        ~KMeansModel.tol
 
     
@@ -117,24 +107,18 @@ KMeansModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getFeaturesCol
     .. automethod:: getFeaturesCols
     .. automethod:: getInitMode
     .. automethod:: getK
-    .. automethod:: getMaxBlockSizeInMB
     .. automethod:: getMaxIter
     .. automethod:: getOrDefault
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getSeed
-    .. automethod:: getSolver
     .. automethod:: getTol
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -145,8 +129,6 @@ KMeansModel
     .. automethod:: setFeaturesCol
     .. automethod:: setFeaturesCols
     .. automethod:: setPredictionCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: transform
     .. automethod:: write
 
@@ -165,14 +147,12 @@ KMeansModel
     .. autoattribute:: hasSummary
     .. autoattribute:: initMode
     .. autoattribute:: k
-    .. autoattribute:: maxBlockSizeInMB
     .. autoattribute:: maxIter
     .. autoattribute:: numFeatures
     .. autoattribute:: num_workers
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: seed
-    .. autoattribute:: solver
     .. autoattribute:: tol
 
     

@@ -42,7 +42,6 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.explainParam
        ~RandomForestClassificationModel.explainParams
        ~RandomForestClassificationModel.extractParamMap
-       ~RandomForestClassificationModel.from_row
        ~RandomForestClassificationModel.getBootstrap
        ~RandomForestClassificationModel.getFeatureSubsetStrategy
        ~RandomForestClassificationModel.getFeaturesCol
@@ -56,12 +55,10 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.getParam
        ~RandomForestClassificationModel.getPredictionCol
        ~RandomForestClassificationModel.getProbabilityCol
+       ~RandomForestClassificationModel.getRawPredictionCol
        ~RandomForestClassificationModel.getSeed
-       ~RandomForestClassificationModel.get_model_attributes
        ~RandomForestClassificationModel.hasDefault
        ~RandomForestClassificationModel.hasParam
-       ~RandomForestClassificationModel.initialize_cuml_logging
-       ~RandomForestClassificationModel.initialize_cuml_params
        ~RandomForestClassificationModel.isDefined
        ~RandomForestClassificationModel.isSet
        ~RandomForestClassificationModel.load
@@ -77,8 +74,7 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.setLabelCol
        ~RandomForestClassificationModel.setPredictionCol
        ~RandomForestClassificationModel.setProbabilityCol
-       ~RandomForestClassificationModel.set_gpu_device
-       ~RandomForestClassificationModel.set_params
+       ~RandomForestClassificationModel.setRawPredictionCol
        ~RandomForestClassificationModel.transform
        ~RandomForestClassificationModel.write
 
@@ -112,6 +108,7 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.params
        ~RandomForestClassificationModel.predictionCol
        ~RandomForestClassificationModel.probabilityCol
+       ~RandomForestClassificationModel.rawPredictionCol
        ~RandomForestClassificationModel.seed
        ~RandomForestClassificationModel.supportedFeatureSubsetStrategies
        ~RandomForestClassificationModel.supportedImpurities
@@ -136,7 +133,6 @@ RandomForestClassificationModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getBootstrap
     .. automethod:: getFeatureSubsetStrategy
     .. automethod:: getFeaturesCol
@@ -150,12 +146,10 @@ RandomForestClassificationModel
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getProbabilityCol
+    .. automethod:: getRawPredictionCol
     .. automethod:: getSeed
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -171,8 +165,7 @@ RandomForestClassificationModel
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
+    .. automethod:: setRawPredictionCol
     .. automethod:: transform
     .. automethod:: write
 
@@ -205,6 +198,7 @@ RandomForestClassificationModel
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: probabilityCol
+    .. autoattribute:: rawPredictionCol
     .. autoattribute:: seed
     .. autoattribute:: supportedFeatureSubsetStrategies
     .. autoattribute:: supportedImpurities

@@ -51,5 +51,6 @@ exclude:
   - vendor/ruby/
 
 include:
-  - _static
+  - _static 
   - _sphinx*
+

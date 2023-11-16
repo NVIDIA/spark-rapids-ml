@@ -35,14 +35,12 @@ RandomForestRegressionModel
 
     .. autosummary::
     
-       ~RandomForestRegressionModel.calculate_regression_metrics
        ~RandomForestRegressionModel.clear
        ~RandomForestRegressionModel.copy
        ~RandomForestRegressionModel.cpu
        ~RandomForestRegressionModel.explainParam
        ~RandomForestRegressionModel.explainParams
        ~RandomForestRegressionModel.extractParamMap
-       ~RandomForestRegressionModel.from_row
        ~RandomForestRegressionModel.getBootstrap
        ~RandomForestRegressionModel.getFeatureSubsetStrategy
        ~RandomForestRegressionModel.getFeaturesCol
@@ -56,11 +54,8 @@ RandomForestRegressionModel
        ~RandomForestRegressionModel.getParam
        ~RandomForestRegressionModel.getPredictionCol
        ~RandomForestRegressionModel.getSeed
-       ~RandomForestRegressionModel.get_model_attributes
        ~RandomForestRegressionModel.hasDefault
        ~RandomForestRegressionModel.hasParam
-       ~RandomForestRegressionModel.initialize_cuml_logging
-       ~RandomForestRegressionModel.initialize_cuml_params
        ~RandomForestRegressionModel.isDefined
        ~RandomForestRegressionModel.isSet
        ~RandomForestRegressionModel.load
@@ -73,8 +68,6 @@ RandomForestRegressionModel
        ~RandomForestRegressionModel.setFeaturesCols
        ~RandomForestRegressionModel.setLabelCol
        ~RandomForestRegressionModel.setPredictionCol
-       ~RandomForestRegressionModel.set_gpu_device
-       ~RandomForestRegressionModel.set_params
        ~RandomForestRegressionModel.transform
        ~RandomForestRegressionModel.write
 
@@ -122,14 +115,12 @@ RandomForestRegressionModel
     .. rubric:: Methods Documentation
 
     
-    .. automethod:: calculate_regression_metrics
     .. automethod:: clear
     .. automethod:: copy
     .. automethod:: cpu
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getBootstrap
     .. automethod:: getFeatureSubsetStrategy
     .. automethod:: getFeaturesCol
@@ -143,11 +134,8 @@ RandomForestRegressionModel
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getSeed
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -160,8 +148,6 @@ RandomForestRegressionModel
     .. automethod:: setFeaturesCols
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: transform
     .. automethod:: write
 

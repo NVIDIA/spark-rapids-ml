@@ -68,8 +68,6 @@ UMAP
        ~UMAP.getTransformQueueSize
        ~UMAP.hasDefault
        ~UMAP.hasParam
-       ~UMAP.initialize_cuml_logging
-       ~UMAP.initialize_cuml_params
        ~UMAP.isDefined
        ~UMAP.isSet
        ~UMAP.load
@@ -98,8 +96,6 @@ UMAP
        ~UMAP.setSetOpMixRatio
        ~UMAP.setSpread
        ~UMAP.setTransformQueueSize
-       ~UMAP.set_gpu_device
-       ~UMAP.set_params
        ~UMAP.write
 
     
@@ -180,8 +176,6 @@ UMAP
     .. automethod:: getTransformQueueSize
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -210,8 +204,6 @@ UMAP
     .. automethod:: setSetOpMixRatio
     .. automethod:: setSpread
     .. automethod:: setTransformQueueSize
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: write
 
     

@@ -42,18 +42,14 @@ NearestNeighborsModel
        ~NearestNeighborsModel.explainParam
        ~NearestNeighborsModel.explainParams
        ~NearestNeighborsModel.extractParamMap
-       ~NearestNeighborsModel.from_row
        ~NearestNeighborsModel.getIdCol
        ~NearestNeighborsModel.getInputCol
        ~NearestNeighborsModel.getInputCols
        ~NearestNeighborsModel.getLabelCol
        ~NearestNeighborsModel.getOrDefault
        ~NearestNeighborsModel.getParam
-       ~NearestNeighborsModel.get_model_attributes
        ~NearestNeighborsModel.hasDefault
        ~NearestNeighborsModel.hasParam
-       ~NearestNeighborsModel.initialize_cuml_logging
-       ~NearestNeighborsModel.initialize_cuml_params
        ~NearestNeighborsModel.isDefined
        ~NearestNeighborsModel.isSet
        ~NearestNeighborsModel.kneighbors
@@ -65,8 +61,6 @@ NearestNeighborsModel
        ~NearestNeighborsModel.setInputCol
        ~NearestNeighborsModel.setInputCols
        ~NearestNeighborsModel.setK
-       ~NearestNeighborsModel.set_gpu_device
-       ~NearestNeighborsModel.set_params
        ~NearestNeighborsModel.transform
        ~NearestNeighborsModel.write
 
@@ -81,7 +75,7 @@ NearestNeighborsModel
     .. autosummary::
     
        ~NearestNeighborsModel.cuml_params
-       ~NearestNeighborsModel.id_col
+       ~NearestNeighborsModel.idCol
        ~NearestNeighborsModel.inputCol
        ~NearestNeighborsModel.inputCols
        ~NearestNeighborsModel.k
@@ -105,18 +99,14 @@ NearestNeighborsModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getIdCol
     .. automethod:: getInputCol
     .. automethod:: getInputCols
     .. automethod:: getLabelCol
     .. automethod:: getOrDefault
     .. automethod:: getParam
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: kneighbors
@@ -128,8 +118,6 @@ NearestNeighborsModel
     .. automethod:: setInputCol
     .. automethod:: setInputCols
     .. automethod:: setK
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: transform
     .. automethod:: write
 
@@ -143,7 +131,7 @@ NearestNeighborsModel
 
     
     .. autoattribute:: cuml_params
-    .. autoattribute:: id_col
+    .. autoattribute:: idCol
     .. autoattribute:: inputCol
     .. autoattribute:: inputCols
     .. autoattribute:: k

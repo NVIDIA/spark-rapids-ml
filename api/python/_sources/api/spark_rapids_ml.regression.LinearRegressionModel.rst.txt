@@ -35,7 +35,6 @@ LinearRegressionModel
 
     .. autosummary::
     
-       ~LinearRegressionModel.calculate_regression_metrics
        ~LinearRegressionModel.clear
        ~LinearRegressionModel.copy
        ~LinearRegressionModel.cpu
@@ -43,7 +42,6 @@ LinearRegressionModel
        ~LinearRegressionModel.explainParam
        ~LinearRegressionModel.explainParams
        ~LinearRegressionModel.extractParamMap
-       ~LinearRegressionModel.from_row
        ~LinearRegressionModel.getElasticNetParam
        ~LinearRegressionModel.getFeaturesCol
        ~LinearRegressionModel.getFeaturesCols
@@ -58,11 +56,8 @@ LinearRegressionModel
        ~LinearRegressionModel.getSolver
        ~LinearRegressionModel.getStandardization
        ~LinearRegressionModel.getTol
-       ~LinearRegressionModel.get_model_attributes
        ~LinearRegressionModel.hasDefault
        ~LinearRegressionModel.hasParam
-       ~LinearRegressionModel.initialize_cuml_logging
-       ~LinearRegressionModel.initialize_cuml_params
        ~LinearRegressionModel.isDefined
        ~LinearRegressionModel.isSet
        ~LinearRegressionModel.load
@@ -74,8 +69,6 @@ LinearRegressionModel
        ~LinearRegressionModel.setFeaturesCols
        ~LinearRegressionModel.setLabelCol
        ~LinearRegressionModel.setPredictionCol
-       ~LinearRegressionModel.set_gpu_device
-       ~LinearRegressionModel.set_params
        ~LinearRegressionModel.transform
        ~LinearRegressionModel.write
 
@@ -119,7 +112,6 @@ LinearRegressionModel
     .. rubric:: Methods Documentation
 
     
-    .. automethod:: calculate_regression_metrics
     .. automethod:: clear
     .. automethod:: copy
     .. automethod:: cpu
@@ -127,7 +119,6 @@ LinearRegressionModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getElasticNetParam
     .. automethod:: getFeaturesCol
     .. automethod:: getFeaturesCols
@@ -142,11 +133,8 @@ LinearRegressionModel
     .. automethod:: getSolver
     .. automethod:: getStandardization
     .. automethod:: getTol
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -158,8 +146,6 @@ LinearRegressionModel
     .. automethod:: setFeaturesCols
     .. automethod:: setLabelCol
     .. automethod:: setPredictionCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: transform
     .. automethod:: write
 

@@ -58,8 +58,6 @@ LinearRegression
        ~LinearRegression.getTol
        ~LinearRegression.hasDefault
        ~LinearRegression.hasParam
-       ~LinearRegression.initialize_cuml_logging
-       ~LinearRegression.initialize_cuml_params
        ~LinearRegression.isDefined
        ~LinearRegression.isSet
        ~LinearRegression.load
@@ -76,8 +74,6 @@ LinearRegression
        ~LinearRegression.setRegParam
        ~LinearRegression.setStandardization
        ~LinearRegression.setTol
-       ~LinearRegression.set_gpu_device
-       ~LinearRegression.set_params
        ~LinearRegression.write
 
     
@@ -138,8 +134,6 @@ LinearRegression
     .. automethod:: getTol
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -156,8 +150,6 @@ LinearRegression
     .. automethod:: setRegParam
     .. automethod:: setStandardization
     .. automethod:: setTol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: write
 
     

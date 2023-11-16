@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>KMeansModel &#8212; spark-rapids-ml 23.8.0 documentation</title>
+    <title>KMeansModel &#8212; spark-rapids-ml 23.10.0 documentation</title>
   
   
   
@@ -19,12 +19,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
 
   
-  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -33,8 +33,9 @@
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6" />
+  <script src="../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=365ca57ee442770a23c6"></script>
 
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
@@ -58,6 +59,15 @@
   
   
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
   
   <input type="checkbox"
           class="sidebar-toggle"
@@ -98,7 +108,8 @@
     <span class="fa-solid fa-bars"></span>
   </label>
   
-  <div class="navbar-header-items__start">
+  
+  <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
   
@@ -109,12 +120,12 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.8.0 documentation</p>
+  
+    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
   
 </a></div>
     
   </div>
-  
   
   <div class="col-lg-9 navbar-header-items">
     
@@ -145,23 +156,25 @@
       
         <div class="navbar-item navbar-persistent--container">
           
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
         </div>
       
       
         <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -172,18 +185,20 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
     </div>
   
 
   
-    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
       <span class="fa-solid fa-outdent"></span>
     </label>
   
@@ -230,10 +245,10 @@ document.write(`
           <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -305,8 +320,8 @@ document.write(`
 
 
 
-<nav aria-label="Breadcrumbs">
-  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
     
     <li class="breadcrumb-item breadcrumb-home">
       <a href="../index.html" class="nav-link" aria-label="Home">
@@ -364,23 +379,17 @@ Refer to the KMeans class for learning the k centers.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.extractParamMap" title="spark_rapids_ml.clustering.KMeansModel.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
 <td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.from_row" title="spark_rapids_ml.clustering.KMeansModel.from_row"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_row</span></code></a>(model_attributes)</p></td>
-<td><p>Default to pass all the attributes of the model to the model constructor, So please make sure if the constructor can accept all of them.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCol" title="spark_rapids_ml.clustering.KMeansModel.getFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCol" title="spark_rapids_ml.clustering.KMeansModel.getFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code></a>()</p></td>
 <td><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCol" title="spark_rapids_ml.clustering.KMeansModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCols" title="spark_rapids_ml.clustering.KMeansModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCols" title="spark_rapids_ml.clustering.KMeansModel.getFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCols</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCols" title="spark_rapids_ml.clustering.KMeansModel.getFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCols</span></code></a>()</p></td>
 <td><p>Gets the value of featuresCols or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getInitMode" title="spark_rapids_ml.clustering.KMeansModel.getInitMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInitMode</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getInitMode" title="spark_rapids_ml.clustering.KMeansModel.getInitMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInitMode</span></code></a>()</p></td>
 <td><p>Gets the value of <cite>initMode</cite></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getK" title="spark_rapids_ml.clustering.KMeansModel.getK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getK" title="spark_rapids_ml.clustering.KMeansModel.getK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code></a>()</p></td>
 <td><p>Gets the value of <cite>k</cite></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getMaxBlockSizeInMB" title="spark_rapids_ml.clustering.KMeansModel.getMaxBlockSizeInMB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxBlockSizeInMB</span></code></a>()</p></td>
-<td><p>Gets the value of maxBlockSizeInMB or its default value.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getMaxIter" title="spark_rapids_ml.clustering.KMeansModel.getMaxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxIter</span></code></a>()</p></td>
 <td><p>Gets the value of maxIter or its default value.</p></td>
@@ -397,26 +406,14 @@ Refer to the KMeans class for learning the k centers.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getSeed" title="spark_rapids_ml.clustering.KMeansModel.getSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSeed</span></code></a>()</p></td>
 <td><p>Gets the value of seed or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getSolver" title="spark_rapids_ml.clustering.KMeansModel.getSolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getSolver</span></code></a>()</p></td>
-<td><p>Gets the value of solver or its default value.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getTol" title="spark_rapids_ml.clustering.KMeansModel.getTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getTol</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.getTol" title="spark_rapids_ml.clustering.KMeansModel.getTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getTol</span></code></a>()</p></td>
 <td><p>Gets the value of tol or its default value.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.get_model_attributes" title="spark_rapids_ml.clustering.KMeansModel.get_model_attributes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_model_attributes</span></code></a>()</p></td>
-<td><p>Return model attributes as a dictionary.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.hasDefault" title="spark_rapids_ml.clustering.KMeansModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
 <td><p>Checks whether a param has a default value.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.hasParam" title="spark_rapids_ml.clustering.KMeansModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
 <td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_logging" title="spark_rapids_ml.clustering.KMeansModel.initialize_cuml_logging"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_logging</span></code></a>(verbose)</p></td>
-<td><p>Initializes the logger for cuML.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_params" title="spark_rapids_ml.clustering.KMeansModel.initialize_cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_cuml_params</span></code></a>()</p></td>
-<td><p>Set the default values of cuML parameters to match their Spark equivalents.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.isDefined" title="spark_rapids_ml.clustering.KMeansModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
@@ -448,12 +445,6 @@ Refer to the KMeans class for learning the k centers.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.setPredictionCol" title="spark_rapids_ml.clustering.KMeansModel.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.predictionCol" title="spark_rapids_ml.clustering.KMeansModel.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.set_gpu_device" title="spark_rapids_ml.clustering.KMeansModel.set_gpu_device"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_gpu_device</span></code></a>(context, is_local[, is_transform])</p></td>
-<td><p>Set gpu device according to the spark task resources.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.set_params" title="spark_rapids_ml.clustering.KMeansModel.set_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_params</span></code></a>(**kwargs)</p></td>
-<td><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter and value mappings defined by the _CumlClass.</p></td>
-</tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.transform" title="spark_rapids_ml.clustering.KMeansModel.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code></a>(dataset[, params])</p></td>
 <td><p>Transforms the input dataset with optional parameters.</p></td>
 </tr>
@@ -483,28 +474,22 @@ Refer to the KMeans class for learning the k centers.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.k" title="spark_rapids_ml.clustering.KMeansModel.k"><code class="xref py py-obj docutils literal notranslate"><span class="pre">k</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.maxBlockSizeInMB" title="spark_rapids_ml.clustering.KMeansModel.maxBlockSizeInMB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxBlockSizeInMB</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.maxIter" title="spark_rapids_ml.clustering.KMeansModel.maxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxIter</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.maxIter" title="spark_rapids_ml.clustering.KMeansModel.maxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxIter</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.numFeatures" title="spark_rapids_ml.clustering.KMeansModel.numFeatures"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numFeatures</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.numFeatures" title="spark_rapids_ml.clustering.KMeansModel.numFeatures"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numFeatures</span></code></a></p></td>
 <td><p>Returns the number of features the model was trained on.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.num_workers" title="spark_rapids_ml.clustering.KMeansModel.num_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.num_workers" title="spark_rapids_ml.clustering.KMeansModel.num_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></a></p></td>
 <td><p>Number of cuML workers, where each cuML worker corresponds to one Spark task running on one GPU.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.params" title="spark_rapids_ml.clustering.KMeansModel.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.params" title="spark_rapids_ml.clustering.KMeansModel.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
 <td><p>Returns all params ordered by name.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.predictionCol" title="spark_rapids_ml.clustering.KMeansModel.predictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictionCol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.predictionCol" title="spark_rapids_ml.clustering.KMeansModel.predictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictionCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.seed" title="spark_rapids_ml.clustering.KMeansModel.seed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seed</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.solver" title="spark_rapids_ml.clustering.KMeansModel.solver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solver</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.seed" title="spark_rapids_ml.clustering.KMeansModel.seed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">seed</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.tol" title="spark_rapids_ml.clustering.KMeansModel.tol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tol</span></code></a></p></td>
@@ -575,13 +560,6 @@ user-supplied values &lt; extra.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.from_row">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_attributes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Row</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.from_row" title="Permalink to this definition">#</a></dt>
-<dd><p>Default to pass all the attributes of the model to the model constructor,
-So please make sure if the constructor can accept all of them.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.getFeaturesCol">
 <span class="sig-name descname"><span class="pre">getFeaturesCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCol" title="spark_rapids_ml.clustering.KMeansModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCols" title="spark_rapids_ml.clustering.KMeansModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p>
@@ -609,12 +587,6 @@ So please make sure if the constructor can accept all of them.</p>
 <div class="versionadded">
 <p><span class="versionmodified added">New in version 1.5.0.</span></p>
 </div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.getMaxBlockSizeInMB">
-<span class="sig-name descname"><span class="pre">getMaxBlockSizeInMB</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.getMaxBlockSizeInMB" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the value of maxBlockSizeInMB or its default value.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -649,21 +621,9 @@ default value. Raises an error if neither is set.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.getSolver">
-<span class="sig-name descname"><span class="pre">getSolver</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.getSolver" title="Permalink to this definition">#</a></dt>
-<dd><p>Gets the value of solver or its default value.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.getTol">
 <span class="sig-name descname"><span class="pre">getTol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.getTol" title="Permalink to this definition">#</a></dt>
 <dd><p>Gets the value of tol or its default value.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.get_model_attributes">
-<span class="sig-name descname"><span class="pre">get_model_attributes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.get_model_attributes" title="Permalink to this definition">#</a></dt>
-<dd><p>Return model attributes as a dictionary.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -677,26 +637,6 @@ default value. Raises an error if neither is set.</p>
 <span class="sig-name descname"><span class="pre">hasParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.hasParam" title="Permalink to this definition">#</a></dt>
 <dd><p>Tests whether this instance contains a param with a given
 (string) name.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.initialize_cuml_logging">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize_cuml_logging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_logging" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes the logger for cuML.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>verbose</strong><span class="classifier">Optional[Union[bool, int]]</span></dt><dd><p>If True, sets the log_level to 5.  If integer value, sets the log_level to the value.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.initialize_cuml_params">
-<span class="sig-name descname"><span class="pre">initialize_cuml_params</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_params" title="Permalink to this definition">#</a></dt>
-<dd><p>Set the default values of cuML parameters to match their Spark equivalents.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -746,7 +686,7 @@ Fall back to PySpark ML KMeansModel</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.setFeaturesCol">
 <span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.setFeaturesCol" title="Permalink to this definition">#</a></dt>
-<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCol" title="spark_rapids_ml.clustering.KMeansModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCols" title="spark_rapids_ml.clustering.KMeansModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>. Used when input vectors are stored in a single column.</p>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCol" title="spark_rapids_ml.clustering.KMeansModel.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.featuresCols" title="spark_rapids_ml.clustering.KMeansModel.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -759,21 +699,6 @@ Fall back to PySpark ML KMeansModel</p>
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.setPredictionCol">
 <span class="sig-name descname"><span class="pre">setPredictionCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.setPredictionCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeansModel.predictionCol" title="spark_rapids_ml.clustering.KMeansModel.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.set_gpu_device">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">set_gpu_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">TaskContext</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.set_gpu_device" title="Permalink to this definition">#</a></dt>
-<dd><p>Set gpu device according to the spark task resources.</p>
-<p>If it is local mode, we use partition id as gpu id for training
-and (partition id ) % gpus for transform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.set_params">
-<span class="sig-name descname"><span class="pre">set_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.set_params" title="Permalink to this definition">#</a></dt>
-<dd><p>Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
-and value mappings defined by the _CumlClass.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -840,11 +765,6 @@ and value mappings defined by the _CumlClass.</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.maxBlockSizeInMB">
-<span class="sig-name descname"><span class="pre">maxBlockSizeInMB</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='maxBlockSizeInMB',</span> <span class="pre">doc='maximum</span> <span class="pre">memory</span> <span class="pre">in</span> <span class="pre">MB</span> <span class="pre">for</span> <span class="pre">stacking</span> <span class="pre">input</span> <span class="pre">data</span> <span class="pre">into</span> <span class="pre">blocks.</span> <span class="pre">Data</span> <span class="pre">is</span> <span class="pre">stacked</span> <span class="pre">within</span> <span class="pre">partitions.</span> <span class="pre">If</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">remaining</span> <span class="pre">data</span> <span class="pre">size</span> <span class="pre">in</span> <span class="pre">a</span> <span class="pre">partition</span> <span class="pre">then</span> <span class="pre">it</span> <span class="pre">is</span> <span class="pre">adjusted</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">data</span> <span class="pre">size.</span> <span class="pre">Default</span> <span class="pre">0.0</span> <span class="pre">represents</span> <span class="pre">choosing</span> <span class="pre">optimal</span> <span class="pre">value,</span> <span class="pre">depends</span> <span class="pre">on</span> <span class="pre">specific</span> <span class="pre">algorithm.</span> <span class="pre">Must</span> <span class="pre">be</span> <span class="pre">&gt;=</span> <span class="pre">0.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.maxBlockSizeInMB" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.maxIter">
 <span class="sig-name descname"><span class="pre">maxIter</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='maxIter',</span> <span class="pre">doc='max</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">iterations</span> <span class="pre">(&gt;=</span> <span class="pre">0).')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.maxIter" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
@@ -881,11 +801,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.solver">
-<span class="sig-name descname"><span class="pre">solver</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='solver',</span> <span class="pre">doc='The</span> <span class="pre">solver</span> <span class="pre">algorithm</span> <span class="pre">for</span> <span class="pre">optimization.</span> <span class="pre">Supported</span> <span class="pre">options:</span> <span class="pre">auto,</span> <span class="pre">row,</span> <span class="pre">block.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.solver" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeansModel.tol">
 <span class="sig-name descname"><span class="pre">tol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='tol',</span> <span class="pre">doc='the</span> <span class="pre">convergence</span> <span class="pre">tolerance</span> <span class="pre">for</span> <span class="pre">iterative</span> <span class="pre">algorithms</span> <span class="pre">(&gt;=</span> <span class="pre">0).')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.KMeansModel.tol" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
@@ -899,11 +814,10 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
               
               
               
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
 <div class="prev-next-area">
     <a class="left-prev"
        href="spark_rapids_ml.clustering.KMeans.html"
@@ -923,10 +837,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
-</div></div>
-  
 </div>
-
                 </footer>
               
             </div>
@@ -949,24 +860,18 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.explainParam"><code class="docutils literal notranslate"><span class="pre">KMeansModel.explainParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.explainParams"><code class="docutils literal notranslate"><span class="pre">KMeansModel.explainParams()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.extractParamMap"><code class="docutils literal notranslate"><span class="pre">KMeansModel.extractParamMap()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.from_row"><code class="docutils literal notranslate"><span class="pre">KMeansModel.from_row()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getFeaturesCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getFeaturesCols"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getFeaturesCols()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getInitMode"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getInitMode()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getK"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getK()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getMaxBlockSizeInMB"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getMaxBlockSizeInMB()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getMaxIter"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getMaxIter()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getOrDefault"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getOrDefault()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getParam"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getPredictionCol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getSeed"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getSeed()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getSolver"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getSolver()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.getTol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.getTol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.get_model_attributes"><code class="docutils literal notranslate"><span class="pre">KMeansModel.get_model_attributes()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.hasDefault"><code class="docutils literal notranslate"><span class="pre">KMeansModel.hasDefault()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.hasParam"><code class="docutils literal notranslate"><span class="pre">KMeansModel.hasParam()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_logging"><code class="docutils literal notranslate"><span class="pre">KMeansModel.initialize_cuml_logging()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.initialize_cuml_params"><code class="docutils literal notranslate"><span class="pre">KMeansModel.initialize_cuml_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.isDefined"><code class="docutils literal notranslate"><span class="pre">KMeansModel.isDefined()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.isSet"><code class="docutils literal notranslate"><span class="pre">KMeansModel.isSet()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.load"><code class="docutils literal notranslate"><span class="pre">KMeansModel.load()</span></code></a></li>
@@ -977,8 +882,6 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.setFeaturesCol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.setFeaturesCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.setFeaturesCols"><code class="docutils literal notranslate"><span class="pre">KMeansModel.setFeaturesCols()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.setPredictionCol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.setPredictionCol()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.set_gpu_device"><code class="docutils literal notranslate"><span class="pre">KMeansModel.set_gpu_device()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.set_params"><code class="docutils literal notranslate"><span class="pre">KMeansModel.set_params()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.transform"><code class="docutils literal notranslate"><span class="pre">KMeansModel.transform()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.write"><code class="docutils literal notranslate"><span class="pre">KMeansModel.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.cuml_params"><code class="docutils literal notranslate"><span class="pre">KMeansModel.cuml_params</span></code></a></li>
@@ -987,27 +890,17 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.hasSummary"><code class="docutils literal notranslate"><span class="pre">KMeansModel.hasSummary</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.initMode"><code class="docutils literal notranslate"><span class="pre">KMeansModel.initMode</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.k"><code class="docutils literal notranslate"><span class="pre">KMeansModel.k</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.maxBlockSizeInMB"><code class="docutils literal notranslate"><span class="pre">KMeansModel.maxBlockSizeInMB</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.maxIter"><code class="docutils literal notranslate"><span class="pre">KMeansModel.maxIter</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.numFeatures"><code class="docutils literal notranslate"><span class="pre">KMeansModel.numFeatures</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.num_workers"><code class="docutils literal notranslate"><span class="pre">KMeansModel.num_workers</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.params"><code class="docutils literal notranslate"><span class="pre">KMeansModel.params</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.predictionCol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.predictionCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.seed"><code class="docutils literal notranslate"><span class="pre">KMeansModel.seed</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.solver"><code class="docutils literal notranslate"><span class="pre">KMeansModel.solver</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeansModel.tol"><code class="docutils literal notranslate"><span class="pre">KMeansModel.tol</span></code></a></li>
 </ul>
 </li>
 </ul>
   </nav></div>
-
-  <div class="sidebar-secondary-item">
-  <div class="tocsection sourcelink">
-    <a href="../_sources/api/spark_rapids_ml.clustering.KMeansModel.rst.txt">
-      <i class="fa-solid fa-file-lines"></i> Show Source
-    </a>
-  </div>
-</div>
 
 </div></div>
               
@@ -1022,8 +915,8 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1049,10 +942,11 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
     </div>
   
   
+  
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.3.
 </p></div>
       
     </div>

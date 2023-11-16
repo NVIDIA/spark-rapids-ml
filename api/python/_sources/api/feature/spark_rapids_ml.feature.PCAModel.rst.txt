@@ -41,18 +41,14 @@ PCAModel
        ~PCAModel.explainParam
        ~PCAModel.explainParams
        ~PCAModel.extractParamMap
-       ~PCAModel.from_row
        ~PCAModel.getInputCol
        ~PCAModel.getInputCols
        ~PCAModel.getK
        ~PCAModel.getOrDefault
        ~PCAModel.getOutputCol
        ~PCAModel.getParam
-       ~PCAModel.get_model_attributes
        ~PCAModel.hasDefault
        ~PCAModel.hasParam
-       ~PCAModel.initialize_cuml_logging
-       ~PCAModel.initialize_cuml_params
        ~PCAModel.isDefined
        ~PCAModel.isSet
        ~PCAModel.load
@@ -62,8 +58,6 @@ PCAModel
        ~PCAModel.setInputCol
        ~PCAModel.setInputCols
        ~PCAModel.setOutputCol
-       ~PCAModel.set_gpu_device
-       ~PCAModel.set_params
        ~PCAModel.transform
        ~PCAModel.write
 
@@ -103,18 +97,14 @@ PCAModel
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
-    .. automethod:: from_row
     .. automethod:: getInputCol
     .. automethod:: getInputCols
     .. automethod:: getK
     .. automethod:: getOrDefault
     .. automethod:: getOutputCol
     .. automethod:: getParam
-    .. automethod:: get_model_attributes
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -124,8 +114,6 @@ PCAModel
     .. automethod:: setInputCol
     .. automethod:: setInputCols
     .. automethod:: setOutputCol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: transform
     .. automethod:: write
 

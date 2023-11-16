@@ -50,8 +50,6 @@ NearestNeighbors
        ~NearestNeighbors.getParam
        ~NearestNeighbors.hasDefault
        ~NearestNeighbors.hasParam
-       ~NearestNeighbors.initialize_cuml_logging
-       ~NearestNeighbors.initialize_cuml_params
        ~NearestNeighbors.isDefined
        ~NearestNeighbors.isSet
        ~NearestNeighbors.load
@@ -62,8 +60,6 @@ NearestNeighbors
        ~NearestNeighbors.setInputCol
        ~NearestNeighbors.setInputCols
        ~NearestNeighbors.setK
-       ~NearestNeighbors.set_gpu_device
-       ~NearestNeighbors.set_params
        ~NearestNeighbors.write
 
     
@@ -77,7 +73,7 @@ NearestNeighbors
     .. autosummary::
     
        ~NearestNeighbors.cuml_params
-       ~NearestNeighbors.id_col
+       ~NearestNeighbors.idCol
        ~NearestNeighbors.inputCol
        ~NearestNeighbors.inputCols
        ~NearestNeighbors.k
@@ -109,8 +105,6 @@ NearestNeighbors
     .. automethod:: getParam
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -121,8 +115,6 @@ NearestNeighbors
     .. automethod:: setInputCol
     .. automethod:: setInputCols
     .. automethod:: setK
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: write
 
     
@@ -135,7 +127,7 @@ NearestNeighbors
 
     
     .. autoattribute:: cuml_params
-    .. autoattribute:: id_col
+    .. autoattribute:: idCol
     .. autoattribute:: inputCol
     .. autoattribute:: inputCols
     .. autoattribute:: k

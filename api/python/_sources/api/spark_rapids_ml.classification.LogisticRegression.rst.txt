@@ -42,6 +42,7 @@ LogisticRegression
        ~LogisticRegression.extractParamMap
        ~LogisticRegression.fit
        ~LogisticRegression.fitMultiple
+       ~LogisticRegression.getElasticNetParam
        ~LogisticRegression.getFeaturesCol
        ~LogisticRegression.getFeaturesCols
        ~LogisticRegression.getFitIntercept
@@ -51,18 +52,18 @@ LogisticRegression
        ~LogisticRegression.getParam
        ~LogisticRegression.getPredictionCol
        ~LogisticRegression.getProbabilityCol
+       ~LogisticRegression.getRawPredictionCol
        ~LogisticRegression.getRegParam
        ~LogisticRegression.getTol
        ~LogisticRegression.hasDefault
        ~LogisticRegression.hasParam
-       ~LogisticRegression.initialize_cuml_logging
-       ~LogisticRegression.initialize_cuml_params
        ~LogisticRegression.isDefined
        ~LogisticRegression.isSet
        ~LogisticRegression.load
        ~LogisticRegression.read
        ~LogisticRegression.save
        ~LogisticRegression.set
+       ~LogisticRegression.setElasticNetParam
        ~LogisticRegression.setFeaturesCol
        ~LogisticRegression.setFeaturesCols
        ~LogisticRegression.setFitIntercept
@@ -70,10 +71,9 @@ LogisticRegression
        ~LogisticRegression.setMaxIter
        ~LogisticRegression.setPredictionCol
        ~LogisticRegression.setProbabilityCol
+       ~LogisticRegression.setRawPredictionCol
        ~LogisticRegression.setRegParam
        ~LogisticRegression.setTol
-       ~LogisticRegression.set_gpu_device
-       ~LogisticRegression.set_params
        ~LogisticRegression.write
 
     
@@ -87,6 +87,7 @@ LogisticRegression
     .. autosummary::
     
        ~LogisticRegression.cuml_params
+       ~LogisticRegression.elasticNetParam
        ~LogisticRegression.featuresCol
        ~LogisticRegression.featuresCols
        ~LogisticRegression.fitIntercept
@@ -96,6 +97,7 @@ LogisticRegression
        ~LogisticRegression.params
        ~LogisticRegression.predictionCol
        ~LogisticRegression.probabilityCol
+       ~LogisticRegression.rawPredictionCol
        ~LogisticRegression.regParam
        ~LogisticRegression.tol
 
@@ -115,6 +117,7 @@ LogisticRegression
     .. automethod:: extractParamMap
     .. automethod:: fit
     .. automethod:: fitMultiple
+    .. automethod:: getElasticNetParam
     .. automethod:: getFeaturesCol
     .. automethod:: getFeaturesCols
     .. automethod:: getFitIntercept
@@ -124,18 +127,18 @@ LogisticRegression
     .. automethod:: getParam
     .. automethod:: getPredictionCol
     .. automethod:: getProbabilityCol
+    .. automethod:: getRawPredictionCol
     .. automethod:: getRegParam
     .. automethod:: getTol
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
     .. automethod:: read
     .. automethod:: save
     .. automethod:: set
+    .. automethod:: setElasticNetParam
     .. automethod:: setFeaturesCol
     .. automethod:: setFeaturesCols
     .. automethod:: setFitIntercept
@@ -143,10 +146,9 @@ LogisticRegression
     .. automethod:: setMaxIter
     .. automethod:: setPredictionCol
     .. automethod:: setProbabilityCol
+    .. automethod:: setRawPredictionCol
     .. automethod:: setRegParam
     .. automethod:: setTol
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: write
 
     
@@ -159,6 +161,7 @@ LogisticRegression
 
     
     .. autoattribute:: cuml_params
+    .. autoattribute:: elasticNetParam
     .. autoattribute:: featuresCol
     .. autoattribute:: featuresCols
     .. autoattribute:: fitIntercept
@@ -168,6 +171,7 @@ LogisticRegression
     .. autoattribute:: params
     .. autoattribute:: predictionCol
     .. autoattribute:: probabilityCol
+    .. autoattribute:: rawPredictionCol
     .. autoattribute:: regParam
     .. autoattribute:: tol
 

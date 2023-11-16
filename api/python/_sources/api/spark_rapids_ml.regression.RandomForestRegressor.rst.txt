@@ -57,8 +57,6 @@ RandomForestRegressor
        ~RandomForestRegressor.getSeed
        ~RandomForestRegressor.hasDefault
        ~RandomForestRegressor.hasParam
-       ~RandomForestRegressor.initialize_cuml_logging
-       ~RandomForestRegressor.initialize_cuml_params
        ~RandomForestRegressor.isDefined
        ~RandomForestRegressor.isSet
        ~RandomForestRegressor.load
@@ -77,8 +75,6 @@ RandomForestRegressor
        ~RandomForestRegressor.setNumTrees
        ~RandomForestRegressor.setPredictionCol
        ~RandomForestRegressor.setSeed
-       ~RandomForestRegressor.set_gpu_device
-       ~RandomForestRegressor.set_params
        ~RandomForestRegressor.write
 
     
@@ -139,8 +135,6 @@ RandomForestRegressor
     .. automethod:: getSeed
     .. automethod:: hasDefault
     .. automethod:: hasParam
-    .. automethod:: initialize_cuml_logging
-    .. automethod:: initialize_cuml_params
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: load
@@ -159,8 +153,6 @@ RandomForestRegressor
     .. automethod:: setNumTrees
     .. automethod:: setPredictionCol
     .. automethod:: setSeed
-    .. automethod:: set_gpu_device
-    .. automethod:: set_params
     .. automethod:: write
 
     
