@@ -109,7 +109,9 @@ def test_toy_example(gpu_number: int) -> None:
         schema = features_col + " array<float>, " + label_col + " float"
         df = spark.createDataFrame(data, schema=schema)
 
-        lr_estimator = LogisticRegression(regParam=1.0, num_workers=gpu_number)
+        lr_estimator = LogisticRegression(
+            standardization=False, regParam=1.0, num_workers=gpu_number
+        )
         lr_estimator.setFeaturesCol(features_col)
         lr_estimator.setLabelCol(label_col)
         lr_estimator.setProbabilityCol(probability_col)
@@ -169,6 +171,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 0.0,
         "tol": 1e-06,
         "fitIntercept": True,
+        "standardization": True,
     }
 
     default_cuml_params = {
@@ -178,6 +181,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "l1_ratio": 0.0,
         "tol": 1e-6,
         "fit_intercept": True,
+        "standardization": True,
     }
 
     default_lr = LogisticRegression()
@@ -191,6 +195,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 0.0,
         "tol": 1e-2,
         "fitIntercept": False,
+        "standardization": False,
     }
 
     spark_lr = LogisticRegression(**spark_params)
@@ -205,6 +210,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "l1_ratio": 0.0,
             "tol": 1e-2,
             "fit_intercept": False,
+            "standardization": False,
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
@@ -216,6 +222,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 1.0,
         "tol": 1e-2,
         "fitIntercept": False,
+        "standardization": False,
     }
 
     spark_lr = LogisticRegression(**spark_params)
@@ -230,6 +237,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "l1_ratio": 1.0,
             "tol": 1e-2,
             "fit_intercept": False,
+            "standardization": False,
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
@@ -241,6 +249,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 0.3,
         "tol": 1e-2,
         "fitIntercept": False,
+        "standardization": True,
     }
 
     spark_lr = LogisticRegression(**spark_params)
@@ -255,6 +264,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "l1_ratio": 0.3,
             "tol": 1e-2,
             "fit_intercept": False,
+            "standardization": True,
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
@@ -291,8 +301,13 @@ def test_classifier(
     reg_param: float = 0.0,
     elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
+    standardization: bool = False,
     convert_to_sparse: bool = False,
 ) -> LogisticRegression:
+    assert (
+        standardization is False
+    ), "standardization=True is not supported due to testing with single-GPU LogisticRegression"
+
     if convert_to_sparse is True:
         assert feature_type == "vector"
 
@@ -340,6 +355,7 @@ def test_classifier(
         assert label_col is not None
         spark_lr = LogisticRegression(
             enable_sparse_data_optim=convert_to_sparse,
+            standardization=standardization,
             fitIntercept=fit_intercept,
             regParam=reg_param,
             elasticNetParam=elasticNet_param,
@@ -463,13 +479,9 @@ def test_compat(
         )
 
         assert _LogisticRegression().getRegParam() == 0.0
-        if lr_types[0] is SparkLogisticRegression:
-            blor = _LogisticRegression(
-                regParam=0.1, fitIntercept=fit_intercept, standardization=False
-            )
-        else:
-            warnings.warn("spark rapids ml does not accept standardization")
-            blor = _LogisticRegression(regParam=0.1, fitIntercept=fit_intercept)
+        blor = _LogisticRegression(
+            regParam=0.1, fitIntercept=fit_intercept, standardization=False
+        )
 
         assert blor.getRegParam() == 0.1
 
@@ -559,95 +571,6 @@ def test_compat(
         assert blor_model.intercept == model2.intercept
         assert blor_model.transform(bdf).take(1) == model2.transform(bdf).take(1)
         assert blor_model.numFeatures == 2
-
-
-@pytest.mark.compat
-@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize(
-    "lr_types",
-    [
-        (SparkLogisticRegression, SparkLogisticRegressionModel),
-        (LogisticRegression, LogisticRegressionModel),
-    ],
-)
-def test_compat_standardization(
-    fit_intercept: bool,
-    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
-) -> None:
-
-    _LogisticRegression, _LogisticRegressionModel = lr_types
-
-    X = np.array(
-        [
-            [1.0, 3000.0],
-            [1.0, 4000.0],
-            [2.0, 1000.0],
-            [2.0, 2000.0],
-        ]
-    )
-    y = np.array(
-        [
-            1.0,
-            1.0,
-            0.0,
-            0.0,
-        ]
-    )
-    num_rows = len(X)
-
-    weight = np.ones([num_rows])
-    feature_cols = ["c0", "c1"]
-    schema = ["c0 float, c1 float, weight float, label float"]
-
-    with CleanSparkSession() as spark:
-        np_array = np.concatenate(
-            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
-        )
-
-        bdf = spark.createDataFrame(
-            np_array.tolist(),
-            ",".join(schema),
-        )
-
-        bdf = bdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
-            *feature_cols
-        )
-
-        blor = _LogisticRegression(
-            regParam=0.1, fitIntercept=fit_intercept, standardization=True
-        )
-
-        if isinstance(blor, SparkLogisticRegression):
-            blor.setWeightCol("weight")
-
-        blor_model = blor.fit(bdf)
-
-        blor_model.setFeaturesCol("features")
-        blor_model.setProbabilityCol("newProbability")
-        blor_model.setRawPredictionCol("newRawPrediction")
-
-        array_equal(
-            blor_model.coefficients.toArray(), [-2.42377087, 2.42377087], tolerance
-        )
-        assert array_equal(
-            blor_model.coefficientMatrix.toArray(),
-            np.array([[-2.42377087, 2.42377087]]),
-            tolerance,
-        )
-        assert array_equal(blor_model.interceptVector.toArray(), [0.0])
-
-        output_df = blor_model.transform(bdf)
-
-        if isinstance(blor_model, SparkLogisticRegressionModel):
-            assert array_equal(
-                output.newRawPrediction.toArray(),
-                Vectors.dense([-2.4238, 2.4238]).toArray(),
-                tolerance,
-            )
-        else:
-            warnings.warn(
-                "transform of spark rapids ml currently does not support rawPredictionCol"
-            )
 
 
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
@@ -801,23 +724,15 @@ def test_compat_multinomial(
         )
 
         assert _LogisticRegression().getRegParam() == 0.0
-        if lr_types[0] is SparkLogisticRegression:
-            mlor = _LogisticRegression(
-                regParam=0.1,
-                elasticNetParam=0.2,
-                fitIntercept=fit_intercept,
-                family="multinomial",
-                standardization=False,
-            )
-        else:
-            warnings.warn("spark rapids ml does not accept standardization")
-            mlor = _LogisticRegression(
-                regParam=0.1,
-                elasticNetParam=0.2,
-                fitIntercept=fit_intercept,
-                family="multinomial",
-            )
+        mlor = _LogisticRegression(
+            regParam=0.1,
+            elasticNetParam=0.2,
+            fitIntercept=fit_intercept,
+            family="multinomial",
+            standardization=False,
+        )
 
+        assert mlor.getStandardization() == False
         assert mlor.getRegParam() == 0.1
         assert mlor.getElasticNetParam() == 0.2
 

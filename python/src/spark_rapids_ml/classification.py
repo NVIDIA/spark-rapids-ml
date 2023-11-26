@@ -660,7 +660,7 @@ class LogisticRegressionClass(_CumlClass):
             "fitIntercept": "fit_intercept",
             "threshold": None,
             "thresholds": None,
-            "standardization": "",  # Set to "" instead of None because cuml defaults to standardization = False
+            "standardization": "standardization",
             "weightCol": None,
             "aggregationDepth": None,
             "family": "",  # family can be 'auto', 'binomial' or 'multinomial', cuml automatically detects num_classes
@@ -680,6 +680,7 @@ class LogisticRegressionClass(_CumlClass):
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
             "fit_intercept": True,
+            "standardization": False,
             "verbose": False,
             "C": 1.0,
             "penalty": "l2",
@@ -848,6 +849,8 @@ class LogisticRegression(
         Note this is only supported in spark >= 3.4.
     fitIntercept:
         Whether to fit an intercept term.
+    standardization:
+        Whether to standardize the training data.
     num_workers:
         Number of cuML workers, where each cuML worker corresponds to one Spark task
         running on one GPU. If not set, spark-rapids-ml tries to infer the number of
@@ -909,6 +912,7 @@ class LogisticRegression(
         elasticNetParam: float = 0.0,
         tol: float = 1e-6,
         fitIntercept: bool = True,
+        standardization: bool = True,
         enable_sparse_data_optim: Optional[bool] = None,
         num_workers: Optional[int] = None,
         verbose: Union[int, bool] = False,
@@ -985,9 +989,18 @@ class LogisticRegression(
                     pdesc.rank,
                 )
 
+                intercept_array = logistic_regression.intercept_
+                # follow Spark to center the intercepts for multinomial classification
+                if (
+                    init_parameters["fit_intercept"] is True
+                    and len(intercept_array) > 1
+                ):
+                    intercept_mean = sum(intercept_array) / len(intercept_array)
+                    intercept_array -= intercept_mean
+
                 model = {
                     "coef_": logistic_regression.coef_.tolist(),
-                    "intercept_": logistic_regression.intercept_.tolist(),
+                    "intercept_": intercept_array.tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": logistic_regression.n_cols,
                     "dtype": logistic_regression.dtype.name,
