@@ -74,7 +74,7 @@ the _project root path_ with:
 cd jvm
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-23.10.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-23.12.0-SNAPSHOT.jar` will be generated under `target` folder.
 
 Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
 released in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
