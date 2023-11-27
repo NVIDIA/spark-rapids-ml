@@ -68,9 +68,5 @@ If you already have a Databricks account, you can run the example notebooks on a
       LIBCUDF_CUFILE_POLICY=OFF
       NCCL_DEBUG=INFO
       ```
-    - **Additional Environment variable for Azure Databricks**
-      ```
-      LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/cuda/lib64
-      ```
 - Start the configured cluster.
 - Select your workspace and upload the desired [notebook](../) via `Import` in the drop down menu for your workspace.
