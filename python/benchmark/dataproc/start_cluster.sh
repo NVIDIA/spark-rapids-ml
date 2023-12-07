@@ -13,7 +13,7 @@ if [[ -z ${GCS_BUCKET} ]]; then
 fi
 
 BENCHMARK_HOME=${BENCHMARK_HOME:-${GCS_BUCKET}/benchmark}
-CUDA_VERSION=${CUDA_VERSION:-11.8}
+CUDA_VERSION=${CUDA_VERSION:-11.8.0}
 
 gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
