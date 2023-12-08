@@ -13,7 +13,6 @@ if [[ -z ${GCS_BUCKET} ]]; then
 fi
 
 BENCHMARK_HOME=${BENCHMARK_HOME:-${GCS_BUCKET}/benchmark}
-CUDA_VERSION=${CUDA_VERSION:-12.2.2}
 
 gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
@@ -21,7 +20,6 @@ gpu_args=$(cat <<EOF
 --initialization-actions gs://${BENCHMARK_HOME}/spark-rapids.sh,gs://${BENCHMARK_HOME}/init_benchmark.sh
 --metadata gpu-driver-provider="NVIDIA"
 --metadata rapids-runtime=SPARK
---metadata cuda-version=${CUDA_VERSION}
 --metadata benchmark-home=${BENCHMARK_HOME}
 EOF
 )
