@@ -978,9 +978,15 @@ class LogisticRegression(
                 }
 
                 if len(logistic_regression.classes_) == 1:
+                    class_val = logistic_regression.classes_[0]
+                    assert (
+                        class_val == 1.0 or class_val == 0.0
+                    ), "class value must be either 1. or 0. when dataset has one label"
                     if init_parameters["fit_intercept"] is True:
                         model["coef_"] = [[0.0] * logistic_regression.n_cols]
-                        model["intercept_"] = [float("inf")]
+                        model["intercept_"] = [
+                            float("inf") if class_val == 1.0 else float("-inf")
+                        ]
 
                 del logistic_regression
                 return model
