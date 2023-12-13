@@ -39,8 +39,10 @@ if TYPE_CHECKING:
     import cupy as cp
     from pyspark.ml._typing import ParamMap
 
+import cupyx
 import numpy as np
 import pandas as pd
+import scipy
 from pyspark import Row, TaskContext, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
@@ -833,6 +835,11 @@ class LogisticRegression(
         the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
     tol:
         The convergence tolerance.
+    enable_sparse_data: None or boolean, optional (default=None)
+        If features column is VectorUDT type, Spark rapids ml relies on this parameter to decide whether to use dense array or sparse array in cuml.
+        If None, use dense array if the first VectorUDT of a dataframe is DenseVector. Use sparse array if it is SparseVector.
+        If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
+        If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
     fitIntercept:
         Whether to fit an intercept term.
     num_workers:
@@ -896,6 +903,7 @@ class LogisticRegression(
         elasticNetParam: float = 0.0,
         tol: float = 1e-6,
         fitIntercept: bool = True,
+        enable_sparse_data: Optional[bool] = None,
         num_workers: Optional[int] = None,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
@@ -931,8 +939,14 @@ class LogisticRegression(
                 concated = pd.concat(X_list)
                 concated_y = pd.concat(y_list)
             else:
-                # features are either cp or np arrays here
-                concated = _concat_and_free(X_list, order=array_order)
+                if isinstance(X_list[0], scipy.sparse.csr_matrix):
+                    concated = scipy.sparse.vstack(X_list)
+                elif isinstance(X_list[0], cupyx.scipy.sparse.csr_matrix):
+                    concated = cupyx.scipy.sparse.vstack(X_list)
+                else:
+                    # features are either cp or np arrays here
+                    concated = _concat_and_free(X_list, order=array_order)
+
                 concated_y = _concat_and_free(y_list, order=array_order)
 
             pdesc = PartitionDescriptor.build(

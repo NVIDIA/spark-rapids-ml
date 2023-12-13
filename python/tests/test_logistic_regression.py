@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 import cuml
 import numpy as np
@@ -26,7 +26,7 @@ from pyspark.ml.linalg import DenseMatrix, DenseVector, SparseVector, Vectors, V
 from pyspark.ml.param import Param
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
-from pyspark.sql import Row
+from pyspark.sql import DataFrame, Row
 from pyspark.sql.functions import array, col
 
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
@@ -249,7 +249,11 @@ def test_classifier(
     reg_param: float = 0.0,
     elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
+    convert_to_sparse: bool = False,
 ) -> LogisticRegression:
+    if convert_to_sparse is True:
+        assert feature_type == "vector"
+
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -277,8 +281,23 @@ def test_classifier(
             spark, feature_type, data_type, X_train, y_train
         )
 
+        if convert_to_sparse:
+            assert type(features_col) is str
+
+            from pyspark.sql.functions import udf
+
+            def to_sparse_func(v: Union[SparseVector, DenseVector]) -> SparseVector:
+                if isinstance(v, DenseVector):
+                    return SparseVector(len(v), range(len(v)), v.toArray())
+                else:
+                    return v
+
+            udf_to_sparse = udf(to_sparse_func, VectorUDT())
+            train_df = train_df.withColumn(features_col, udf_to_sparse(features_col))
+
         assert label_col is not None
         spark_lr = LogisticRegression(
+            enable_sparse_data_optim=convert_to_sparse,
             fitIntercept=fit_intercept,
             regParam=reg_param,
             elasticNetParam=elasticNet_param,
@@ -1270,3 +1289,249 @@ def test_compat_wrong_label(
         f"Classification labels should be in [0 to 2]. Found 1 invalid labels."
     )
     test_functor(y, spark_v34_msg, spark_v33_msg)
+
+
+def compare_model(
+    gpu_lr: LogisticRegression,
+    cpu_lr: SparkLogisticRegression,
+    df_train: DataFrame,
+    df_test: DataFrame,
+    unit_tol: float = 1e-4,
+) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
+    gpu_model = gpu_lr.fit(df_train)
+    gpu_res = gpu_model.transform(df_test).collect()
+
+    cpu_model = cpu_lr.fit(df_train)
+    cpu_res = cpu_model.transform(df_test).collect()
+
+    # compare accuracy
+    gpu_pred = [row["prediction"] for row in gpu_res]
+    cpu_pred = [row["prediction"] for row in cpu_res]
+    ytest_true = [row["label"] for row in df_test.select(["label"]).collect()]
+    from sklearn.metrics import accuracy_score
+
+    gpu_acc = accuracy_score(ytest_true, gpu_pred)
+    cpu_acc = accuracy_score(ytest_true, cpu_pred)
+    assert gpu_acc == cpu_acc or abs(gpu_acc - cpu_acc) < 1e-3
+
+    # compare rawPrediction column
+    gpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in gpu_res]
+    cpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in cpu_res]
+    assert array_equal(gpu_rawpred, cpu_rawpred)
+
+    # compare probability column
+    gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
+    cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
+    assert array_equal(gpu_prob, cpu_prob)
+
+    # compare coefficients
+    assert array_equal(
+        gpu_model.coefficientMatrix.toArray(),
+        cpu_model.coefficientMatrix.toArray(),
+        unit_tol=unit_tol,
+    )
+    assert array_equal(
+        gpu_model.interceptVector.toArray(),
+        cpu_model.interceptVector.toArray(),
+        unit_tol=unit_tol,
+    )
+
+    return (gpu_model, cpu_model)
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_compat_sparse_binomial(
+    fit_intercept: bool,
+) -> None:
+    tolerance = 0.001
+
+    with CleanSparkSession() as spark:
+        data = [
+            Row(
+                label=1.0, weight=1.0, features=Vectors.sparse(3, {2: 1.0})
+            ),  # (0., 0., 1.)
+            Row(
+                label=1.0, weight=1.0, features=Vectors.dense([0.0, 1.0, 0.0])
+            ),  # (0., 1., 0.)
+            Row(
+                label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 1.0})
+            ),  # (1., 0., 0.)
+            Row(
+                label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 2.0, 2: -1.0})
+            ),  # (2., 0., -1.)
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True,
+            regParam=0.1,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        cpu_lr = SparkLogisticRegression(
+            regParam=0.1,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        compare_model(gpu_lr, cpu_lr, bdf, bdf)
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_compat_sparse_multinomial(
+    fit_intercept: bool,
+) -> None:
+    with CleanSparkSession() as spark:
+        data = [
+            Row(
+                label=1.0, weight=1.0, features=Vectors.sparse(3, {2: 1.0})
+            ),  # (0., 0., 1.)
+            Row(
+                label=1.0, weight=1.0, features=Vectors.sparse(3, {1: 1.0})
+            ),  # (0., 1., 0.)
+            Row(
+                label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 1.0})
+            ),  # (1., 0., 0.)
+            Row(
+                label=2.0, weight=1.0, features=Vectors.sparse(3, {0: 2.0, 2: -1.0})
+            ),  # (2., 0., -1.)
+        ]
+
+        mdf = spark.createDataFrame(data)
+
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True,
+            regParam=0.1,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        cpu_lr = SparkLogisticRegression(
+            regParam=0.1,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        compare_model(gpu_lr, cpu_lr, mdf, mdf)
+
+
+# @pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("fit_intercept", [False])
+def test_sparse_nlp20news(
+    fit_intercept: bool,
+) -> None:
+    datatype = np.float32
+    tolerance = 0.001
+    max_iteration = 1000
+
+    from scipy.sparse import csr_matrix
+    from sklearn.datasets import fetch_20newsgroups
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.model_selection import train_test_split
+
+    try:
+        twenty_train = fetch_20newsgroups(subset="train", shuffle=True, random_state=42)
+    except:
+        pytest.xfail(reason="Error fetching 20 newsgroup dataset")
+
+    count_vect = CountVectorizer()
+    X = count_vect.fit_transform(twenty_train.data)
+    y = twenty_train.target
+
+    X = X.astype(datatype)
+    y = y.astype(datatype).tolist()
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=10)
+    print(f"X_train.shape: {X_train.shape}")
+
+    with CleanSparkSession() as spark:
+
+        def to_df(X_csr: csr_matrix, y_ary: List[float]) -> DataFrame:
+            assert X_csr.shape[0] == len(y_ary)
+            dimension = X_csr.shape[1]
+            data = [
+                Row(
+                    label=y_ary[i],
+                    weight=1.0,
+                    features=Vectors.sparse(dimension, X_csr[i].indices, X_csr[i].data),
+                )
+                for i in range(X_csr.shape[0])
+            ]
+
+            df = spark.createDataFrame(data)
+            return df
+
+        df_train = to_df(X_train, y_train)
+        df_test = to_df(X_test, y_test)
+
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True,
+            maxIter=max_iteration,
+            verbose=6,
+            regParam=1e-6,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        cpu_lr = SparkLogisticRegression(
+            regParam=1e-6,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        compare_model(gpu_lr, cpu_lr, df_train, df_test, unit_tol=tolerance)
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("n_classes", [2, 4])
+def test_quick_sparse(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    n_classes: int,
+    gpu_number: int,
+) -> None:
+    convert_to_sparse = True
+    tolerance = 0.005
+    reg_param = reg_factors[0]
+    elasticNet_param = reg_factors[1]
+
+    lr = test_classifier(
+        fit_intercept=fit_intercept,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        tolerance=tolerance,
+        reg_param=reg_param,
+        elasticNet_param=elasticNet_param,
+        convert_to_sparse=convert_to_sparse,
+    )

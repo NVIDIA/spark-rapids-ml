@@ -23,8 +23,11 @@ if TYPE_CHECKING:
     import cupy as cp
 
 import numpy as np
+import pandas as pd
 from pyspark import BarrierTaskContext, SparkConf, SparkContext, TaskContext
-from pyspark.sql import SparkSession
+from pyspark.sql import Column, SparkSession
+from pyspark.sql.types import ArrayType, FloatType
+from scipy.sparse import csr_matrix
 
 _ArrayOrder = Literal["C", "F"]
 
@@ -444,3 +447,23 @@ def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # 
         )
     elif "leaf_value" in model:
         return _create_leaf_node(sc, impurity, model)
+
+
+# to the XGBOOST _get_unwrap_udt_fn in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py
+def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
+    try:
+        from pyspark.sql.functions import unwrap_udt
+
+        return unwrap_udt
+    except ImportError:
+        pass
+
+    try:
+        from pyspark.databricks.sql.functions import unwrap_udt as databricks_unwrap_udt
+
+        return databricks_unwrap_udt
+    except ImportError as exc:
+        raise RuntimeError(
+            "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
+            "or run on Databricks Runtime."
+        ) from exc
