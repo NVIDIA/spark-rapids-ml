@@ -1080,7 +1080,7 @@ def test_parameters_validation() -> None:
 
 @pytest.mark.compat
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("label", [1.0, 0.0])
+@pytest.mark.parametrize("label", [1.0, 0.0, -3.0, 4.0])
 @pytest.mark.parametrize(
     "lr_types",
     [
@@ -1093,7 +1093,7 @@ def test_compat_one_label(
     label: float,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
 ) -> None:
-    assert label == 1.0 or label == 0.0
+    assert label % 1 == 0.0, "label value must be an integer"
 
     tolerance = 0.001
     _LogisticRegression, _LogisticRegressionModel = lr_types
@@ -1107,6 +1107,7 @@ def test_compat_one_label(
         ]
     )
     y = np.array([label] * 4)
+
     num_rows = len(X)
 
     feature_cols = ["c0", "c1"]
@@ -1127,6 +1128,31 @@ def test_compat_one_label(
         blor = _LogisticRegression(
             regParam=0.1, fitIntercept=fit_intercept, standardization=False
         )
+
+        if label < 0:
+            from py4j.protocol import Py4JJavaError
+
+            msg = f"Labels MUST be in [0, 2147483647), but got {label}"
+
+            try:
+                blor_model = blor.fit(bdf)
+                assert False, "There should be a java exception"
+            except Py4JJavaError as e:
+                assert msg in e.java_exception.getMessage()
+
+            return
+
+        if label > 1:  # Spark and Cuml do not match
+            if _LogisticRegression is SparkLogisticRegression:
+                blor_model = blor.fit(bdf)
+                assert blor_model.numClasses == label + 1
+            else:
+                blor_model = blor.fit(bdf)
+                assert blor_model.numClasses == 1
+
+            return
+
+        assert label == 1.0 or label == 0.0
 
         blor_model = blor.fit(bdf)
 

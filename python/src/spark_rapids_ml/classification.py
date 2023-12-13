@@ -979,14 +979,20 @@ class LogisticRegression(
 
                 if len(logistic_regression.classes_) == 1:
                     class_val = logistic_regression.classes_[0]
-                    assert (
-                        class_val == 1.0 or class_val == 0.0
-                    ), "class value must be either 1. or 0. when dataset has one label"
-                    if init_parameters["fit_intercept"] is True:
-                        model["coef_"] = [[0.0] * logistic_regression.n_cols]
-                        model["intercept_"] = [
-                            float("inf") if class_val == 1.0 else float("-inf")
-                        ]
+
+                    if class_val < 0:
+                        raise RuntimeError(
+                            f"Labels MUST be in [0, 2147483647), but got {class_val}"
+                        )
+                    elif class_val <= 1:
+                        assert (
+                            class_val == 1.0 or class_val == 0.0
+                        ), "class value must be either 1. or 0. when dataset has one label"
+                        if init_parameters["fit_intercept"] is True:
+                            model["coef_"] = [[0.0] * logistic_regression.n_cols]
+                            model["intercept_"] = [
+                                float("inf") if class_val == 1.0 else float("-inf")
+                            ]
 
                 del logistic_regression
                 return model
@@ -1039,14 +1045,15 @@ class LogisticRegression(
         )
 
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
+        logger = get_logger(self.__class__)
         if len(result["classes_"]) == 1:
             if self.getFitIntercept() is False:
-                print(
-                    "WARNING: All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
+                logger.warning(
+                    "All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
                 )
             else:
-                print(
-                    "WARNING: All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
+                logger.warning(
+                    "All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
                 )
 
         return LogisticRegressionModel._from_row(result)
