@@ -978,7 +978,7 @@ class LogisticRegression(
                 }
 
                 # check if invalid label exists
-                for class_val in logistic_regression.classes_:
+                for class_val in model["classes_"]:
                     if class_val < 0:
                         raise RuntimeError(
                             f"Labels MUST be in [0, 2147483647), but got {class_val}"
