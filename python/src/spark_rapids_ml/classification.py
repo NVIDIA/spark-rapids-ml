@@ -977,22 +977,31 @@ class LogisticRegression(
                     "num_iters": logistic_regression.solver_model.num_iters,
                 }
 
-                if len(logistic_regression.classes_) == 1:
-                    class_val = logistic_regression.classes_[0]
-
+                # check if invalid label exists
+                for class_val in logistic_regression.classes_:
                     if class_val < 0:
                         raise RuntimeError(
                             f"Labels MUST be in [0, 2147483647), but got {class_val}"
                         )
-                    elif class_val <= 1:
-                        assert (
-                            class_val == 1.0 or class_val == 0.0
-                        ), "class value must be either 1. or 0. when dataset has one label"
-                        if init_parameters["fit_intercept"] is True:
-                            model["coef_"] = [[0.0] * logistic_regression.n_cols]
-                            model["intercept_"] = [
-                                float("inf") if class_val == 1.0 else float("-inf")
-                            ]
+                    elif not class_val.is_integer():
+                        raise RuntimeError(
+                            f"Labels MUST be Integers, but got {class_val}"
+                        )
+
+                if len(logistic_regression.classes_) == 1:
+                    class_val = logistic_regression.classes_[0]
+                    # TODO: match Spark to use max(class_list) to calculate the number of classes
+                    # Cuml currently uses unique(class_list)
+                    if class_val != 1.0 and class_val != 0.0:
+                        raise RuntimeError(
+                            "class value must be either 1. or 0. when dataset has one label"
+                        )
+
+                    if init_parameters["fit_intercept"] is True:
+                        model["coef_"] = [[0.0] * logistic_regression.n_cols]
+                        model["intercept_"] = [
+                            float("inf") if class_val == 1.0 else float("-inf")
+                        ]
 
                 del logistic_regression
                 return model

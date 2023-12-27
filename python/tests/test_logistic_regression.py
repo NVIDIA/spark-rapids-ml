@@ -6,6 +6,7 @@ import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
 from packaging import version
+from py4j.protocol import Py4JJavaError
 
 if version.parse(pyspark.__version__) < version.parse("3.4.0"):
     from pyspark.sql.utils import IllegalArgumentException  # type: ignore
@@ -1131,8 +1132,6 @@ def test_compat_one_label(
         )
 
         if label < 0:
-            from py4j.protocol import Py4JJavaError
-
             msg = f"Labels MUST be in [0, 2147483647), but got {label}"
 
             try:
@@ -1148,8 +1147,11 @@ def test_compat_one_label(
                 blor_model = blor.fit(bdf)
                 assert blor_model.numClasses == label + 1
             else:
-                blor_model = blor.fit(bdf)
-                assert blor_model.numClasses == 1
+                msg = "class value must be either 1. or 0. when dataset has one label"
+                try:
+                    blor_model = blor.fit(bdf)
+                except Py4JJavaError as e:
+                    assert msg in e.java_exception.getMessage()
 
             return
 
@@ -1194,3 +1196,64 @@ def test_compat_one_label(
             assert blor_model.intercept == (
                 float("inf") if label == 1.0 else float("-inf")
             )
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat_wrong_label(
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    caplog: LogCaptureFixture,
+) -> None:
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+
+    X = np.array(
+        [
+            [1.0, 2.0],
+            [1.0, 3.0],
+            [2.0, 1.0],
+            [3.0, 1.0],
+        ]
+    )
+
+    num_rows = len(X)
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, label float"]
+
+    def test_functor(y: np.ndarray, err_msg: str) -> None:
+        with CleanSparkSession() as spark:
+            np_array = np.concatenate((X, y.reshape(num_rows, 1)), axis=1)
+
+            df = spark.createDataFrame(
+                np_array.tolist(),
+                ",".join(schema),
+            )
+
+            df = df.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+                *feature_cols
+            )
+
+            lr = _LogisticRegression(standardization=False)
+
+            try:
+                lr.fit(df)
+                assert False, "There should be a java exception"
+            except Py4JJavaError as e:
+                assert err_msg in e.java_exception.getMessage()
+
+    # negative label
+    wrong_label = -1.1
+    y = np.array([1.0, 0.0, wrong_label, 2.0])
+    msg = f"Labels MUST be in [0, 2147483647), but got {wrong_label}"
+    test_functor(y, msg)
+
+    # non-integer label
+    wrong_label = 0.4
+    y = np.array([1.0, 0.0, wrong_label, 2.0])
+    msg = f"Labels MUST be Integers, but got {wrong_label}"
+    test_functor(y, msg)
