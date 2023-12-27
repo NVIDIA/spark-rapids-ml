@@ -1092,6 +1092,7 @@ def test_compat_one_label(
     fit_intercept: bool,
     label: float,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    caplog: LogCaptureFixture,
 ) -> None:
     assert label % 1 == 0.0, "label value must be an integer"
 
@@ -1157,6 +1158,15 @@ def test_compat_one_label(
         blor_model = blor.fit(bdf)
 
         if fit_intercept is False:
+            if _LogisticRegression is SparkLogisticRegression:
+                # Got empty caplog.text. Spark prints warning message from jvm
+                assert caplog.text == ""
+            else:
+                assert (
+                    "All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
+                    in caplog.text
+                )
+
             if label == 1.0:
                 assert array_equal(
                     blor_model.coefficients.toArray(),
@@ -1171,6 +1181,15 @@ def test_compat_one_label(
                 )
             assert blor_model.intercept == 0.0
         else:
+            if _LogisticRegression is SparkLogisticRegression:
+                # Got empty caplog.text. Spark prints warning message from jvm
+                assert caplog.text == ""
+            else:
+                assert (
+                    "All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
+                    in caplog.text
+                )
+
             assert array_equal(blor_model.coefficients.toArray(), [0, 0], 0.0)
             assert blor_model.intercept == (
                 float("inf") if label == 1.0 else float("-inf")
