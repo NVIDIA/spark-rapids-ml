@@ -1259,7 +1259,6 @@ def test_compat_wrong_label(
     spark_v33_msg = (
         f"Classification labels should be in [0 to 2]. Found 1 invalid labels."
     )
-
     test_functor(y, spark_v34_msg, spark_v33_msg)
 
     # non-integer label
