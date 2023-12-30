@@ -1292,16 +1292,13 @@ def test_compat_wrong_label(
 
 
 def compare_model(
-    gpu_lr: LogisticRegression,
-    cpu_lr: SparkLogisticRegression,
-    df_train: DataFrame,
+    gpu_model: LogisticRegressionModel,
+    cpu_model: SparkLogisticRegressionModel,
     df_test: DataFrame,
     unit_tol: float = 1e-4,
 ) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
-    gpu_model = gpu_lr.fit(df_train)
     gpu_res = gpu_model.transform(df_test).collect()
 
-    cpu_model = cpu_lr.fit(df_train)
     cpu_res = cpu_model.transform(df_test).collect()
 
     # compare accuracy
@@ -1364,24 +1361,21 @@ def test_compat_sparse_binomial(
 
         bdf = spark.createDataFrame(data)
 
-        gpu_lr = LogisticRegression(
-            enable_sparse_data_optim=True,
-            regParam=0.1,
-            fitIntercept=fit_intercept,
-            standardization=False,
-            featuresCol="features",
-            labelCol="label",
-        )
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": False,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
 
-        cpu_lr = SparkLogisticRegression(
-            regParam=0.1,
-            fitIntercept=fit_intercept,
-            standardization=False,
-            featuresCol="features",
-            labelCol="label",
-        )
+        gpu_lr = LogisticRegression(**params)
+        assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
+        gpu_model = gpu_lr.fit(bdf)
 
-        compare_model(gpu_lr, cpu_lr, bdf, bdf)
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)
 
 
 @pytest.mark.compat
@@ -1407,30 +1401,34 @@ def test_compat_sparse_multinomial(
 
         mdf = spark.createDataFrame(data)
 
-        gpu_lr = LogisticRegression(
-            enable_sparse_data_optim=True,
-            regParam=0.1,
-            fitIntercept=fit_intercept,
-            standardization=False,
-            featuresCol="features",
-            labelCol="label",
-        )
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": False,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
 
-        cpu_lr = SparkLogisticRegression(
-            regParam=0.1,
-            fitIntercept=fit_intercept,
-            standardization=False,
-            featuresCol="features",
-            labelCol="label",
-        )
+        gpu_lr = LogisticRegression(**params)
+        assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
+        gpu_model = gpu_lr.fit(mdf)
 
-        compare_model(gpu_lr, cpu_lr, mdf, mdf)
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(mdf)
+        compare_model(gpu_model, cpu_model, mdf)
+
+        for value in {True, False}:
+            gpu_lr = LogisticRegression(enable_sparse_data_optim=value, **params)
+            assert gpu_lr.getOrDefault("enable_sparse_data_optim") == value
+            gpu_model = gpu_lr.fit(mdf)
+            compare_model(gpu_model, cpu_model, mdf)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.slow
 def test_sparse_nlp20news(
     fit_intercept: bool,
+    caplog: LogCaptureFixture,
 ) -> None:
     datatype = np.float32
     tolerance = 0.001
@@ -1504,6 +1502,8 @@ def test_sparse_nlp20news(
             gpu_model.objective < cpu_objective
             or abs(gpu_model.objective - cpu_objective) < tolerance
         )
+
+        assert "CUDA managed memory enabled." in caplog.text
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
