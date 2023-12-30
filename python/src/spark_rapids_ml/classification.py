@@ -989,6 +989,7 @@ class LogisticRegression(
                     "n_cols": logistic_regression.n_cols,
                     "dtype": logistic_regression.dtype.name,
                     "num_iters": logistic_regression.solver_model.num_iters,
+                    "objective": logistic_regression.solver_model.objective,
                 }
 
                 # check if invalid label exists
@@ -1064,6 +1065,7 @@ class LogisticRegression(
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
                 StructField("num_iters", IntegerType(), False),
+                StructField("objective", DoubleType(), False),
             ]
         )
 
@@ -1156,6 +1158,7 @@ class LogisticRegressionModel(
         n_cols: int,
         dtype: str,
         num_iters: int,
+        objective: float,
     ) -> None:
         super().__init__(
             dtype=dtype,
@@ -1164,6 +1167,7 @@ class LogisticRegressionModel(
             intercept_=intercept_,
             classes_=classes_,
             num_iters=num_iters,
+            objective=objective,
         )
         self.coef_ = coef_
         self.intercept_ = intercept_
@@ -1171,6 +1175,7 @@ class LogisticRegressionModel(
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
         self._num_classes = len(self.classes_)
         self.num_iters = num_iters
+        self.objective = objective
         self._this_model = self
 
     def cpu(self) -> SparkLogisticRegressionModel:

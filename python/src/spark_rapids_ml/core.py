@@ -716,7 +716,7 @@ class _CumlCaller(HasEnableSparseDataOptim, _CumlParams, _CumlCommon):
                     features = (
                         cp.array(features)
                         if use_sparse_array is False
-                        else cupyx.sparse.csr_matrix(features)
+                        else cupyx.scipy.sparse.csr_matrix(features)
                     )
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None

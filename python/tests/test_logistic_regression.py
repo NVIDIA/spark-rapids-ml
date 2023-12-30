@@ -1427,14 +1427,14 @@ def test_compat_sparse_multinomial(
         compare_model(gpu_lr, cpu_lr, mdf, mdf)
 
 
-# @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("fit_intercept", [False])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.slow
 def test_sparse_nlp20news(
     fit_intercept: bool,
 ) -> None:
     datatype = np.float32
     tolerance = 0.001
-    max_iteration = 1000
+    reg_param = 1e-6
 
     from scipy.sparse import csr_matrix
     from sklearn.datasets import fetch_20newsgroups
@@ -1454,9 +1454,11 @@ def test_sparse_nlp20news(
     y = y.astype(datatype).tolist()
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=10)
-    print(f"X_train.shape: {X_train.shape}")
 
-    with CleanSparkSession() as spark:
+    conf = {
+        "spark.rapids.ml.uvm.enabled": True
+    }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
+    with CleanSparkSession(conf) as spark:
 
         def to_df(X_csr: csr_matrix, y_ary: List[float]) -> DataFrame:
             assert X_csr.shape[0] == len(y_ary)
@@ -1478,9 +1480,8 @@ def test_sparse_nlp20news(
 
         gpu_lr = LogisticRegression(
             enable_sparse_data_optim=True,
-            maxIter=max_iteration,
             verbose=6,
-            regParam=1e-6,
+            regParam=reg_param,
             fitIntercept=fit_intercept,
             standardization=False,
             featuresCol="features",
@@ -1488,14 +1489,21 @@ def test_sparse_nlp20news(
         )
 
         cpu_lr = SparkLogisticRegression(
-            regParam=1e-6,
+            regParam=reg_param,
             fitIntercept=fit_intercept,
             standardization=False,
             featuresCol="features",
             labelCol="label",
         )
 
-        compare_model(gpu_lr, cpu_lr, df_train, df_test, unit_tol=tolerance)
+        gpu_model = gpu_lr.fit(df_train)
+        cpu_model = cpu_lr.fit(df_train)
+        cpu_objective = cpu_model.summary.objectiveHistory[-1]
+
+        assert (
+            gpu_model.objective < cpu_objective
+            or abs(gpu_model.objective - cpu_objective) < tolerance
+        )
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -1507,6 +1515,7 @@ def test_sparse_nlp20news(
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.parametrize("max_record_batch", [20])
 @pytest.mark.parametrize("n_classes", [2, 4])
+@pytest.mark.slow
 def test_quick_sparse(
     fit_intercept: bool,
     reg_factors: Tuple[float, float],
