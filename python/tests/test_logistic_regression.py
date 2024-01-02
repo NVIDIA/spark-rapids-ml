@@ -1370,6 +1370,7 @@ def test_compat_sparse_binomial(
         }
 
         gpu_lr = LogisticRegression(**params)
+        assert gpu_lr.hasParam("enable_sparse_data_optim") is True
         assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
         gpu_model = gpu_lr.fit(bdf)
 
@@ -1410,6 +1411,7 @@ def test_compat_sparse_multinomial(
         }
 
         gpu_lr = LogisticRegression(**params)
+        assert gpu_lr.hasParam("enable_sparse_data_optim") is True
         assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
         gpu_model = gpu_lr.fit(mdf)
 

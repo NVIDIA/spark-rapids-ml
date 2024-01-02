@@ -72,7 +72,7 @@ from scipy.sparse import csr_matrix
 
 from .common.cuml_context import CumlContext
 from .metrics import EvalMetricInfo
-from .params import HasEnableSparseDataOptim, _CumlParams
+from .params import _CumlParams
 from .utils import (
     _ArrayOrder,
     _get_gpu_id,
@@ -405,7 +405,7 @@ class _CumlCommon(MLWritable, MLReadable):
         )
 
 
-class _CumlCaller(HasEnableSparseDataOptim, _CumlParams, _CumlCommon):
+class _CumlCaller(_CumlParams, _CumlCommon):
     """
     This class is responsible for calling cuml function (e.g. fit or kneighbor) on pyspark dataframe,
     to run a multi-node multi-gpu algorithm on the dataframe. A function usually comes from a multi-gpu cuml class,
@@ -479,7 +479,9 @@ class _CumlCaller(HasEnableSparseDataOptim, _CumlParams, _CumlCommon):
                     or type(first_record[input_col]) is DenseVector
                     else SparseVector
                 )
-                use_sparse = self.getOrDefault(self.enable_sparse_data_optim)
+                use_sparse = self.hasParam(
+                    "enable_sparse_data_optim"
+                ) and self.getOrDefault("enable_sparse_data_optim")
 
                 if use_sparse is True or (
                     use_sparse is None and first_vectorudt_type is SparseVector

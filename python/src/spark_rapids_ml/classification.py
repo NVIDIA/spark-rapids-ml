@@ -88,7 +88,7 @@ from .core import (
     param_alias,
     pred,
 )
-from .params import HasFeaturesCols, _CumlClass, _CumlParams
+from .params import HasEnableSparseDataOptim, HasFeaturesCols, _CumlClass, _CumlParams
 from .tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
@@ -718,6 +718,7 @@ class LogisticRegressionClass(_CumlClass):
 class _LogisticRegressionCumlParams(
     _CumlParams,
     _LogisticRegressionParams,
+    HasEnableSparseDataOptim,
     HasFeaturesCols,
     HasProbabilityCol,
     HasRawPredictionCol,
