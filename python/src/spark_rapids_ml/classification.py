@@ -940,14 +940,8 @@ class LogisticRegression(
                 concated = pd.concat(X_list)
                 concated_y = pd.concat(y_list)
             else:
-                if isinstance(X_list[0], scipy.sparse.csr_matrix):
-                    concated = scipy.sparse.vstack(X_list)
-                elif isinstance(X_list[0], cupyx.scipy.sparse.csr_matrix):
-                    concated = cupyx.scipy.sparse.vstack(X_list)
-                else:
-                    # features are either cp or np arrays here
-                    concated = _concat_and_free(X_list, order=array_order)
-
+                # features are either cp, np, scipy csr or cupyx csr arrays here
+                concated = _concat_and_free(X_list, order=array_order)
                 concated_y = _concat_and_free(y_list, order=array_order)
 
             pdesc = PartitionDescriptor.build(
