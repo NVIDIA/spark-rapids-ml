@@ -152,7 +152,11 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             .map(lambda row: (row,))
             .toDF(["features"])
         )
-        kmeans = KMeans(num_workers=gpu_number, n_clusters=2).setFeaturesCol("features")
+        kmeans = (
+            KMeans(num_workers=gpu_number, n_clusters=2)
+            .setFeaturesCol("features")
+            .setSeed(0)
+        )
 
         def assert_kmeans_model(model: KMeansModel) -> None:
             assert len(model.cluster_centers_) == 2
