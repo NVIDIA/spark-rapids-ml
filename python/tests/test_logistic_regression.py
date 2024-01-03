@@ -1372,6 +1372,14 @@ def test_compat_sparse_binomial(
         gpu_lr = LogisticRegression(**params)
         assert gpu_lr.hasParam("enable_sparse_data_optim") is True
         assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            err_msg = "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
+            "or run on Databricks Runtime."
+            with pytest.raises(RuntimeError, match=err_msg):
+                gpu_lr.fit(bdf)
+            return
+
         gpu_model = gpu_lr.fit(bdf)
 
         cpu_lr = SparkLogisticRegression(**params)
@@ -1413,6 +1421,14 @@ def test_compat_sparse_multinomial(
         gpu_lr = LogisticRegression(**params)
         assert gpu_lr.hasParam("enable_sparse_data_optim") is True
         assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            err_msg = "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
+            "or run on Databricks Runtime."
+            with pytest.raises(RuntimeError, match=err_msg):
+                gpu_lr.fit(mdf)
+            return
+
         gpu_model = gpu_lr.fit(mdf)
 
         cpu_lr = SparkLogisticRegression(**params)
@@ -1432,6 +1448,16 @@ def test_sparse_nlp20news(
     fit_intercept: bool,
     caplog: LogCaptureFixture,
 ) -> None:
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = (
+            "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+        )
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
     datatype = np.float32
     tolerance = 0.001
     reg_param = 1e-6
@@ -1528,6 +1554,16 @@ def test_quick_sparse(
     n_classes: int,
     gpu_number: int,
 ) -> None:
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = (
+            "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+        )
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
     convert_to_sparse = True
     tolerance = 0.005
     reg_param = reg_factors[0]

@@ -468,7 +468,7 @@ def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # 
 # to the XGBOOST _get_unwrap_udt_fn in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py
 def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
     try:
-        from pyspark.sql.functions import unwrap_udt
+        from pyspark.sql.functions import unwrap_udt  # type: ignore
 
         return unwrap_udt
     except ImportError:

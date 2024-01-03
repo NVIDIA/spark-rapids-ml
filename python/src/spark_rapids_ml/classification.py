@@ -841,6 +841,7 @@ class LogisticRegression(
         If None, use dense array if the first VectorUDT of a dataframe is DenseVector. Use sparse array if it is SparseVector.
         If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
         If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
+        Note this is only supported in spark >= 3.4.
     fitIntercept:
         Whether to fit an intercept term.
     num_workers:

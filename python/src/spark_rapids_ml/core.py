@@ -167,7 +167,7 @@ def _get_unwrapped_vec_cols(feature_col: Column) -> List[Column]:
     #  - `size`: int
     #  - `indices`: array<int>
     #  - `values`: array<double>
-    # For sparse vector, `type` field is 0, `size` field means vector length,
+    # For sparse vector, `type` field is 0, `size` field means vector dimension,
     # `indices` field is the array of active element indices, `values` field
     # is the array of active element values.
     # For dense vector, `type` field is 1, `size` and `indices` fields are None,
@@ -213,11 +213,15 @@ def _read_csr_matrix_from_unwrapped_spark_vec(part: pd.DataFrame) -> csr_matrix:
 
         if n_features == 0:
             n_features = vec_size
-        assert n_features == vec_size
+        assert n_features == vec_size, "all vectors must be of the same dimension"
 
         csr_indices_list.append(csr_indices)
         csr_indptr_list.append(csr_indptr_list[-1] + len(csr_indices))
+        assert len(csr_indptr_list) == 1 + len(csr_indices_list)
+
         csr_values_list.append(csr_values)
+
+    assert len(csr_indptr_list) == 1 + len(part)
 
     csr_indptr_arr = np.array(csr_indptr_list)
     csr_indices_arr = np.concatenate(csr_indices_list)
@@ -667,6 +671,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         cuml_verbose = self.cuml_params.get("verbose", False)
         use_sparse_array = (
             alias.featureVectorType in dataset.schema.fieldNames()
+            and alias.featureVectorSize in dataset.schema.fieldNames()
+            and alias.featureVectorIndices in dataset.schema.fieldNames()
         )  # use sparse array in cuml only if features vectorudt column was unwrapped
 
         (enable_nccl, require_ucx) = self._require_nccl_ucx()

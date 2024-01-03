@@ -43,16 +43,19 @@ class HasEnableSparseDataOptim(Params):
 
     """
     This is a Params based class inherited from XGBOOST: https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/params.py.
-    It holds the variable to store the boolean config of enabling sparse data optimization.
+    It holds the variable to store the boolean config for enabling sparse data optimization.
     """
 
     enable_sparse_data_optim = Param(
         Params._dummy(),
         "enable_sparse_data_optim",
-        "This stores the boolean config of enabling sparse data optimization, if enabled, "
-        "Spark rapids ml will construct a sparse matrix in the the format of csr_matrix, "
-        "then calls cuml with the sparse matrix. This config is disabled by default. If most of "
-        "examples in your training dataset are sparse vectors, we suggest to enable this config.",
+        "This param activates sparse data optimization for VectorUDT features column. "
+        "If the param is not included in an Estimator class, "
+        "Spark rapids ml always converts VectorUDT features column into dense arrays when calling cuml backend. "
+        "If included, Spark rapids ml will determine whether to create sparse arrays based on the param value: "
+        "(1) If None, create dense arrays if the first VectorUDT of a dataframe is DenseVector. Create sparse arrays if it is SparseVector."
+        "(2) If False, create dense arrays. This is favorable if the majority of vectors are DenseVector."
+        "(3) If True, create sparse arrays. This is favorable if the majority of the VectorUDT vectors are SparseVector.",
         typeConverter=TypeConverters.toBoolean,
     )
 
