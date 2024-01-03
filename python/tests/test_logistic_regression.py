@@ -1458,51 +1458,41 @@ def test_sparse_nlp20news(
         logging.info(err_msg)
         return
 
-    datatype = np.float32
     tolerance = 0.001
-    reg_param = 1e-6
+    reg_param = 1e-2
 
-    from scipy.sparse import csr_matrix
+    from pyspark.ml.feature import CountVectorizer, RegexTokenizer
     from sklearn.datasets import fetch_20newsgroups
-    from sklearn.feature_extraction.text import CountVectorizer
-    from sklearn.model_selection import train_test_split
 
     try:
         twenty_train = fetch_20newsgroups(subset="train", shuffle=True, random_state=42)
     except:
         pytest.xfail(reason="Error fetching 20 newsgroup dataset")
 
-    count_vect = CountVectorizer()
-    X = count_vect.fit_transform(twenty_train.data)
-    y = twenty_train.target
-
-    X = X.astype(datatype)
-    y = y.astype(datatype).tolist()
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=10)
+    X = twenty_train.data
+    y = twenty_train.target.tolist()
 
     conf = {
         "spark.rapids.ml.uvm.enabled": True
     }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
     with CleanSparkSession(conf) as spark:
+        data = [
+            Row(
+                label=y[i],
+                weight=1.0,
+                text=X[i],
+            )
+            for i in range(len(X))
+        ]
+        df = spark.createDataFrame(data)
+        tokenizer = RegexTokenizer(inputCol="text", outputCol="tokens")
+        df = tokenizer.transform(df)
 
-        def to_df(X_csr: csr_matrix, y_ary: List[float]) -> DataFrame:
-            assert X_csr.shape[0] == len(y_ary)
-            dimension = X_csr.shape[1]
-            data = [
-                Row(
-                    label=y_ary[i],
-                    weight=1.0,
-                    features=Vectors.sparse(dimension, X_csr[i].indices, X_csr[i].data),
-                )
-                for i in range(X_csr.shape[0])
-            ]
+        cv = CountVectorizer(inputCol="tokens", outputCol="features")
+        cv_model = cv.fit(df)
+        df = cv_model.transform(df)
 
-            df = spark.createDataFrame(data)
-            return df
-
-        df_train = to_df(X_train, y_train)
-        df_test = to_df(X_test, y_test)
+        df_train, df_test = df.randomSplit([0.8, 0.2])
 
         gpu_lr = LogisticRegression(
             enable_sparse_data_optim=True,
