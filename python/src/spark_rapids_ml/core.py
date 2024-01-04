@@ -1197,7 +1197,6 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         if input_col is not None:
             input_col_type = dataset.schema[input_col].dataType
-            tmp_input_col = alias.data
             if isinstance(input_col_type, VectorUDT):
                 # Vector type
                 vector_element_type = "float32" if self._float32_inputs else "float64"
@@ -1229,26 +1228,24 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                         alias.featureVectorIndices, indices_col
                     )
 
-                    dataset = dataset.withColumn(
-                        tmp_input_col, data_col.alias(tmp_input_col)
-                    )
+                    dataset = dataset.withColumn(alias.data, data_col.alias(alias.data))
 
                     for col_name in [
                         alias.featureVectorType,
                         alias.featureVectorSize,
                         alias.featureVectorIndices,
-                        tmp_input_col,
+                        alias.data,
                     ]:
                         select_cols.append(col_name)
                         tmp_cols.append(col_name)
                 else:
                     # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
                     dataset = dataset.withColumn(
-                        tmp_input_col,
+                        alias.data,
                         vector_to_array(col(input_col), vector_element_type),
                     )
-                    select_cols.append(tmp_input_col)
-                    tmp_cols.append(tmp_input_col)
+                    select_cols.append(alias.data)
+                    tmp_cols.append(alias.data)
             elif isinstance(input_col_type, ArrayType):
                 if (
                     isinstance(input_col_type.elementType, DoubleType)
@@ -1260,10 +1257,10 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     and self._float32_inputs
                 ):
                     dataset = dataset.withColumn(
-                        tmp_input_col, col(input_col).cast(ArrayType(FloatType()))
+                        alias.data, col(input_col).cast(ArrayType(FloatType()))
                     )
-                    select_cols.append(tmp_input_col)
-                    tmp_cols.append(tmp_input_col)
+                    select_cols.append(alias.data)
+                    tmp_cols.append(alias.data)
                 else:
                     # FloatType array
                     select_cols.append(input_col)
