@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 import cuml
 import numpy as np
@@ -26,7 +26,7 @@ from pyspark.ml.linalg import DenseMatrix, DenseVector, SparseVector, Vectors, V
 from pyspark.ml.param import Param
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
-from pyspark.sql import Row
+from pyspark.sql import DataFrame, Row
 from pyspark.sql.functions import array, col
 
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
@@ -249,7 +249,11 @@ def test_classifier(
     reg_param: float = 0.0,
     elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
+    convert_to_sparse: bool = False,
 ) -> LogisticRegression:
+    if convert_to_sparse is True:
+        assert feature_type == "vector"
+
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -277,8 +281,23 @@ def test_classifier(
             spark, feature_type, data_type, X_train, y_train
         )
 
+        if convert_to_sparse:
+            assert type(features_col) is str
+
+            from pyspark.sql.functions import udf
+
+            def to_sparse_func(v: Union[SparseVector, DenseVector]) -> SparseVector:
+                if isinstance(v, DenseVector):
+                    return SparseVector(len(v), range(len(v)), v.toArray())
+                else:
+                    return v
+
+            udf_to_sparse = udf(to_sparse_func, VectorUDT())
+            train_df = train_df.withColumn(features_col, udf_to_sparse(features_col))
+
         assert label_col is not None
         spark_lr = LogisticRegression(
+            enable_sparse_data_optim=convert_to_sparse,
             fitIntercept=fit_intercept,
             regParam=reg_param,
             elasticNetParam=elasticNet_param,
@@ -1270,3 +1289,286 @@ def test_compat_wrong_label(
         f"Classification labels should be in [0 to 2]. Found 1 invalid labels."
     )
     test_functor(y, spark_v34_msg, spark_v33_msg)
+
+
+def compare_model(
+    gpu_model: LogisticRegressionModel,
+    cpu_model: SparkLogisticRegressionModel,
+    df_test: DataFrame,
+    unit_tol: float = 1e-4,
+) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
+    gpu_res = gpu_model.transform(df_test).collect()
+
+    cpu_res = cpu_model.transform(df_test).collect()
+
+    # compare accuracy
+    gpu_pred = [row["prediction"] for row in gpu_res]
+    cpu_pred = [row["prediction"] for row in cpu_res]
+    ytest_true = [row["label"] for row in df_test.select(["label"]).collect()]
+    from sklearn.metrics import accuracy_score
+
+    gpu_acc = accuracy_score(ytest_true, gpu_pred)
+    cpu_acc = accuracy_score(ytest_true, cpu_pred)
+    assert gpu_acc == cpu_acc or abs(gpu_acc - cpu_acc) < 1e-3
+
+    # compare rawPrediction column
+    gpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in gpu_res]
+    cpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in cpu_res]
+    assert array_equal(gpu_rawpred, cpu_rawpred)
+
+    # compare probability column
+    gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
+    cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
+    assert array_equal(gpu_prob, cpu_prob)
+
+    # compare coefficients
+    assert array_equal(
+        gpu_model.coefficientMatrix.toArray(),
+        cpu_model.coefficientMatrix.toArray(),
+        unit_tol=unit_tol,
+    )
+    assert array_equal(
+        gpu_model.interceptVector.toArray(),
+        cpu_model.interceptVector.toArray(),
+        unit_tol=unit_tol,
+    )
+
+    return (gpu_model, cpu_model)
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_compat_sparse_binomial(
+    fit_intercept: bool,
+) -> None:
+    tolerance = 0.001
+
+    with CleanSparkSession() as spark:
+        data = [
+            Row(
+                label=1.0, weight=1.0, features=Vectors.sparse(3, {2: 1.0})
+            ),  # (0., 0., 1.)
+            Row(
+                label=1.0, weight=1.0, features=Vectors.dense([0.0, 1.0, 0.0])
+            ),  # (0., 1., 0.)
+            Row(
+                label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 1.0})
+            ),  # (1., 0., 0.)
+            Row(
+                label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 2.0, 2: -1.0})
+            ),  # (2., 0., -1.)
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": False,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
+
+        gpu_lr = LogisticRegression(**params)
+        assert gpu_lr.hasParam("enable_sparse_data_optim") is True
+        assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            err_msg = "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
+            "or run on Databricks Runtime."
+            with pytest.raises(RuntimeError, match=err_msg):
+                gpu_lr.fit(bdf)
+            return
+
+        gpu_model = gpu_lr.fit(bdf)
+
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_compat_sparse_multinomial(
+    fit_intercept: bool,
+) -> None:
+    with CleanSparkSession() as spark:
+        data = [
+            Row(
+                label=1.0, weight=1.0, features=Vectors.sparse(3, {2: 1.0})
+            ),  # (0., 0., 1.)
+            Row(
+                label=1.0, weight=1.0, features=Vectors.sparse(3, {1: 1.0})
+            ),  # (0., 1., 0.)
+            Row(
+                label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 1.0})
+            ),  # (1., 0., 0.)
+            Row(
+                label=2.0, weight=1.0, features=Vectors.sparse(3, {0: 2.0, 2: -1.0})
+            ),  # (2., 0., -1.)
+        ]
+
+        mdf = spark.createDataFrame(data)
+
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": False,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
+
+        gpu_lr = LogisticRegression(**params)
+        assert gpu_lr.hasParam("enable_sparse_data_optim") is True
+        assert gpu_lr.getOrDefault("enable_sparse_data_optim") == None
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            err_msg = "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
+            "or run on Databricks Runtime."
+            with pytest.raises(RuntimeError, match=err_msg):
+                gpu_lr.fit(mdf)
+            return
+
+        gpu_model = gpu_lr.fit(mdf)
+
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(mdf)
+        compare_model(gpu_model, cpu_model, mdf)
+
+        for value in {True, False}:
+            gpu_lr = LogisticRegression(enable_sparse_data_optim=value, **params)
+            assert gpu_lr.getOrDefault("enable_sparse_data_optim") == value
+            gpu_model = gpu_lr.fit(mdf)
+            compare_model(gpu_model, cpu_model, mdf)
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.slow
+def test_sparse_nlp20news(
+    fit_intercept: bool,
+    caplog: LogCaptureFixture,
+) -> None:
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = (
+            "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+        )
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
+    tolerance = 0.001
+    reg_param = 1e-2
+
+    from pyspark.ml.feature import CountVectorizer, RegexTokenizer
+    from sklearn.datasets import fetch_20newsgroups
+
+    try:
+        twenty_train = fetch_20newsgroups(subset="train", shuffle=True, random_state=42)
+    except:
+        pytest.xfail(reason="Error fetching 20 newsgroup dataset")
+
+    X = twenty_train.data
+    y = twenty_train.target.tolist()
+
+    conf = {
+        "spark.rapids.ml.uvm.enabled": True
+    }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
+    with CleanSparkSession(conf) as spark:
+        data = [
+            Row(
+                label=y[i],
+                weight=1.0,
+                text=X[i],
+            )
+            for i in range(len(X))
+        ]
+        df = spark.createDataFrame(data)
+        tokenizer = RegexTokenizer(inputCol="text", outputCol="tokens")
+        df = tokenizer.transform(df)
+
+        cv = CountVectorizer(inputCol="tokens", outputCol="features")
+        cv_model = cv.fit(df)
+        df = cv_model.transform(df)
+
+        df_train, df_test = df.randomSplit([0.8, 0.2])
+
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True,
+            verbose=6,
+            regParam=reg_param,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        cpu_lr = SparkLogisticRegression(
+            regParam=reg_param,
+            fitIntercept=fit_intercept,
+            standardization=False,
+            featuresCol="features",
+            labelCol="label",
+        )
+
+        gpu_model = gpu_lr.fit(df_train)
+        cpu_model = cpu_lr.fit(df_train)
+        cpu_objective = cpu_model.summary.objectiveHistory[-1]
+
+        assert (
+            gpu_model.objective < cpu_objective
+            or abs(gpu_model.objective - cpu_objective) < tolerance
+        )
+
+        assert "CUDA managed memory enabled." in caplog.text
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("n_classes", [2, 4])
+@pytest.mark.slow
+def test_quick_sparse(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    n_classes: int,
+    gpu_number: int,
+) -> None:
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = (
+            "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+        )
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
+    convert_to_sparse = True
+    tolerance = 0.005
+    reg_param = reg_factors[0]
+    elasticNet_param = reg_factors[1]
+
+    lr = test_classifier(
+        fit_intercept=fit_intercept,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        tolerance=tolerance,
+        reg_param=reg_param,
+        elasticNet_param=elasticNet_param,
+        convert_to_sparse=convert_to_sparse,
+    )

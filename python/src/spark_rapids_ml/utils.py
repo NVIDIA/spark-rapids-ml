@@ -22,9 +22,13 @@ if TYPE_CHECKING:
     import cudf
     import cupy as cp
 
+import cupyx
 import numpy as np
+import pandas as pd
+import scipy
 from pyspark import BarrierTaskContext, SparkConf, SparkContext, TaskContext
-from pyspark.sql import SparkSession
+from pyspark.sql import Column, SparkSession
+from pyspark.sql.types import ArrayType, FloatType
 
 _ArrayOrder = Literal["C", "F"]
 
@@ -197,26 +201,41 @@ class PartitionDescriptor:
 
 
 def _concat_and_free(
-    array_list: Union[List["cp.ndarray"], List[np.ndarray]], order: _ArrayOrder = "F"
-) -> Union["cp.ndarray", np.ndarray]:
+    array_list: Union[
+        List["cp.ndarray"],
+        List[np.ndarray],
+        List[scipy.sparse.csr_matrix],
+        List["cupyx.scipy.sparse.csr_matrix"],
+    ],
+    order: _ArrayOrder = "F",
+) -> Union[
+    "cp.ndarray", np.ndarray, scipy.sparse.csr_matrix, "cupyx.scipy.sparse.csr_matrix"
+]:
     """
     concatenates a list of compatible numpy arrays into a 'order' ordered output array,
     in a memory efficient way.
     Note: frees list elements so do not reuse after calling.
+
+    if the type of input arrays is scipy or cupyx csr_matrix, 'order' parameter will not be used.
     """
-    import cupy as cp
-
-    array_module = cp if isinstance(array_list[0], cp.ndarray) else np
-
-    rows = sum(arr.shape[0] for arr in array_list)
-    if len(array_list[0].shape) > 1:
-        cols = array_list[0].shape[1]
-        concat_shape: Tuple[int, ...] = (rows, cols)
+    if isinstance(array_list[0], scipy.sparse.csr_matrix):
+        concated = scipy.sparse.vstack(array_list)
+    elif isinstance(array_list[0], cupyx.scipy.sparse.csr_matrix):
+        concated = cupyx.scipy.sparse.vstack(array_list)
     else:
-        concat_shape = (rows,)
-    d_type = array_list[0].dtype
-    concated = array_module.empty(shape=concat_shape, order=order, dtype=d_type)
-    array_module.concatenate(array_list, out=concated)
+        import cupy as cp
+
+        array_module = cp if isinstance(array_list[0], cp.ndarray) else np
+
+        rows = sum(arr.shape[0] for arr in array_list)
+        if len(array_list[0].shape) > 1:
+            cols = array_list[0].shape[1]
+            concat_shape: Tuple[int, ...] = (rows, cols)
+        else:
+            concat_shape = (rows,)
+        d_type = array_list[0].dtype
+        concated = array_module.empty(shape=concat_shape, order=order, dtype=d_type)
+        array_module.concatenate(array_list, out=concated)
     del array_list[:]
     return concated
 
@@ -444,3 +463,23 @@ def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # 
         )
     elif "leaf_value" in model:
         return _create_leaf_node(sc, impurity, model)
+
+
+# to the XGBOOST _get_unwrap_udt_fn in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py
+def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
+    try:
+        from pyspark.sql.functions import unwrap_udt  # type: ignore
+
+        return unwrap_udt
+    except ImportError:
+        pass
+
+    try:
+        from pyspark.databricks.sql.functions import unwrap_udt as databricks_unwrap_udt
+
+        return databricks_unwrap_udt
+    except ImportError as exc:
+        raise RuntimeError(
+            "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
+            "or run on Databricks Runtime."
+        ) from exc
