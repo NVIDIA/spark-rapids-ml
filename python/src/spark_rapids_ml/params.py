@@ -39,6 +39,31 @@ if TYPE_CHECKING:
 P = TypeVar("P", bound="_CumlParams")
 
 
+class HasEnableSparseDataOptim(Params):
+
+    """
+    This is a Params based class inherited from XGBOOST: https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/params.py.
+    It holds the variable to store the boolean config for enabling sparse data optimization.
+    """
+
+    enable_sparse_data_optim = Param(
+        Params._dummy(),
+        "enable_sparse_data_optim",
+        "This param activates sparse data optimization for VectorUDT features column. "
+        "If the param is not included in an Estimator class, "
+        "Spark rapids ml always converts VectorUDT features column into dense arrays when calling cuml backend. "
+        "If included, Spark rapids ml will determine whether to create sparse arrays based on the param value: "
+        "(1) If None, create dense arrays if the first VectorUDT of a dataframe is DenseVector. Create sparse arrays if it is SparseVector."
+        "(2) If False, create dense arrays. This is favorable if the majority of vectors are DenseVector."
+        "(3) If True, create sparse arrays. This is favorable if the majority of the VectorUDT vectors are SparseVector.",
+        typeConverter=TypeConverters.toBoolean,
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._setDefault(enable_sparse_data_optim=None)
+
+
 class HasFeaturesCols(Params):
     """
     Mixin for param featuresCols: features column names for multi-column input.
