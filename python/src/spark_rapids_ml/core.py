@@ -191,6 +191,7 @@ def _read_csr_matrix_from_unwrapped_spark_vec(part: pd.DataFrame) -> csr_matrix:
 
     n_features = 0
 
+    # TBD: investigate if there is a more efficient 'vectorized' approach to doing this. Iterating in python can be slow
     for vec_type, vec_size_, vec_indices, vec_values in zip(
         part[alias.featureVectorType],
         part[alias.featureVectorSize],
