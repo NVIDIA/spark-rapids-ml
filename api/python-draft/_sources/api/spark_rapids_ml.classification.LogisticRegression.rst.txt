@@ -88,6 +88,7 @@ LogisticRegression
     
        ~LogisticRegression.cuml_params
        ~LogisticRegression.elasticNetParam
+       ~LogisticRegression.enable_sparse_data_optim
        ~LogisticRegression.featuresCol
        ~LogisticRegression.featuresCols
        ~LogisticRegression.fitIntercept
@@ -162,6 +163,7 @@ LogisticRegression
     
     .. autoattribute:: cuml_params
     .. autoattribute:: elasticNetParam
+    .. autoattribute:: enable_sparse_data_optim
     .. autoattribute:: featuresCol
     .. autoattribute:: featuresCols
     .. autoattribute:: fitIntercept
