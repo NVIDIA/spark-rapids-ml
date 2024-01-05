@@ -28,6 +28,7 @@ from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql import DataFrame, Row
 from pyspark.sql.functions import array, col
+from pyspark.sql.types import FloatType
 
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
     raise ValueError(
@@ -37,6 +38,7 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
 import warnings
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
+from spark_rapids_ml.core import _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
@@ -48,6 +50,46 @@ from .utils import (
     idfn,
     make_classification_dataset,
 )
+
+
+def check_sparse_estimator_preprocess(
+    lr: LogisticRegression, df: DataFrame, dimension: int
+) -> None:
+    (select_cols, multi_col_names, dimension, feature_type) = lr._pre_process_data(df)
+    internal_df = df.select(*select_cols)
+    field_names = internal_df.schema.fieldNames()
+    assert field_names == [
+        alias.featureVectorType,
+        alias.featureVectorSize,
+        alias.featureVectorIndices,
+        alias.data,
+        alias.label,
+    ]
+    assert multi_col_names is None
+    assert dimension == dimension
+    assert feature_type == FloatType
+    assert _use_sparse_in_cuml(internal_df) is True
+
+
+def check_sparse_model_preprocess(
+    model: LogisticRegressionModel, df: DataFrame
+) -> None:
+    (internal_df, select_cols, input_is_multi_cols, tmp_cols) = model._pre_process_data(
+        df
+    )
+    df_field_names = df.schema.fieldNames()
+    internal_df_field_names = internal_df.schema.fieldNames()
+    unwrapped_col_names = [
+        alias.featureVectorType,
+        alias.featureVectorSize,
+        alias.featureVectorIndices,
+        alias.data,
+    ]
+    assert internal_df_field_names == df_field_names + unwrapped_col_names
+    assert select_cols == unwrapped_col_names
+    assert tmp_cols == select_cols
+    assert input_is_multi_cols is False
+    assert _use_sparse_in_cuml(internal_df) is True
 
 
 def test_toy_example(gpu_number: int) -> None:
@@ -1013,7 +1055,11 @@ def test_crossvalidator_logistic_regression(
     feature_type: str,
     data_type: np.dtype,
     data_shape: Tuple[int, int],
+    convert_to_sparse: bool = False,
 ) -> None:
+    if convert_to_sparse:
+        assert feature_type == feature_types.vector
+
     # Train a toy model
 
     n_classes = 2 if metric_name == "areaUnderROC" else 10
@@ -1034,9 +1080,26 @@ def test_crossvalidator_logistic_regression(
         )
         assert label_col is not None
 
-        lr = LogisticRegression()
+        if convert_to_sparse:
+            assert type(features_col) is str
+
+            from pyspark.sql.functions import udf
+
+            def to_sparse_func(v: Union[SparseVector, DenseVector]) -> SparseVector:
+                if isinstance(v, DenseVector):
+                    return SparseVector(len(v), range(len(v)), v.toArray())
+                else:
+                    return v
+
+            udf_to_sparse = udf(to_sparse_func, VectorUDT())
+            df = df.withColumn(features_col, udf_to_sparse(features_col))
+
+        lr = LogisticRegression(enable_sparse_data_optim=convert_to_sparse)
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_col)
+
+        if convert_to_sparse is True:
+            check_sparse_estimator_preprocess(lr, df, data_shape[1])
 
         evaluator = (
             BinaryClassificationEvaluator()
@@ -1380,7 +1443,10 @@ def test_compat_sparse_binomial(
                 gpu_lr.fit(bdf)
             return
 
+        check_sparse_estimator_preprocess(gpu_lr, bdf, dimension=3)
+
         gpu_model = gpu_lr.fit(bdf)
+        check_sparse_model_preprocess(gpu_model, bdf)
 
         cpu_lr = SparkLogisticRegression(**params)
         cpu_model = cpu_lr.fit(bdf)
@@ -1571,4 +1637,21 @@ def test_quick_sparse(
         reg_param=reg_param,
         elasticNet_param=elasticNet_param,
         convert_to_sparse=convert_to_sparse,
+    )
+
+
+@pytest.mark.parametrize("metric_name", ["accuracy", "logLoss", "areaUnderROC"])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+def test_sparse_crossvalidator_logistic_regression(
+    metric_name: str,
+    data_type: np.dtype,
+    data_shape: Tuple[int, int],
+) -> None:
+    test_crossvalidator_logistic_regression(
+        metric_name=metric_name,
+        feature_type=feature_types.vector,
+        data_type=data_type,
+        data_shape=data_shape,
+        convert_to_sparse=True,
     )
