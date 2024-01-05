@@ -28,6 +28,7 @@ from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql import DataFrame, Row
 from pyspark.sql.functions import array, col
+from pyspark.sql.types import FloatType
 
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
     raise ValueError(
@@ -37,6 +38,7 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
 import warnings
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
+from spark_rapids_ml.core import _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
@@ -1336,6 +1338,46 @@ def compare_model(
     return (gpu_model, cpu_model)
 
 
+def check_sparse_estimator_preprocess(
+    lr: LogisticRegression, df: DataFrame, dimension: int
+) -> None:
+    (select_cols, multi_col_names, dimension, feature_type) = lr._pre_process_data(df)
+    internal_df = df.select(*select_cols)
+    field_names = internal_df.schema.fieldNames()
+    assert field_names == [
+        alias.featureVectorType,
+        alias.featureVectorSize,
+        alias.featureVectorIndices,
+        alias.data,
+        alias.label,
+    ]
+    assert multi_col_names is None
+    assert dimension == dimension
+    assert feature_type == FloatType
+    assert _use_sparse_in_cuml(internal_df) is True
+
+
+def check_sparse_model_preprocess(
+    model: LogisticRegressionModel, df: DataFrame
+) -> None:
+    (internal_df, select_cols, input_is_multi_cols, tmp_cols) = model._pre_process_data(
+        df
+    )
+    df_field_names = df.schema.fieldNames()
+    internal_df_field_names = internal_df.schema.fieldNames()
+    unwrapped_col_names = [
+        alias.featureVectorType,
+        alias.featureVectorSize,
+        alias.featureVectorIndices,
+        alias.data,
+    ]
+    assert internal_df_field_names == df_field_names + unwrapped_col_names
+    assert select_cols == unwrapped_col_names
+    assert tmp_cols == select_cols
+    assert input_is_multi_cols is False
+    assert _use_sparse_in_cuml(internal_df) is True
+
+
 @pytest.mark.compat
 @pytest.mark.parametrize("fit_intercept", [True, False])
 def test_compat_sparse_binomial(
@@ -1380,7 +1422,10 @@ def test_compat_sparse_binomial(
                 gpu_lr.fit(bdf)
             return
 
+        check_sparse_estimator_preprocess(gpu_lr, bdf, dimension=3)
+
         gpu_model = gpu_lr.fit(bdf)
+        check_sparse_model_preprocess(gpu_model, bdf)
 
         cpu_lr = SparkLogisticRegression(**params)
         cpu_model = cpu_lr.fit(bdf)

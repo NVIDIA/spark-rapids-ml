@@ -1325,6 +1325,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         array_order = self._transform_array_order()
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
+
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
 
@@ -1342,7 +1344,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             for pdf in pdf_iter:
                 for index, cuml_object in enumerate(cuml_objects):
                     # Transform the dataset
-                    if input_is_multi_cols:
+                    if use_sparse_array:
+                        features = _read_csr_matrix_from_unwrapped_spark_vec(
+                            pdf[select_cols]
+                        )
+                        data = cuml_transform_func(cuml_object, features)
+                    elif input_is_multi_cols:
                         data = cuml_transform_func(cuml_object, pdf[select_cols])
                     else:
                         nparray = np.array(list(pdf[select_cols[0]]), order=array_order)
