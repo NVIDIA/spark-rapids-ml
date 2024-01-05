@@ -836,7 +836,7 @@ class LogisticRegression(
         the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
     tol:
         The convergence tolerance.
-    enable_sparse_data: None or boolean, optional (default=None)
+    enable_sparse_data_optim: None or boolean, optional (default=None)
         If features column is VectorUDT type, Spark rapids ml relies on this parameter to decide whether to use dense array or sparse array in cuml.
         If None, use dense array if the first VectorUDT of a dataframe is DenseVector. Use sparse array if it is SparseVector.
         If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
@@ -905,7 +905,7 @@ class LogisticRegression(
         elasticNetParam: float = 0.0,
         tol: float = 1e-6,
         fitIntercept: bool = True,
-        enable_sparse_data: Optional[bool] = None,
+        enable_sparse_data_optim: Optional[bool] = None,
         num_workers: Optional[int] = None,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
