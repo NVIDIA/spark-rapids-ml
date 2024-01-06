@@ -1060,6 +1060,14 @@ def test_crossvalidator_logistic_regression(
     if convert_to_sparse:
         assert feature_type == feature_types.vector
 
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            import logging
+
+            err_msg = "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+            "The test case will be skipped. Please install pyspark>=3.4."
+            logging.info(err_msg)
+        return
+
     # Train a toy model
 
     n_classes = 2 if metric_name == "areaUnderROC" else 10
