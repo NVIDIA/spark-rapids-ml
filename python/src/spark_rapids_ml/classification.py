@@ -39,8 +39,10 @@ if TYPE_CHECKING:
     import cupy as cp
     from pyspark.ml._typing import ParamMap
 
+import cupyx
 import numpy as np
 import pandas as pd
+import scipy
 from pyspark import Row, TaskContext, keyword_only
 from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
@@ -86,7 +88,7 @@ from .core import (
     param_alias,
     pred,
 )
-from .params import HasFeaturesCols, _CumlClass, _CumlParams
+from .params import HasEnableSparseDataOptim, HasFeaturesCols, _CumlClass, _CumlParams
 from .tree import (
     _RandomForestClass,
     _RandomForestCumlParams,
@@ -716,6 +718,7 @@ class LogisticRegressionClass(_CumlClass):
 class _LogisticRegressionCumlParams(
     _CumlParams,
     _LogisticRegressionParams,
+    HasEnableSparseDataOptim,
     HasFeaturesCols,
     HasProbabilityCol,
     HasRawPredictionCol,
@@ -833,6 +836,12 @@ class LogisticRegression(
         the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
     tol:
         The convergence tolerance.
+    enable_sparse_data_optim: None or boolean, optional (default=None)
+        If features column is VectorUDT type, Spark rapids ml relies on this parameter to decide whether to use dense array or sparse array in cuml.
+        If None, use dense array if the first VectorUDT of a dataframe is DenseVector. Use sparse array if it is SparseVector.
+        If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
+        If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
+        Note this is only supported in spark >= 3.4.
     fitIntercept:
         Whether to fit an intercept term.
     num_workers:
@@ -896,6 +905,7 @@ class LogisticRegression(
         elasticNetParam: float = 0.0,
         tol: float = 1e-6,
         fitIntercept: bool = True,
+        enable_sparse_data_optim: Optional[bool] = None,
         num_workers: Optional[int] = None,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
@@ -931,7 +941,7 @@ class LogisticRegression(
                 concated = pd.concat(X_list)
                 concated_y = pd.concat(y_list)
             else:
-                # features are either cp or np arrays here
+                # features are either cp, np, scipy csr or cupyx csr arrays here
                 concated = _concat_and_free(X_list, order=array_order)
                 concated_y = _concat_and_free(y_list, order=array_order)
 
@@ -975,7 +985,35 @@ class LogisticRegression(
                     "n_cols": logistic_regression.n_cols,
                     "dtype": logistic_regression.dtype.name,
                     "num_iters": logistic_regression.solver_model.num_iters,
+                    "objective": logistic_regression.solver_model.objective,
                 }
+
+                # check if invalid label exists
+                for class_val in model["classes_"]:
+                    if class_val < 0:
+                        raise RuntimeError(
+                            f"Labels MUST be in [0, 2147483647), but got {class_val}"
+                        )
+                    elif not class_val.is_integer():
+                        raise RuntimeError(
+                            f"Labels MUST be Integers, but got {class_val}"
+                        )
+
+                if len(logistic_regression.classes_) == 1:
+                    class_val = logistic_regression.classes_[0]
+                    # TODO: match Spark to use max(class_list) to calculate the number of classes
+                    # Cuml currently uses unique(class_list)
+                    if class_val != 1.0 and class_val != 0.0:
+                        raise RuntimeError(
+                            "class value must be either 1. or 0. when dataset has one label"
+                        )
+
+                    if init_parameters["fit_intercept"] is True:
+                        model["coef_"] = [[0.0] * logistic_regression.n_cols]
+                        model["intercept_"] = [
+                            float("inf") if class_val == 1.0 else float("-inf")
+                        ]
+
                 del logistic_regression
                 return model
 
@@ -1023,10 +1061,22 @@ class LogisticRegression(
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
                 StructField("num_iters", IntegerType(), False),
+                StructField("objective", DoubleType(), False),
             ]
         )
 
     def _create_pyspark_model(self, result: Row) -> "LogisticRegressionModel":
+        logger = get_logger(self.__class__)
+        if len(result["classes_"]) == 1:
+            if self.getFitIntercept() is False:
+                logger.warning(
+                    "All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
+                )
+            else:
+                logger.warning(
+                    "All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
+                )
+
         return LogisticRegressionModel._from_row(result)
 
     def _set_cuml_reg_params(self) -> "LogisticRegression":
@@ -1104,6 +1154,7 @@ class LogisticRegressionModel(
         n_cols: int,
         dtype: str,
         num_iters: int,
+        objective: float,
     ) -> None:
         super().__init__(
             dtype=dtype,
@@ -1112,6 +1163,7 @@ class LogisticRegressionModel(
             intercept_=intercept_,
             classes_=classes_,
             num_iters=num_iters,
+            objective=objective,
         )
         self.coef_ = coef_
         self.intercept_ = intercept_
@@ -1119,6 +1171,7 @@ class LogisticRegressionModel(
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
         self._num_classes = len(self.classes_)
         self.num_iters = num_iters
+        self.objective = objective
         self._this_model = self
 
     def cpu(self) -> SparkLogisticRegressionModel:

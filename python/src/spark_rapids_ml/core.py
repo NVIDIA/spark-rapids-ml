@@ -40,7 +40,7 @@ from pyspark import RDD, SparkConf, TaskContext
 from pyspark.ml import Estimator, Model
 from pyspark.ml.evaluation import Evaluator
 from pyspark.ml.functions import array_to_vector, vector_to_array
-from pyspark.ml.linalg import VectorUDT
+from pyspark.ml.linalg import DenseVector, SparseVector, VectorUDT
 from pyspark.ml.param.shared import (
     HasLabelCol,
     HasOutputCol,
@@ -68,6 +68,7 @@ from pyspark.sql.types import (
     Row,
     StructType,
 )
+from scipy.sparse import csr_matrix
 
 from .common.cuml_context import CumlContext
 from .metrics import EvalMetricInfo
@@ -115,8 +116,25 @@ _EvaluateFunc = Callable[
 ]
 
 # Global constant for defining column alias
-Alias = namedtuple("Alias", ("data", "label", "row_number"))
-alias = Alias("cuml_values", "cuml_label", "unique_id")
+Alias = namedtuple(
+    "Alias",
+    (
+        "featureVectorType",
+        "featureVectorSize",
+        "featureVectorIndices",
+        "data",
+        "label",
+        "row_number",
+    ),
+)
+alias = Alias(
+    "vector_type_c3BhcmstcmFwaWRzLW1sCg==",
+    "vector_size_c3BhcmstcmFwaWRzLW1sCg==",
+    "vector_indices_c3BhcmstcmFwaWRzLW1sCg==",
+    "cuml_values_c3BhcmstcmFwaWRzLW1sCg==",
+    "cuml_label",
+    "unique_id",
+)
 
 # Global prediction names
 Pred = namedtuple(
@@ -134,6 +152,93 @@ param_alias = ParamAlias(
 )
 
 CumlModel = TypeVar("CumlModel", bound="_CumlModel")
+
+from .utils import _get_unwrap_udt_fn
+
+
+# similar to the XGBOOST _get_unwrapped_vec_cols in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py
+def _get_unwrapped_vec_cols(feature_col: Column) -> List[Column]:
+    unwrap_udt = _get_unwrap_udt_fn()
+    features_unwrapped_vec_col = unwrap_udt(feature_col)
+
+    # After a `pyspark.ml.linalg.VectorUDT` type column being unwrapped, it becomes
+    # a pyspark struct type column, the struct fields are:
+    #  - `type`: byte
+    #  - `size`: int
+    #  - `indices`: array<int>
+    #  - `values`: array<double>
+    # For sparse vector, `type` field is 0, `size` field means vector dimension,
+    # `indices` field is the array of active element indices, `values` field
+    # is the array of active element values.
+    # For dense vector, `type` field is 1, `size` and `indices` fields are None,
+    # `values` field is the array of the vector element values.
+    return [
+        features_unwrapped_vec_col.type.alias(alias.featureVectorType),
+        features_unwrapped_vec_col.size.alias(alias.featureVectorSize),
+        features_unwrapped_vec_col.indices.alias(alias.featureVectorIndices),
+        # Note: the value field is double array type, cast it to float32 array type
+        # for speedup following repartitioning.
+        features_unwrapped_vec_col.values.cast(ArrayType(FloatType())).alias(
+            alias.data
+        ),
+    ]
+
+
+def _use_sparse_in_cuml(dataset: DataFrame) -> bool:
+    return (
+        alias.featureVectorType in dataset.schema.fieldNames()
+        and alias.featureVectorSize in dataset.schema.fieldNames()
+        and alias.featureVectorIndices in dataset.schema.fieldNames()
+    )  # use sparse array in cuml only if features vectorudt column was unwrapped
+
+
+# similar to the XGBOOST _read_csr_matrix_from_unwrapped_spark_vec in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/data.py
+def _read_csr_matrix_from_unwrapped_spark_vec(part: pd.DataFrame) -> csr_matrix:
+    # variables for constructing csr_matrix
+    csr_indices_list, csr_indptr_list, csr_values_list = [], [0], []
+
+    n_features = 0
+
+    # TBD: investigate if there is a more efficient 'vectorized' approach to doing this. Iterating in python can be slow
+    for vec_type, vec_size_, vec_indices, vec_values in zip(
+        part[alias.featureVectorType],
+        part[alias.featureVectorSize],
+        part[alias.featureVectorIndices],
+        part[alias.data],
+    ):
+        if vec_type == 0:
+            # sparse vector
+            vec_size = int(vec_size_)
+            csr_indices = vec_indices
+            csr_values = vec_values
+        else:
+            # dense vector
+            # Note: According to spark ML VectorUDT format,
+            # when type field is 1, the size field is also empty.
+            # we need to check the values field to get vector length.
+            vec_size = len(vec_values)
+            csr_indices = np.arange(vec_size, dtype=np.int32)
+            csr_values = vec_values
+
+        if n_features == 0:
+            n_features = vec_size
+        assert n_features == vec_size, "all vectors must be of the same dimension"
+
+        csr_indices_list.append(csr_indices)
+        csr_indptr_list.append(csr_indptr_list[-1] + len(csr_indices))
+        assert len(csr_indptr_list) == 1 + len(csr_indices_list)
+
+        csr_values_list.append(csr_values)
+
+    assert len(csr_indptr_list) == 1 + len(part)
+
+    csr_indptr_arr = np.array(csr_indptr_list)
+    csr_indices_arr = np.concatenate(csr_indices_list)
+    csr_values_arr = np.concatenate(csr_values_list)
+
+    return csr_matrix(
+        (csr_values_arr, csr_indices_arr, csr_indptr_arr), shape=(len(part), n_features)
+    )
 
 
 class _CumlEstimatorWriter(MLWriter):
@@ -359,6 +464,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         if input_col is not None:
             # Single Column
             input_datatype = dataset.schema[input_col].dataType
+            first_record = dataset.first()
 
             if isinstance(input_datatype, ArrayType):
                 # Array type
@@ -379,17 +485,37 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     # FloatType array
                     select_cols.append(col(input_col).alias(alias.data))
             elif isinstance(input_datatype, VectorUDT):
-                # Vector type
                 vector_element_type = "float32" if self._float32_inputs else "float64"
-                select_cols.append(
-                    vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
+                first_vectorudt_type = (
+                    DenseVector
+                    if first_record is None
+                    or type(first_record[input_col]) is DenseVector
+                    else SparseVector
                 )
+                use_sparse = self.hasParam(
+                    "enable_sparse_data_optim"
+                ) and self.getOrDefault("enable_sparse_data_optim")
+
+                if use_sparse is True or (
+                    use_sparse is None and first_vectorudt_type is SparseVector
+                ):
+                    # Sparse Vector type
+                    select_cols += _get_unwrapped_vec_cols(col(input_col))
+                else:
+                    # Dense Vector type
+                    assert use_sparse is False or (
+                        use_sparse is None and first_vectorudt_type is DenseVector
+                    )
+                    select_cols.append(
+                        vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
+                    )
+
                 if not self._float32_inputs:
                     feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
 
-            dimension = len(dataset.first()[input_col])  # type: ignore
+            dimension = len(first_record[input_col])  # type: ignore
 
         elif input_cols is not None:
             # if self._float32_inputs is False and if any columns are double type, convert all to double type
@@ -553,10 +679,13 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         cuml_verbose = self.cuml_params.get("verbose", False)
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
+
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             import cupy as cp
+            import cupyx
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
@@ -583,16 +712,26 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             logger.info("Loading data into python worker memory")
             inputs = []
             sizes = []
+
             for pdf in pdf_iter:
                 sizes.append(pdf.shape[0])
                 if multi_col_names:
                     features = np.array(pdf[multi_col_names], order=array_order)
+                elif use_sparse_array:
+                    # sparse vector
+                    features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
                 else:
+                    # dense vector
                     features = np.array(list(pdf[alias.data]), order=array_order)
+
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
                 if cuda_managed_mem_enabled:
-                    features = cp.array(features)
+                    features = (
+                        cp.array(features)
+                        if use_sparse_array is False
+                        else cupyx.scipy.sparse.csr_matrix(features)
+                    )
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
@@ -1058,16 +1197,55 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         if input_col is not None:
             input_col_type = dataset.schema[input_col].dataType
-            tmp_input_col = f"{alias.data}_c3BhcmstcmFwaWRzLW1sCg=="
             if isinstance(input_col_type, VectorUDT):
                 # Vector type
-                # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
                 vector_element_type = "float32" if self._float32_inputs else "float64"
-                dataset = dataset.withColumn(
-                    tmp_input_col, vector_to_array(col(input_col), vector_element_type)
-                )
-                select_cols.append(tmp_input_col)
-                tmp_cols.append(tmp_input_col)
+
+                if self.hasParam("enable_sparse_data_optim") is False:
+                    use_cuml_sparse = False
+                elif self.getOrDefault("enable_sparse_data_optim") is None:
+                    first_record = dataset.first()
+                    first_vectorudt_type = (
+                        DenseVector
+                        if first_record is None
+                        or type(first_record[input_col]) is DenseVector
+                        else SparseVector
+                    )
+                    use_cuml_sparse = first_vectorudt_type is SparseVector
+                else:
+                    use_cuml_sparse = self.getOrDefault("enable_sparse_data_optim")
+
+                if use_cuml_sparse:
+                    type_col, size_col, indices_col, data_col = _get_unwrapped_vec_cols(
+                        col(input_col)
+                    )
+
+                    dataset = dataset.withColumn(alias.featureVectorType, type_col)
+
+                    dataset = dataset.withColumn(alias.featureVectorSize, size_col)
+
+                    dataset = dataset.withColumn(
+                        alias.featureVectorIndices, indices_col
+                    )
+
+                    dataset = dataset.withColumn(alias.data, data_col.alias(alias.data))
+
+                    for col_name in [
+                        alias.featureVectorType,
+                        alias.featureVectorSize,
+                        alias.featureVectorIndices,
+                        alias.data,
+                    ]:
+                        select_cols.append(col_name)
+                        tmp_cols.append(col_name)
+                else:
+                    # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
+                    dataset = dataset.withColumn(
+                        alias.data,
+                        vector_to_array(col(input_col), vector_element_type),
+                    )
+                    select_cols.append(alias.data)
+                    tmp_cols.append(alias.data)
             elif isinstance(input_col_type, ArrayType):
                 if (
                     isinstance(input_col_type.elementType, DoubleType)
@@ -1079,10 +1257,10 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     and self._float32_inputs
                 ):
                     dataset = dataset.withColumn(
-                        tmp_input_col, col(input_col).cast(ArrayType(FloatType()))
+                        alias.data, col(input_col).cast(ArrayType(FloatType()))
                     )
-                    select_cols.append(tmp_input_col)
-                    tmp_cols.append(tmp_input_col)
+                    select_cols.append(alias.data)
+                    tmp_cols.append(alias.data)
                 else:
                     # FloatType array
                     select_cols.append(input_col)
@@ -1147,6 +1325,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         array_order = self._transform_array_order()
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
+
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
 
@@ -1164,7 +1344,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             for pdf in pdf_iter:
                 for index, cuml_object in enumerate(cuml_objects):
                     # Transform the dataset
-                    if input_is_multi_cols:
+                    if use_sparse_array:
+                        features = _read_csr_matrix_from_unwrapped_spark_vec(
+                            pdf[select_cols]
+                        )
+                        data = cuml_transform_func(cuml_object, features)
+                    elif input_is_multi_cols:
                         data = cuml_transform_func(cuml_object, pdf[select_cols])
                     else:
                         nparray = np.array(list(pdf[select_cols[0]]), order=array_order)
@@ -1291,6 +1476,8 @@ class _CumlModelWithColumns(_CumlModel):
 
         array_order = self._transform_array_order()
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
+
         @pandas_udf(self._out_schema(dataset.schema))  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
             from pyspark import TaskContext
@@ -1302,7 +1489,9 @@ class _CumlModelWithColumns(_CumlModel):
                 cuml_objects[0] if isinstance(cuml_objects, list) else cuml_objects
             )
             for pdf in iterator:
-                if not input_is_multi_cols:
+                if use_sparse_array:
+                    data = _read_csr_matrix_from_unwrapped_spark_vec(pdf[select_cols])
+                elif not input_is_multi_cols:
                     data = np.array(list(pdf[select_cols[0]]), order=array_order)
                 else:
                     data = pdf[select_cols]

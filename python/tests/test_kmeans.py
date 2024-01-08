@@ -17,9 +17,16 @@
 from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 import numpy as np
+import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pyspark.errors import IllegalArgumentException
+from packaging import version
+
+if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+    from pyspark.sql.utils import IllegalArgumentException  # type: ignore
+else:
+    from pyspark.errors import IllegalArgumentException  # type: ignore
+
 from pyspark.ml.clustering import KMeans as SparkKMeans
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.functions import array_to_vector
@@ -145,7 +152,11 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             .map(lambda row: (row,))
             .toDF(["features"])
         )
-        kmeans = KMeans(num_workers=gpu_number, n_clusters=2).setFeaturesCol("features")
+        kmeans = (
+            KMeans(num_workers=gpu_number, n_clusters=2)
+            .setFeaturesCol("features")
+            .setSeed(0)
+        )
 
         def assert_kmeans_model(model: KMeansModel) -> None:
             assert len(model.cluster_centers_) == 2
@@ -335,7 +346,7 @@ def test_kmeans_spark_compat(
         if version.parse(pyspark.__version__) < version.parse("3.4.0"):
             kmeans = _KMeans(k=2)
         else:
-            kmeans = _KMeans(k=2, solver="auto", maxBlockSizeInMB=0)
+            kmeans = _KMeans(k=2, solver="auto", maxBlockSizeInMB=0)  # type: ignore # only spark >= 3.4 supports solver and maxblockSize
 
         kmeans.setSeed(1)
         kmeans.setMaxIter(10)

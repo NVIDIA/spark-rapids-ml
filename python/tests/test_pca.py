@@ -17,9 +17,16 @@
 from typing import Any, Dict, Tuple, Type, TypeVar
 
 import numpy as np
+import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pyspark.errors import IllegalArgumentException
+from packaging import version
+
+if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+    from pyspark.sql.utils import IllegalArgumentException  # type: ignore
+else:
+    from pyspark.errors import IllegalArgumentException  # type: ignore
+
 from pyspark.ml.feature import PCA as SparkPCA
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.functions import array_to_vector
