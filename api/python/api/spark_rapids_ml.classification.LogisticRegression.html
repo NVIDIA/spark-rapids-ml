@@ -3,13 +3,13 @@
 <!DOCTYPE html>
 
 
-<html lang="en" >
+<html lang="en" data-content_root="" >
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>LogisticRegression &#8212; spark-rapids-ml 23.10.0 documentation</title>
+    <title>LogisticRegression &#8212; spark-rapids-ml 23.12.0 documentation</title>
   
   
   
@@ -19,23 +19,23 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=bd9e20870c6007c4c509" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=bd9e20870c6007c4c509" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=bd9e20870c6007c4c509" rel="stylesheet" />
 
   
-  <link href="../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=365ca57ee442770a23c6" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+  <link href="../_static/vendor/fontawesome/6.5.1/css/all.min.css?digest=bd9e20870c6007c4c509" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.1/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.1/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.1/webfonts/fa-regular-400.woff2" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6" />
-  <script src="../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=365ca57ee442770a23c6"></script>
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=bd9e20870c6007c4c509" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=bd9e20870c6007c4c509" />
+  <script src="../_static/vendor/fontawesome/6.5.1/js/all.min.js?digest=bd9e20870c6007c4c509"></script>
 
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
@@ -58,7 +58,7 @@
 
   
   
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <a id="pst-skip-link" class="skip-link" href="#main-content">Skip to main content</a>
   
   <div id="pst-scroll-pixel-helper"></div>
 
@@ -101,8 +101,10 @@
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
 </form></div>
   </div>
+
+  <header>
   
-    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+    <div class="bd-header navbar navbar-expand-lg bd-navbar">
 <div class="bd-header__inner bd-page-width">
   <label class="sidebar-toggle primary-toggle" for="__primary">
     <span class="fa-solid fa-bars"></span>
@@ -112,6 +114,7 @@
   <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
+
   
 
 <a class="navbar-brand logo" href="../index.html">
@@ -121,7 +124,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 23.10.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 23.12.0 documentation</p>
   
 </a></div>
     
@@ -131,13 +134,8 @@
     
     <div class="me-auto navbar-header-items__center">
       
-        <div class="navbar-item"><nav class="navbar-nav">
-  <p class="sidebar-header-items__title"
-     role="heading"
-     aria-level="1"
-     aria-label="Site Navigation">
-    Site Navigation
-  </p>
+        <div class="navbar-item">
+<nav class="navbar-nav">
   <ul class="bd-navbar-elements navbar-nav">
     
                     <li class="nav-item current active">
@@ -156,6 +154,7 @@
       
         <div class="navbar-item navbar-persistent--container">
           
+
  <script>
  document.write(`
    <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -169,6 +168,7 @@
       
       
         <div class="navbar-item">
+
 <script>
 document.write(`
   <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -185,6 +185,7 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
+
  <script>
  document.write(`
    <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -204,10 +205,14 @@ document.write(`
   
 </div>
 
-    </nav>
+    </div>
   
+  </header>
+
   <div class="bd-container">
     <div class="bd-container__inner bd-page-width">
+      
+      
       
       <div class="bd-sidebar-primary bd-sidebar">
         
@@ -218,13 +223,8 @@ document.write(`
     
       <div class="sidebar-header-items__center">
         
-          <div class="navbar-item"><nav class="navbar-nav">
-  <p class="sidebar-header-items__title"
-     role="heading"
-     aria-level="1"
-     aria-label="Site Navigation">
-    Site Navigation
-  </p>
+          <div class="navbar-item">
+<nav class="navbar-nav">
   <ul class="bd-navbar-elements navbar-nav">
     
                     <li class="nav-item current active">
@@ -243,6 +243,7 @@ document.write(`
       <div class="sidebar-header-items__end">
         
           <div class="navbar-item">
+
 <script>
 document.write(`
   <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -258,7 +259,8 @@ document.write(`
   </div>
   
     <div class="sidebar-primary-items__start sidebar-primary__section">
-        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
@@ -346,13 +348,13 @@ document.write(`
               
                 
 <div id="searchbox"></div>
-                <article class="bd-article" role="main">
+                <article class="bd-article">
                   
   <section id="logisticregression">
 <h1>LogisticRegression<a class="headerlink" href="#logisticregression" title="Permalink to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.LogisticRegression">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.classification.</span></span><span class="sig-name descname"><span class="pre">LogisticRegression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">featuresCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'features'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labelCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predictionCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'prediction'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probabilityCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'probability'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rawPredictionCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'rawPrediction'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxIter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regParam</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elasticNetParam</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fitIntercept</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.classification.LogisticRegression" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.classification.</span></span><span class="sig-name descname"><span class="pre">LogisticRegression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">featuresCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'features'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labelCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predictionCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'prediction'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probabilityCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'probability'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rawPredictionCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'rawPrediction'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxIter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regParam</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elasticNetParam</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fitIntercept</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_sparse_data_optim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.classification.LogisticRegression" title="Permalink to this definition">#</a></dt>
 <dd><p>LogisticRegression is a machine learning model where the response y is modeled
 by the sigmoid (or softmax for more than 2 classes) function applied to a linear
 combination of the features in X. It implements cuML’s GPU accelerated
@@ -399,6 +401,12 @@ to cuML parameters.</p>
 the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.</p>
 </dd>
 <dt><strong>tol:</strong></dt><dd><p>The convergence tolerance.</p>
+</dd>
+<dt><strong>enable_sparse_data_optim: None or boolean, optional (default=None)</strong></dt><dd><p>If features column is VectorUDT type, Spark rapids ml relies on this parameter to decide whether to use dense array or sparse array in cuml.
+If None, use dense array if the first VectorUDT of a dataframe is DenseVector. Use sparse array if it is SparseVector.
+If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
+If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
+Note this is only supported in spark &gt;= 3.4.</p>
 </dd>
 <dt><strong>fitIntercept:</strong></dt><dd><p>Whether to fit an intercept term.</p>
 </dd>
@@ -587,40 +595,43 @@ cuML workers (i.e. GPUs in cluster) from the Spark environment.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.elasticNetParam" title="spark_rapids_ml.classification.LogisticRegression.elasticNetParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">elasticNetParam</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.featuresCol" title="spark_rapids_ml.classification.LogisticRegression.featuresCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.enable_sparse_data_optim" title="spark_rapids_ml.classification.LogisticRegression.enable_sparse_data_optim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">enable_sparse_data_optim</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.featuresCols" title="spark_rapids_ml.classification.LogisticRegression.featuresCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.featuresCol" title="spark_rapids_ml.classification.LogisticRegression.featuresCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.fitIntercept" title="spark_rapids_ml.classification.LogisticRegression.fitIntercept"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fitIntercept</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.featuresCols" title="spark_rapids_ml.classification.LogisticRegression.featuresCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.labelCol" title="spark_rapids_ml.classification.LogisticRegression.labelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">labelCol</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.fitIntercept" title="spark_rapids_ml.classification.LogisticRegression.fitIntercept"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fitIntercept</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.maxIter" title="spark_rapids_ml.classification.LogisticRegression.maxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxIter</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.labelCol" title="spark_rapids_ml.classification.LogisticRegression.labelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">labelCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.num_workers" title="spark_rapids_ml.classification.LogisticRegression.num_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.maxIter" title="spark_rapids_ml.classification.LogisticRegression.maxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxIter</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.num_workers" title="spark_rapids_ml.classification.LogisticRegression.num_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></a></p></td>
 <td><p>Number of cuML workers, where each cuML worker corresponds to one Spark task running on one GPU.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.params" title="spark_rapids_ml.classification.LogisticRegression.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.params" title="spark_rapids_ml.classification.LogisticRegression.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
 <td><p>Returns all params ordered by name.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.predictionCol" title="spark_rapids_ml.classification.LogisticRegression.predictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictionCol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.predictionCol" title="spark_rapids_ml.classification.LogisticRegression.predictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predictionCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.probabilityCol" title="spark_rapids_ml.classification.LogisticRegression.probabilityCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">probabilityCol</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.probabilityCol" title="spark_rapids_ml.classification.LogisticRegression.probabilityCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">probabilityCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.rawPredictionCol" title="spark_rapids_ml.classification.LogisticRegression.rawPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rawPredictionCol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.rawPredictionCol" title="spark_rapids_ml.classification.LogisticRegression.rawPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rawPredictionCol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.regParam" title="spark_rapids_ml.classification.LogisticRegression.regParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">regParam</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.regParam" title="spark_rapids_ml.classification.LogisticRegression.regParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">regParam</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.tol" title="spark_rapids_ml.classification.LogisticRegression.tol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.tol" title="spark_rapids_ml.classification.LogisticRegression.tol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -938,6 +949,11 @@ a default value.</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.LogisticRegression.enable_sparse_data_optim">
+<span class="sig-name descname"><span class="pre">enable_sparse_data_optim</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='enable_sparse_data_optim',</span> <span class="pre">doc='This</span> <span class="pre">param</span> <span class="pre">activates</span> <span class="pre">sparse</span> <span class="pre">data</span> <span class="pre">optimization</span> <span class="pre">for</span> <span class="pre">VectorUDT</span> <span class="pre">features</span> <span class="pre">column.</span> <span class="pre">If</span> <span class="pre">the</span> <span class="pre">param</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">included</span> <span class="pre">in</span> <span class="pre">an</span> <span class="pre">Estimator</span> <span class="pre">class,</span> <span class="pre">Spark</span> <span class="pre">rapids</span> <span class="pre">ml</span> <span class="pre">always</span> <span class="pre">converts</span> <span class="pre">VectorUDT</span> <span class="pre">features</span> <span class="pre">column</span> <span class="pre">into</span> <span class="pre">dense</span> <span class="pre">arrays</span> <span class="pre">when</span> <span class="pre">calling</span> <span class="pre">cuml</span> <span class="pre">backend.</span> <span class="pre">If</span> <span class="pre">included,</span> <span class="pre">Spark</span> <span class="pre">rapids</span> <span class="pre">ml</span> <span class="pre">will</span> <span class="pre">determine</span> <span class="pre">whether</span> <span class="pre">to</span> <span class="pre">create</span> <span class="pre">sparse</span> <span class="pre">arrays</span> <span class="pre">based</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">param</span> <span class="pre">value:</span> <span class="pre">(1)</span> <span class="pre">If</span> <span class="pre">None,</span> <span class="pre">create</span> <span class="pre">dense</span> <span class="pre">arrays</span> <span class="pre">if</span> <span class="pre">the</span> <span class="pre">first</span> <span class="pre">VectorUDT</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">dataframe</span> <span class="pre">is</span> <span class="pre">DenseVector.</span> <span class="pre">Create</span> <span class="pre">sparse</span> <span class="pre">arrays</span> <span class="pre">if</span> <span class="pre">it</span> <span class="pre">is</span> <span class="pre">SparseVector.(2)</span> <span class="pre">If</span> <span class="pre">False,</span> <span class="pre">create</span> <span class="pre">dense</span> <span class="pre">arrays.</span> <span class="pre">This</span> <span class="pre">is</span> <span class="pre">favorable</span> <span class="pre">if</span> <span class="pre">the</span> <span class="pre">majority</span> <span class="pre">of</span> <span class="pre">vectors</span> <span class="pre">are</span> <span class="pre">DenseVector.(3)</span> <span class="pre">If</span> <span class="pre">True,</span> <span class="pre">create</span> <span class="pre">sparse</span> <span class="pre">arrays.</span> <span class="pre">This</span> <span class="pre">is</span> <span class="pre">favorable</span> <span class="pre">if</span> <span class="pre">the</span> <span class="pre">majority</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">VectorUDT</span> <span class="pre">vectors</span> <span class="pre">are</span> <span class="pre">SparseVector.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.LogisticRegression.enable_sparse_data_optim" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.LogisticRegression.featuresCol">
 <span class="sig-name descname"><span class="pre">featuresCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='featuresCol',</span> <span class="pre">doc='features</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.LogisticRegression.featuresCol" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
@@ -1014,7 +1030,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
               
               
                 <footer class="prev-next-footer">
-                  <!-- Previous / next buttons -->
+                  
 <div class="prev-next-area">
     <a class="left-prev"
        href="feature/spark_rapids_ml.feature.PCAModel.html"
@@ -1043,11 +1059,14 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
               
                 <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
+
   <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
     <i class="fa-solid fa-list"></i> On this page
   </div>
-  <nav class="bd-toc-nav page-toc">
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression"><code class="docutils literal notranslate"><span class="pre">LogisticRegression</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.clear"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.clear()</span></code></a></li>
@@ -1092,6 +1111,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.write"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.cuml_params"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.cuml_params</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.elasticNetParam"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.elasticNetParam</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.enable_sparse_data_optim"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.enable_sparse_data_optim</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.featuresCol"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.featuresCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.featuresCols"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.featuresCols</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.fitIntercept"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.fitIntercept</span></code></a></li>
@@ -1122,8 +1142,8 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=365ca57ee442770a23c6"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=365ca57ee442770a23c6"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=bd9e20870c6007c4c509"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=bd9e20870c6007c4c509"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1131,6 +1151,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
     <div class="footer-items__start">
       
         <div class="footer-item">
+
   <p class="copyright">
     
       © Copyright 2023, NVIDIA.
@@ -1140,6 +1161,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 </div>
       
         <div class="footer-item">
+
   <p class="sphinx-version">
     Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     <br/>
@@ -1152,8 +1174,9 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
   
     <div class="footer-items__end">
       
-        <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.3.
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.1.
 </p></div>
       
     </div>
