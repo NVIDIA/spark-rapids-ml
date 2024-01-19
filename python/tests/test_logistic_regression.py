@@ -1667,3 +1667,193 @@ def test_sparse_crossvalidator_logistic_regression(
         data_shape=data_shape,
         convert_to_sparse=True,
     )
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat_standardization(
+    fit_intercept: bool,
+    data_type: np.dtype,
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+) -> None:
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+    tolerance = 1e-3
+
+    X, _, y, y_test = make_classification_dataset(
+        datatype=data_type,
+        nrows=10000,
+        ncols=2,
+        n_classes=2,
+        n_informative=2,
+        n_redundant=0,
+        n_repeated=0,
+    )
+
+    X[:, 0] *= 1000  # Scale up the first features by 1000
+    X[:, 0] += 50  # Shift the first features by 50
+
+    num_rows = len(X)
+    weight = np.ones([num_rows])
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        bdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        bdf = bdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        blor = _LogisticRegression(
+            regParam=0.01, fitIntercept=fit_intercept, standardization=True
+        )
+
+        if isinstance(blor, SparkLogisticRegression):
+            blor.setWeightCol("weight")
+
+        blor_model = blor.fit(bdf)
+
+        blor_model.setFeaturesCol("features")
+        blor_model.setProbabilityCol("newProbability")
+        blor_model.setRawPredictionCol("newRawPrediction")
+
+        if fit_intercept is False:
+            array_equal(
+                blor_model.coefficients.toArray(),
+                [-1.59550205e-04, 1.35555146e00],
+                tolerance,
+            )
+            array_equal(
+                blor_model.coefficientMatrix.toArray(),
+                [-1.59550205e-04, 1.35555146e00],
+                tolerance,
+            )
+            assert blor_model.intercept == 0.0
+            assert blor_model.interceptVector.toArray() == [0.0]
+        else:
+            array_equal(
+                blor_model.coefficients.toArray(),
+                [-1.63432342e-04, 1.35951030e00],
+                tolerance,
+            )
+            array_equal(
+                blor_model.coefficientMatrix.toArray(),
+                [-1.63432342e-04, 1.35951030e00],
+                tolerance,
+            )
+            assert array_equal([blor_model.intercept], [-0.05060137], tolerance)
+            assert array_equal(
+                blor_model.interceptVector.toArray(), [-0.05060137], tolerance
+            )
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("ncols_nclasses", [(2, 2), (4, 3), (4, 4)])
+@pytest.mark.slow
+def test_standardization(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    feature_type: str,
+    data_type: np.dtype,
+    max_record_batch: int,
+    ncols_nclasses: Tuple[int, int],
+    gpu_number: int,
+) -> None:
+    tolerance = 0.001
+    reg_param = reg_factors[0]
+    elasticNet_param = reg_factors[1]
+    n_rows = 10000
+    n_cols = ncols_nclasses[0]
+    n_classes = ncols_nclasses[1]
+
+    X_train, X_test, y_train, y_test = make_classification_dataset(
+        datatype=data_type,
+        nrows=n_rows,
+        ncols=n_cols,
+        n_classes=n_classes,
+        n_informative=n_cols,
+        n_redundant=0,
+        n_repeated=0,
+    )
+    X_train[:, 0] *= 1000  # Scale up the first features by 1000
+    X_train[:, 0] += 50  # Shift the first features by 50
+
+    X_test[:, 0] *= 1000  # Scale up the first features by 1000
+    X_test[:, 0] += 50  # Shift the first features by 50
+
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    with CleanSparkSession(conf) as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+        test_df, _, _ = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_test, y_test
+        )
+
+        assert label_col is not None
+
+        def train_model(EstimatorClass, ModelClass):  # type: ignore
+            estimator = EstimatorClass(
+                standardization=True,
+                fitIntercept=fit_intercept,
+                regParam=reg_param,
+                elasticNetParam=elasticNet_param,
+            )
+            estimator.setFeaturesCol(features_col)
+            estimator.setLabelCol(label_col)
+            model = estimator.fit(train_df)
+
+            preds = model.transform(train_df).collect()
+            y_preds = [row[label_col] for row in preds]
+            from sklearn.metrics import accuracy_score
+
+            train_acc = accuracy_score(y_train, y_preds)
+
+            preds = model.transform(test_df).collect()
+            y_preds = [row[label_col] for row in preds]
+            test_acc = accuracy_score(y_test, y_preds)
+
+            return (estimator, model, train_acc, test_acc)
+
+        mg, mg_model, mg_train_acc, mg_test_acc = train_model(
+            LogisticRegression, LogisticRegressionModel
+        )
+        mc, mc_model, mc_train_acc, mc_test_acc = train_model(
+            SparkLogisticRegression, SparkLogisticRegressionModel
+        )
+
+        assert array_equal(
+            mg_model.coefficientMatrix.toArray(),
+            mc_model.coefficientMatrix.toArray(),
+            tolerance,
+        )
+        assert array_equal(
+            mg_model.interceptVector.toArray(),
+            mc_model.interceptVector.toArray(),
+            tolerance,
+        )
+        assert (
+            mg_train_acc > mc_train_acc or abs(mg_train_acc - mc_train_acc) < tolerance
+        )
+        assert mg_test_acc > mc_test_acc or abs(mg_test_acc - mc_test_acc) < tolerance
