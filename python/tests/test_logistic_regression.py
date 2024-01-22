@@ -37,6 +37,9 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
 
 import warnings
 
+import scipy
+from scipy.sparse import csr_matrix
+
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
 from spark_rapids_ml.core import _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
@@ -1371,6 +1374,8 @@ def compare_model(
     cpu_model: SparkLogisticRegressionModel,
     df_test: DataFrame,
     unit_tol: float = 1e-4,
+    total_tol: float = 0.0,
+    accuracy_and_probability_only: bool = False,
 ) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
     gpu_res = gpu_model.transform(df_test).collect()
 
@@ -1384,17 +1389,20 @@ def compare_model(
 
     gpu_acc = accuracy_score(ytest_true, gpu_pred)
     cpu_acc = accuracy_score(ytest_true, cpu_pred)
-    assert gpu_acc == cpu_acc or abs(gpu_acc - cpu_acc) < 1e-3
-
-    # compare rawPrediction column
-    gpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in gpu_res]
-    cpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in cpu_res]
-    assert array_equal(gpu_rawpred, cpu_rawpred)
+    assert gpu_acc >= cpu_acc or abs(gpu_acc - cpu_acc) < 1e-3
 
     # compare probability column
     gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
     cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
-    assert array_equal(gpu_prob, cpu_prob)
+    assert array_equal(gpu_prob, cpu_prob, unit_tol, total_tol)
+
+    if accuracy_and_probability_only:
+        return (gpu_model, cpu_model)
+
+    # compare rawPrediction column
+    gpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in gpu_res]
+    cpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in cpu_res]
+    assert array_equal(gpu_rawpred, cpu_rawpred, unit_tol, total_tol)
 
     # compare coefficients
     assert array_equal(
@@ -1521,9 +1529,11 @@ def test_compat_sparse_multinomial(
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("standardization", [True, False])
 @pytest.mark.slow
 def test_sparse_nlp20news(
     fit_intercept: bool,
+    standardization: bool,
     caplog: LogCaptureFixture,
 ) -> None:
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
@@ -1577,7 +1587,7 @@ def test_sparse_nlp20news(
             verbose=6,
             regParam=reg_param,
             fitIntercept=fit_intercept,
-            standardization=False,
+            standardization=standardization,
             featuresCol="features",
             labelCol="label",
         )
@@ -1585,7 +1595,7 @@ def test_sparse_nlp20news(
         cpu_lr = SparkLogisticRegression(
             regParam=reg_param,
             fitIntercept=fit_intercept,
-            standardization=False,
+            standardization=standardization,
             featuresCol="features",
             labelCol="label",
         )
@@ -1600,6 +1610,16 @@ def test_sparse_nlp20news(
         )
 
         assert "CUDA managed memory enabled." in caplog.text
+
+        if standardization is True:
+            compare_model(
+                gpu_model,
+                cpu_model,
+                df_train,
+                unit_tol=tolerance,
+                total_tol=tolerance,
+                accuracy_and_probability_only=True,
+            )
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -1857,3 +1877,96 @@ def test_standardization(
             mg_train_acc > mc_train_acc or abs(mg_train_acc - mc_train_acc) < tolerance
         )
         assert mg_test_acc > mc_test_acc or abs(mg_test_acc - mc_test_acc) < tolerance
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+def test_standardization_sparse_example(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    caplog: LogCaptureFixture,
+) -> None:
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = (
+            "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+        )
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
+    tolerance = 0.001
+    # Compare accuracy and probability only when regularizaiton is disabled.
+    # It is observed that no regularization leads to large absolute values of coefficients, and
+    # therefore large difference of GPU and CPU in raw Predictions (e.g. 23.1068 v.s. 27.6741)
+    # and in coefficients (e.g. -23.57752037 v.s. -28.48549335).
+    accuracy_and_probability_only = True if reg_factors[0] == 0.0 else False
+
+    datatype = np.float32
+
+    est_params: Dict[str, Any] = {
+        "standardization": True,
+        "regParam": reg_factors[0],
+        "elasticNetParam": reg_factors[1],
+        "fitIntercept": fit_intercept,
+        "featuresCol": "features",
+        "labelCol": "label",
+    }
+
+    def prepare_csr_matrix_and_y() -> Tuple[csr_matrix, List[float]]:
+        X_origin = np.array(
+            [
+                [-1.1258, 0.0000, 0.0000, -0.4339, 0.0000],
+                [-1.5551, -0.3414, 0.0000, 0.0000, 0.0000],
+                [0.0000, 0.2660, 0.0000, 0.0000, 0.9463],
+                [-0.8437, 0.0000, 1.2590, 0.0000, 0.0000],
+            ],
+            datatype,
+        )
+
+        X_origin = np.ascontiguousarray(X_origin.T)
+
+        X = csr_matrix(X_origin)
+        assert X.nnz == 8 and X.shape == (5, 4)
+        y = [0.0, 1.0, 2.0, 0.0, 1.0]
+        return X, y
+
+    X, y = prepare_csr_matrix_and_y()
+
+    conf = {
+        "spark.rapids.ml.uvm.enabled": True
+    }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
+    with CleanSparkSession(conf) as spark:
+
+        def sparse_to_df(X: csr_matrix, y: List[float]) -> DataFrame:
+            assert X.shape[0] == len(y)
+            dimension = X.shape[1]
+            data = [
+                Row(
+                    features=SparseVector(dimension, X[i].indices, X[i].data),
+                    label=y[i],
+                )
+                for i in range(len(y))
+            ]
+            df = spark.createDataFrame(data)
+
+            return df
+
+        df = sparse_to_df(X, y)
+
+        gpu_lr = LogisticRegression(**est_params)
+        cpu_lr = SparkLogisticRegression(**est_params)
+
+        gpu_model = gpu_lr.fit(df)
+        cpu_model = cpu_lr.fit(df)
+
+        compare_model(
+            gpu_model,
+            cpu_model,
+            df,
+            tolerance,
+            accuracy_and_probability_only=accuracy_and_probability_only,
+        )
