@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'spark-rapids-ml'
-copyright = '2023, NVIDIA'
+copyright = '2024, NVIDIA'
 author = 'NVIDIA'
 release = '24.02.0'
 
