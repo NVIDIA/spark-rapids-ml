@@ -615,7 +615,11 @@ class RandomForestClassificationModel(
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
         _construct_rf, _, _ = super()._get_cuml_transform_func(dataset)
 
         def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
@@ -926,7 +930,10 @@ class LogisticRegression(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         array_order = self._fit_array_order()
 
         def _logistic_regression_fit(
@@ -1276,7 +1283,11 @@ class LogisticRegressionModel(
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
         coef_ = self.coef_
         intercept_ = self.intercept_
         classes_ = self.classes_
