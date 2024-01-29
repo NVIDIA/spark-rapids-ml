@@ -446,9 +446,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return dataset.repartition(self.num_workers)
 
-    def _pre_process_data(
-        self, dataset: DataFrame
-    ) -> Tuple[
+    def _pre_process_data(self, dataset: DataFrame) -> Tuple[
         List[Column],
         Optional[List[str]],
         int,
@@ -586,7 +584,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         """
         Subclass must implement this function to return a cuml fit function that will be
         sent to executor to run.

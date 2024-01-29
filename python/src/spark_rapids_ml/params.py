@@ -40,7 +40,6 @@ P = TypeVar("P", bound="_CumlParams")
 
 
 class HasEnableSparseDataOptim(Params):
-
     """
     This is a Params based class inherited from XGBOOST: https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/params.py.
     It holds the variable to store the boolean config for enabling sparse data optimization.
