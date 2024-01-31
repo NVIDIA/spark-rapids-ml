@@ -81,6 +81,24 @@ class KMeansClass(_CumlClass):
 
         return param_map
 
+    @classmethod
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
+        def tol_value_mapper(x: float) -> float:
+            if x == 0.0:
+                logger = get_logger(cls)
+                logger.warn(
+                    "tol=0 is not supported in cuml yet. "
+                    + "It will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny."
+                )
+
+                return np.finfo("float32").tiny.item()
+            else:
+                return x
+
+        return {"tol": lambda x: tol_value_mapper(x)}
+
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
             "n_clusters": 8,

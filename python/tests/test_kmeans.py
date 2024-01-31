@@ -141,7 +141,9 @@ def test_kmeans_params(
     assert not kmeans_float32._float32_inputs
 
 
-def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
+def test_kmeans_basic(
+    gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
+) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
     data = [[1.0, 1.0], [1.0, 2.0], [3.0, 2.0], [4.0, 3.0]]
@@ -157,6 +159,15 @@ def test_kmeans_basic(gpu_number: int, tmp_path: str) -> None:
             .setFeaturesCol("features")
             .setSeed(0)
         )
+
+        kmeans.setTol(0.0)
+
+        warn_msg = (
+            "tol=0 is not supported in cuml yet. "
+            + "It will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny."
+        )
+
+        assert warn_msg in caplog.text
 
         def assert_kmeans_model(model: KMeansModel) -> None:
             assert len(model.cluster_centers_) == 2
