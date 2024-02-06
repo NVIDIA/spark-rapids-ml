@@ -791,6 +791,21 @@ class _LogisticRegressionCumlParams(
         """
         return self._set(rawPredictionCol=value)
 
+    def setStandardization(
+        self: "_LogisticRegressionCumlParams", value: bool
+    ) -> "_LogisticRegressionCumlParams":
+        """
+        Sets the value of :py:attr:`standardization`.
+        """
+        self._set_params(standardization=value)
+        if value is True and self.getOrDefault("enable_sparse_data_optim") is not False:
+            get_logger(self.__class__).warning(
+                ("when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training. "
+                "enable_sparse_data_optim is set to False")
+            )
+            self._set_params(enable_sparse_data_optim=False)
+        return self
+
 
 class LogisticRegression(
     LogisticRegressionClass,
@@ -850,7 +865,9 @@ class LogisticRegression(
     fitIntercept:
         Whether to fit an intercept term.
     standardization:
-        Whether to standardize the training data.
+        Whether to standardize the training data. If true, spark rapids ml sets enable_sparse_data_optim=False 
+        to densify sparse vectors into dense vectors for fitting. Currently there is no support for sparse vectors 
+        standardization in cuml yet.
     num_workers:
         Number of cuML workers, where each cuML worker corresponds to one Spark task
         running on one GPU. If not set, spark-rapids-ml tries to infer the number of
@@ -923,9 +940,11 @@ class LogisticRegression(
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
             )
             self._input_kwargs.pop("float32_inputs")
+
         super().__init__()
         self._set_cuml_reg_params()
         self._set_params(**self._input_kwargs)
+        self.setStandardization(self.getStandardization())
 
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
@@ -939,6 +958,9 @@ class LogisticRegression(
         Dict[str, Any],
     ]:
         array_order = self._fit_array_order()
+
+        if self.getStandardization() == True:
+            assert self.getOrDefault("enable_sparse_data_optim") is False
 
         def _logistic_regression_fit(
             dfs: FitInputType,

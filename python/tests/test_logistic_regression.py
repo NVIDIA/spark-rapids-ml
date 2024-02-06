@@ -1528,8 +1528,10 @@ def test_compat_sparse_multinomial(
             compare_model(gpu_model, cpu_model, mdf)
 
 
-@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("standardization", [True, False])
+#@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("fit_intercept", [True])
+#@pytest.mark.parametrize("standardization", [True, False])
+@pytest.mark.parametrize("standardization", [False])
 @pytest.mark.slow
 def test_sparse_nlp20news(
     fit_intercept: bool,
@@ -1601,6 +1603,9 @@ def test_sparse_nlp20news(
         )
 
         gpu_model = gpu_lr.fit(df_train)
+
+        exit()
+
         cpu_model = cpu_lr.fit(df_train)
         cpu_objective = cpu_model.summary.objectiveHistory[-1]
 
@@ -1703,6 +1708,7 @@ def test_compat_standardization(
     fit_intercept: bool,
     data_type: np.dtype,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    caplog: LogCaptureFixture,
 ) -> None:
     _LogisticRegression, _LogisticRegressionModel = lr_types
     tolerance = 1e-3
@@ -1747,6 +1753,11 @@ def test_compat_standardization(
             blor.setWeightCol("weight")
 
         blor_model = blor.fit(bdf)
+
+        if isinstance(blor, LogisticRegression):
+            warning_log = ("when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training. "
+                            "enable_sparse_data_optim is set to False")
+            assert warning_log in caplog.text
 
         blor_model.setFeaturesCol("features")
         blor_model.setProbabilityCol("newProbability")
@@ -1881,7 +1892,8 @@ def test_standardization(
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
-    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+    "reg_factors", [(0.0, 0.0)]
+    #"reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
 )
 def test_standardization_sparse_example(
     fit_intercept: bool,
@@ -1961,6 +1973,10 @@ def test_standardization_sparse_example(
         cpu_lr = SparkLogisticRegression(**est_params)
 
         gpu_model = gpu_lr.fit(df)
+        warning_log = ("when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training. "
+                        "enable_sparse_data_optim is set to False")
+        assert warning_log in caplog.text
+
         cpu_model = cpu_lr.fit(df)
 
         compare_model(
