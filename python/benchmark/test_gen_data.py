@@ -118,7 +118,8 @@ def test_make_low_rank_matrix(dtype: str, use_gpu: str) -> None:
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("low_rank", [True, False])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-def test_make_regression(dtype: str, low_rank: bool, use_gpu: str) -> None:
+@pytest.mark.parametrize("logistic_regression", ["True", "False"])
+def test_make_regression(dtype: str, low_rank: bool, use_gpu: str, logistic_regression: str) -> None:
     input_args = [
         "--num_rows",
         "100",
@@ -140,6 +141,8 @@ def test_make_regression(dtype: str, low_rank: bool, use_gpu: str) -> None:
         "0",
         "--use_gpu",
         use_gpu,
+        "--logistic_regression",
+        logistic_regression
     ]
     if low_rank:
         input_args.extend(("--effective_rank", "5"))
@@ -158,9 +161,22 @@ def test_make_regression(dtype: str, low_rank: bool, use_gpu: str) -> None:
         assert y.shape == (100,), "y shape mismatch"
         assert c.shape == (10,), "coef shape mismatch"
         assert sum(c != 0.0) == 3, "Unexpected number of informative features"
-
-        # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
-        assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+        
+        if logistic_regression == "False":
+            # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
+            assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+        else:
+            # Test that X is consist of only 0 or 1
+            count_one = 0
+            for n in y:
+                assert n == 0 or n == 1
+                if n == 1:
+                    count_one += 1
+            
+            # Test that the random logstic regression model should create around half of True label
+            size =  y.shape[0]
+            assert count_one >= size * 0.4 and count_one <= size * 0.6
+            
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
