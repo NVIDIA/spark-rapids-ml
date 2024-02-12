@@ -791,21 +791,6 @@ class _LogisticRegressionCumlParams(
         """
         return self._set(rawPredictionCol=value)
 
-    def setStandardization(
-        self: "_LogisticRegressionCumlParams", value: bool
-    ) -> "_LogisticRegressionCumlParams":
-        """
-        Sets the value of :py:attr:`standardization`.
-        """
-        self._set_params(standardization=value)
-        if value is True and self.getOrDefault("enable_sparse_data_optim") is not False:
-            get_logger(self.__class__).warning(
-                ("when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training. "
-                "enable_sparse_data_optim is set to False")
-            )
-            self._set_params(enable_sparse_data_optim=False)
-        return self
-
 
 class LogisticRegression(
     LogisticRegressionClass,
@@ -944,7 +929,6 @@ class LogisticRegression(
         super().__init__()
         self._set_cuml_reg_params()
         self._set_params(**self._input_kwargs)
-        self.setStandardization(self.getStandardization())
 
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
@@ -959,8 +943,11 @@ class LogisticRegression(
     ]:
         array_order = self._fit_array_order()
 
-        if self.getStandardization() == True:
-            assert self.getOrDefault("enable_sparse_data_optim") is False
+        logger = get_logger(self.__class__)
+        if self.getStandardization() is True and self.getOrDefault("enable_sparse_data_optim") is not False:
+                logger.warning(
+                    ("when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training.")
+                )
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -970,6 +957,32 @@ class LogisticRegression(
 
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
+
+            # padding temporarily to bypass a cuda kernel error 
+            dimension_origin = X_list[0].shape[1] 
+            enable_padding = dimension_origin % 32 != 0
+            #enable_padding = False
+            if enable_padding:
+                pad_num_cols = 32 - X_list[0].shape[1] % 32
+                def convert_X(X):
+                    print(f"debug before convert X: {X}")
+                    new_shape = (X.shape[0], X.shape[1] + pad_num_cols)
+                    X._shape = new_shape
+                    print(f"debug after convert X: {X}")
+                    return X
+                #def convert_X(X):
+                #    assert isinstance(X, cupyx.scipy.sparse.csr_matrix)
+                #    num_rows = X.shape[0]
+                #    pad_cols = cupyx.scipy.sparse.csr_matrix((num_rows, pad_num_cols), dtype=X.dtype)
+                #    X = cupyx.scipy.sparse.hstack([X, pad_cols])
+                #    assert X.shape[1] % 32 == 0
+                #    return X
+                if pad_num_cols > 0:
+                    X_list = [convert_X(X) for X in X_list]
+
+            for i in range(len(X_list)): 
+                print(f"debug i: {i}, X[i].shape: {X_list[i].shape}")
+
             if isinstance(X_list[0], pd.DataFrame):
                 concated = pd.concat(X_list)
                 concated_y = pd.concat(y_list)
@@ -977,6 +990,13 @@ class LogisticRegression(
                 # features are either cp, np, scipy csr or cupyx csr arrays here
                 concated = _concat_and_free(X_list, order=array_order)
                 concated_y = _concat_and_free(y_list, order=array_order)
+
+            is_sparse = isinstance(concated, scipy.sparse.csr_matrix) or isinstance(concated, cupyx.scipy.sparse.csr_matrix)
+            if self.getStandardization() is True and is_sparse is True: 
+                print(f"debug concated.shape: {concated.shape}")
+                concated = concated.toarray()
+
+            print(f"debug concated: {concated}")
 
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]], params[param_alias.num_cols]
@@ -1020,11 +1040,18 @@ class LogisticRegression(
                     intercept_mean = sum(intercept_array) / len(intercept_array)
                     intercept_array -= intercept_mean
 
+                n_cols = logistic_regression.n_cols if enable_padding is False else dimension_origin
+                
+                print(f"debug n_cols: {n_cols}")
+                print(f"debug logistic_regression.coef_: {logistic_regression.coef_}")
+                print(f"debug logistic_regression.coef_[:, :n_cols]: {logistic_regression.coef_[:, :n_cols]}")
+                print(f"debug intercept_array: {intercept_array}")
+                print(f"debug intercept_array[:n_cols]: {intercept_array[:n_cols]}")
                 model = {
-                    "coef_": logistic_regression.coef_.tolist(),
-                    "intercept_": intercept_array.tolist(),
+                    "coef_": logistic_regression.coef_[:, :n_cols].tolist(),
+                    "intercept_": intercept_array[:n_cols].tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
-                    "n_cols": logistic_regression.n_cols,
+                    "n_cols": n_cols,
                     "dtype": logistic_regression.dtype.name,
                     "num_iters": logistic_regression.solver_model.num_iters,
                     "objective": logistic_regression.solver_model.objective,
@@ -1051,7 +1078,7 @@ class LogisticRegression(
                         )
 
                     if init_parameters["fit_intercept"] is True:
-                        model["coef_"] = [[0.0] * logistic_regression.n_cols]
+                        model["coef_"] = [[0.0] * n_cols]
                         model["intercept_"] = [
                             float("inf") if class_val == 1.0 else float("-inf")
                         ]
