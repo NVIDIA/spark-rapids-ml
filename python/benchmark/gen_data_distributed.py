@@ -178,6 +178,7 @@ class LowRankMatrixDataGen(DataGenBase):
         # must replace the None to the correct type
         params["random_state"] = int
         params["use_gpu"] = bool
+        params["logistic_regression"] = bool
         return params
 
     def gen_dataframe(self, spark: SparkSession) -> Tuple[DataFrame, List[str]]:
@@ -304,6 +305,7 @@ class RegressionDataGen(DataGenBaseMeta):
         params["effective_rank"] = int
         params["random_state"] = int
         params["use_gpu"] = bool
+        params["logistic_regression"] = bool
         return params
 
     def gen_dataframe_and_meta(
@@ -337,6 +339,7 @@ class RegressionDataGen(DataGenBaseMeta):
         n_informative = params.get("n_informative", 10)
         n_targets = params.get("n_targets", 1)
         use_gpu = params.get("use_gpu", False)
+        logistic_regression = params.get("logistic_regression", False)
 
         # Description (from sklearn):
         #
@@ -447,6 +450,15 @@ class RegressionDataGen(DataGenBaseMeta):
                     y = np.dot(X_p, ground_truth) + bias
                 if noise > 0.0:
                     y += generator_p.normal(scale=noise, size=y.shape)
+
+                # Logistric Regression sigmoid and sample
+                if logistic_regression:
+                    if use_cupy:
+                        prob = 1 / (1 + cp.exp(-y))
+                        y = cp.random.binomial(1, prob)
+                    else:
+                        prob = 1 / (1 + np.exp(-y))
+                        y = np.random.binomial(1, prob)
 
                 n_partition_rows = X_p.shape[0]
                 if shuffle:

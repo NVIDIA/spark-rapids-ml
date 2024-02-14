@@ -134,11 +134,11 @@ class DataGenBase(DataGen):
         for name, value in self.supported_extra_params.items():
             if value is None:
                 raise RuntimeError("Must convert None value to the correct type")
+            elif type(value) is bool or value is bool:
+                self._parser.add_argument("--" + name, type=to_bool)
             elif type(value) is type:
                 # value is already type
                 self._parser.add_argument("--" + name, type=value)
-            elif type(value) is bool:
-                self._parser.add_argument("--" + name, type=to_bool)
             else:
                 # get the type from the value
                 self._parser.add_argument("--" + name, type=type(value))
