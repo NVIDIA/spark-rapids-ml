@@ -22,9 +22,12 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import pyspark
+import scipy as sp
 from gen_data import DataGenBase, DefaultDataGen, main
+from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.types import FloatType, StringType, StructField, StructType
 from sklearn.datasets import (
     make_blobs,
     make_classification,
@@ -502,6 +505,228 @@ class RegressionDataGen(DataGenBaseMeta):
         )
 
 
+class SparseRegressionDataGen(DataGenBaseMeta):
+    """Generate sprase regression dataset using a distributed version of sklearn.datasets.regression,
+    including features and labels.
+    """
+
+    def __init__(self, argv: List[Any]) -> None:
+        super().__init__()
+        self._parse_arguments(argv)
+
+    def _supported_extra_params(self) -> Dict[str, Any]:
+        params = inspect_default_params_from_func(
+            make_regression, ["n_samples", "n_features", "coef"]
+        )
+        # must replace the None to the correct type
+        params["redundant_cols"] = int
+        params["random_state"] = int
+        params["density"] = float
+        params["use_gpu"] = bool
+        params["logistic_regression"] = bool
+        return params
+
+    def gen_dataframe_and_meta(
+        self, spark: SparkSession
+    ) -> Tuple[DataFrame, List[str], np.ndarray]:
+        dtype = self.dtype
+        params = self.extra_params
+
+        if "random_state" not in params:
+            # for reproducible dataset.
+            params["random_state"] = 1
+
+        print(f"Passing {params} to make_sparse_regression")
+
+        rows = self.num_rows
+        cols = self.num_cols
+        assert self.args is not None
+        num_partitions = self.args.output_num_files
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if num_partitions is None:
+            num_partitions = spark.sparkContext.defaultParallelism
+
+        # Retrieve input params or set to defaults.
+        seed = params["random_state"]
+        generator = np.random.RandomState(seed)
+        bias = params.get("bias", 0.0)
+        noise = params.get("noise", 0.0)
+        shuffle = params.get("shuffle", True)
+        n_informative = params.get("n_informative", 10)
+        n_targets = params.get("n_targets", 1)
+        use_gpu = params.get("use_gpu", False)
+        logistic_regression = params.get("logistic_regression", False)
+        density = params.get("density", 0.1)
+        redundant_cols = params.get("redundant_cols", 0)
+        cols += redundant_cols
+
+        # Generate ground truth upfront.
+        ground_truth = np.zeros((cols, n_targets))
+        ground_truth[:n_informative, :] = 100 * generator.uniform(
+            size=(n_informative, n_targets)
+        )
+
+        if shuffle:
+            # Shuffle feature indices upfront.
+            col_indices = np.arange(cols)
+            generator.shuffle(col_indices)
+            ground_truth = ground_truth[col_indices]
+
+        # Create different partition seeds for sample generation.
+        random.seed(params["random_state"])
+        seed_maxval = 100 * num_partitions
+        partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
+
+        # UDF for distributed generation of X and y.
+        def make_sparse_regression_udf(
+            iter: Iterable[pd.DataFrame],
+        ) -> Iterable[pd.DataFrame]:
+            use_cupy = use_gpu
+            if use_cupy:
+                try:
+                    import cupy as cp
+                except ImportError:
+                    use_cupy = False
+                    logging.warning("cupy import failed; falling back to numpy.")
+
+            partition_index = pyspark.TaskContext().partitionId()
+
+            # Get #rows in charge
+            num_rows_per_partition = 0
+            start = -1
+
+            dfs = []
+            for pdf in iter:
+                num_rows_per_partition += pdf.shape[0]
+                dfs.append(pdf)
+                if start == -1:
+                    start = pdf["id"][0]
+
+            # Generate random sparse matrix
+            sparse_matrix = sp.sparse.random(
+                num_rows_per_partition,
+                self.num_cols,
+                density=density,
+                random_state=generator,
+                format="csr",
+                dtype=dtype,
+            )
+
+            # Add in redundant cols of linear combinations of generated random sparse cols
+            if redundant_cols > 0:
+                if use_cupy:
+                    redundant_mul = np.random.rand(self.num_cols, redundant_cols)
+                else:
+                    redundant_mul = np.random.rand(self.num_cols, redundant_cols)
+
+                redundants = sparse_matrix.dot(redundant_mul)
+                sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
+
+            # Shuffle the matrix in scipy matrix with support to indexing
+            if shuffle:
+                sparse_matrix = sparse_matrix[:, col_indices]
+
+            # Transform the sparse matrix into array of sparse vectors
+            indices = range(num_rows_per_partition)
+
+            X = []
+            for i in indices:
+                row = sparse_matrix.getrow(i)
+
+                dense_indices = row.indices
+                dense_values = row.data
+
+                dense = sorted(zip(dense_indices, dense_values))
+                X.append(
+                    {
+                        "type": 0,
+                        "size": cols,
+                        "indices": [x[0] for x in dense],
+                        "values": [x[1] for x in dense],
+                    }
+                )
+
+            # Support parameters and library adaptation
+            if use_cupy:
+                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                ground_truth_cp = cp.asarray(ground_truth)
+                col_indices_cp = cp.asarray(col_indices)
+            else:
+                generator_p = np.random.RandomState(partition_seeds[partition_index])
+
+            # Label Calculation
+            y = sparse_matrix.dot(ground_truth) + bias
+
+            # Type conversion
+            if use_cupy:
+                y = cp.asarray(y)
+            else:
+                y = np.asarray(y)
+
+            # Random Noise
+            if noise > 0.0:
+                y += generator_p.normal(scale=noise, size=y.shape)
+
+            # Logistric Regression sigmoid and sample
+            if logistic_regression:
+                if use_cupy:
+                    prob = 1 - 1 / (1 + cp.exp(-y))
+                    y = cp.random.binomial(1, prob)
+                else:
+                    prob = 1 - 1 / (1 + np.exp(-y))
+                    y = np.random.binomial(1, prob)
+
+            del sparse_matrix
+
+            if use_cupy:
+                y = cp.squeeze(y).get()
+            else:
+                y = np.squeeze(y)
+
+            for idx in dfs:
+                truncated_idx = idx["id"].to_numpy() - start
+                X_p = [X[i] for i in truncated_idx]
+
+                n_partition_rows = len(X_p)
+                if shuffle:
+                    # Row-wise shuffle (partition)
+                    if use_cupy:
+                        row_indices = cp.random.permutation(n_partition_rows)
+                        X_p = [X_p[i] for i in row_indices.get()]
+                        y = y[row_indices.get()]
+                    else:
+                        X_p, y = util_shuffle(X_p, y, random_state=generator_p)
+
+                data = [(X_p[i], y[i]) for i in range(y.shape[0])]
+
+                del X_p
+                del y
+
+                res = pd.DataFrame(data)
+                yield res
+
+        label_col = "label"
+
+        schema = StructType(
+            [
+                StructField("features", VectorUDT(), nullable=True),
+                StructField(label_col, FloatType(), nullable=True),
+            ]
+        )
+
+        # Initial DataFrame with only row numbers
+        init = spark.range(rows, numPartitions=num_partitions)
+
+        res = init.mapInPandas(make_sparse_regression_udf, schema)
+
+        return (
+            res,
+            self.feature_cols,
+            np.squeeze(ground_truth),
+        )
+
+
 class ClassificationDataGen(DataGenBase):
     """Generate classification dataset using a distributed version of sklearn.datasets.classification,
     including features and labels."""
@@ -729,6 +954,7 @@ if __name__ == "__main__":
         "low_rank_matrix": LowRankMatrixDataGen,
         "regression": RegressionDataGen,
         "classification": ClassificationDataGen,
+        "sparse_regression": SparseRegressionDataGen,
     }
 
     main(registered_data_gens=registered_data_gens, repartition=False)
