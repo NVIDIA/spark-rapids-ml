@@ -963,20 +963,6 @@ class LogisticRegression(
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
 
-            ## padding zero columns to bypass a cuda kernel bug in cuml 24.02
-            #dimension_origin = X_list[0].shape[1]
-            #enable_padding = dimension_origin % 32 != 0
-            #if enable_padding:
-            #    pad_num_cols = 32 - X_list[0].shape[1] % 32
-
-            #    def convert_X(X):
-            #        new_shape = (X.shape[0], X.shape[1] + pad_num_cols)
-            #        X._shape = new_shape
-            #        return X
-
-            #    if pad_num_cols > 0:
-            #        X_list = [convert_X(X) for X in X_list]
-
             if isinstance(X_list[0], pd.DataFrame):
                 concated = pd.concat(X_list)
                 concated_y = pd.concat(y_list)
@@ -989,24 +975,13 @@ class LogisticRegression(
                 concated, cupyx.scipy.sparse.csr_matrix
             )
 
+            # densifying sparse vectors into dense to use standardization
             if self.getStandardization() is True and is_sparse is True:
                 concated = concated.toarray()
 
-            #enable_padding = False
-            #dimension_origin = concated.shape[1]
-            num_pad_cols = 0
-            if self.getStandardization() is True and concated.shape[1] % 32 != 0:
-                num_pad_cols = concated.shape[1] % 32
-                nrows = concated.shape[0]
-                if isinstance(concated, np.ndarray):
-                    zeros = np.zeros((nrows, num_pad_cols), dtype=concated.dtype)
-                    concated = np.concatenate([concated, zeros], axis=1)
-                else:
-                    concated._shape = (nrows, concated.shape[1] + num_pad_cols)
-
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
-                params[param_alias.num_cols] + num_pad_cols,
+                params[param_alias.num_cols],
             )
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
@@ -1047,10 +1022,9 @@ class LogisticRegression(
                     intercept_mean = sum(intercept_array) / len(intercept_array)
                     intercept_array -= intercept_mean
 
-                n_cols = logistic_regression.n_cols - num_pad_cols
-
+                n_cols = logistic_regression.n_cols
                 model = {
-                    "coef_": logistic_regression.coef_[:, :n_cols].tolist(),
+                    "coef_": logistic_regression.coef_.tolist(),
                     "intercept_": intercept_array.tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": n_cols,

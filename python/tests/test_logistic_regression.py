@@ -1560,7 +1560,7 @@ def test_sparse_nlp20news(
     X = twenty_train.data
     y = twenty_train.target.tolist()
 
-    conf = {
+    conf: Dict[str, Any] = {
         # "spark.rapids.ml.uvm.enabled": True # Commenting this out can resolve a cudaMemSet error
     }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
     with CleanSparkSession(conf) as spark:
@@ -1885,11 +1885,9 @@ def test_standardization(
         assert mg_test_acc > mc_test_acc or abs(mg_test_acc - mc_test_acc) < tolerance
 
 
-#@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("fit_intercept", [True])
+@pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
-    "reg_factors", [(0.0, 0.0)]
-    #"reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
 )
 def test_standardization_sparse_example(
     fit_intercept: bool,
