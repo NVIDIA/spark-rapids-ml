@@ -68,9 +68,10 @@ knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
-gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
-#gen_data_script=./benchmark/gen_data_distributed.py
-gen_data_root=/tmp/data
+# gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
+# gen_data_root=/tmp/data
+gen_data_script=${gen_data_script:-./benchmark/gen_data_distributed.py}
+gen_data_root=/tmp/distributed
 
 # if num_rows=1m => output_files=50, scale linearly
 output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
@@ -194,7 +195,7 @@ fi
 # Linear Regression
 # TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
 # https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
-if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
+if ([[ "${MODE}" =~ "linear_regression" ]] && ! [[ "${MODE}" =~ "sparse_linear_regression" ]]) || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
@@ -250,6 +251,70 @@ if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_linear_regression_ridge_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+fi
+
+# Sparse Linear Regression
+# TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
+# https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
+if [[ "${MODE}" =~ "sparse_linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" ]]; then
+        python $gen_data_script sparse_regression \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --noise 10 \
+            --dtype "float64" \
+            --feature_type "vector" \
+            --density "0.1" \
+            --output_dir "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+            $common_confs
+    fi
+
+    echo "$sep algo: linear regression - no regularization $sep"
+    python ./benchmark/benchmark_runner.py linear_regression \
+        --regParam 0.0 \
+        --elasticNetParam 0.0 \
+        --standardization False \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+        --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+        --report_path "report_sparse_linear_regression_noreg_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+    
+    echo "$sep algo: linear regression - elasticnet regularization $sep"
+    python ./benchmark/benchmark_runner.py linear_regression \
+        --regParam 0.00001 \
+        --elasticNetParam 0.5 \
+        --tol 1.0e-30 \
+        --maxIter 10 \
+        --standardization False \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+        --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+        --report_path "report_sparse_linear_regression_elastic_net_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+    
+    echo "$sep algo: linear regression - ridge regularization $sep"
+    python ./benchmark/benchmark_runner.py linear_regression \
+        --regParam 0.00001 \
+        --elasticNetParam 0.0 \
+        --tol 1.0e-30 \
+        --maxIter 10 \
+        --standardization False \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+        --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
+        --report_path "report_sparse_linear_regression_ridge_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
@@ -365,7 +430,7 @@ if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
 fi
 
 # Logistic Regression Classification
-if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
+if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logistic_regression" ]]) || [[ "${MODE}" == "all" ]]; then
     num_classes_list=${num_classes_list:-"2 10"}
 
     for num_classes in ${num_classes_list}; do
@@ -433,6 +498,60 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             $common_confs $spark_rapids_confs \
             ${EXTRA_ARGS}
     done
+fi
+
+# Sparse Logistic Regression Classification
+if [[ "${MODE}" =~ "sparse_logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
+
+    data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_cols}_float64_ncls${num_classes}.parquet
+
+    if [[ ! -d ${data_path} ]]; then
+        python $gen_data_script sparse_regression \
+	    --n_informative $( expr $num_cols / 3 )  \
+	    --num_rows $num_rows \
+	    --num_cols $num_cols \
+	    --output_num_files $output_num_files \
+	    --dtype "float64" \
+	    --feature_type "vector" \
+	    --output_dir ${data_path} \
+	    --density "0.1" \
+	    --logistic_regression "True" \
+	    $common_confs
+    fi
+
+    family="Binomial"
+
+    echo "$sep algo: ${family} logistic regression - l2 regularization $sep"
+    python ./benchmark/benchmark_runner.py logistic_regression \
+        --standardization False \
+        --maxIter 200 \
+        --tol 1e-30 \
+        --regParam 0.00001 \
+        --elasticNetParam 0 \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path ${data_path} \
+        --transform_path ${data_path} \
+        --report_path "report_logistic_regression_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+        
+    echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
+    python ./benchmark/benchmark_runner.py logistic_regression \
+        --standardization False \
+        --maxIter 200 \
+        --tol 1e-30 \
+        --regParam 0.00001 \
+        --elasticNetParam 0.2 \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path ${data_path} \
+        --transform_path ${data_path} \
+        --report_path "report_logistic_regression_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
 fi
 
 # UMAP

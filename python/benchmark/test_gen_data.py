@@ -232,10 +232,13 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str) -
         if redundant_cols == "0":
             assert count > total * 0.24 and count < total * 0.26
 
+
 @pytest.mark.parametrize("dtype", ["float64"])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize("redundant_cols", ["0", "5"])
-def test_make_sparse_logistic_regression(dtype: str, use_gpu: str, redundant_cols: str) -> None:
+def test_make_sparse_logistic_regression(
+    dtype: str, use_gpu: str, redundant_cols: str
+) -> None:
     input_args = [
         "--num_rows",
         "100",
@@ -299,10 +302,11 @@ def test_make_sparse_logistic_regression(dtype: str, use_gpu: str, redundant_col
         # If there is no random shuffled redundant cols, we can check the total density
         if redundant_cols == "0":
             assert count > total * 0.24 and count < total * 0.26
-            
+
         # Test that X is consist of only 0 or 1
         for n in y:
             assert n == 0 or n == 1
+
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("low_rank", [True, False])
