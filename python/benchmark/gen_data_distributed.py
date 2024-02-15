@@ -540,6 +540,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
+        orig_cols = self.num_cols
         assert self.args is not None
         num_partitions = self.args.output_num_files
 
@@ -606,21 +607,26 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             # Generate random sparse matrix
             sparse_matrix = sp.sparse.random(
                 num_rows_per_partition,
-                self.num_cols,
+                orig_cols,
                 density=density,
                 random_state=generator,
                 format="csr",
                 dtype=dtype,
             )
+            
 
             # Add in redundant cols of linear combinations of generated random sparse cols
             if redundant_cols > 0:
+                # Separate informative and non-informative columns
+                informative_shuffle_indices = np.arange(orig_cols)
+                informative = sparse_matrix[:, :n_informative]
+            
                 if use_cupy:
-                    redundant_mul = np.random.rand(self.num_cols, redundant_cols)
+                    redundant_mul = np.random.rand(n_informative, redundant_cols)
                 else:
-                    redundant_mul = np.random.rand(self.num_cols, redundant_cols)
-
-                redundants = sparse_matrix.dot(redundant_mul)
+                    redundant_mul = np.random.rand(n_informative, redundant_cols)
+                
+                redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
 
             # Shuffle the matrix in scipy matrix with support to indexing
