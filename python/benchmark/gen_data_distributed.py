@@ -27,7 +27,14 @@ from gen_data import DataGenBase, DefaultDataGen, main
 from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import FloatType, StringType, StructField, StructType, ArrayType, IntegerType
+from pyspark.sql.types import (
+    ArrayType,
+    FloatType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 from sklearn.datasets import (
     make_blobs,
     make_classification,
@@ -704,7 +711,10 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     else:
                         X_p, y = util_shuffle(X_p, y, random_state=generator_p)
 
-                data = [(X_p[i]["indices"], X_p[i]["values"], y[i]) for i in range(y.shape[0])]
+                data = [
+                    (X_p[i]["indices"], X_p[i]["values"], y[i])
+                    for i in range(y.shape[0])
+                ]
 
                 del X_p
                 del y
@@ -735,7 +745,9 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         res = init.mapInPandas(make_sparse_regression_udf, schema)
 
         # Map the indices and values back to a sparse vector
-        vec_rdd = res.rdd.map(lambda row: (Vectors.sparse(cols, row[0], row[1]), row[2]))
+        vec_rdd = res.rdd.map(
+            lambda row: (Vectors.sparse(cols, row[0], row[1]), row[2])
+        )
         vec_res = vec_rdd.toDF(vec_schema)
 
         return (
