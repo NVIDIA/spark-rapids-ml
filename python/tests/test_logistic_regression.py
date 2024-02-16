@@ -304,12 +304,10 @@ def test_classifier(
     reg_param: float = 0.0,
     elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
-    standardization: bool = False,
     convert_to_sparse: bool = False,
 ) -> LogisticRegression:
-    assert (
-        standardization is False
-    ), "standardization=True is not supported due to testing with single-GPU LogisticRegression"
+
+    standardization: bool = False
 
     if convert_to_sparse is True:
         assert feature_type == "vector"
@@ -429,6 +427,7 @@ LogisticRegressionModelType = TypeVar(
 
 @pytest.mark.compat
 @pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("standardization", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
@@ -438,6 +437,7 @@ LogisticRegressionModelType = TypeVar(
 )
 def test_compat(
     fit_intercept: bool,
+    standardization: bool,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
     tmp_path: str,
 ) -> None:
@@ -483,7 +483,7 @@ def test_compat(
 
         assert _LogisticRegression().getRegParam() == 0.0
         blor = _LogisticRegression(
-            regParam=0.1, fitIntercept=fit_intercept, standardization=False
+            regParam=0.1, fitIntercept=fit_intercept, standardization=standardization
         )
 
         assert blor.getRegParam() == 0.1
@@ -513,15 +513,19 @@ def test_compat(
         assert blor_model.getProbabilityCol() == "newProbability"
 
         assert isinstance(blor_model.coefficients, DenseVector)
-        assert array_equal(
-            blor_model.coefficients.toArray(), [-2.42377087, 2.42377087], tolerance
+
+        coef_gnd = (
+            [-2.48197058, 2.48197058]
+            if standardization is True
+            else [-2.42377087, 2.42377087]
         )
+        assert array_equal(blor_model.coefficients.toArray(), coef_gnd, tolerance)
         assert blor_model.intercept == pytest.approx(0, abs=1e-6)
 
         assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
         assert array_equal(
             blor_model.coefficientMatrix.toArray(),
-            np.array([[-2.42377087, 2.42377087]]),
+            np.array([coef_gnd]),
             tolerance,
         )
         assert isinstance(blor_model.interceptVector, DenseVector)
@@ -546,15 +550,21 @@ def test_compat(
         output = output_df.head()
         assert output.prediction == 1.0
 
+        prob_gnd = (
+            [0.07713181, 0.92286819] if standardization is True else [0.0814, 0.9186]
+        )
         assert array_equal(
             output.newProbability.toArray(),
-            Vectors.dense([0.0814, 0.9186]).toArray(),
+            Vectors.dense(prob_gnd).toArray(),
             tolerance,
         )
 
-        array_equal(
+        rawPredict_gnd = (
+            [-2.48197058, 2.48197058] if standardization is True else [-2.4238, 2.4238]
+        )
+        assert array_equal(
             output.newRawPrediction.toArray(),
-            Vectors.dense([-2.4238, 2.4238]).toArray(),
+            Vectors.dense(rawPredict_gnd).toArray(),
             tolerance,
         )
 

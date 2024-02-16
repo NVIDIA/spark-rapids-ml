@@ -1019,7 +1019,13 @@ class LogisticRegression(
                     init_parameters["fit_intercept"] is True
                     and len(intercept_array) > 1
                 ):
-                    intercept_mean = sum(intercept_array) / len(intercept_array)
+                    import cupy as cp
+
+                    intercept_mean = (
+                        np.mean(intercept_array)
+                        if isinstance(intercept_array, np.ndarray)
+                        else cp.mean(intercept_array)
+                    )
                     intercept_array -= intercept_mean
 
                 n_cols = logistic_regression.n_cols
