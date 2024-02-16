@@ -24,6 +24,7 @@ import pandas as pd
 import pyspark
 import scipy as sp
 from gen_data import DataGenBase, DefaultDataGen, main
+from packaging import version
 from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.mllib.random import RandomRDDs
 from pyspark.sql import DataFrame, SparkSession
@@ -711,15 +712,27 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     else:
                         X_p, y = util_shuffle(X_p, y, random_state=generator_p)
 
-                data = [
-                    (X_p[i]["indices"], X_p[i]["values"], y[i])
-                    for i in range(y.shape[0])
-                ]
+                # If pyspark version does not support Pandas-Spark Vector transformation
+                #   return arrays of indices and values to reconstruct the sparse vectors
+                # else return the vector dictionary and let spark do the transformation
+                if version.parse(pyspark.__version__) < version.parse("3.5.0"):
+                    data = [
+                        (X_p[i]["indices"], X_p[i]["values"], y[i])
+                        for i in range(y.shape[0])
+                    ]
 
-                del X_p
-                del y
+                    del X_p
+                    del y
 
-                res = pd.DataFrame(data)
+                    res = pd.DataFrame(data)
+                else:
+                    vec_data = [(X_p[i], y[i]) for i in range(y.shape[0])]
+
+                    del X_p
+                    del y
+
+                    res = pd.DataFrame(vec_data)
+
                 yield res
 
         label_col = "label"
@@ -742,13 +755,18 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         # Initial DataFrame with only row numbers
         init = spark.range(rows, numPartitions=num_partitions)
 
-        res = init.mapInPandas(make_sparse_regression_udf, schema)
+        # If pyspark version does not support Pandas-Spark Vector transformation
+        # return arrays of indices and values to reconstruct the sparse vectors
+        if version.parse(pyspark.__version__) < version.parse("3.5.0"):
+            res = init.mapInPandas(make_sparse_regression_udf, schema)
 
-        # Map the indices and values back to a sparse vector
-        vec_rdd = res.rdd.map(
-            lambda row: (Vectors.sparse(cols, row[0], row[1]), row[2])
-        )
-        vec_res = vec_rdd.toDF(vec_schema)
+            # Map the indices and values back to a sparse vector
+            vec_rdd = res.rdd.map(
+                lambda row: (Vectors.sparse(cols, row[0], row[1]), row[2])
+            )
+            vec_res = vec_rdd.toDF(vec_schema)
+        else:
+            vec_res = init.mapInPandas(make_sparse_regression_udf, vec_schema)
 
         return (
             vec_res,
