@@ -568,7 +568,15 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         logistic_regression = params.get("logistic_regression", False)
         density = params.get("density", 0.1)
         redundant_cols = params.get("redundant_cols", 0)
-        cols += redundant_cols
+
+        # Check for valid redundant columns
+        if redundant_cols > 0 and redundant_cols / (cols + redundant_cols) > density:
+            logging.warning(
+                "Redundant columns would break density property, setting to zero instead"
+            )
+            redundant_cols = 0
+        else:
+            cols += redundant_cols
 
         # Generate ground truth upfront.
         ground_truth = np.zeros((cols, n_targets))
@@ -612,19 +620,19 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 if start == -1:
                     start = pdf["id"][0]
 
-            # Generate random sparse matrix
-            sparse_matrix = sp.sparse.random(
-                num_rows_per_partition,
-                orig_cols,
-                density=density,
-                random_state=generator,
-                format="csr",
-                dtype=dtype,
-                data_rvs=np.random.randn,
-            )
-
             # Add in redundant cols of linear combinations of generated random sparse cols
             if redundant_cols > 0:
+                # Generate random sparse matrix
+                sparse_matrix = sp.sparse.random(
+                    num_rows_per_partition,
+                    orig_cols,
+                    density=(density - redundant_cols / cols),
+                    random_state=generator,
+                    format="csr",
+                    dtype=dtype,
+                    data_rvs=np.random.randn,
+                )
+
                 # Separate informative and non-informative columns
                 informative_shuffle_indices = np.arange(orig_cols)
                 informative = sparse_matrix[:, :n_informative]
@@ -636,6 +644,17 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
                 redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
+            else:
+                # Generate random sparse matrix without redundant columns directly
+                sparse_matrix = sp.sparse.random(
+                    num_rows_per_partition,
+                    orig_cols,
+                    density=density,
+                    random_state=generator,
+                    format="csr",
+                    dtype=dtype,
+                    data_rvs=np.random.randn,
+                )
 
             # Shuffle the matrix in scipy matrix with support to indexing
             if shuffle:

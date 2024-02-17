@@ -166,13 +166,13 @@ def test_make_regression(dtype: str, low_rank: bool, use_gpu: str) -> None:
 
 @pytest.mark.parametrize("dtype", ["float64"])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-@pytest.mark.parametrize("redundant_cols", ["0", "5"])
+@pytest.mark.parametrize("redundant_cols", ["0", "2"])
 def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str) -> None:
     input_args = [
         "--num_rows",
         "100",
         "--num_cols",
-        "10",
+        "20",
         "--dtype",
         dtype,
         "--output_dir",
@@ -206,7 +206,7 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str) -
         X = pdf.iloc[:, 0].to_numpy()
         y = pdf.iloc[:, 1].to_numpy()
 
-        total_cols = 10 + int(redundant_cols)
+        total_cols = 20 + int(redundant_cols)
         assert len(X) == 100, "X row number mismatch"
         for sparseVec in X:
             # assert sparseVec.toArray().dtype == np.dtype(dtype), "Unexpected dtype"
@@ -235,7 +235,7 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str) -
 
 @pytest.mark.parametrize("dtype", ["float64"])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-@pytest.mark.parametrize("redundant_cols", ["0", "5"])
+@pytest.mark.parametrize("redundant_cols", ["0", "2"])
 def test_make_sparse_logistic_regression(
     dtype: str, use_gpu: str, redundant_cols: str
 ) -> None:
@@ -243,7 +243,7 @@ def test_make_sparse_logistic_regression(
         "--num_rows",
         "100",
         "--num_cols",
-        "10",
+        "20",
         "--dtype",
         dtype,
         "--output_dir",
@@ -279,7 +279,7 @@ def test_make_sparse_logistic_regression(
         X = pdf.iloc[:, 0].to_numpy()
         y = pdf.iloc[:, 1].to_numpy()
 
-        total_cols = 10 + int(redundant_cols)
+        total_cols = 20 + int(redundant_cols)
         assert len(X) == 100, "X row number mismatch"
         for sparseVec in X:
             # assert sparseVec.toArray().dtype == np.dtype(dtype), "Unexpected dtype"
