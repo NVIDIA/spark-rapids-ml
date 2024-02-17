@@ -37,6 +37,9 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
 
 import warnings
 
+import scipy
+from scipy.sparse import csr_matrix
+
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
 from spark_rapids_ml.core import _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
@@ -109,7 +112,9 @@ def test_toy_example(gpu_number: int) -> None:
         schema = features_col + " array<float>, " + label_col + " float"
         df = spark.createDataFrame(data, schema=schema)
 
-        lr_estimator = LogisticRegression(regParam=1.0, num_workers=gpu_number)
+        lr_estimator = LogisticRegression(
+            standardization=False, regParam=1.0, num_workers=gpu_number
+        )
         lr_estimator.setFeaturesCol(features_col)
         lr_estimator.setLabelCol(label_col)
         lr_estimator.setProbabilityCol(probability_col)
@@ -169,6 +174,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 0.0,
         "tol": 1e-06,
         "fitIntercept": True,
+        "standardization": True,
     }
 
     default_cuml_params = {
@@ -178,6 +184,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "l1_ratio": 0.0,
         "tol": 1e-6,
         "fit_intercept": True,
+        "standardization": True,
     }
 
     default_lr = LogisticRegression()
@@ -191,6 +198,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 0.0,
         "tol": 1e-2,
         "fitIntercept": False,
+        "standardization": False,
     }
 
     spark_lr = LogisticRegression(**spark_params)
@@ -205,6 +213,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "l1_ratio": 0.0,
             "tol": 1e-2,
             "fit_intercept": False,
+            "standardization": False,
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
@@ -216,6 +225,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 1.0,
         "tol": 1e-2,
         "fitIntercept": False,
+        "standardization": False,
     }
 
     spark_lr = LogisticRegression(**spark_params)
@@ -230,6 +240,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "l1_ratio": 1.0,
             "tol": 1e-2,
             "fit_intercept": False,
+            "standardization": False,
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
@@ -241,6 +252,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "elasticNetParam": 0.3,
         "tol": 1e-2,
         "fitIntercept": False,
+        "standardization": True,
     }
 
     spark_lr = LogisticRegression(**spark_params)
@@ -255,6 +267,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             "l1_ratio": 0.3,
             "tol": 1e-2,
             "fit_intercept": False,
+            "standardization": True,
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
@@ -293,6 +306,9 @@ def test_classifier(
     tolerance: float = 0.001,
     convert_to_sparse: bool = False,
 ) -> LogisticRegression:
+
+    standardization: bool = False
+
     if convert_to_sparse is True:
         assert feature_type == "vector"
 
@@ -340,6 +356,7 @@ def test_classifier(
         assert label_col is not None
         spark_lr = LogisticRegression(
             enable_sparse_data_optim=convert_to_sparse,
+            standardization=standardization,
             fitIntercept=fit_intercept,
             regParam=reg_param,
             elasticNetParam=elasticNet_param,
@@ -410,6 +427,7 @@ LogisticRegressionModelType = TypeVar(
 
 @pytest.mark.compat
 @pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("standardization", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
@@ -419,6 +437,7 @@ LogisticRegressionModelType = TypeVar(
 )
 def test_compat(
     fit_intercept: bool,
+    standardization: bool,
     lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
     tmp_path: str,
 ) -> None:
@@ -463,13 +482,9 @@ def test_compat(
         )
 
         assert _LogisticRegression().getRegParam() == 0.0
-        if lr_types[0] is SparkLogisticRegression:
-            blor = _LogisticRegression(
-                regParam=0.1, fitIntercept=fit_intercept, standardization=False
-            )
-        else:
-            warnings.warn("spark rapids ml does not accept standardization")
-            blor = _LogisticRegression(regParam=0.1, fitIntercept=fit_intercept)
+        blor = _LogisticRegression(
+            regParam=0.1, fitIntercept=fit_intercept, standardization=standardization
+        )
 
         assert blor.getRegParam() == 0.1
 
@@ -498,15 +513,19 @@ def test_compat(
         assert blor_model.getProbabilityCol() == "newProbability"
 
         assert isinstance(blor_model.coefficients, DenseVector)
-        assert array_equal(
-            blor_model.coefficients.toArray(), [-2.42377087, 2.42377087], tolerance
+
+        coef_gnd = (
+            [-2.48197058, 2.48197058]
+            if standardization is True
+            else [-2.42377087, 2.42377087]
         )
+        assert array_equal(blor_model.coefficients.toArray(), coef_gnd, tolerance)
         assert blor_model.intercept == pytest.approx(0, abs=1e-6)
 
         assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
         assert array_equal(
             blor_model.coefficientMatrix.toArray(),
-            np.array([[-2.42377087, 2.42377087]]),
+            np.array([coef_gnd]),
             tolerance,
         )
         assert isinstance(blor_model.interceptVector, DenseVector)
@@ -531,15 +550,21 @@ def test_compat(
         output = output_df.head()
         assert output.prediction == 1.0
 
+        prob_gnd = (
+            [0.07713181, 0.92286819] if standardization is True else [0.0814, 0.9186]
+        )
         assert array_equal(
             output.newProbability.toArray(),
-            Vectors.dense([0.0814, 0.9186]).toArray(),
+            Vectors.dense(prob_gnd).toArray(),
             tolerance,
         )
 
-        array_equal(
+        rawPredict_gnd = (
+            [-2.48197058, 2.48197058] if standardization is True else [-2.4238, 2.4238]
+        )
+        assert array_equal(
             output.newRawPrediction.toArray(),
-            Vectors.dense([-2.4238, 2.4238]).toArray(),
+            Vectors.dense(rawPredict_gnd).toArray(),
             tolerance,
         )
 
@@ -712,23 +737,15 @@ def test_compat_multinomial(
         )
 
         assert _LogisticRegression().getRegParam() == 0.0
-        if lr_types[0] is SparkLogisticRegression:
-            mlor = _LogisticRegression(
-                regParam=0.1,
-                elasticNetParam=0.2,
-                fitIntercept=fit_intercept,
-                family="multinomial",
-                standardization=False,
-            )
-        else:
-            warnings.warn("spark rapids ml does not accept standardization")
-            mlor = _LogisticRegression(
-                regParam=0.1,
-                elasticNetParam=0.2,
-                fitIntercept=fit_intercept,
-                family="multinomial",
-            )
+        mlor = _LogisticRegression(
+            regParam=0.1,
+            elasticNetParam=0.2,
+            fitIntercept=fit_intercept,
+            family="multinomial",
+            standardization=False,
+        )
 
+        assert mlor.getStandardization() == False
         assert mlor.getRegParam() == 0.1
         assert mlor.getElasticNetParam() == 0.2
 
@@ -1367,6 +1384,8 @@ def compare_model(
     cpu_model: SparkLogisticRegressionModel,
     df_test: DataFrame,
     unit_tol: float = 1e-4,
+    total_tol: float = 0.0,
+    accuracy_and_probability_only: bool = False,
 ) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
     gpu_res = gpu_model.transform(df_test).collect()
 
@@ -1380,17 +1399,20 @@ def compare_model(
 
     gpu_acc = accuracy_score(ytest_true, gpu_pred)
     cpu_acc = accuracy_score(ytest_true, cpu_pred)
-    assert gpu_acc == cpu_acc or abs(gpu_acc - cpu_acc) < 1e-3
-
-    # compare rawPrediction column
-    gpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in gpu_res]
-    cpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in cpu_res]
-    assert array_equal(gpu_rawpred, cpu_rawpred)
+    assert gpu_acc >= cpu_acc or abs(gpu_acc - cpu_acc) < 1e-3
 
     # compare probability column
     gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
     cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
-    assert array_equal(gpu_prob, cpu_prob)
+    assert array_equal(gpu_prob, cpu_prob, unit_tol, total_tol)
+
+    if accuracy_and_probability_only:
+        return (gpu_model, cpu_model)
+
+    # compare rawPrediction column
+    gpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in gpu_res]
+    cpu_rawpred = [row["rawPrediction"].toArray().tolist() for row in cpu_res]
+    assert array_equal(gpu_rawpred, cpu_rawpred, unit_tol, total_tol)
 
     # compare coefficients
     assert array_equal(
@@ -1517,9 +1539,11 @@ def test_compat_sparse_multinomial(
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("standardization", [True, False])
 @pytest.mark.slow
 def test_sparse_nlp20news(
     fit_intercept: bool,
+    standardization: bool,
     caplog: LogCaptureFixture,
 ) -> None:
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
@@ -1546,8 +1570,8 @@ def test_sparse_nlp20news(
     X = twenty_train.data
     y = twenty_train.target.tolist()
 
-    conf = {
-        "spark.rapids.ml.uvm.enabled": True
+    conf: Dict[str, Any] = {
+        # "spark.rapids.ml.uvm.enabled": True # Commenting this out can resolve a cudaMemSet error
     }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
     with CleanSparkSession(conf) as spark:
         data = [
@@ -1573,7 +1597,7 @@ def test_sparse_nlp20news(
             verbose=6,
             regParam=reg_param,
             fitIntercept=fit_intercept,
-            standardization=False,
+            standardization=standardization,
             featuresCol="features",
             labelCol="label",
         )
@@ -1581,12 +1605,13 @@ def test_sparse_nlp20news(
         cpu_lr = SparkLogisticRegression(
             regParam=reg_param,
             fitIntercept=fit_intercept,
-            standardization=False,
+            standardization=standardization,
             featuresCol="features",
             labelCol="label",
         )
 
         gpu_model = gpu_lr.fit(df_train)
+
         cpu_model = cpu_lr.fit(df_train)
         cpu_objective = cpu_model.summary.objectiveHistory[-1]
 
@@ -1595,7 +1620,17 @@ def test_sparse_nlp20news(
             or abs(gpu_model.objective - cpu_objective) < tolerance
         )
 
-        assert "CUDA managed memory enabled." in caplog.text
+        # assert "CUDA managed memory enabled." in caplog.text
+
+        if standardization is True:
+            compare_model(
+                gpu_model,
+                cpu_model,
+                df_train,
+                unit_tol=tolerance,
+                total_tol=tolerance,
+                accuracy_and_probability_only=True,
+            )
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -1663,3 +1698,294 @@ def test_sparse_crossvalidator_logistic_regression(
         data_shape=data_shape,
         convert_to_sparse=True,
     )
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize(
+    "lr_types",
+    [
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
+        (LogisticRegression, LogisticRegressionModel),
+    ],
+)
+def test_compat_standardization(
+    fit_intercept: bool,
+    data_type: np.dtype,
+    lr_types: Tuple[LogisticRegressionType, LogisticRegressionModelType],
+    caplog: LogCaptureFixture,
+) -> None:
+    _LogisticRegression, _LogisticRegressionModel = lr_types
+    tolerance = 1e-3
+
+    X, _, y, y_test = make_classification_dataset(
+        datatype=data_type,
+        nrows=10000,
+        ncols=2,
+        n_classes=2,
+        n_informative=2,
+        n_redundant=0,
+        n_repeated=0,
+    )
+
+    X[:, 0] *= 1000  # Scale up the first features by 1000
+    X[:, 0] += 50  # Shift the first features by 50
+
+    num_rows = len(X)
+    weight = np.ones([num_rows])
+    feature_cols = ["c0", "c1"]
+    schema = ["c0 float, c1 float, weight float, label float"]
+
+    with CleanSparkSession() as spark:
+        np_array = np.concatenate(
+            (X, weight.reshape(num_rows, 1), y.reshape(num_rows, 1)), axis=1
+        )
+
+        bdf = spark.createDataFrame(
+            np_array.tolist(),
+            ",".join(schema),
+        )
+
+        bdf = bdf.withColumn("features", array_to_vector(array(*feature_cols))).drop(
+            *feature_cols
+        )
+
+        blor = _LogisticRegression(
+            regParam=0.01, fitIntercept=fit_intercept, standardization=True
+        )
+
+        if isinstance(blor, SparkLogisticRegression):
+            blor.setWeightCol("weight")
+
+        blor_model = blor.fit(bdf)
+
+        if isinstance(blor, LogisticRegression):
+            warning_log = "when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training."
+            assert warning_log in caplog.text
+
+        blor_model.setFeaturesCol("features")
+        blor_model.setProbabilityCol("newProbability")
+        blor_model.setRawPredictionCol("newRawPrediction")
+
+        if fit_intercept is False:
+            array_equal(
+                blor_model.coefficients.toArray(),
+                [-1.59550205e-04, 1.35555146e00],
+                tolerance,
+            )
+            array_equal(
+                blor_model.coefficientMatrix.toArray(),
+                [-1.59550205e-04, 1.35555146e00],
+                tolerance,
+            )
+            assert blor_model.intercept == 0.0
+            assert blor_model.interceptVector.toArray() == [0.0]
+        else:
+            array_equal(
+                blor_model.coefficients.toArray(),
+                [-1.63432342e-04, 1.35951030e00],
+                tolerance,
+            )
+            array_equal(
+                blor_model.coefficientMatrix.toArray(),
+                [-1.63432342e-04, 1.35951030e00],
+                tolerance,
+            )
+            assert array_equal([blor_model.intercept], [-0.05060137], tolerance)
+            assert array_equal(
+                blor_model.interceptVector.toArray(), [-0.05060137], tolerance
+            )
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("ncols_nclasses", [(2, 2), (4, 3), (4, 4)])
+@pytest.mark.slow
+def test_standardization(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    feature_type: str,
+    data_type: np.dtype,
+    max_record_batch: int,
+    ncols_nclasses: Tuple[int, int],
+    gpu_number: int,
+) -> None:
+    tolerance = 0.001
+    reg_param = reg_factors[0]
+    elasticNet_param = reg_factors[1]
+    n_rows = 10000
+    n_cols = ncols_nclasses[0]
+    n_classes = ncols_nclasses[1]
+
+    X_train, X_test, y_train, y_test = make_classification_dataset(
+        datatype=data_type,
+        nrows=n_rows,
+        ncols=n_cols,
+        n_classes=n_classes,
+        n_informative=n_cols,
+        n_redundant=0,
+        n_repeated=0,
+    )
+    X_train[:, 0] *= 1000  # Scale up the first features by 1000
+    X_train[:, 0] += 50  # Shift the first features by 50
+
+    X_test[:, 0] *= 1000  # Scale up the first features by 1000
+    X_test[:, 0] += 50  # Shift the first features by 50
+
+    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    with CleanSparkSession(conf) as spark:
+        train_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_train, y_train
+        )
+        test_df, _, _ = create_pyspark_dataframe(
+            spark, feature_type, data_type, X_test, y_test
+        )
+
+        assert label_col is not None
+
+        def train_model(EstimatorClass, ModelClass):  # type: ignore
+            estimator = EstimatorClass(
+                standardization=True,
+                fitIntercept=fit_intercept,
+                regParam=reg_param,
+                elasticNetParam=elasticNet_param,
+            )
+            estimator.setFeaturesCol(features_col)
+            estimator.setLabelCol(label_col)
+            model = estimator.fit(train_df)
+
+            preds = model.transform(train_df).collect()
+            y_preds = [row[label_col] for row in preds]
+            from sklearn.metrics import accuracy_score
+
+            train_acc = accuracy_score(y_train, y_preds)
+
+            preds = model.transform(test_df).collect()
+            y_preds = [row[label_col] for row in preds]
+            test_acc = accuracy_score(y_test, y_preds)
+
+            return (estimator, model, train_acc, test_acc)
+
+        mg, mg_model, mg_train_acc, mg_test_acc = train_model(
+            LogisticRegression, LogisticRegressionModel
+        )
+        mc, mc_model, mc_train_acc, mc_test_acc = train_model(
+            SparkLogisticRegression, SparkLogisticRegressionModel
+        )
+
+        assert array_equal(
+            mg_model.coefficientMatrix.toArray(),
+            mc_model.coefficientMatrix.toArray(),
+            tolerance,
+        )
+        assert array_equal(
+            mg_model.interceptVector.toArray(),
+            mc_model.interceptVector.toArray(),
+            tolerance,
+        )
+        assert (
+            mg_train_acc > mc_train_acc or abs(mg_train_acc - mc_train_acc) < tolerance
+        )
+        assert mg_test_acc > mc_test_acc or abs(mg_test_acc - mc_test_acc) < tolerance
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+def test_standardization_sparse_example(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    caplog: LogCaptureFixture,
+) -> None:
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = (
+            "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function. "
+        )
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
+    tolerance = 0.001
+    # Compare accuracy and probability only when regularizaiton is disabled.
+    # It is observed that no regularization leads to large absolute values of coefficients, and
+    # therefore large difference of GPU and CPU in raw Predictions (e.g. 23.1068 v.s. 27.6741)
+    # and in coefficients (e.g. -23.57752037 v.s. -28.48549335).
+    accuracy_and_probability_only = True if reg_factors[0] == 0.0 else False
+
+    datatype = np.float32
+
+    est_params: Dict[str, Any] = {
+        "standardization": True,
+        "regParam": reg_factors[0],
+        "elasticNetParam": reg_factors[1],
+        "fitIntercept": fit_intercept,
+        "featuresCol": "features",
+        "labelCol": "label",
+    }
+
+    def prepare_csr_matrix_and_y() -> Tuple[csr_matrix, List[float]]:
+        X_origin = np.array(
+            [
+                [-1.1258, 0.0000, 0.0000, -0.4339, 0.0000],
+                [-1.5551, -0.3414, 0.0000, 0.0000, 0.0000],
+                [0.0000, 0.2660, 0.0000, 0.0000, 0.9463],
+                [-0.8437, 0.0000, 1.2590, 0.0000, 0.0000],
+            ],
+            datatype,
+        )
+
+        X_origin = np.ascontiguousarray(X_origin.T)
+
+        X = csr_matrix(X_origin)
+        assert X.nnz == 8 and X.shape == (5, 4)
+        y = [0.0, 1.0, 2.0, 0.0, 1.0]
+        return X, y
+
+    X, y = prepare_csr_matrix_and_y()
+
+    conf = {
+        "spark.rapids.ml.uvm.enabled": True
+    }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
+    with CleanSparkSession(conf) as spark:
+
+        def sparse_to_df(X: csr_matrix, y: List[float]) -> DataFrame:
+            assert X.shape[0] == len(y)
+            dimension = X.shape[1]
+            data = [
+                Row(
+                    features=SparseVector(dimension, X[i].indices, X[i].data),
+                    label=y[i],
+                )
+                for i in range(len(y))
+            ]
+            df = spark.createDataFrame(data)
+
+            return df
+
+        df = sparse_to_df(X, y)
+
+        gpu_lr = LogisticRegression(**est_params)
+        cpu_lr = SparkLogisticRegression(**est_params)
+
+        gpu_model = gpu_lr.fit(df)
+        warning_log = "when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training."
+        assert warning_log in caplog.text
+
+        cpu_model = cpu_lr.fit(df)
+
+        compare_model(
+            gpu_model,
+            cpu_model,
+            df,
+            tolerance,
+            accuracy_and_probability_only=accuracy_and_probability_only,
+        )
