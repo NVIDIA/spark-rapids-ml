@@ -229,8 +229,9 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str) -
         total = 100 * total_cols
 
         # If there is no random shuffled redundant cols, we can check the total density
+        density = 0.25
         if redundant_cols == "0":
-            assert count > total * 0.24 and count < total * 0.26
+            assert count > total * density * 0.95 and count < total * density * 1.05
 
 
 @pytest.mark.parametrize("dtype", ["float64"])

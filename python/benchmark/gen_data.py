@@ -133,9 +133,7 @@ class DataGenBase(DataGen):
         self.supported_extra_params = self._supported_extra_params()
         for name, value in self.supported_extra_params.items():
             if name == "effective_rank":
-                help_msg = (
-                    "the rank of the featuren matrix, used for low rank generation"
-                )
+                help_msg = "The approximate number of singular vectors required to explain most of the data by linear combinations, refer to sklearn.datasets.make_low_rank_matrix()"
             elif name == "random_state":
                 help_msg = "seed for random feature generation"
             elif name == "use_gpu":
@@ -483,7 +481,7 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
     # Must repartition for default.
     if args.type == "default":
         repartition = True
-    model = args.type
+
     assert data_gen.args is not None
     args = data_gen.args
 
@@ -494,7 +492,7 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
             df = df.withColumn("feature_array", array(*feature_cols)).drop(
                 *feature_cols
             )
-        elif args.feature_type == "vector" and model != "sparse_regression":
+        elif args.feature_type == "vector" and args.type != "sparse_regression":
             from pyspark.ml.feature import VectorAssembler
 
             df = (
