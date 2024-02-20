@@ -979,9 +979,33 @@ class LogisticRegression(
             if self.getStandardization() is True and is_sparse is True:
                 concated = concated.toarray()
 
+            num_pad_zero_cols = 0
+            if self.getStandardization() is True and concated.shape[1] % 32 != 0:
+                num_pad_zero_cols = concated.shape[1] % 32
+                nrows = concated.shape[0]
+                import cupy as cp
+
+                if isinstance(concated, np.ndarray):
+                    zeros = np.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
+                    concated = np.concatenate([concated, zeros], axis=1)
+                elif isinstance(concated, cp.ndarray):
+                    zeros = cp.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
+                    concated = cp.concatenate([concated, zeros], axis=1)
+                elif isinstance(concated, pd.DataFrame):
+                    zero_col_names = [
+                        f"Zero_{i}_c3BhcmstcmFwaWRzLW1sCg"
+                        for i in range(num_pad_zero_cols)
+                    ]
+                    zeros = np.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
+                    zeros_pd = pd.DataFrame(zeros, columns=zero_col_names)
+                    concated = pd.concat([concated, zeros_pd], axis=1)
+                else:
+                    assert is_sparse is True
+                    concated._shape = (nrows, concated.shape[1] + num_pad_zero_cols)
+
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
-                params[param_alias.num_cols],
+                params[param_alias.num_cols] + num_pad_zero_cols,
             )
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
@@ -1028,9 +1052,9 @@ class LogisticRegression(
                     )
                     intercept_array -= intercept_mean
 
-                n_cols = logistic_regression.n_cols
+                n_cols = logistic_regression.n_cols - num_pad_zero_cols
                 model = {
-                    "coef_": logistic_regression.coef_.tolist(),
+                    "coef_": logistic_regression.coef_[:, :n_cols].tolist(),
                     "intercept_": intercept_array.tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": n_cols,
