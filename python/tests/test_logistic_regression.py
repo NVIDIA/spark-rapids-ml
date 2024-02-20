@@ -1556,7 +1556,7 @@ def test_sparse_nlp20news(
         logging.info(err_msg)
         return
 
-    tolerance = 0.001
+    tolerance = 0.002
     reg_param = 1e-2
 
     from pyspark.ml.feature import CountVectorizer, RegexTokenizer

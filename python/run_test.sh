@@ -13,4 +13,4 @@ echo "use --runslow to run all tests"
 #pytest -ra "$@" --durations=10 tests
 # pytest -ra --runslow --durations=10 tests
 
-pytest -ra "$@" --durations=10 tests/test_logistic_regression.py::test_sparse_nlp20news[True-True]
+pytest -ra "$@" --durations=10 tests/test_logistic_regression.py::test_sparse_nlp20news
