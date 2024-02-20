@@ -981,7 +981,7 @@ class LogisticRegression(
 
             num_pad_zero_cols = 0
             if self.getStandardization() is True and concated.shape[1] % 32 != 0:
-                num_pad_zero_cols = concated.shape[1] % 32
+                num_pad_zero_cols = 32 - concated.shape[1] % 32
                 nrows = concated.shape[0]
                 import cupy as cp
 
@@ -1002,6 +1002,8 @@ class LogisticRegression(
                 else:
                     assert is_sparse is True
                     concated._shape = (nrows, concated.shape[1] + num_pad_zero_cols)
+
+                assert concated.shape[1] % 32 == 0
 
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
