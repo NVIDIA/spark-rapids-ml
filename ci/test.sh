@@ -42,7 +42,7 @@ pip install -r requirements_dev.txt && pip install -e .
 ./run_test.sh $ut_args
 
 # benchmark
-./run_benchmark.sh $bench_args
+#./run_benchmark.sh $bench_args
 
 # check compatibility with Spark 3.3 in nightly run
 # also push draft release docs to gh-pages

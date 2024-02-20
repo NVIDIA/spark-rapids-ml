@@ -1540,7 +1540,7 @@ def test_compat_sparse_multinomial(
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("standardization", [True, False])
-@pytest.mark.slow
+# @pytest.mark.slow
 def test_sparse_nlp20news(
     fit_intercept: bool,
     standardization: bool,
