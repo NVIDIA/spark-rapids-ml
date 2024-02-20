@@ -120,7 +120,9 @@ def test_make_low_rank_matrix(dtype: str, use_gpu: str) -> None:
 @pytest.mark.parametrize("low_rank", [True, False])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize("logistic_regression", ["True", "False"])
-def test_make_regression(dtype: str, low_rank: bool, use_gpu: str, logistic_regression: str) -> None:
+def test_make_regression(
+    dtype: str, low_rank: bool, use_gpu: str, logistic_regression: str
+) -> None:
     input_args = [
         "--num_rows",
         "100",
@@ -169,14 +171,16 @@ def test_make_regression(dtype: str, low_rank: bool, use_gpu: str, logistic_regr
                 assert n == 0 or n == 1
         else:
             # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
-            assert_almost_equal(np.std(y - np.dot(X_np, c)), 1.0, decimal=1)
+            assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
 
 
 @pytest.mark.parametrize("dtype", ["float64"])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize("redundant_cols", ["0", "2"])
 @pytest.mark.parametrize("logistic_regression", ["True", "False"])
-def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str, logistic_regression: str) -> None:
+def test_make_sparse_regression(
+    dtype: str, use_gpu: str, redundant_cols: str, logistic_regression: str
+) -> None:
     input_args = [
         "--num_rows",
         "100",
@@ -203,7 +207,7 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str, l
         "--redundant_cols",
         redundant_cols,
         "--logistic_regression",
-        logistic_regression
+        logistic_regression,
     ]
 
     data_gen = SparseRegressionDataGen(input_args)
@@ -227,7 +231,7 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str, l
         assert sum(c != 0.0) == 3, "Unexpected number of informative features"
 
         X_np = np.array([r.toArray() for r in X])
-        
+
         if logistic_regression == "True":
             # Test that X is consist of only 0 or 1
             for n in y:
@@ -249,6 +253,7 @@ def test_make_sparse_regression(dtype: str, use_gpu: str, redundant_cols: str, l
         density = 0.25
         if redundant_cols == "0":
             assert count > total * density * 0.95 and count < total * density * 1.05
+
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
