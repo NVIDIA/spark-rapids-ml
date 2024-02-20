@@ -548,7 +548,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
-        orig_cols = self.num_cols
         assert self.args is not None
         num_partitions = self.args.output_num_files
 
@@ -568,6 +567,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         logistic_regression = params.get("logistic_regression", False)
         density = params.get("density", 0.1)
         redundant_cols = params.get("redundant_cols", 0)
+        orig_cols = cols - redundant_cols
 
         # Check for valid redundant columns
         if redundant_cols > 0 and redundant_cols / (cols + redundant_cols) > density:
@@ -575,8 +575,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 "Redundant columns would break density property, setting to zero instead"
             )
             redundant_cols = 0
-        else:
-            cols += redundant_cols
+            orig_cols = cols
 
         # Generate ground truth upfront.
         ground_truth = np.zeros((cols, n_targets))
