@@ -979,6 +979,9 @@ class LogisticRegression(
             if self.getStandardization() is True and is_sparse is True:
                 concated = concated.toarray()
 
+            # Padding zero columns so that the total number of columns is a multiple of 32.
+            # The purpose is to avoid out-of-bound memory access of some RAFT 24.02 cuda kernels (e.g. sum).
+            # This is a temporary workaround and is expected to be removed in 24.04
             num_pad_zero_cols = 0
             if self.getStandardization() is True and concated.shape[1] % 32 != 0:
                 num_pad_zero_cols = 32 - concated.shape[1] % 32
