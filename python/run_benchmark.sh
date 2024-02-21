@@ -66,6 +66,7 @@ unset SPARK_HOME
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
+density=${density:-0.1}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
 # gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
@@ -253,12 +254,8 @@ if ([[ "${MODE}" =~ "linear_regression" ]] && ! [[ "${MODE}" =~ "sparse_linear_r
         --report_path "report_linear_regression_ridge_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
-fi
-
-# Sparse Linear Regression
-# TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
-# https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
-if [[ "${MODE}" =~ "sparse_linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
+    
+    # Linear Regression with sparse vector dataset
     if [[ ! -d "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" ]]; then
         python $gen_data_script sparse_regression \
             --num_rows $num_rows \
@@ -267,12 +264,12 @@ if [[ "${MODE}" =~ "sparse_linear_regression" ]] || [[ "${MODE}" == "all" ]]; th
             --noise 10 \
             --dtype "float64" \
             --feature_type "vector" \
-            --density "0.1" \
+            --density $density \
             --output_dir "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
             $common_confs
     fi
     
-    echo "$sep algo: linear regression - elasticnet regularization $sep"
+    echo "$sep algo: sparse linear regression - elasticnet regularization $sep"
     python ./benchmark/benchmark_runner.py linear_regression \
         --regParam 0.00001 \
         --elasticNetParam 0.5 \
@@ -452,7 +449,7 @@ if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logist
             family="Multinomial"
         fi
 
-        echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
+        echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
         python ./benchmark/benchmark_runner.py logistic_regression \
             --standardization False \
             --maxIter 200 \
@@ -468,11 +465,8 @@ if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logist
             $common_confs $spark_rapids_confs \
             ${EXTRA_ARGS}
     done
-fi
-
-# Sparse Logistic Regression Classification
-if [[ "${MODE}" =~ "sparse_logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
-
+    
+    # Logistic Regression with sparse vector dataset
     data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_cols}_float64_ncls${num_classes}.parquet
 
     if [[ ! -d ${data_path} ]]; then
@@ -484,7 +478,7 @@ if [[ "${MODE}" =~ "sparse_logistic_regression" ]] || [[ "${MODE}" == "all" ]]; 
 	    --dtype "float64" \
 	    --feature_type "vector" \
 	    --output_dir ${data_path} \
-	    --density "0.1" \
+	    --density $density \
 	    --logistic_regression "True" \
 	    $common_confs
     fi

@@ -178,14 +178,23 @@ def test_make_regression(
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize("redundant_cols", ["0", "2"])
 @pytest.mark.parametrize("logistic_regression", ["True", "False"])
+@pytest.mark.parametrize("density", ["0.25", "0.2"])
+@pytest.mark.parametrize("rows, cols", [("100", "20"), ("1000", "100")])
 def test_make_sparse_regression(
-    dtype: str, use_gpu: str, redundant_cols: str, logistic_regression: str
+    dtype: str,
+    use_gpu: str,
+    redundant_cols: str,
+    logistic_regression: str,
+    density: str,
+    rows: str,
+    cols: str,
 ) -> None:
+
     input_args = [
         "--num_rows",
-        "100",
+        rows,
         "--num_cols",
-        "20",
+        cols,
         "--dtype",
         dtype,
         "--output_dir",
@@ -203,12 +212,15 @@ def test_make_sparse_regression(
         "--use_gpu",
         use_gpu,
         "--density",
-        "0.25",
+        density,
         "--redundant_cols",
         redundant_cols,
         "--logistic_regression",
         logistic_regression,
     ]
+
+    row_num = int(rows)
+    col_num = int(cols)
 
     data_gen = SparseRegressionDataGen(input_args)
     args = data_gen.args
@@ -221,19 +233,18 @@ def test_make_sparse_regression(
         X = pdf.iloc[:, 0].to_numpy()
         y = pdf.iloc[:, 1].to_numpy()
 
-        total_cols = 20
-        assert len(X) == 100, "X row number mismatch"
+        assert len(X) == row_num, "X row number mismatch"
         for sparseVec in X:
             # assert sparseVec.toArray().dtype == np.dtype(dtype), "Unexpected dtype"
-            assert sparseVec.size == total_cols, "X col number mismatch"
-        assert y.shape == (100,), "y shape mismatch"
-        assert c.shape == (total_cols,), "coef shape mismatch"
+            assert sparseVec.size == col_num, "X col number mismatch"
+        assert y.shape == (row_num,), "y shape mismatch"
+        assert c.shape == (col_num,), "coef shape mismatch"
         assert sum(c != 0.0) == 3, "Unexpected number of informative features"
 
         X_np = np.array([r.toArray() for r in X])
 
         if logistic_regression == "True":
-            # Test that X is consist of only 0 or 1
+            # Test that X consists of only 0 or 1
             for n in y:
                 assert n == 0 or n == 1
         else:
@@ -247,12 +258,15 @@ def test_make_sparse_regression(
                 if n != 0.0:
                     count += 1
 
-        total = 100 * total_cols
+        total = row_num * col_num
 
         # If there is no random shuffled redundant cols, we can check the total density
-        density = 0.25
+        density_num = float(density)
         if redundant_cols == "0":
-            assert count > total * density * 0.95 and count < total * density * 1.05
+            assert (
+                count > total * density_num * 0.95
+                and count < total * density_num * 1.05
+            )
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

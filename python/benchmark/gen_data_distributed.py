@@ -570,7 +570,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         orig_cols = cols - redundant_cols
 
         # Check for valid redundant columns
-        if redundant_cols > 0 and redundant_cols / (cols + redundant_cols) > density:
+        if redundant_cols > 0 and redundant_cols / cols > density:
             logging.warning(
                 "Redundant columns would break density property, setting to zero instead"
             )
@@ -625,7 +625,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 sparse_matrix = sp.sparse.random(
                     num_rows_per_partition,
                     orig_cols,
-                    density=(density - redundant_cols / cols),
+                    density=(density - redundant_cols / cols) / (1 - redundant_cols / cols),
                     random_state=generator,
                     format="csr",
                     dtype=dtype,
