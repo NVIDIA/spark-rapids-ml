@@ -271,20 +271,6 @@ if [[ "${MODE}" =~ "sparse_linear_regression" ]] || [[ "${MODE}" == "all" ]]; th
             --output_dir "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
             $common_confs
     fi
-
-    echo "$sep algo: linear regression - no regularization $sep"
-    python ./benchmark/benchmark_runner.py linear_regression \
-        --regParam 0.0 \
-        --elasticNetParam 0.0 \
-        --standardization False \
-        --num_gpus $num_gpus \
-        --num_cpus $num_cpus \
-        --num_runs $num_runs \
-        --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-        --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-        --report_path "report_sparse_linear_regression_noreg_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
     
     echo "$sep algo: linear regression - elasticnet regularization $sep"
     python ./benchmark/benchmark_runner.py linear_regression \
@@ -299,22 +285,6 @@ if [[ "${MODE}" =~ "sparse_linear_regression" ]] || [[ "${MODE}" == "all" ]]; th
         --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
         --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
         --report_path "report_sparse_linear_regression_elastic_net_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
-    
-    echo "$sep algo: linear regression - ridge regularization $sep"
-    python ./benchmark/benchmark_runner.py linear_regression \
-        --regParam 0.00001 \
-        --elasticNetParam 0.0 \
-        --tol 1.0e-30 \
-        --maxIter 10 \
-        --standardization False \
-        --num_gpus $num_gpus \
-        --num_cpus $num_cpus \
-        --num_runs $num_runs \
-        --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-        --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-        --report_path "report_sparse_linear_regression_ridge_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
@@ -520,22 +490,6 @@ if [[ "${MODE}" =~ "sparse_logistic_regression" ]] || [[ "${MODE}" == "all" ]]; 
     fi
 
     family="Binomial"
-
-    echo "$sep algo: ${family} logistic regression - l2 regularization $sep"
-    python ./benchmark/benchmark_runner.py logistic_regression \
-        --standardization False \
-        --maxIter 200 \
-        --tol 1e-30 \
-        --regParam 0.00001 \
-        --elasticNetParam 0 \
-        --num_gpus $num_gpus \
-        --num_cpus $num_cpus \
-        --num_runs $num_runs \
-        --train_path ${data_path} \
-        --transform_path ${data_path} \
-        --report_path "report_logistic_regression_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
         
     echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
     python ./benchmark/benchmark_runner.py logistic_regression \

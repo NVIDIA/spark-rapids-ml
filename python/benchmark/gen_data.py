@@ -482,6 +482,7 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
     if args.type == "default":
         repartition = True
 
+    model = args.type
     assert data_gen.args is not None
     args = data_gen.args
 
@@ -492,7 +493,7 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
             df = df.withColumn("feature_array", array(*feature_cols)).drop(
                 *feature_cols
             )
-        elif args.feature_type == "vector" and args.type != "sparse_regression":
+        elif args.feature_type == "vector" and model != "sparse_regression":
             from pyspark.ml.feature import VectorAssembler
 
             df = (
