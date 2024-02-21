@@ -1404,6 +1404,16 @@ def compare_model(
     # compare probability column
     gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
     cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
+    diff_count = 0
+    for i in range(len(gpu_prob)):
+        for j in range(len(gpu_prob[i])):
+            diff = abs(gpu_prob[i][j] - cpu_prob[i][j])
+            if diff > unit_tol:
+                diff_count += 1
+                print(
+                    f"pos ({i}, {j}: gpu_prob is {gpu_prob[i][j]}, cpu_prob is {cpu_prob[i][j]}, absolute diff is {diff}"
+                )
+    print(f"total diff count is {diff_count}")
     assert array_equal(gpu_prob, cpu_prob, unit_tol, total_tol)
 
     if accuracy_and_probability_only:
@@ -1556,7 +1566,7 @@ def test_sparse_nlp20news(
         logging.info(err_msg)
         return
 
-    tolerance = 0.002
+    tolerance = 0.001
     reg_param = 1e-2
 
     from pyspark.ml.feature import CountVectorizer, RegexTokenizer
