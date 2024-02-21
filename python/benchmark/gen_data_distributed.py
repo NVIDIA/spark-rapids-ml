@@ -625,7 +625,8 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 sparse_matrix = sp.sparse.random(
                     num_rows_per_partition,
                     orig_cols,
-                    density=(density - redundant_cols / cols) / (1 - redundant_cols / cols),
+                    density=(density - redundant_cols / cols)
+                    / (1 - redundant_cols / cols),
                     random_state=generator,
                     format="csr",
                     dtype=dtype,
