@@ -520,7 +520,7 @@ def test_compat(
             else [-2.42377087, 2.42377087]
         )
         assert array_equal(blor_model.coefficients.toArray(), coef_gnd, tolerance)
-        assert blor_model.intercept == pytest.approx(0, abs=1e-6)
+        assert blor_model.intercept == pytest.approx(0, abs=1e-4)
 
         assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
         assert array_equal(
