@@ -514,7 +514,7 @@ class RegressionDataGen(DataGenBaseMeta):
 
 
 class SparseRegressionDataGen(DataGenBaseMeta):
-    """Generate sprase regression dataset using a distributed version of sklearn.datasets.regression,
+    """Generate sparse regression dataset using a distributed version of sklearn.datasets.regression,
     including features and labels.
     """
 

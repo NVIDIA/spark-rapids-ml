@@ -252,11 +252,7 @@ def test_make_sparse_regression(
             assert_almost_equal(np.std(y - np.dot(X_np, c)), 1.0, decimal=1)
 
         # Check density match
-        count = 0
-        for row in X_np:
-            for n in row:
-                if n != 0.0:
-                    count += 1
+        count = np.count_nonzero(X_np)
 
         total = row_num * col_num
 
