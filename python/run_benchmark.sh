@@ -254,37 +254,6 @@ if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --report_path "report_linear_regression_ridge_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
-    
-    # Linear Regression with sparse vector dataset
-    if [[ ! -d "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" ]]; then
-        python $gen_data_script sparse_regression \
-            --num_rows $num_rows \
-            --num_cols $num_cols \
-            --output_num_files $output_num_files \
-            --noise 10 \
-            --dtype "float64" \
-            --feature_type "vector" \
-            --density $density \
-            --output_dir "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-            $common_confs
-    fi
-    
-    echo "$sep algo: sparse linear regression - elasticnet regularization $sep"
-    # Note that linear regression would densify the sparse vector, Need to update the model for better sparse vector support
-    python ./benchmark/benchmark_runner.py linear_regression \
-        --regParam 0.00001 \
-        --elasticNetParam 0.5 \
-        --tol 1.0e-30 \
-        --maxIter 10 \
-        --standardization False \
-        --num_gpus $num_gpus \
-        --num_cpus $num_cpus \
-        --num_runs $num_runs \
-        --train_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-        --transform_path "${gen_data_root}/sparse_linear_regression/r${num_rows}_c${num_cols}_float64.parquet" \
-        --report_path "report_sparse_linear_regression_elastic_net_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
 fi
 
 # PCA
