@@ -449,7 +449,7 @@ if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logist
             family="Multinomial"
         fi
 
-        echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
+        echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
         python ./benchmark/benchmark_runner.py logistic_regression \
             --standardization False \
             --maxIter 200 \
@@ -485,7 +485,7 @@ if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logist
 
     family="Binomial"
         
-    echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
+    echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
     python ./benchmark/benchmark_runner.py logistic_regression \
         --standardization False \
         --maxIter 200 \
