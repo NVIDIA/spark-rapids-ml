@@ -537,6 +537,11 @@ class SparseRegressionDataGen(DataGenBaseMeta):
     def gen_dataframe_and_meta(
         self, spark: SparkSession
     ) -> Tuple[DataFrame, List[str], np.ndarray]:
+
+        if self.args_.dtype != "float64":
+            logging.warning(
+                "Sparse VectorUDT in Spark Dataframe only support float64, would be auto-transformed"
+            )
         dtype = self.dtype
         params = self.extra_params
 
