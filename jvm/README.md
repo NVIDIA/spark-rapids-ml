@@ -74,7 +74,7 @@ the _project root path_ with:
 cd jvm
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-23.12.0-SNAPSHOT.jar` will be generated under `target` folder.
+Then `rapids-4-spark-ml_2.12-23.12.2-SNAPSHOT.jar` will be generated under `target` folder.
 
 Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
 released in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
@@ -94,8 +94,8 @@ repository, usually in your `~/.m2/repository`.
 
 Add the artifact jar to the Spark, for example:
 ```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-23.12.0-SNAPSHOT.jar"
-PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/23.12.0/rapids-4-spark_2.12-23.12.1.jar"
+ML_JAR="target/rapids-4-spark-ml_2.12-23.12.2-SNAPSHOT.jar"
+PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/23.12.2/rapids-4-spark_2.12-23.12.2.jar"
 
 $SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
  --driver-memory 20G \
