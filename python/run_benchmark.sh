@@ -196,7 +196,7 @@ fi
 # Linear Regression
 # TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
 # https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
-if ([[ "${MODE}" =~ "linear_regression" ]] && ! [[ "${MODE}" =~ "sparse_linear_regression" ]]) || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
@@ -270,6 +270,7 @@ if ([[ "${MODE}" =~ "linear_regression" ]] && ! [[ "${MODE}" =~ "sparse_linear_r
     fi
     
     echo "$sep algo: sparse linear regression - elasticnet regularization $sep"
+    # Note that linear regression would densify the sparse vector, Need to update the model for better sparse vector support
     python ./benchmark/benchmark_runner.py linear_regression \
         --regParam 0.00001 \
         --elasticNetParam 0.5 \
@@ -397,7 +398,7 @@ if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
 fi
 
 # Logistic Regression Classification
-if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logistic_regression" ]]) || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
     num_classes_list=${num_classes_list:-"2 10"}
 
     for num_classes in ${num_classes_list}; do

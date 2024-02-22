@@ -538,11 +538,12 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         self, spark: SparkSession
     ) -> Tuple[DataFrame, List[str], np.ndarray]:
 
-        if self.args_.dtype != "float64":
+        dtype = self.dtype
+        if dtype != np.float64:
             logging.warning(
                 "Sparse VectorUDT in Spark Dataframe only support float64, would be auto-transformed"
             )
-        dtype = self.dtype
+
         params = self.extra_params
 
         if "random_state" not in params:
@@ -709,10 +710,10 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             # Logistric Regression sigmoid and sample
             if logistic_regression:
                 if use_cupy:
-                    prob = 1 - 1 / (1 + cp.exp(-y))
+                    prob = 1 / (1 + cp.exp(-y))
                     y = cp.random.binomial(1, prob)
                 else:
-                    prob = 1 - 1 / (1 + np.exp(-y))
+                    prob = 1 / (1 + np.exp(-y))
                     y = np.random.binomial(1, prob)
 
             del sparse_matrix
