@@ -315,6 +315,7 @@ class RegressionDataGen(DataGenBaseMeta):
         # must replace the None to the correct type
         params["effective_rank"] = int
         params["random_state"] = int
+        params["n_classes"] = int
         params["use_gpu"] = bool
         params["logistic_regression"] = bool
         return params
@@ -349,8 +350,17 @@ class RegressionDataGen(DataGenBaseMeta):
         effective_rank = params.get("effective_rank", None)
         n_informative = params.get("n_informative", 10)
         n_targets = params.get("n_targets", 1)
+        n_classes = params.get("n_classes", 2)
         use_gpu = params.get("use_gpu", False)
         logistic_regression = params.get("logistic_regression", False)
+
+        # Check for multinomial logistic regression
+        if logistic_regression and n_classes < 2:
+            logging.warning(
+                "Can not have logistic regression with 2 classes, default to 2"
+            )
+
+        multinomial_log = logistic_regression and (n_classes > 2)
 
         # Description (from sklearn):
         #
@@ -408,16 +418,25 @@ class RegressionDataGen(DataGenBaseMeta):
             )
 
         # Generate ground truth upfront.
-        ground_truth = np.zeros((cols, n_targets))
-        ground_truth[:n_informative, :] = 100 * generator.uniform(
-            size=(n_informative, n_targets)
-        )
+        if multinomial_log:
+            ground_truth = np.zeros((n_classes, cols, n_targets))
+            ground_truth[:, :n_informative, :] = 100 * generator.uniform(
+                size=(n_classes, n_informative, n_targets)
+            )
+        else:
+            ground_truth = np.zeros((cols, n_targets))
+            ground_truth[:n_informative, :] = 100 * generator.uniform(
+                size=(n_informative, n_targets)
+            )
 
         if shuffle:
             # Shuffle feature indices upfront.
             col_indices = np.arange(cols)
             generator.shuffle(col_indices)
-            ground_truth = ground_truth[col_indices]
+            if multinomial_log:
+                ground_truth = ground_truth[:, col_indices]
+            else:
+                ground_truth = ground_truth[col_indices]
 
         # Create different partition seeds for sample generation.
         random.seed(params["random_state"])
@@ -455,21 +474,63 @@ class RegressionDataGen(DataGenBaseMeta):
                     else:
                         X_p[:, :] = X_p[:, col_indices]
 
-                if use_cupy:
-                    y = cp.dot(X_p, ground_truth_cp) + bias
+                # Label Calculation
+                if multinomial_log:
+                    if use_cupy:
+                        y = cp.squeeze(
+                            cp.array(
+                                [
+                                    [cp.dot(X_p, class_truth) + bias]
+                                    for class_truth in ground_truth_cp
+                                ]
+                            )
+                        )
+                        y = cp.transpose(y)
+                    else:
+                        y = np.squeeze(
+                            np.array(
+                                [
+                                    [np.dot(X_p, class_truth) + bias]
+                                    for class_truth in ground_truth
+                                ]
+                            )
+                        )
+                        y = np.transpose(y)
                 else:
-                    y = np.dot(X_p, ground_truth) + bias
+                    if use_cupy:
+                        y = cp.dot(X_p, ground_truth_cp) + bias
+                    else:
+                        y = np.dot(X_p, ground_truth) + bias
+
                 if noise > 0.0:
                     y += generator_p.normal(scale=noise, size=y.shape)
 
                 # Logistric Regression sigmoid and sample
                 if logistic_regression:
-                    if use_cupy:
-                        prob = 1 / (1 + cp.exp(-y))
-                        y = cp.random.binomial(1, prob)
+                    if multinomial_log:
+                        if use_cupy:
+                            y = y.get()
+
+                        probs = [
+                            sp.special.softmax(target_weight) for target_weight in y
+                        ]
+
+                        multi_labels = [
+                            random.choices(range(n_classes), weights=p)[0]
+                            for p in probs
+                        ]
+
+                        if use_cupy:
+                            y = cp.asarray(multi_labels)
+                        else:
+                            y = np.asarray(multi_labels)
                     else:
-                        prob = 1 / (1 + np.exp(-y))
-                        y = np.random.binomial(1, prob)
+                        if use_cupy:
+                            prob = 1 / (1 + cp.exp(-y))
+                            y = cp.random.binomial(1, prob)
+                        else:
+                            prob = 1 / (1 + np.exp(-y))
+                            y = np.random.binomial(1, prob)
 
                 n_partition_rows = X_p.shape[0]
                 if shuffle:
@@ -532,6 +593,8 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         params["density"] = float
         params["use_gpu"] = bool
         params["logistic_regression"] = bool
+        params["density_curve"] = str
+        params["n_classes"] = int
         return params
 
     def gen_dataframe_and_meta(
@@ -554,6 +617,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
+        orig_cols = self.num_cols
         assert self.args is not None
         num_partitions = self.args.output_num_files
 
@@ -569,10 +633,22 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         shuffle = params.get("shuffle", True)
         n_informative = params.get("n_informative", 10)
         n_targets = params.get("n_targets", 1)
+        n_classes = params.get("n_classes", 2)
         use_gpu = params.get("use_gpu", False)
         logistic_regression = params.get("logistic_regression", False)
         density = params.get("density", 0.1)
         redundant_cols = params.get("redundant_cols", 0)
+        density_curve = params.get("density_curve", "None")
+
+        # Check for multinomial logistic regression
+        if logistic_regression and n_classes < 2:
+            logging.warning(
+                "Can not have logistic regression with 2 classes, default to 2"
+            )
+
+        multinomial_log = logistic_regression and (n_classes > 2)
+
+        # Number of non_redundant columns
         orig_cols = cols - redundant_cols
 
         # Check for valid redundant columns
@@ -583,17 +659,42 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             redundant_cols = 0
             orig_cols = cols
 
+        # Compute Density Curve
+        density_values = np.array([])
+        if density_curve != "None":
+            if density_curve == "Linear":
+                density_values = np.linspace(num_partitions / rows, density, orig_cols)
+            elif density_curve == "Exponential":
+                density_values = np.logspace(
+                    np.log10(num_partitions / rows), np.log10(density), orig_cols
+                )
+            else:
+                logging.warning(
+                    "Unsupported density curve, canceling density curve option",
+                    density_curve,
+                )
+                density_curve = "None"
+
         # Generate ground truth upfront.
-        ground_truth = np.zeros((cols, n_targets))
-        ground_truth[:n_informative, :] = 100 * generator.uniform(
-            size=(n_informative, n_targets)
-        )
+        if multinomial_log:
+            ground_truth = np.zeros((n_classes, cols, n_targets))
+            ground_truth[:, :n_informative, :] = 100 * generator.uniform(
+                size=(n_classes, n_informative, n_targets)
+            )
+        else:
+            ground_truth = np.zeros((cols, n_targets))
+            ground_truth[:n_informative, :] = 100 * generator.uniform(
+                size=(n_informative, n_targets)
+            )
 
         if shuffle:
             # Shuffle feature indices upfront.
             col_indices = np.arange(cols)
             generator.shuffle(col_indices)
-            ground_truth = ground_truth[col_indices]
+            if multinomial_log:
+                ground_truth = ground_truth[:, col_indices]
+            else:
+                ground_truth = ground_truth[col_indices]
 
         # Create different partition seeds for sample generation.
         random.seed(params["random_state"])
@@ -625,22 +726,47 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 if start == -1:
                     start = pdf["id"][0]
 
+            # Generate column by column if there is a density curve
+            if density_curve != "None":
+                sparse_matrix = sp.sparse.csr_matrix((0, 0))
+                for d in density_values:
+                    # Generate a column
+                    sparse_col = sp.sparse.random(
+                        num_rows_per_partition,
+                        1,
+                        density=d,
+                        random_state=generator,
+                        format="csr",
+                        dtype=dtype,
+                        data_rvs=np.random.randn,
+                    )
+
+                    if sparse_matrix.shape[0] == 0:
+                        sparse_matrix = sparse_col
+                    else:
+                        sparse_matrix = sp.sparse.hstack(
+                            [sparse_matrix, sparse_col]
+                        ).tocsr()
+
             # Add in redundant cols of linear combinations of generated random sparse cols
             if redundant_cols > 0:
                 # Generate random sparse matrix
-                sparse_matrix = sp.sparse.random(
-                    num_rows_per_partition,
-                    orig_cols,
-                    density=(density - redundant_cols / cols)
-                    / (1 - redundant_cols / cols),
-                    random_state=generator,
-                    format="csr",
-                    dtype=dtype,
-                    data_rvs=np.random.randn,
-                )
+                if density_curve == "None":
+                    sparse_matrix = sp.sparse.random(
+                        num_rows_per_partition,
+                        orig_cols,
+                        density=(density - redundant_cols / cols)
+                        / (1 - redundant_cols / cols),
+                        random_state=generator,
+                        format="csr",
+                        dtype=dtype,
+                        data_rvs=np.random.randn,
+                    )
 
                 # Separate informative and non-informative columns
-                informative_shuffle_indices = np.arange(orig_cols)
+                if shuffle:
+                    informative_shuffle_indices = np.arange(orig_cols)
+                    sparse_matrix = sparse_matrix[:, informative_shuffle_indices]
                 informative = sparse_matrix[:, :n_informative]
 
                 if use_cupy:
@@ -650,7 +776,8 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
                 redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
-            else:
+
+            elif density_curve == "None":
                 # Generate random sparse matrix without redundant columns directly
                 sparse_matrix = sp.sparse.random(
                     num_rows_per_partition,
@@ -695,26 +822,57 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 generator_p = np.random.RandomState(partition_seeds[partition_index])
 
             # Label Calculation
-            y = sparse_matrix.dot(ground_truth) + bias
+            if multinomial_log:
+                y = np.squeeze(
+                    np.array(
+                        [
+                            [sparse_matrix.dot(class_truth) + bias]
+                            for class_truth in ground_truth
+                        ]
+                    )
+                )
+                y = np.transpose(y)
+            else:
+                y = sparse_matrix.dot(ground_truth) + bias
 
             # Type conversion
             if use_cupy:
-                y = cp.asarray(y)
+                y_p = cp.asarray(y)
             else:
-                y = np.asarray(y)
+                y_p = np.asarray(y)
 
             # Random Noise
             if noise > 0.0:
-                y += generator_p.normal(scale=noise, size=y.shape)
+                y_p += generator_p.normal(scale=noise, size=y.shape)
 
             # Logistric Regression sigmoid and sample
             if logistic_regression:
-                if use_cupy:
-                    prob = 1 / (1 + cp.exp(-y))
-                    y = cp.random.binomial(1, prob)
+                if multinomial_log:
+                    if use_cupy:
+                        y = y_p.get()
+                        del y_p
+
+                    probs = [sp.special.softmax(target_weight) for target_weight in y]
+
+                    multi_labels = [
+                        random.choices(range(n_classes), weights=p)[0] for p in probs
+                    ]
+
+                    if use_cupy:
+                        y = cp.asarray(multi_labels)
+                    else:
+                        y = np.asarray(multi_labels)
                 else:
-                    prob = 1 / (1 + np.exp(-y))
-                    y = np.random.binomial(1, prob)
+                    if use_cupy:
+                        prob = 1 - 1 / (1 + cp.exp(-y_p))
+                        del y_p
+                        y = cp.random.binomial(1, prob)
+                    else:
+                        prob = 1 - 1 / (1 + np.exp(-y_p))
+                        del y_p
+                        y = np.random.binomial(1, prob)
+            else:
+                y = y_p
 
             del sparse_matrix
 

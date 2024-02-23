@@ -158,6 +158,8 @@ class DataGenBase(DataGen):
                 help_msg = "boolean for whether the shuffle the rows and cols of the feature matrix"
             elif name == "tail_strength":
                 help_msg = "tail strength for random low rank feature matrix generation, refer to sklearn.datasets.make_low_rank_matrix()"
+            elif name == "density_curve":
+                help_msg = "Specify columns wise density curve, support Linear or Exponential. Argument density would not be used to represent the max density in the curve"
             else:
                 help_msg = ""
 
