@@ -66,11 +66,13 @@ unset SPARK_HOME
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
+density=${density:-0.1}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
-gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
-#gen_data_script=./benchmark/gen_data_distributed.py
-gen_data_root=/tmp/data
+# gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
+# gen_data_root=/tmp/data
+gen_data_script=${gen_data_script:-./benchmark/gen_data_distributed.py}
+gen_data_root=/tmp/distributed
 
 # if num_rows=1m => output_files=50, scale linearly
 output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
@@ -433,6 +435,41 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             $common_confs $spark_rapids_confs \
             ${EXTRA_ARGS}
     done
+    
+    # Logistic Regression with sparse vector dataset
+    data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_cols}_float64_ncls${num_classes}.parquet
+
+    if [[ ! -d ${data_path} ]]; then
+        python $gen_data_script sparse_regression \
+	    --n_informative $( expr $num_cols / 3 )  \
+	    --num_rows $num_rows \
+	    --num_cols $num_cols \
+	    --output_num_files $output_num_files \
+	    --dtype "float64" \
+	    --feature_type "vector" \
+	    --output_dir ${data_path} \
+	    --density $density \
+	    --logistic_regression "True" \
+	    $common_confs
+    fi
+
+    family="Binomial"
+        
+    echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
+    python ./benchmark/benchmark_runner.py logistic_regression \
+        --standardization False \
+        --maxIter 200 \
+        --tol 1e-30 \
+        --regParam 0.00001 \
+        --elasticNetParam 0.2 \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --num_runs $num_runs \
+        --train_path ${data_path} \
+        --transform_path ${data_path} \
+        --report_path "report_logistic_regression_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
 fi
 
 # UMAP
