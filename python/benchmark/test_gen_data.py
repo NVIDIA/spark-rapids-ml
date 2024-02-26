@@ -211,8 +211,14 @@ def test_make_regression(
     "rows, cols", [("100", "20"), pytest.param("1000", "100", marks=pytest.mark.slow)]
 )
 @pytest.mark.parametrize(
-    "density_curve",
-    ["None", "Linear", pytest.param("Exponential", marks=pytest.mark.slow)],
+    "density_curve, shuffle",
+    [
+        ("None", "True"),
+        ("Linear", "True"),
+        ("Linear", "False"),
+        ("Exponential", "False"),
+        pytest.param("Exponential", "True", marks=pytest.mark.slow),
+    ],
 )
 def test_make_sparse_regression(
     dtype: str,
@@ -224,6 +230,7 @@ def test_make_sparse_regression(
     rows: str,
     cols: str,
     density_curve: str,
+    shuffle: str,
 ) -> None:
 
     input_args = [
@@ -257,6 +264,8 @@ def test_make_sparse_regression(
         logistic_regression,
         "--density_curve",
         density_curve,
+        "--shuffle",
+        shuffle,
     ]
 
     row_num = int(rows)
@@ -320,6 +329,36 @@ def test_make_sparse_regression(
                 count > total * density_num * 0.95
                 and count < total * density_num * 1.05
             )
+
+        # If no shuffle with a density curve, test to see if the column density is increasing as the desired curve
+        if density_curve != "None" and shuffle == "False":
+            orig_cols = col_num - int(redundant_cols)
+            num_partitions = 3
+
+            if density_curve == "Linear":
+                density_values = np.linspace(
+                    num_partitions / row_num, density_num, orig_cols
+                )
+            else:
+                density_values = np.logspace(
+                    np.log10(num_partitions / row_num), np.log10(density_num), orig_cols
+                )
+
+            for idx, col in enumerate(X_np):
+                # Ignore the redundant columns
+                if idx >= orig_cols:
+                    break
+
+                col_density = density_values[idx]
+
+                dense_count = np.count_nonzero(X_np[:, idx])
+
+                print((row_num // num_partitions) * col_density * 0.95)
+                assert dense_count >= num_partitions * int(
+                    (row_num // num_partitions) * col_density - 1
+                ) and dense_count <= num_partitions * int(
+                    (row_num // num_partitions) * col_density + 1
+                )
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])

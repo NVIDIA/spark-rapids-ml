@@ -853,7 +853,9 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             if use_cupy:
                 generator_p = cp.random.RandomState(partition_seeds[partition_index])
                 ground_truth_cp = cp.asarray(ground_truth)
-                col_indices_cp = cp.asarray(col_indices)
+
+                if shuffle:
+                    col_indices_cp = cp.asarray(col_indices)
             else:
                 generator_p = np.random.RandomState(partition_seeds[partition_index])
 
