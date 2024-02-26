@@ -14,8 +14,12 @@
 # limitations under the License.
 #
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tests.conftest import pytest_addoption, pytest_configure, pytest_collection_modifyitems
+from tests.conftest import (
+    pytest_addoption,
+    pytest_collection_modifyitems,
+    pytest_configure,
+)
