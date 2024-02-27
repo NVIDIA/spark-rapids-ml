@@ -432,14 +432,14 @@ class RegressionDataGen(DataGenBaseMeta):
 
         # Generate ground truth upfront.
         if multinomial_log:
-            ground_truth = np.zeros((n_classes, cols, n_targets))
-            ground_truth[:, :n_informative, :] = 100 * generator.uniform(
-                size=(n_classes, n_informative, n_targets)
+            ground_truth = np.zeros((cols, n_classes))
+            ground_truth[:n_informative, :] = 100 * generator.uniform(
+                size=(n_informative, n_classes)
             )
         else:
-            ground_truth = np.zeros((cols, n_targets))
+            ground_truth = np.zeros((cols, 1))
             ground_truth[:n_informative, :] = 100 * generator.uniform(
-                size=(n_informative, n_targets)
+                size=(n_informative, 1)
             )
 
         if shuffle:
@@ -447,7 +447,7 @@ class RegressionDataGen(DataGenBaseMeta):
             col_indices = np.arange(cols)
             generator.shuffle(col_indices)
             if multinomial_log:
-                ground_truth = ground_truth[:, col_indices]
+                ground_truth = ground_truth[col_indices]
             else:
                 ground_truth = ground_truth[col_indices]
 
@@ -488,32 +488,10 @@ class RegressionDataGen(DataGenBaseMeta):
                         X_p[:, :] = X_p[:, col_indices]
 
                 # Label Calculation
-                if multinomial_log:
-                    if use_cupy:
-                        y = cp.squeeze(
-                            cp.array(
-                                [
-                                    [cp.dot(X_p, class_truth) + bias]
-                                    for class_truth in ground_truth_cp
-                                ]
-                            )
-                        )
-                        y = cp.transpose(y)
-                    else:
-                        y = np.squeeze(
-                            np.array(
-                                [
-                                    [np.dot(X_p, class_truth) + bias]
-                                    for class_truth in ground_truth
-                                ]
-                            )
-                        )
-                        y = np.transpose(y)
+                if use_cupy:
+                    y = cp.dot(X_p, ground_truth_cp) + bias
                 else:
-                    if use_cupy:
-                        y = cp.dot(X_p, ground_truth_cp) + bias
-                    else:
-                        y = np.dot(X_p, ground_truth) + bias
+                    y = np.dot(X_p, ground_truth) + bias
 
                 if noise > 0.0:
                     y += generator_p.normal(scale=noise, size=y.shape)
@@ -524,9 +502,7 @@ class RegressionDataGen(DataGenBaseMeta):
                         if use_cupy:
                             y = y.get()
 
-                        probs = [
-                            sp.special.softmax(target_weight) for target_weight in y
-                        ]
+                        probs = sp.special.softmax(y, axis=1)
 
                         multi_labels = [
                             random.choices(range(n_classes), weights=p)[0]
@@ -690,24 +666,21 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
         # Generate ground truth upfront.
         if multinomial_log:
-            ground_truth = np.zeros((n_classes, cols, n_targets))
-            ground_truth[:, :n_informative, :] = 100 * generator.uniform(
-                size=(n_classes, n_informative, n_targets)
+            ground_truth = np.zeros((cols, n_classes))
+            ground_truth[:n_informative, :] = 100 * generator.uniform(
+                size=(n_informative, n_classes)
             )
         else:
-            ground_truth = np.zeros((cols, n_targets))
+            ground_truth = np.zeros((cols, 1))
             ground_truth[:n_informative, :] = 100 * generator.uniform(
-                size=(n_informative, n_targets)
+                size=(n_informative, 1)
             )
 
         if shuffle:
             # Shuffle feature indices upfront.
             col_indices = np.arange(cols)
             generator.shuffle(col_indices)
-            if multinomial_log:
-                ground_truth = ground_truth[:, col_indices]
-            else:
-                ground_truth = ground_truth[col_indices]
+            ground_truth = ground_truth[col_indices]
 
         # Create different partition seeds for sample generation.
         random.seed(params["random_state"])
@@ -837,18 +810,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 generator_p = np.random.RandomState(partition_seeds[partition_index])
 
             # Label Calculation
-            if multinomial_log:
-                y = np.squeeze(
-                    np.array(
-                        [
-                            [sparse_matrix.dot(class_truth) + bias]
-                            for class_truth in ground_truth
-                        ]
-                    )
-                )
-                y = np.transpose(y)
-            else:
-                y = sparse_matrix.dot(ground_truth) + bias
+            y = sparse_matrix.dot(ground_truth) + bias
 
             # Type conversion
             if use_cupy:
@@ -867,7 +829,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                         y = y_p.get()
                         del y_p
 
-                    probs = [sp.special.softmax(target_weight) for target_weight in y]
+                    probs = sp.special.softmax(y, axis=1)
 
                     multi_labels = [
                         random.choices(range(n_classes), weights=p)[0] for p in probs

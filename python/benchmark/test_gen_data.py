@@ -176,8 +176,8 @@ def test_make_regression(
             assert np.count_nonzero(c) == 3, "Unexpected number of informative features"
         else:
             assert c.shape == (
-                n_classes_num,
                 col_num,
+                n_classes_num,
             ), "coef shape mismatch"
             assert (
                 np.count_nonzero(c) == 3 * n_classes_num
@@ -294,8 +294,8 @@ def test_make_sparse_regression(
             assert np.count_nonzero(c) == 3, "Unexpected number of informative features"
         else:
             assert c.shape == (
-                n_classes_num,
                 col_num,
+                n_classes_num,
             ), "coef shape mismatch"
             assert (
                 np.count_nonzero(c) == 3 * n_classes_num
