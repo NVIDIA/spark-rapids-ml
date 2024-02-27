@@ -518,15 +518,16 @@ class RegressionDataGen(DataGenBaseMeta):
 
                         probs = sp.special.softmax(y, axis=1)
 
-                        multi_labels = [
-                            random.choices(range(n_classes), weights=p)[0]
-                            for p in probs
-                        ]
-
                         if use_cupy:
-                            y = cp.asarray(multi_labels)
+                            probs_p = cp.asarray(probs)
+                            cdf = cp.cumsum(probs_p, axis=1)
+                            anchors = cp.random.random(size=(cdf.shape[0], 1))
+                            y = cp.sum(anchors > cdf, axis=1)
                         else:
-                            y = np.asarray(multi_labels)
+                            probs_p = probs
+                            cdf = np.cumsum(probs_p, axis=1)
+                            anchors = np.random.random(size=(cdf.shape[0], 1))
+                            y = np.sum(anchors > cdf, axis=1)
                     else:
                         if use_cupy:
                             prob = 1 / (1 + cp.exp(-y))
@@ -859,14 +860,16 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
                     probs = sp.special.softmax(y, axis=1)
 
-                    multi_labels = [
-                        random.choices(range(n_classes), weights=p)[0] for p in probs
-                    ]
-
                     if use_cupy:
-                        y = cp.asarray(multi_labels)
+                        probs_p = cp.asarray(probs)
+                        cdf = cp.cumsum(probs_p, axis=1)
+                        anchors = cp.random.random(size=(cdf.shape[0], 1))
+                        y = cp.sum(anchors > cdf, axis=1)
                     else:
-                        y = np.asarray(multi_labels)
+                        probs_p = probs
+                        cdf = np.cumsum(probs_p, axis=1)
+                        anchors = np.random.random(size=(cdf.shape[0], 1))
+                        y = np.sum(anchors > cdf, axis=1)
                 else:
                     if use_cupy:
                         prob = 1 / (1 + cp.exp(-y_p))

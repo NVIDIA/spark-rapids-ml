@@ -364,10 +364,12 @@ def test_make_sparse_regression(
                 density_values = np.linspace(
                     num_partitions / row_num, density_num, orig_cols
                 )
+                density_values *= orig_cols * density_num / sum(density_values)
             else:
                 density_values = np.logspace(
                     np.log10(num_partitions / row_num), np.log10(density_num), orig_cols
                 )
+                density_values *= orig_cols * density_num / sum(density_values)
 
             for idx, col in enumerate(X_np):
                 # Ignore the redundant columns
