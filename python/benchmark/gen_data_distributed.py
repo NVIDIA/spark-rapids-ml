@@ -298,7 +298,10 @@ class LowRankMatrixDataGen(DataGenBase):
             self.feature_cols,
         )
 
-def logistic_regression_transform (multinomial_log: bool, use_cupy: bool, n_classes: int, y_p):
+
+def logistic_regression_transform(
+    multinomial_log: bool, use_cupy: bool, n_classes: int, y_p
+):
     if use_cupy:
         try:
             import cupy as cp
@@ -312,9 +315,7 @@ def logistic_regression_transform (multinomial_log: bool, use_cupy: bool, n_clas
     if multinomial_log:
         probs = [sp.special.softmax(target_weight) for target_weight in y]
 
-        multi_labels = [
-            random.choices(range(n_classes), weights=p)[0] for p in probs
-        ]
+        multi_labels = [random.choices(range(n_classes), weights=p)[0] for p in probs]
 
         if use_cupy:
             y = cp.asarray(multi_labels)
@@ -331,6 +332,7 @@ def logistic_regression_transform (multinomial_log: bool, use_cupy: bool, n_clas
             y = np.random.binomial(1, prob)
 
     return y
+
 
 class RegressionDataGen(DataGenBaseMeta):
     """Generate regression dataset using a distributed version of sklearn.datasets.regression,
