@@ -298,6 +298,39 @@ class LowRankMatrixDataGen(DataGenBase):
             self.feature_cols,
         )
 
+def logistic_regression_transform (multinomial_log: bool, use_cupy: bool, n_classes: int, y_p):
+    if use_cupy:
+        try:
+            import cupy as cp
+        except ImportError:
+            use_cupy = False
+            logging.warning("cupy import failed; falling back to numpy.")
+
+    if use_cupy:
+        y = y_p.get()
+
+    if multinomial_log:
+        probs = [sp.special.softmax(target_weight) for target_weight in y]
+
+        multi_labels = [
+            random.choices(range(n_classes), weights=p)[0] for p in probs
+        ]
+
+        if use_cupy:
+            y = cp.asarray(multi_labels)
+        else:
+            y = np.asarray(multi_labels)
+    else:
+        if use_cupy:
+            prob = 1 - 1 / (1 + cp.exp(-y_p))
+            del y_p
+            y = cp.random.binomial(1, prob)
+        else:
+            prob = 1 - 1 / (1 + np.exp(-y_p))
+            del y_p
+            y = np.random.binomial(1, prob)
+
+    return y
 
 class RegressionDataGen(DataGenBaseMeta):
     """Generate regression dataset using a distributed version of sklearn.datasets.regression,
@@ -507,6 +540,7 @@ class RegressionDataGen(DataGenBaseMeta):
 
                 # Logistric Regression sigmoid and sample
                 if logistic_regression:
+                    # y = logistic_regression_transform (multinomial_log, use_cupy, n_classes, y)
                     if multinomial_log:
                         if use_cupy:
                             y = y.get()
@@ -847,6 +881,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
             # Logistric Regression sigmoid and sample
             if logistic_regression:
+                # y = logistic_regression_transform (multinomial_log, use_cupy, n_classes, y_p)
                 if multinomial_log:
                     if use_cupy:
                         y = y_p.get()
@@ -864,11 +899,11 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                         y = np.asarray(multi_labels)
                 else:
                     if use_cupy:
-                        prob = 1 - 1 / (1 + cp.exp(-y_p))
+                        prob = 1 / (1 + cp.exp(-y_p))
                         del y_p
                         y = cp.random.binomial(1, prob)
                     else:
-                        prob = 1 - 1 / (1 + np.exp(-y_p))
+                        prob = 1 / (1 + np.exp(-y_p))
                         del y_p
                         y = np.random.binomial(1, prob)
             else:

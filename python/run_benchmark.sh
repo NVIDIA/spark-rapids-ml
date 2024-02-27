@@ -196,7 +196,7 @@ fi
 # Linear Regression
 # TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
 # https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
-if ([[ "${MODE}" =~ "linear_regression" ]] && ! [[ "${MODE}" =~ "sparse_linear_regression" ]]) || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
     if [[ ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
@@ -367,7 +367,7 @@ if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
 fi
 
 # Logistic Regression Classification
-if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logistic_regression" ]]) || [[ "${MODE}" == "all" ]]; then
+if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
     num_classes_list=${num_classes_list:-"2 10"}
 
     for num_classes in ${num_classes_list}; do
@@ -445,20 +445,21 @@ if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logist
 
         if [[ ! -d ${data_path} ]]; then
             python $gen_data_script sparse_regression \
-	     --n_informative $( expr $num_cols / 3 )  \
-	     --num_rows $num_rows \
-	     --num_cols $num_cols \
-	     --output_num_files $output_num_files \
-	     --dtype "float64" \
-	     --feature_type "vector" \
-	     --output_dir ${data_path} \
-	     --density $density \
-	     --logistic_regression "True" \
-	     $common_confs
+            --n_informative $( expr $num_cols / 3 )  \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --dtype "float64" \
+            --feature_type "vector" \
+            --output_dir ${data_path} \
+            --density $density \
+            --logistic_regression "True" \
+            --n_classes ${num_classes}
+            $common_confs
         fi
 
         family="Binomial"
-
+            
         echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
         python ./benchmark/benchmark_runner.py logistic_regression \
             --standardization False \
@@ -471,10 +472,10 @@ if ([[ "${MODE}" =~ "logistic_regression" ]] && ! [[ "${MODE}" =~ "sparse_logist
             --num_runs $num_runs \
             --train_path ${data_path} \
             --transform_path ${data_path} \
-            --report_path "report_logistic_regression_${cluster_type}.csv" \
+            --report_path "report_sparse_logistic_regression_${cluster_type}.csv" \
             $common_confs $spark_rapids_confs \
             ${EXTRA_ARGS}
-    fi
+    done
 fi
 
 # UMAP

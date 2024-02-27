@@ -120,7 +120,7 @@ def test_make_low_rank_matrix(dtype: str, use_gpu: str) -> None:
 @pytest.mark.parametrize("low_rank", [True, False])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize(
-    "logistic_regression, n_classes", [("True", "2"), ("True", "4"), ("False", "0")]
+    "logistic_regression, n_classes", [("True", "2"), ("True", "15"), ("False", "0")]
 )
 def test_make_regression(
     dtype: str, low_rank: bool, use_gpu: str, logistic_regression: str, n_classes: str
@@ -175,13 +175,6 @@ def test_make_regression(
             assert c.shape == (col_num,), "coef shape mismatch"
             assert np.count_nonzero(c) == 3, "Unexpected number of informative features"
         else:
-            print(
-                c.shape,
-                (
-                    n_classes,
-                    col_num,
-                ),
-            )
             assert c.shape == (
                 n_classes_num,
                 col_num,
@@ -209,7 +202,7 @@ def test_make_regression(
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize("redundant_cols", ["0", "2"])
 @pytest.mark.parametrize(
-    "logistic_regression, n_classes", [("True", "2"), ("True", "4"), ("False", "0")]
+    "logistic_regression, n_classes", [("True", "2"), ("True", "15"), ("False", "0")]
 )
 @pytest.mark.parametrize(
     "density", ["0.25", pytest.param("0.2", marks=pytest.mark.slow)]
@@ -291,13 +284,6 @@ def test_make_sparse_regression(
             assert c.shape == (col_num,), "coef shape mismatch"
             assert np.count_nonzero(c) == 3, "Unexpected number of informative features"
         else:
-            print(
-                c.shape,
-                (
-                    n_classes,
-                    col_num,
-                ),
-            )
             assert c.shape == (
                 n_classes_num,
                 col_num,

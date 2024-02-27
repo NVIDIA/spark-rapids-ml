@@ -159,7 +159,8 @@ class DataGenBase(DataGen):
             elif name == "tail_strength":
                 help_msg = "tail strength for random low rank feature matrix generation, refer to sklearn.datasets.make_low_rank_matrix()"
             elif name == "density_curve":
-                help_msg = "Specify columns wise density curve, support Linear or Exponential. Argument density would not be used to represent the max density in the curve"
+                help_msg = "Specify columns wise density curve, support Linear or Exponential. The density of the generated matrix will have a density growing linearly/exponentially from the first to the last column. \
+                            Argument density would not be used to represent the max density in the curve"
             else:
                 help_msg = ""
 
