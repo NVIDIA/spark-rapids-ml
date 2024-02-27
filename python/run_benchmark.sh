@@ -437,39 +437,44 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
     done
     
     # Logistic Regression with sparse vector dataset
-    data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_cols}_float64_ncls${num_classes}.parquet
+    PYSPARK_4_below=$(python -c "import pyspark; from packaging import version; cmp = version.parse(pyspark.__version__) < version.parse('3.4.0'); print(cmp);")
+    if [ $PYSPARK_4_below = "True" ]; then
+        echo "Skip benchmarking logistic regression on sparse vectors. Spark 3.4 and above is required."
+    else
+        data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_cols}_float64_ncls${num_classes}.parquet
 
-    if [[ ! -d ${data_path} ]]; then
-        python $gen_data_script sparse_regression \
-	    --n_informative $( expr $num_cols / 3 )  \
-	    --num_rows $num_rows \
-	    --num_cols $num_cols \
-	    --output_num_files $output_num_files \
-	    --dtype "float64" \
-	    --feature_type "vector" \
-	    --output_dir ${data_path} \
-	    --density $density \
-	    --logistic_regression "True" \
-	    $common_confs
+        if [[ ! -d ${data_path} ]]; then
+            python $gen_data_script sparse_regression \
+	     --n_informative $( expr $num_cols / 3 )  \
+	     --num_rows $num_rows \
+	     --num_cols $num_cols \
+	     --output_num_files $output_num_files \
+	     --dtype "float64" \
+	     --feature_type "vector" \
+	     --output_dir ${data_path} \
+	     --density $density \
+	     --logistic_regression "True" \
+	     $common_confs
+        fi
+
+        family="Binomial"
+
+        echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
+        python ./benchmark/benchmark_runner.py logistic_regression \
+            --standardization False \
+            --maxIter 200 \
+            --tol 1e-30 \
+            --regParam 0.00001 \
+            --elasticNetParam 0.2 \
+            --num_gpus $num_gpus \
+            --num_cpus $num_cpus \
+            --num_runs $num_runs \
+            --train_path ${data_path} \
+            --transform_path ${data_path} \
+            --report_path "report_logistic_regression_${cluster_type}.csv" \
+            $common_confs $spark_rapids_confs \
+            ${EXTRA_ARGS}
     fi
-
-    family="Binomial"
-        
-    echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
-    python ./benchmark/benchmark_runner.py logistic_regression \
-        --standardization False \
-        --maxIter 200 \
-        --tol 1e-30 \
-        --regParam 0.00001 \
-        --elasticNetParam 0.2 \
-        --num_gpus $num_gpus \
-        --num_cpus $num_cpus \
-        --num_runs $num_runs \
-        --train_path ${data_path} \
-        --transform_path ${data_path} \
-        --report_path "report_logistic_regression_${cluster_type}.csv" \
-        $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
 fi
 
 # UMAP
