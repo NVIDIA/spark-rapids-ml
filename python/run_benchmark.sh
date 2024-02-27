@@ -66,6 +66,7 @@ unset SPARK_HOME
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
+num_sparse_cols=${num_sparse_cols:-3000}
 density=${density:-0.1}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
@@ -442,13 +443,13 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
         echo "Skip benchmarking logistic regression on sparse vectors. Spark 3.4 and above is required."
     else
         for num_classes in ${num_classes_list}; do
-            data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_cols}_float64_ncls${num_classes}.parquet
+            data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_sparse_cols}_float64_ncls${num_classes}.parquet
 
             if [[ ! -d ${data_path} ]]; then
                 python $gen_data_script sparse_regression \
                 --n_informative $( expr $num_cols / 3 )  \
                 --num_rows $num_rows \
-                --num_cols $num_cols \
+                --num_cols $num_sparse_cols \
                 --output_num_files $output_num_files \
                 --dtype "float64" \
                 --feature_type "vector" \

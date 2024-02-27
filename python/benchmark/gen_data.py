@@ -164,6 +164,13 @@ class DataGenBase(DataGen):
             else:
                 help_msg = ""
 
+            # Support multiple biases
+            if name == "bias":
+                self._parser.add_argument(
+                    "--" + name, nargs="+", type=float, help=help_msg
+                )
+                continue
+
             if value is None:
                 raise RuntimeError("Must convert None value to the correct type")
             elif type(value) is bool or value is bool:

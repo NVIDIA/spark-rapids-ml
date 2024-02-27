@@ -372,8 +372,20 @@ class RegressionDataGen(DataGenBaseMeta):
             logging.warning(
                 "Can not have logistic regression with 2 classes, default to 2"
             )
+            n_classes = 2
 
         multinomial_log = logistic_regression and (n_classes > 2)
+
+        # Check for bias for each class
+        if multinomial_log:
+            if isinstance(bias, list):
+                if len(bias) < n_classes:
+                    logging.warning(
+                        "Insufficient bias number, setting all the the first entry"
+                    )
+                    bias = [bias[0] for i in range(n_classes)]
+            else:
+                bias = [bias for i in range(n_classes)]
 
         # Description (from sklearn):
         #
@@ -471,8 +483,10 @@ class RegressionDataGen(DataGenBaseMeta):
                 generator_p = cp.random.RandomState(partition_seeds[partition_index])
                 ground_truth_cp = cp.asarray(ground_truth)
                 col_indices_cp = cp.asarray(col_indices)
+                bias_p = cp.asarray(bias)
             else:
                 generator_p = np.random.RandomState(partition_seeds[partition_index])
+                bias_p = np.array(bias)
 
             for pdf in iter:
                 if use_cupy:
@@ -489,9 +503,9 @@ class RegressionDataGen(DataGenBaseMeta):
 
                 # Label Calculation
                 if use_cupy:
-                    y = cp.dot(X_p, ground_truth_cp) + bias
+                    y = cp.dot(X_p, ground_truth_cp) + bias_p
                 else:
-                    y = np.dot(X_p, ground_truth) + bias
+                    y = np.dot(X_p, ground_truth) + bias_p
 
                 if noise > 0.0:
                     y += generator_p.normal(scale=noise, size=y.shape)
@@ -634,8 +648,20 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             logging.warning(
                 "Can not have logistic regression with 2 classes, default to 2"
             )
+            n_classes = 2
 
         multinomial_log = logistic_regression and (n_classes > 2)
+
+        # Check for bias for each class
+        if multinomial_log:
+            if isinstance(bias, list):
+                if len(bias) < n_classes:
+                    logging.warning(
+                        "Insufficient bias number, setting all the the first entry"
+                    )
+                    bias = [bias[0] for i in range(n_classes)]
+            else:
+                bias = [bias for i in range(n_classes)]
 
         # Number of non_redundant columns
         orig_cols = cols - redundant_cols
@@ -653,10 +679,12 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         if density_curve != "None":
             if density_curve == "Linear":
                 density_values = np.linspace(num_partitions / rows, density, orig_cols)
+                density_values *= orig_cols * density / sum(density_values)
             elif density_curve == "Exponential":
                 density_values = np.logspace(
                     np.log10(num_partitions / rows), np.log10(density), orig_cols
                 )
+                density_values *= orig_cols * density / sum(density_values)
             else:
                 logging.warning(
                     "Unsupported density curve, canceling density curve option",
