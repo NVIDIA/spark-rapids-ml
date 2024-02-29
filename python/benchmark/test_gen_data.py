@@ -421,6 +421,7 @@ def test_make_sparse_regression(
 
                 dense_count += np.count_nonzero(X_np[:, idx])
 
+
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
 @pytest.mark.parametrize(
