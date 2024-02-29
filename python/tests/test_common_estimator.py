@@ -167,7 +167,10 @@ class SparkRapidsMLDummy(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         num_workers = self.num_workers
         partition_num = self.partition_num
         m = self.m
@@ -277,7 +280,11 @@ class SparkRapidsMLDummyModel(
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
         model_attribute_a = self.model_attribute_a
 
         # if the common framework tries to pickle the whole class,

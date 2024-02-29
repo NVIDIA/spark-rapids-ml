@@ -570,7 +570,7 @@ def test_perf(
             )
 
         # If no shuffle with a density curve, test to see if the column density is increasing as the desired curve
-        n_chunks = int(n_chunks)
+        n_chunks_num = int(n_chunks)
         if density_curve != "None" and shuffle == "False":
             orig_cols = col_num - int(redundant_cols)
             num_partitions = 3
@@ -582,17 +582,19 @@ def test_perf(
 
             if density_curve == "Linear":
                 density_values = np.linspace(
-                    num_partitions / row_num, density_num, n_chunks
+                    num_partitions / row_num, density_num, n_chunks_num
                 )
-                density_values *= n_chunks * density_num / sum(density_values)
+                density_values *= n_chunks_num * density_num / sum(density_values)
             else:
                 density_values = np.logspace(
-                    np.log10(num_partitions / row_num), np.log10(density_num), n_chunks
+                    np.log10(num_partitions / row_num),
+                    np.log10(density_num),
+                    n_chunks_num,
                 )
-                density_values *= n_chunks * density_num / sum(density_values)
+                density_values *= n_chunks_num * density_num / sum(density_values)
 
-            col_per_chunk = np.full(n_chunks, orig_cols // n_chunks)
-            col_per_chunk[: (orig_cols % n_chunks)] += 1
+            col_per_chunk = np.full(n_chunks_num, orig_cols // n_chunks_num)
+            col_per_chunk[: (orig_cols % n_chunks_num)] += 1
             col_per_chunk = np.cumsum(col_per_chunk)
 
             density_idx = 0
