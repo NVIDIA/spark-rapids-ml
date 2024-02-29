@@ -322,10 +322,10 @@ class NearestNeighbors(
         """
         pass
 
-    def _get_cuml_fit_func(self, dataset: DataFrame) -> Callable[
+    def _get_cuml_fit_func(self, dataset: DataFrame) -> Callable[  # type: ignore
         [FitInputType, Dict[str, Any]],
         Dict[str, Any],
-    ]:  # type: ignore
+    ]:
         """
         This class overrides _fit and will not call _get_cuml_fit_func.
         """
