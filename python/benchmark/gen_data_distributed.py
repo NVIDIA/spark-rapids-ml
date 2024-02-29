@@ -700,9 +700,9 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 density_curve = "None"
         else:
             if isinstance(density, List):
-                density_values = density
+                density_values = np.array(density)
             else:
-                density_values = [density]
+                density_values = np.array([density])
 
             n_chunks = len(density_values)
 
@@ -828,16 +828,19 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 sparse_matrix = sparse_matrix[:, col_indices]
 
             # Transform the sparse matrix into array of sparse vectors
-            indices = range(num_rows_per_partition)
-
             X = []
-            for i in indices:
-                row = sparse_matrix.getrow(i)
+            for i in range(num_rows_per_partition):
+                # row = sparse_matrix.getrow(i)
 
-                dense_indices = row.indices
-                dense_values = row.data
+                # dense_indices = row.indices
+                # dense_values = row.data
+                # dense = zip(dense_indices, dense_values)
 
-                dense = sorted(zip(dense_indices, dense_values))
+                
+                dense_indices = sparse_matrix[i].nonzero()[1]
+                dense_values = sparse_matrix[i, dense_indices]
+                print("Check here\n", sparse_matrix[i], dense_indices, dense_values)
+
                 # vectors = np.column_stack((dense_indices, dense_values))
                 # col_order = np.argsort(vectors[:, 0])
                 # dense = vectors[col_order]
@@ -846,8 +849,10 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     {
                         "type": 0,
                         "size": cols,
-                        "indices": [x[0] for x in dense],
-                        "values": [x[1] for x in dense],
+                        # "indices": [x[0] for x in dense],
+                        # "values": [x[1] for x in dense],
+                        "indices": dense_indices,
+                        "values": dense_values,
                     }
                 )
 
@@ -917,17 +922,17 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 X_p = [X[i] for i in truncated_idx]
                 y_partial = y[truncated_idx]
 
-                n_partition_rows = len(X_p)
-                if shuffle:
-                    # Row-wise shuffle (partition)
-                    if use_cupy:
-                        row_indices = cp.random.permutation(n_partition_rows)
-                        X_p = [X_p[i] for i in row_indices.get()]
-                        y_partial = y_partial[row_indices.get()]
-                    else:
-                        X_p, y_partial = util_shuffle(
-                            X_p, y_partial, random_state=generator_p
-                        )
+                # n_partition_rows = len(X_p)
+                # if shuffle:
+                #     # Row-wise shuffle (partition)
+                #     if use_cupy:
+                #         row_indices = cp.random.permutation(n_partition_rows)
+                #         X_p = [X_p[i] for i in row_indices.get()]
+                #         y_partial = y_partial[row_indices.get()]
+                #     else:
+                #         X_p, y_partial = util_shuffle(
+                #             X_p, y_partial, random_state=generator_p
+                #         )
 
                 # If pyspark version does not support Pandas-Spark Vector transformation
                 #   return arrays of indices and values to reconstruct the sparse vectors
