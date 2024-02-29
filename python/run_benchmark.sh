@@ -42,12 +42,14 @@ local_threads=${local_threads:-4}
 num_gpus=1
 if [[ $cluster_type == "gpu" || $cluster_type == "gpu_etl" ]]; then
     num_cpus=0
+    use_gpu=true
     if [[ -n $CUDA_VISIBLE_DEVICES ]]; then
         num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
     fi
 elif [[ $cluster_type == "cpu" ]]; then
     num_cpus=$local_threads
     num_gpus=0
+    use_gpu=false
 else
     echo "unknown cluster type $cluster_type"
     echo "usage: $0 cpu|gpu|gpu_etl mode [extra-args] "
@@ -457,6 +459,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
                 --density $density \
                 --logistic_regression "True" \
                 --n_classes ${num_classes} \
+                --use_gpu ${use_gpu} \
                 $common_confs
             fi
 

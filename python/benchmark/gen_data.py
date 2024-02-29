@@ -165,7 +165,7 @@ class DataGenBase(DataGen):
                 help_msg = ""
 
             # Support multiple biases
-            if name == "bias":
+            if name == "bias" or name == "density":
                 self._parser.add_argument(
                     "--" + name, nargs="+", type=float, help=help_msg
                 )

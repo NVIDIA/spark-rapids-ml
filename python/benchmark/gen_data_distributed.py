@@ -599,6 +599,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         params["logistic_regression"] = bool
         params["density_curve"] = str
         params["n_classes"] = int
+        params["n_chunk"] = int
         return params
 
     def gen_dataframe_and_meta(
@@ -638,6 +639,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         n_informative = params.get("n_informative", 10)
         n_targets = params.get("n_targets", 1)
         n_classes = params.get("n_classes", 2)
+        n_chunks = params.get("n_chunk", 10)
         use_gpu = params.get("use_gpu", False)
         logistic_regression = params.get("logistic_regression", False)
         density = params.get("density", 0.1)
@@ -667,31 +669,54 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         # Number of non_redundant columns
         orig_cols = cols - redundant_cols
 
-        # Check for valid redundant columns
-        if redundant_cols > 0 and redundant_cols / cols > density:
-            logging.warning(
-                "Redundant columns would break density property, setting to zero instead"
-            )
-            redundant_cols = 0
-            orig_cols = cols
-
         # Compute Density Curve
         density_values = np.array([])
         if density_curve != "None":
+            if isinstance(density, List):
+                logging.warning(
+                    "Only the first density value will be used as density curve final target density"
+                )
+                density = density[0]
+
+            if n_chunks > orig_cols:
+                logging.warning(
+                    "Not enough columns for the density chunks, setting chunk number to non-redundant column number"
+                )
+                n_chunks = orig_cols
+
             if density_curve == "Linear":
-                density_values = np.linspace(num_partitions / rows, density, orig_cols)
-                density_values *= orig_cols * density / sum(density_values)
+                density_values = np.linspace(num_partitions / rows, density, n_chunks)
+                density_values *= n_chunks * density / sum(density_values)
             elif density_curve == "Exponential":
                 density_values = np.logspace(
-                    np.log10(num_partitions / rows), np.log10(density), orig_cols
+                    np.log10(num_partitions / rows), np.log10(density), n_chunks
                 )
-                density_values *= orig_cols * density / sum(density_values)
+                density_values *= n_chunks * density / sum(density_values)
             else:
                 logging.warning(
                     "Unsupported density curve, canceling density curve option",
                     density_curve,
                 )
                 density_curve = "None"
+        else:
+            if isinstance(density, List):
+                density_values = density
+            else:
+                density_values = [density]
+
+            n_chunks = len(density_values)
+
+            avg_density = sum(density_values) // len(density_values)
+            if (
+                redundant_cols > 0
+                and redundant_cols / cols > avg_density
+                and density_curve == "None"
+            ):
+                logging.warning(
+                    "Redundant columns would break density property, setting to zero instead"
+                )
+                redundant_cols = 0
+                orig_cols = cols
 
         # Generate ground truth upfront.
         if multinomial_log:
@@ -742,26 +767,32 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     start = pdf["id"][0]
 
             # Generate column by column if there is a density curve
-            if density_curve != "None":
-                sparse_matrix = sp.sparse.csr_matrix((0, 0))
-                for d in density_values:
-                    # Generate a column
-                    sparse_col = sp.sparse.random(
-                        num_rows_per_partition,
-                        1,
-                        density=d,
-                        random_state=generator,
-                        format="csr",
-                        dtype=dtype,
-                        data_rvs=np.random.randn,
-                    )
+            sparse_matrix = sp.sparse.csr_matrix((0, 0))
 
-                    if sparse_matrix.shape[0] == 0:
-                        sparse_matrix = sparse_col
-                    else:
-                        sparse_matrix = sp.sparse.hstack(
-                            [sparse_matrix, sparse_col]
-                        ).tocsr()
+            col_per_chunk = np.full(n_chunks, orig_cols // n_chunks)
+            col_per_chunk[: (orig_cols % n_chunks)] += 1
+
+            for i in range(n_chunks):
+                d = density_values[i]
+                chunk_cols = col_per_chunk[i]
+
+                # Generate a column
+                sparse_col = sp.sparse.random(
+                    num_rows_per_partition,
+                    chunk_cols,
+                    density=d,
+                    random_state=generator,
+                    format="csr",
+                    dtype=dtype,
+                    data_rvs=np.random.randn,
+                )
+
+                if sparse_matrix.shape[0] == 0:
+                    sparse_matrix = sparse_col
+                else:
+                    sparse_matrix = sp.sparse.hstack(
+                        [sparse_matrix, sparse_col]
+                    ).tocsr()
 
             # Add in redundant cols of linear combinations of generated random sparse cols
             if redundant_cols > 0:
@@ -792,18 +823,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
 
-            elif density_curve == "None":
-                # Generate random sparse matrix without redundant columns directly
-                sparse_matrix = sp.sparse.random(
-                    num_rows_per_partition,
-                    orig_cols,
-                    density=density,
-                    random_state=generator,
-                    format="csr",
-                    dtype=dtype,
-                    data_rvs=np.random.randn,
-                )
-
             # Shuffle the matrix in scipy matrix with support to indexing
             if shuffle:
                 sparse_matrix = sparse_matrix[:, col_indices]
@@ -819,6 +838,10 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 dense_values = row.data
 
                 dense = sorted(zip(dense_indices, dense_values))
+                # vectors = np.column_stack((dense_indices, dense_values))
+                # col_order = np.argsort(vectors[:, 0])
+                # dense = vectors[col_order]
+                # del vectors
                 X.append(
                     {
                         "type": 0,
@@ -892,6 +915,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             for idx in dfs:
                 truncated_idx = idx["id"].to_numpy() - start
                 X_p = [X[i] for i in truncated_idx]
+                y_partial = y[truncated_idx]
 
                 n_partition_rows = len(X_p)
                 if shuffle:
@@ -899,47 +923,52 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     if use_cupy:
                         row_indices = cp.random.permutation(n_partition_rows)
                         X_p = [X_p[i] for i in row_indices.get()]
-                        y = y[row_indices.get()]
+                        y_partial = y_partial[row_indices.get()]
                     else:
-                        X_p, y = util_shuffle(X_p, y, random_state=generator_p)
+                        X_p, y_partial = util_shuffle(
+                            X_p, y_partial, random_state=generator_p
+                        )
 
                 # If pyspark version does not support Pandas-Spark Vector transformation
                 #   return arrays of indices and values to reconstruct the sparse vectors
                 # else return the vector dictionary and let spark do the transformation
                 if version.parse(pyspark.__version__) < version.parse("3.5.0"):
                     data = [
-                        (X_p[i]["indices"], X_p[i]["values"], y[i])
-                        for i in range(y.shape[0])
+                        (X_p[i]["indices"], X_p[i]["values"], y_partial[i])
+                        for i in range(y_partial.shape[0])
                     ]
 
                     del X_p
-                    del y
+                    del y_partial
 
                     res = pd.DataFrame(data)
                 else:
-                    vec_data = [(X_p[i], y[i]) for i in range(y.shape[0])]
+                    vec_data = [
+                        (X_p[i], y_partial[i]) for i in range(y_partial.shape[0])
+                    ]
 
                     del X_p
-                    del y
+                    del y_partial
 
                     res = pd.DataFrame(vec_data)
 
                 yield res
 
         label_col = "label"
+        label_type = IntegerType() if logistic_regression else FloatType()
 
         vec_schema = StructType(
             [
-                StructField("features", VectorUDT(), nullable=True),
-                StructField(label_col, FloatType(), nullable=True),
+                StructField("features", VectorUDT(), nullable=False),
+                StructField(label_col, label_type, nullable=False),
             ]
         )
 
         schema = StructType(
             [
-                StructField("indices", ArrayType(IntegerType()), nullable=True),
-                StructField("values", ArrayType(FloatType()), nullable=True),
-                StructField(label_col, FloatType(), nullable=True),
+                StructField("indices", ArrayType(IntegerType()), nullable=False),
+                StructField("values", ArrayType(FloatType()), nullable=False),
+                StructField(label_col, label_type, nullable=False),
             ]
         )
 

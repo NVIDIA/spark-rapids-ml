@@ -229,7 +229,8 @@ def test_make_regression(
     ],
 )
 @pytest.mark.parametrize(
-    "density", ["0.25", pytest.param("0.2", marks=pytest.mark.slow)]
+    "density",
+    ["0.25", ["0.05", "0.1", "0.2"], pytest.param("0.2", marks=pytest.mark.slow)],
 )
 @pytest.mark.parametrize(
     "rows, cols", [("100", "20"), pytest.param("1000", "100", marks=pytest.mark.slow)]
@@ -244,6 +245,9 @@ def test_make_regression(
         pytest.param("Exponential", "True", marks=pytest.mark.slow),
     ],
 )
+@pytest.mark.parametrize(
+    "n_chunks", ["10", pytest.param("100", marks=pytest.mark.slow)]
+)
 def test_make_sparse_regression(
     dtype: str,
     use_gpu: str,
@@ -251,11 +255,12 @@ def test_make_sparse_regression(
     logistic_regression: str,
     n_classes: str,
     bias: Union[str, List[str]],
-    density: str,
+    density: Union[str, List[str]],
     rows: str,
     cols: str,
     density_curve: str,
     shuffle: str,
+    n_chunks: str,
 ) -> None:
 
     input_args = [
@@ -273,16 +278,12 @@ def test_make_sparse_regression(
         "3",
         "--n_classes",
         n_classes,
-        "--bias",
-        "0.0",
         "--noise",
         "1.0",
         "--random_state",
         "0",
         "--use_gpu",
         use_gpu,
-        "--density",
-        density,
         "--redundant_cols",
         redundant_cols,
         "--logistic_regression",
@@ -292,6 +293,18 @@ def test_make_sparse_regression(
         "--shuffle",
         shuffle,
     ]
+
+    input_args.append("--bias")
+    if isinstance(bias, List):
+        input_args.extend(bias)
+    else:
+        input_args.append(bias)
+
+    input_args.append("--density")
+    if isinstance(density, List):
+        input_args.extend(density)
+    else:
+        input_args.append(density)
 
     row_num = int(rows)
     col_num = int(cols)
@@ -348,44 +361,64 @@ def test_make_sparse_regression(
         total = row_num * col_num
 
         # If there is no random shuffled redundant cols, we can check the total density
-        density_num = float(density)
         if redundant_cols == "0" and density_curve == "None":
+            if isinstance(density, List):
+                density_num = sum([float(d) for d in density]) / len(density)
+            else:
+                density_num = float(density)
+
             assert (
                 count > total * density_num * 0.95
                 and count < total * density_num * 1.05
             )
 
         # If no shuffle with a density curve, test to see if the column density is increasing as the desired curve
+        n_chunks = int(n_chunks)
         if density_curve != "None" and shuffle == "False":
             orig_cols = col_num - int(redundant_cols)
             num_partitions = 3
 
+            if isinstance(density, List):
+                density_num = float(density[0])
+            else:
+                density_num = float(density)
+
             if density_curve == "Linear":
                 density_values = np.linspace(
-                    num_partitions / row_num, density_num, orig_cols
+                    num_partitions / row_num, density_num, n_chunks
                 )
-                density_values *= orig_cols * density_num / sum(density_values)
+                density_values *= n_chunks * density_num / sum(density_values)
             else:
                 density_values = np.logspace(
-                    np.log10(num_partitions / row_num), np.log10(density_num), orig_cols
+                    np.log10(num_partitions / row_num), np.log10(density_num), n_chunks
                 )
-                density_values *= orig_cols * density_num / sum(density_values)
+                density_values *= n_chunks * density_num / sum(density_values)
 
+            col_per_chunk = np.full(n_chunks, orig_cols // n_chunks)
+            col_per_chunk[: (orig_cols % n_chunks)] += 1
+            col_per_chunk = np.cumsum(col_per_chunk)
+
+            density_idx = 0
+            dense_count = 0
             for idx, col in enumerate(X_np):
                 # Ignore the redundant columns
                 if idx >= orig_cols:
                     break
 
-                col_density = density_values[idx]
+                if density_values[density_idx] == idx:
+                    col_density = density_values[density_idx]
+                    chunk_size = col_per_chunk[density_idx]
 
-                dense_count = np.count_nonzero(X_np[:, idx])
+                    assert dense_count >= chunk_size * num_partitions * int(
+                        (row_num // num_partitions) * col_density - 1
+                    ) and dense_count <= chunk_size * num_partitions * int(
+                        (row_num // num_partitions) * col_density + 1
+                    )
 
-                print((row_num // num_partitions) * col_density * 0.95)
-                assert dense_count >= num_partitions * int(
-                    (row_num // num_partitions) * col_density - 1
-                ) and dense_count <= num_partitions * int(
-                    (row_num // num_partitions) * col_density + 1
-                )
+                    density_idx += 1
+                    dense_count = 0
+
+                dense_count += np.count_nonzero(X_np[:, idx])
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
