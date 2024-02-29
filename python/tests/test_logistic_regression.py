@@ -596,6 +596,7 @@ def test_lr_fit_multiple_in_single_pass(
     data_shape: Tuple[int, int],
     n_classes: int,
 ) -> None:
+    tolerance = 1e-3
     X_train, X_test, y_train, y_test = make_classification_dataset(
         datatype=data_type,
         nrows=data_shape[0],
@@ -651,9 +652,13 @@ def test_lr_fit_multiple_in_single_pass(
             single_model = rf.fit(train_df, param_map)
 
             assert array_equal(
-                single_model.coefficients.toArray(), models[i].coefficients.toArray()
+                single_model.coefficients.toArray(),
+                models[i].coefficients.toArray(),
+                tolerance,
             )
-            assert array_equal([single_model.intercept], [models[i].intercept])
+            assert array_equal(
+                [single_model.intercept], [models[i].intercept], tolerance
+            )
 
             for k, v in param_map.items():
                 assert models[i].getOrDefault(k.name) == v

@@ -942,6 +942,8 @@ class LogisticRegression(
         Dict[str, Any],
     ]:
         array_order = self._fit_array_order()
+        standardization = self.getStandardization()
+        fit_intercept = self.getFitIntercept()
 
         logger = get_logger(self.__class__)
         if (
@@ -976,14 +978,14 @@ class LogisticRegression(
             )
 
             # densifying sparse vectors into dense to use standardization
-            if self.getStandardization() is True and is_sparse is True:
+            if standardization is True and is_sparse is True:
                 concated = concated.toarray()
 
             # Padding zero columns so that the total number of columns is a multiple of 32.
             # The purpose is to avoid out-of-bound memory access of some RAFT 24.02 cuda kernels (e.g. sum).
             # This is a temporary workaround and is expected to be removed in 24.04
             num_pad_zero_cols = 0
-            if self.getStandardization() is True and concated.shape[1] % 32 != 0:
+            if standardization is True and concated.shape[1] % 32 != 0:
                 num_pad_zero_cols = 32 - concated.shape[1] % 32
                 nrows = concated.shape[0]
                 import cupy as cp
@@ -1013,7 +1015,74 @@ class LogisticRegression(
                 params[param_alias.num_cols] + num_pad_zero_cols,
             )
 
+            # Use cupy to standardize dataset as a workaround to gain better numeric stability
+            standarization_with_cupy = standardization
+            if standarization_with_cupy is True:
+                if isinstance(concated, np.ndarray):
+                    concated = cp.array(concated)
+                elif isinstance(concated, pd.DataFrame):
+                    concated = cp.array(concated.values)
+                else:
+                    assert isinstance(
+                        concated, cp.ndarray
+                    ), "only numpy array, cupy array, and pandas dataframe are supported when standardization_with_cupy is on"
+
+                mean_partial = concated.sum(axis=0) / pdesc.m
+                quadratic_sum_kernel = cp.ReductionKernel(
+                    "T x",  # input params
+                    "T y",  # output params
+                    "x * x",  # map
+                    "a + b",  # reduce
+                    "y = a",  # post-reduction map
+                    "0",  # identity value
+                    "quadratic_sum",  # kernel name
+                )
+                normalized_quadsum_partial = quadratic_sum_kernel(concated, axis=0) / (
+                    pdesc.m - 1
+                )
+
+                import json
+
+                from pyspark import BarrierTaskContext
+
+                context = BarrierTaskContext.get()
+
+                msg = json.dumps(
+                    (mean_partial.tolist(), normalized_quadsum_partial.tolist())
+                )
+                recv_msgs = context.allGather(msg)
+                recv_partials = [json.loads(m) for m in recv_msgs]
+
+                mp_collection = [p[0] for p in recv_partials]
+                nqs_collection = [p[1] for p in recv_partials]
+
+                mean = np.sum(mp_collection, axis=0).astype(concated.dtype)
+                normalized_quadsum = np.sum(nqs_collection, axis=0).astype(
+                    concated.dtype
+                )
+
+                vars = normalized_quadsum - (mean**2) * pdesc.m / (pdesc.m - 1)
+                assert np.all(vars >= 0)
+                stddev = np.sqrt(vars)
+
+                mean = cp.array(mean)
+                stddev = cp.array(stddev)
+
+                if fit_intercept is True:
+                    mean_centered_kernel = cp.ElementwiseKernel(
+                        "T x, T y", "T z", "z = x - y", "mean_centered"
+                    )
+                    concated = mean_centered_kernel(concated, mean)
+
+                stddev_scaled_kernel = cp.ElementwiseKernel(
+                    "T x, T y", "T z", "z = (y == T(0)? x : x / y)", "stddev_scaled"
+                )
+                concated = stddev_scaled_kernel(concated, stddev)
+
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
+                if standarization_with_cupy is True:
+                    init_parameters["standardization"] = False
+
                 if init_parameters["C"] == 0.0:
                     init_parameters["penalty"] = "none"
 
@@ -1042,7 +1111,16 @@ class LogisticRegression(
                     pdesc.rank,
                 )
 
-                intercept_array = logistic_regression.intercept_
+                coef_ = logistic_regression.coef_
+                intercept_ = logistic_regression.intercept_
+                if standarization_with_cupy is True:
+                    import cupy as cp
+
+                    coef_ = cp.where(stddev > 0, coef_ / stddev, coef_)
+                    if init_parameters["fit_intercept"] is True:
+                        intercept_ = intercept_ - cp.dot(coef_, mean)
+
+                intercept_array = intercept_
                 # follow Spark to center the intercepts for multinomial classification
                 if (
                     init_parameters["fit_intercept"] is True
@@ -1058,9 +1136,10 @@ class LogisticRegression(
                     intercept_array -= intercept_mean
 
                 n_cols = logistic_regression.n_cols - num_pad_zero_cols
+
                 model = {
-                    "coef_": logistic_regression.coef_[:, :n_cols].tolist(),
-                    "intercept_": intercept_array.tolist(),
+                    "coef_": coef_[:, :n_cols].tolist(),
+                    "intercept_": intercept_.tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": n_cols,
                     "dtype": logistic_regression.dtype.name,
