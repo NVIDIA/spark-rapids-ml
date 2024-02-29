@@ -262,7 +262,6 @@ def test_make_sparse_regression(
     shuffle: str,
     n_chunks: str,
 ) -> None:
-
     input_args = [
         "--num_rows",
         rows,
@@ -390,7 +389,9 @@ def test_make_sparse_regression(
                 density_values *= n_chunks_num * density_num / sum(density_values)
             else:
                 density_values = np.logspace(
-                    np.log10(num_partitions / row_num), np.log10(density_num), n_chunks_num
+                    np.log10(num_partitions / row_num),
+                    np.log10(density_num),
+                    n_chunks_num,
                 )
                 density_values *= n_chunks_num * density_num / sum(density_values)
 
@@ -420,6 +421,7 @@ def test_make_sparse_regression(
 
                 dense_count += np.count_nonzero(X_np[:, idx])
 
+
 @pytest.mark.parametrize("dtype", ["float64"])
 @pytest.mark.parametrize("use_gpu", ["True"])
 @pytest.mark.parametrize("redundant_cols", ["0"])
@@ -433,9 +435,7 @@ def test_make_sparse_regression(
     "density",
     ["0.25"],
 )
-@pytest.mark.parametrize(
-    "rows, cols", [("100", "20")]
-)
+@pytest.mark.parametrize("rows, cols", [("100", "20")])
 @pytest.mark.parametrize(
     "density_curve, shuffle",
     [
@@ -445,9 +445,7 @@ def test_make_sparse_regression(
         ("Exponential", "False"),
     ],
 )
-@pytest.mark.parametrize(
-    "n_chunks", ["10"]
-)
+@pytest.mark.parametrize("n_chunks", ["10"])
 def test_perf(
     dtype: str,
     use_gpu: str,
@@ -462,7 +460,6 @@ def test_perf(
     shuffle: str,
     n_chunks: str,
 ) -> None:
-
     input_args = [
         "--num_rows",
         rows,

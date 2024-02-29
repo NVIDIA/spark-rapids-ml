@@ -605,7 +605,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
     def gen_dataframe_and_meta(
         self, spark: SparkSession
     ) -> Tuple[DataFrame, List[str], np.ndarray]:
-
         dtype = self.dtype
         if dtype != np.float64:
             logging.warning(
@@ -836,7 +835,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 # dense_values = row.data
                 # dense = zip(dense_indices, dense_values)
 
-                
                 dense_indices = sparse_matrix[i].nonzero()[1]
                 dense_values = sparse_matrix[i, dense_indices]
                 print("Check here\n", sparse_matrix[i], dense_indices, dense_values)

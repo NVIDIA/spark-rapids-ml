@@ -486,10 +486,7 @@ class LinearRegression(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[
-        [FitInputType, Dict[str, Any]],
-        Dict[str, Any],
-    ]:
+    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
         def _linear_regression_fit(
             dfs: FitInputType,
             params: Dict[str, Any],
@@ -711,11 +708,7 @@ class LinearRegressionModel(
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[
-        _ConstructFunc,
-        _TransformFunc,
-        Optional[_EvaluateFunc],
-    ]:
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         coef_ = self.coef_
         intercept_ = self.intercept_
         n_cols = self.n_cols
@@ -1026,11 +1019,7 @@ class RandomForestRegressionModel(
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[
-        _ConstructFunc,
-        _TransformFunc,
-        Optional[_EvaluateFunc],
-    ]:
+    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
         _construct_rf, _predict, _ = super()._get_cuml_transform_func(
             dataset, eval_metric_info
         )
