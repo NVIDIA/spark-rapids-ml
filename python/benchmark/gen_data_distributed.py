@@ -829,15 +829,15 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             # Transform the sparse matrix into array of sparse vectors
             X = []
             for i in range(num_rows_per_partition):
-                # row = sparse_matrix.getrow(i)
+                row = sparse_matrix.getrow(i)
 
-                # dense_indices = row.indices
-                # dense_values = row.data
-                # dense = zip(dense_indices, dense_values)
+                dense_indices = row.indices
+                dense_values = row.data
+                dense = zip(dense_indices, dense_values)
 
-                dense_indices = sparse_matrix[i].nonzero()[1]
-                dense_values = sparse_matrix[i, dense_indices]
-                print("Check here\n", sparse_matrix[i], dense_indices, dense_values)
+                # dense_indices = sparse_matrix[i].nonzero()[1]
+                # dense_values = sparse_matrix[i, dense_indices]
+                # print("Check here\n", sparse_matrix[i], dense_indices, dense_values)
 
                 # vectors = np.column_stack((dense_indices, dense_values))
                 # col_order = np.argsort(vectors[:, 0])
@@ -847,10 +847,10 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     {
                         "type": 0,
                         "size": cols,
-                        # "indices": [x[0] for x in dense],
-                        # "values": [x[1] for x in dense],
-                        "indices": dense_indices,
-                        "values": dense_values,
+                        "indices": [x[0] for x in dense],
+                        "values": [x[1] for x in dense],
+                        # "indices": dense_indices,
+                        # "values": dense_values,
                     }
                 )
 
