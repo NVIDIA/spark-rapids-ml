@@ -826,41 +826,12 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             if shuffle:
                 sparse_matrix = sparse_matrix[:, col_indices]
 
-            # Transform the sparse matrix into array of sparse vectors
-            X = []
-            for i in range(num_rows_per_partition):
-                row = sparse_matrix.getrow(i)
-
-                dense_indices = row.indices
-                dense_values = row.data
-                dense = zip(dense_indices, dense_values)
-
-                # dense_indices = sparse_matrix[i].nonzero()[1]
-                # dense_values = sparse_matrix[i, dense_indices]
-                # print("Check here\n", sparse_matrix[i], dense_indices, dense_values)
-
-                # vectors = np.column_stack((dense_indices, dense_values))
-                # col_order = np.argsort(vectors[:, 0])
-                # dense = vectors[col_order]
-                # del vectors
-                X.append(
-                    {
-                        "type": 0,
-                        "size": cols,
-                        "indices": [x[0] for x in dense],
-                        "values": [x[1] for x in dense],
-                        # "indices": dense_indices,
-                        # "values": dense_values,
-                    }
-                )
+            # Sort the csr matrix representation for better indices retrieval
+            sparse_matrix.sum_duplicates()
 
             # Support parameters and library adaptation
             if use_cupy:
                 generator_p = cp.random.RandomState(partition_seeds[partition_index])
-                ground_truth_cp = cp.asarray(ground_truth)
-
-                if shuffle:
-                    col_indices_cp = cp.asarray(col_indices)
             else:
                 generator_p = np.random.RandomState(partition_seeds[partition_index])
 
@@ -877,7 +848,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             if noise > 0.0:
                 y_p += generator_p.normal(scale=noise, size=y.shape)
 
-            # Logistric Regression sigmoid and sample
+            # Logistric Regression sigmoid/softmax and sample
             if logistic_regression:
                 if multinomial_log:
                     if use_cupy:
@@ -908,8 +879,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             else:
                 y = y_p
 
-            del sparse_matrix
-
             if use_cupy:
                 y = cp.squeeze(y).get()
             else:
@@ -917,43 +886,20 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
             for idx in dfs:
                 truncated_idx = idx["id"].to_numpy() - start
-                X_p = [X[i] for i in truncated_idx]
                 y_partial = y[truncated_idx]
+                sparse_matrix_partial = sparse_matrix[truncated_idx]
 
-                # n_partition_rows = len(X_p)
-                # if shuffle:
-                #     # Row-wise shuffle (partition)
-                #     if use_cupy:
-                #         row_indices = cp.random.permutation(n_partition_rows)
-                #         X_p = [X_p[i] for i in row_indices.get()]
-                #         y_partial = y_partial[row_indices.get()]
-                #     else:
-                #         X_p, y_partial = util_shuffle(
-                #             X_p, y_partial, random_state=generator_p
-                #         )
+                # Get indices and data for each row in csr format
+                X_indices = np.split(
+                    sparse_matrix_partial.indices, sparse_matrix_partial.indptr
+                )[1:-1]
+                X_data = np.split(
+                    sparse_matrix_partial.data, sparse_matrix_partial.indptr
+                )[1:-1]
 
-                # If pyspark version does not support Pandas-Spark Vector transformation
-                #   return arrays of indices and values to reconstruct the sparse vectors
-                # else return the vector dictionary and let spark do the transformation
-                if version.parse(pyspark.__version__) < version.parse("3.5.0"):
-                    data = [
-                        (X_p[i]["indices"], X_p[i]["values"], y_partial[i])
-                        for i in range(y_partial.shape[0])
-                    ]
-
-                    del X_p
-                    del y_partial
-
-                    res = pd.DataFrame(data)
-                else:
-                    vec_data = [
-                        (X_p[i], y_partial[i]) for i in range(y_partial.shape[0])
-                    ]
-
-                    del X_p
-                    del y_partial
-
-                    res = pd.DataFrame(vec_data)
+                res = pd.DataFrame(
+                    {"indices": X_indices, "values": X_data, "label": y_partial}
+                )
 
                 yield res
 
@@ -978,18 +924,13 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         # Initial DataFrame with only row numbers
         init = spark.range(rows, numPartitions=num_partitions)
 
-        # If pyspark version does not support Pandas-Spark Vector transformation
-        # return arrays of indices and values to reconstruct the sparse vectors
-        if version.parse(pyspark.__version__) < version.parse("3.5.0"):
-            res = init.mapInPandas(make_sparse_regression_udf, schema)
+        res = init.mapInPandas(make_sparse_regression_udf, schema)
 
-            # Map the indices and values back to a sparse vector
-            vec_rdd = res.rdd.map(
-                lambda row: (Vectors.sparse(cols, row[0], row[1]), row[2])
-            )
-            vec_res = vec_rdd.toDF(vec_schema)
-        else:
-            vec_res = init.mapInPandas(make_sparse_regression_udf, vec_schema)
+        # Map the indices and values back to a sparse vector
+        vec_rdd = res.rdd.map(
+            lambda row: (Vectors.sparse(cols, row[0], row[1]), row[2])
+        )
+        vec_res = vec_rdd.toDF(vec_schema)
 
         return (
             vec_res,
