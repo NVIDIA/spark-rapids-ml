@@ -140,9 +140,9 @@ def test_make_regression(
 ) -> None:
     input_args = [
         "--num_rows",
-        "100",
+        "1000",
         "--num_cols",
-        "10",
+        "200",
         "--dtype",
         dtype,
         "--output_dir",
@@ -150,7 +150,7 @@ def test_make_regression(
         "--output_num_files",
         "3",
         "--n_informative",
-        "3",
+        "5",
         "--noise",
         "1.0",
         "--random_state",
@@ -181,24 +181,25 @@ def test_make_regression(
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
-        col_num = 10
+        col_num = 200
+        row_num = 1000
 
         assert X.dtype == np.dtype(dtype), "Unexpected dtype"
-        assert X.shape == (100, 10), "X shape mismatch"
-        assert y.shape == (100,), "y shape mismatch"
+        assert X.shape == (row_num, col_num), "X shape mismatch"
+        assert y.shape == (row_num,), "y shape mismatch"
 
         n_classes_num = int(n_classes)
 
         if logistic_regression == "False" or n_classes_num == 2:
             assert c.shape == (col_num,), "coef shape mismatch"
-            assert np.count_nonzero(c) == 3, "Unexpected number of informative features"
+            assert np.count_nonzero(c) == 5, "Unexpected number of informative features"
         else:
             assert c.shape == (
                 col_num,
                 n_classes_num,
             ), "coef shape mismatch"
             assert (
-                np.count_nonzero(c) == 3 * n_classes_num
+                np.count_nonzero(c) == 5 * n_classes_num
             ), "Unexpected number of informative features"
 
         if logistic_regression == "True":
@@ -214,6 +215,9 @@ def test_make_regression(
         else:
             # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
             assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+
+        if logistic_regression == "True":
+            assert np.unique(y).shape[0] == n_classes_num
 
 
 @pytest.mark.parametrize("dtype", ["float64"])
@@ -233,7 +237,8 @@ def test_make_regression(
     ["0.25", ["0.05", "0.1", "0.2"], pytest.param("0.2", marks=pytest.mark.slow)],
 )
 @pytest.mark.parametrize(
-    "rows, cols", [("100", "20"), pytest.param("1000", "100", marks=pytest.mark.slow)]
+    "rows, cols",
+    [("1000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
 )
 @pytest.mark.parametrize(
     "density_curve, shuffle",
@@ -420,6 +425,9 @@ def test_make_sparse_regression(
                     dense_count = 0
 
                 dense_count += np.count_nonzero(X_np[:, idx])
+
+        if logistic_regression == "True":
+            assert np.unique(y).shape[0] == n_classes_num
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
