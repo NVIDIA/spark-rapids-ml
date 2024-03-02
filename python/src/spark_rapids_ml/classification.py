@@ -1028,7 +1028,28 @@ class LogisticRegression(
                     ), "only numpy array, cupy array, and pandas dataframe are supported when standardization_with_cupy is on"
 
                 mean_partial = concated.sum(axis=0) / pdesc.m
-                quadratic_sum_kernel = cp.ReductionKernel(
+
+                import json
+
+                from pyspark import BarrierTaskContext
+
+                context = BarrierTaskContext.get()
+
+                def all_gather_then_sum(
+                    cp_array: cp.ndarray, dtype: Union[np.float32, np.float64]
+                ) -> cp.ndarray:
+                    msgs = context.allGather(json.dumps(cp_array.tolist()))
+                    arrays = [json.loads(p) for p in msgs]
+                    array_sum = np.sum(arrays, axis=0).astype(dtype)
+                    return cp.array(array_sum)
+
+                mean = all_gather_then_sum(mean_partial, concated.dtype)
+                mean_centered_kernel = cp.ElementwiseKernel(
+                    "T x, T y", "T z", "z = x - y", "mean_centered"
+                )
+                concated = mean_centered_kernel(concated, mean)
+
+                square_sum_kernel = cp.ReductionKernel(
                     "T x",  # input params
                     "T y",  # output params
                     "x * x",  # map
@@ -1037,42 +1058,21 @@ class LogisticRegression(
                     "0",  # identity value
                     "quadratic_sum",  # kernel name
                 )
-                normalized_quadsum_partial = quadratic_sum_kernel(concated, axis=0) / (
-                    pdesc.m - 1
-                )
 
-                import json
+                var_partial = square_sum_kernel(concated, axis=0) / (pdesc.m - 1)
+                var = all_gather_then_sum(var_partial, concated.dtype)
 
-                from pyspark import BarrierTaskContext
+                assert cp.all(
+                    var >= 0
+                ), "numeric instable detected when calculating variance. Got negative variance"
 
-                context = BarrierTaskContext.get()
+                stddev = cp.sqrt(var)
 
-                msg = json.dumps(
-                    (mean_partial.tolist(), normalized_quadsum_partial.tolist())
-                )
-                recv_msgs = context.allGather(msg)
-                recv_partials = [json.loads(m) for m in recv_msgs]
-
-                mp_collection = [p[0] for p in recv_partials]
-                nqs_collection = [p[1] for p in recv_partials]
-
-                mean = np.sum(mp_collection, axis=0).astype(concated.dtype)
-                normalized_quadsum = np.sum(nqs_collection, axis=0).astype(
-                    concated.dtype
-                )
-
-                vars = normalized_quadsum - (mean**2) * pdesc.m / (pdesc.m - 1)
-                assert np.all(vars >= 0)
-                stddev = np.sqrt(vars)
-
-                mean = cp.array(mean)
-                stddev = cp.array(stddev)
-
-                if fit_intercept is True:
-                    mean_centered_kernel = cp.ElementwiseKernel(
-                        "T x, T y", "T z", "z = x - y", "mean_centered"
+                if fit_intercept is False:
+                    mean_centered_back_kernel = cp.ElementwiseKernel(
+                        "T x, T y", "T z", "z = x + y", "mean_centered"
                     )
-                    concated = mean_centered_kernel(concated, mean)
+                    concated = mean_centered_back_kernel(concated, mean)
 
                 stddev_scaled_kernel = cp.ElementwiseKernel(
                     "T x, T y", "T z", "z = (y == T(0)? x : x / y)", "stddev_scaled"
