@@ -1044,22 +1044,11 @@ class LogisticRegression(
                     return cp.array(array_sum)
 
                 mean = all_gather_then_sum(mean_partial, concated.dtype)
-                mean_centered_kernel = cp.ElementwiseKernel(
-                    "T x, T y", "T z", "z = x - y", "mean_centered"
-                )
-                concated = mean_centered_kernel(concated, mean)
+                concated -= mean
 
-                square_sum_kernel = cp.ReductionKernel(
-                    "T x",  # input params
-                    "T y",  # output params
-                    "x * x",  # map
-                    "a + b",  # reduce
-                    "y = a",  # post-reduction map
-                    "0",  # identity value
-                    "quadratic_sum",  # kernel name
-                )
+                l2 = cp.linalg.norm(concated, ord=2, axis=0)
 
-                var_partial = square_sum_kernel(concated, axis=0) / (pdesc.m - 1)
+                var_partial = l2 * l2 / (pdesc.m - 1)
                 var = all_gather_then_sum(var_partial, concated.dtype)
 
                 assert cp.all(
@@ -1068,16 +1057,12 @@ class LogisticRegression(
 
                 stddev = cp.sqrt(var)
 
-                if fit_intercept is False:
-                    mean_centered_back_kernel = cp.ElementwiseKernel(
-                        "T x, T y", "T z", "z = x + y", "mean_centered"
-                    )
-                    concated = mean_centered_back_kernel(concated, mean)
+                stddev_inv = cp.where(stddev != 0, 1.0 / stddev, 1.0)
 
-                stddev_scaled_kernel = cp.ElementwiseKernel(
-                    "T x, T y", "T z", "z = (y == T(0)? x : x / y)", "stddev_scaled"
-                )
-                concated = stddev_scaled_kernel(concated, stddev)
+                if fit_intercept is False:
+                    concated += mean
+
+                concated *= stddev_inv
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
                 if standarization_with_cupy is True:
