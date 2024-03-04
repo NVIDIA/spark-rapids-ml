@@ -402,7 +402,7 @@ def test_make_sparse_regression(
 
             col_per_chunk = np.full(n_chunks_num, orig_cols // n_chunks_num)
             col_per_chunk[: (orig_cols % n_chunks_num)] += 1
-            col_per_chunk = np.cumsum(col_per_chunk)
+            chunk_boundary = np.cumsum(col_per_chunk)
 
             density_idx = 0
             dense_count = 0
@@ -411,7 +411,9 @@ def test_make_sparse_regression(
                 if idx >= orig_cols:
                     break
 
-                if density_values[density_idx] == idx:
+                dense_count += np.count_nonzero(X_np[:, idx])
+
+                if chunk_boundary[density_idx] == idx + 1:
                     col_density = density_values[density_idx]
                     chunk_size = col_per_chunk[density_idx]
 
@@ -423,8 +425,6 @@ def test_make_sparse_regression(
 
                     density_idx += 1
                     dense_count = 0
-
-                dense_count += np.count_nonzero(X_np[:, idx])
 
         if logistic_regression == "True":
             assert np.unique(y).shape[0] == n_classes_num
