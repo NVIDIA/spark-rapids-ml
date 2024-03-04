@@ -981,43 +981,16 @@ class LogisticRegression(
             if standardization is True and is_sparse is True:
                 concated = concated.toarray()
 
-            # Padding zero columns so that the total number of columns is a multiple of 32.
-            # The purpose is to avoid out-of-bound memory access of some RAFT 24.02 cuda kernels (e.g. sum).
-            # This is a temporary workaround and is expected to be removed in 24.04
-            num_pad_zero_cols = 0
-            if standardization is True and concated.shape[1] % 32 != 0:
-                num_pad_zero_cols = 32 - concated.shape[1] % 32
-                nrows = concated.shape[0]
-                import cupy as cp
-
-                if isinstance(concated, np.ndarray):
-                    zeros = np.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
-                    concated = np.concatenate([concated, zeros], axis=1)
-                elif isinstance(concated, cp.ndarray):
-                    zeros = cp.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
-                    concated = cp.concatenate([concated, zeros], axis=1)
-                elif isinstance(concated, pd.DataFrame):
-                    zero_col_names = [
-                        f"Zero_{i}_c3BhcmstcmFwaWRzLW1sCg"
-                        for i in range(num_pad_zero_cols)
-                    ]
-                    zeros = np.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
-                    zeros_pd = pd.DataFrame(zeros, columns=zero_col_names)
-                    concated = pd.concat([concated, zeros_pd], axis=1)
-                else:
-                    assert is_sparse is True
-                    concated._shape = (nrows, concated.shape[1] + num_pad_zero_cols)
-
-                assert concated.shape[1] % 32 == 0
-
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
-                params[param_alias.num_cols] + num_pad_zero_cols,
+                params[param_alias.num_cols],
             )
 
             # Use cupy to standardize dataset as a workaround to gain better numeric stability
             standarization_with_cupy = standardization
             if standarization_with_cupy is True:
+                import cupy as cp
+
                 if isinstance(concated, np.ndarray):
                     concated = cp.array(concated)
                 elif isinstance(concated, pd.DataFrame):
@@ -1120,7 +1093,7 @@ class LogisticRegression(
                     )
                     intercept_array -= intercept_mean
 
-                n_cols = logistic_regression.n_cols - num_pad_zero_cols
+                n_cols = logistic_regression.n_cols
 
                 model = {
                     "coef_": coef_[:, :n_cols].tolist(),
