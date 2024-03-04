@@ -942,6 +942,8 @@ class LogisticRegression(
         Dict[str, Any],
     ]:
         array_order = self._fit_array_order()
+        standardization = self.getStandardization()
+        fit_intercept = self.getFitIntercept()
 
         logger = get_logger(self.__class__)
         if (
@@ -976,44 +978,69 @@ class LogisticRegression(
             )
 
             # densifying sparse vectors into dense to use standardization
-            if self.getStandardization() is True and is_sparse is True:
+            if standardization is True and is_sparse is True:
                 concated = concated.toarray()
-
-            # Padding zero columns so that the total number of columns is a multiple of 32.
-            # The purpose is to avoid out-of-bound memory access of some RAFT 24.02 cuda kernels (e.g. sum).
-            # This is a temporary workaround and is expected to be removed in 24.04
-            num_pad_zero_cols = 0
-            if self.getStandardization() is True and concated.shape[1] % 32 != 0:
-                num_pad_zero_cols = 32 - concated.shape[1] % 32
-                nrows = concated.shape[0]
-                import cupy as cp
-
-                if isinstance(concated, np.ndarray):
-                    zeros = np.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
-                    concated = np.concatenate([concated, zeros], axis=1)
-                elif isinstance(concated, cp.ndarray):
-                    zeros = cp.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
-                    concated = cp.concatenate([concated, zeros], axis=1)
-                elif isinstance(concated, pd.DataFrame):
-                    zero_col_names = [
-                        f"Zero_{i}_c3BhcmstcmFwaWRzLW1sCg"
-                        for i in range(num_pad_zero_cols)
-                    ]
-                    zeros = np.zeros((nrows, num_pad_zero_cols), dtype=concated.dtype)
-                    zeros_pd = pd.DataFrame(zeros, columns=zero_col_names)
-                    concated = pd.concat([concated, zeros_pd], axis=1)
-                else:
-                    assert is_sparse is True
-                    concated._shape = (nrows, concated.shape[1] + num_pad_zero_cols)
-
-                assert concated.shape[1] % 32 == 0
 
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
-                params[param_alias.num_cols] + num_pad_zero_cols,
+                params[param_alias.num_cols],
             )
 
+            # Use cupy to standardize dataset as a workaround to gain better numeric stability
+            standarization_with_cupy = standardization
+            if standarization_with_cupy is True:
+                import cupy as cp
+
+                if isinstance(concated, np.ndarray):
+                    concated = cp.array(concated)
+                elif isinstance(concated, pd.DataFrame):
+                    concated = cp.array(concated.values)
+                else:
+                    assert isinstance(
+                        concated, cp.ndarray
+                    ), "only numpy array, cupy array, and pandas dataframe are supported when standardization_with_cupy is on"
+
+                mean_partial = concated.sum(axis=0) / pdesc.m
+
+                import json
+
+                from pyspark import BarrierTaskContext
+
+                context = BarrierTaskContext.get()
+
+                def all_gather_then_sum(
+                    cp_array: cp.ndarray, dtype: Union[np.float32, np.float64]
+                ) -> cp.ndarray:
+                    msgs = context.allGather(json.dumps(cp_array.tolist()))
+                    arrays = [json.loads(p) for p in msgs]
+                    array_sum = np.sum(arrays, axis=0).astype(dtype)
+                    return cp.array(array_sum)
+
+                mean = all_gather_then_sum(mean_partial, concated.dtype)
+                concated -= mean
+
+                l2 = cp.linalg.norm(concated, ord=2, axis=0)
+
+                var_partial = l2 * l2 / (pdesc.m - 1)
+                var = all_gather_then_sum(var_partial, concated.dtype)
+
+                assert cp.all(
+                    var >= 0
+                ), "numeric instable detected when calculating variance. Got negative variance"
+
+                stddev = cp.sqrt(var)
+
+                stddev_inv = cp.where(stddev != 0, 1.0 / stddev, 1.0)
+
+                if fit_intercept is False:
+                    concated += mean
+
+                concated *= stddev_inv
+
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
+                if standarization_with_cupy is True:
+                    init_parameters["standardization"] = False
+
                 if init_parameters["C"] == 0.0:
                     init_parameters["penalty"] = "none"
 
@@ -1042,7 +1069,16 @@ class LogisticRegression(
                     pdesc.rank,
                 )
 
-                intercept_array = logistic_regression.intercept_
+                coef_ = logistic_regression.coef_
+                intercept_ = logistic_regression.intercept_
+                if standarization_with_cupy is True:
+                    import cupy as cp
+
+                    coef_ = cp.where(stddev > 0, coef_ / stddev, coef_)
+                    if init_parameters["fit_intercept"] is True:
+                        intercept_ = intercept_ - cp.dot(coef_, mean)
+
+                intercept_array = intercept_
                 # follow Spark to center the intercepts for multinomial classification
                 if (
                     init_parameters["fit_intercept"] is True
@@ -1057,10 +1093,11 @@ class LogisticRegression(
                     )
                     intercept_array -= intercept_mean
 
-                n_cols = logistic_regression.n_cols - num_pad_zero_cols
+                n_cols = logistic_regression.n_cols
+
                 model = {
-                    "coef_": logistic_regression.coef_[:, :n_cols].tolist(),
-                    "intercept_": intercept_array.tolist(),
+                    "coef_": coef_[:, :n_cols].tolist(),
+                    "intercept_": intercept_.tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": n_cols,
                     "dtype": logistic_regression.dtype.name,
