@@ -306,7 +306,6 @@ def test_classifier(
     tolerance: float = 0.001,
     convert_to_sparse: bool = False,
 ) -> LogisticRegression:
-
     standardization: bool = False
 
     if convert_to_sparse is True:

@@ -158,8 +158,18 @@ class DataGenBase(DataGen):
                 help_msg = "boolean for whether the shuffle the rows and cols of the feature matrix"
             elif name == "tail_strength":
                 help_msg = "tail strength for random low rank feature matrix generation, refer to sklearn.datasets.make_low_rank_matrix()"
+            elif name == "density_curve":
+                help_msg = "Specify columns wise density curve, support Linear or Exponential. The density of the generated matrix will have a density growing linearly/exponentially from the first to the last column. \
+                            Argument density would not be used to represent the max density in the curve"
             else:
                 help_msg = ""
+
+            # Support multiple biases
+            if name == "bias" or name == "density":
+                self._parser.add_argument(
+                    "--" + name, nargs="+", type=float, help=help_msg
+                )
+                continue
 
             if value is None:
                 raise RuntimeError("Must convert None value to the correct type")
