@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+from typing import List, Union
+
 import numpy as np
 import pytest
 from gen_data_distributed import (
@@ -119,15 +121,28 @@ def test_make_low_rank_matrix(dtype: str, use_gpu: str) -> None:
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("low_rank", [True, False])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-@pytest.mark.parametrize("logistic_regression", ["True", "False"])
+@pytest.mark.parametrize(
+    "logistic_regression, n_classes, bias",
+    [
+        ("True", "2", "1.0"),
+        ("True", "5", ["0.5", "1.5", "2.5", "3.5", "4.5"]),
+        ("True", "15", "1.5"),
+        ("False", "0", "1.0"),
+    ],
+)
 def test_make_regression(
-    dtype: str, low_rank: bool, use_gpu: str, logistic_regression: str
+    dtype: str,
+    low_rank: bool,
+    use_gpu: str,
+    logistic_regression: str,
+    n_classes: str,
+    bias: Union[str, List[str]],
 ) -> None:
     input_args = [
         "--num_rows",
-        "100",
+        "1000",
         "--num_cols",
-        "10",
+        "200",
         "--dtype",
         dtype,
         "--output_dir",
@@ -135,9 +150,7 @@ def test_make_regression(
         "--output_num_files",
         "3",
         "--n_informative",
-        "3",
-        "--bias",
-        "0.0",
+        "5",
         "--noise",
         "1.0",
         "--random_state",
@@ -146,9 +159,18 @@ def test_make_regression(
         use_gpu,
         "--logistic_regression",
         logistic_regression,
+        "--n_classes",
+        n_classes,
     ]
     if low_rank:
         input_args.extend(("--effective_rank", "5"))
+
+    input_args.append("--bias")
+    if isinstance(bias, List):
+        input_args.extend(bias)
+    else:
+        input_args.append(bias)
+
     data_gen = RegressionDataGen(input_args)
     args = data_gen.args
     assert args is not None
@@ -159,37 +181,92 @@ def test_make_regression(
         X = pdf.iloc[:, :-1].to_numpy()
         y = pdf.iloc[:, -1].to_numpy()
 
+        col_num = 200
+        row_num = 1000
+
         assert X.dtype == np.dtype(dtype), "Unexpected dtype"
-        assert X.shape == (100, 10), "X shape mismatch"
-        assert y.shape == (100,), "y shape mismatch"
-        assert c.shape == (10,), "coef shape mismatch"
-        assert sum(c != 0.0) == 3, "Unexpected number of informative features"
+        assert X.shape == (row_num, col_num), "X shape mismatch"
+        assert y.shape == (row_num,), "y shape mismatch"
+
+        n_classes_num = int(n_classes)
+
+        if logistic_regression == "False" or n_classes_num == 2:
+            assert c.shape == (col_num,), "coef shape mismatch"
+            assert np.count_nonzero(c) == 5, "Unexpected number of informative features"
+        else:
+            assert c.shape == (
+                col_num,
+                n_classes_num,
+            ), "coef shape mismatch"
+            assert (
+                np.count_nonzero(c) == 5 * n_classes_num
+            ), "Unexpected number of informative features"
 
         if logistic_regression == "True":
-            # Test that X is consist of only 0 or 1
+            # Test that y consists of only discrete label
+            possible_labels = range(n_classes_num)
             for n in y:
-                assert n == 0 or n == 1
+                found = False
+                for l in possible_labels:
+                    if n == l:
+                        found = True
+                        break
+                assert found, "Invalid label"
         else:
             # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
             assert_almost_equal(np.std(y - np.dot(X, c)), 1.0, decimal=1)
+
+        if logistic_regression == "True":
+            assert np.unique(y).shape[0] == n_classes_num
 
 
 @pytest.mark.parametrize("dtype", ["float64"])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize("redundant_cols", ["0", "2"])
-@pytest.mark.parametrize("logistic_regression", ["True", "False"])
-@pytest.mark.parametrize("density", ["0.25", "0.2"])
-@pytest.mark.parametrize("rows, cols", [("100", "20"), ("1000", "100")])
+@pytest.mark.parametrize(
+    "logistic_regression, n_classes, bias",
+    [
+        ("True", "2", "1.0"),
+        ("True", "5", ["0.5", "1.5", "2.5", "3.5", "4.5"]),
+        ("True", "15", "1.5"),
+        ("False", "0", "1.0"),
+    ],
+)
+@pytest.mark.parametrize(
+    "density",
+    ["0.25", ["0.05", "0.1", "0.2"], pytest.param("0.2", marks=pytest.mark.slow)],
+)
+@pytest.mark.parametrize(
+    "rows, cols",
+    [("1000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
+)
+@pytest.mark.parametrize(
+    "density_curve, shuffle",
+    [
+        ("None", "True"),
+        ("Linear", "True"),
+        ("Linear", "False"),
+        ("Exponential", "False"),
+        pytest.param("Exponential", "True", marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize(
+    "n_chunks", ["10", pytest.param("100", marks=pytest.mark.slow)]
+)
 def test_make_sparse_regression(
     dtype: str,
     use_gpu: str,
     redundant_cols: str,
     logistic_regression: str,
-    density: str,
+    n_classes: str,
+    bias: Union[str, List[str]],
+    density: Union[str, List[str]],
     rows: str,
     cols: str,
+    density_curve: str,
+    shuffle: str,
+    n_chunks: str,
 ) -> None:
-
     input_args = [
         "--num_rows",
         rows,
@@ -203,24 +280,39 @@ def test_make_sparse_regression(
         "3",
         "--n_informative",
         "3",
-        "--bias",
-        "0.0",
+        "--n_classes",
+        n_classes,
         "--noise",
         "1.0",
         "--random_state",
         "0",
         "--use_gpu",
         use_gpu,
-        "--density",
-        density,
         "--redundant_cols",
         redundant_cols,
         "--logistic_regression",
         logistic_regression,
+        "--density_curve",
+        density_curve,
+        "--shuffle",
+        shuffle,
     ]
+
+    input_args.append("--bias")
+    if isinstance(bias, List):
+        input_args.extend(bias)
+    else:
+        input_args.append(bias)
+
+    input_args.append("--density")
+    if isinstance(density, List):
+        input_args.extend(density)
+    else:
+        input_args.append(density)
 
     row_num = int(rows)
     col_num = int(cols)
+    n_classes_num = int(n_classes)
 
     data_gen = SparseRegressionDataGen(input_args)
     args = data_gen.args
@@ -238,15 +330,31 @@ def test_make_sparse_regression(
             # assert sparseVec.toArray().dtype == np.dtype(dtype), "Unexpected dtype"
             assert sparseVec.size == col_num, "X col number mismatch"
         assert y.shape == (row_num,), "y shape mismatch"
-        assert c.shape == (col_num,), "coef shape mismatch"
-        assert sum(c != 0.0) == 3, "Unexpected number of informative features"
+
+        if logistic_regression == "False" or n_classes_num == 2:
+            assert c.shape == (col_num,), "coef shape mismatch"
+            assert np.count_nonzero(c) == 3, "Unexpected number of informative features"
+        else:
+            assert c.shape == (
+                col_num,
+                n_classes_num,
+            ), "coef shape mismatch"
+            assert (
+                np.count_nonzero(c) == 3 * n_classes_num
+            ), "Unexpected number of informative features"
 
         X_np = np.array([r.toArray() for r in X])
 
         if logistic_regression == "True":
-            # Test that X consists of only 0 or 1
+            # Test that X consists of only discrete label
+            possible_labels = range(n_classes_num)
             for n in y:
-                assert n == 0 or n == 1
+                found = False
+                for l in possible_labels:
+                    if n == l:
+                        found = True
+                        break
+                assert found, "Invalid label"
         else:
             # Test that y ~= np.dot(X, c) + bias + N(0, 1.0).
             assert_almost_equal(np.std(y - np.dot(X_np, c)), 1.0, decimal=1)
@@ -257,12 +365,62 @@ def test_make_sparse_regression(
         total = row_num * col_num
 
         # If there is no random shuffled redundant cols, we can check the total density
-        density_num = float(density)
-        if redundant_cols == "0":
+        if redundant_cols == "0" and density_curve == "None":
+            if isinstance(density, List):
+                density_num = sum([float(d) for d in density]) / len(density)
+            else:
+                density_num = float(density)
+
             assert (
                 count > total * density_num * 0.95
                 and count < total * density_num * 1.05
             )
+
+        # If no shuffle, test to see if the chunk density is as specified/curved
+        n_chunks_num = int(n_chunks)
+        if shuffle == "False":
+            orig_cols = col_num - int(redundant_cols)
+            num_partitions = 3
+
+            if isinstance(density, List):
+                density_num = float(density[0])
+            else:
+                density_num = float(density)
+
+            if density_curve == "Linear":
+                density_values = np.linspace(
+                    num_partitions / row_num, density_num, n_chunks_num
+                )
+                density_values *= n_chunks_num * density_num / sum(density_values)
+            else:
+                density_values = np.logspace(
+                    np.log10(num_partitions / row_num),
+                    np.log10(density_num),
+                    n_chunks_num,
+                )
+                density_values *= n_chunks_num * density_num / sum(density_values)
+
+            col_per_chunk = np.full(n_chunks_num, orig_cols // n_chunks_num)
+            col_per_chunk[: (orig_cols % n_chunks_num)] += 1
+            chunk_boundary = np.cumsum(col_per_chunk)
+
+            dense_count = 0
+
+            for i in range(len(chunk_boundary)):
+                start = 0 if i == 0 else chunk_boundary[i - 1]
+                dense_count = np.count_nonzero(X_np[:, start : chunk_boundary[i]])
+
+                col_density = density_values[i]
+                chunk_size = col_per_chunk[i]
+
+                assert dense_count >= chunk_size * num_partitions * int(
+                    (row_num // num_partitions) * col_density - 1
+                ) and dense_count <= chunk_size * num_partitions * int(
+                    (row_num // num_partitions) * col_density + 1
+                )
+
+        if logistic_regression == "True":
+            assert np.unique(y).shape[0] == n_classes_num
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
