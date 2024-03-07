@@ -30,8 +30,9 @@ else:
 from pyspark.ml.feature import PCA as SparkPCA
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.functions import array_to_vector
-from pyspark.ml.linalg import DenseMatrix, Vectors
+from pyspark.ml.linalg import DenseMatrix, Vectors, VectorUDT
 from pyspark.sql.functions import col
+from pyspark.sql.types import StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.feature import PCA, PCAModel
@@ -379,7 +380,24 @@ def test_pca_spark_compat(
         model.setOutputCol("output")
         assert model.getOutputCol() == "output"
 
-        output = model.transform(df).collect()[0].output
+        k = model.getK()
+        output_df = model.transform(df)
+        schema_fields = [
+            StructField("features", VectorUDT(), True),
+        ]
+        if _PCA is SparkPCA:
+            schema_fields.append(
+                StructField(
+                    "output", VectorUDT(), True, metadata={"ml_attr": {"num_attrs": k}}
+                )
+            )
+        else:
+            schema_fields.append(StructField("output", VectorUDT(), True))
+
+        schema_gnd = StructType(schema_fields)  # type
+        assert output_df.schema == schema_gnd
+
+        output = output_df.collect()[0].output
         expected_output = [1.6485728230883814, -4.0132827005162985]
         assert array_equal(output, expected_output, with_sign=False)
 
