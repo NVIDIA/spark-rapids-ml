@@ -1507,7 +1507,15 @@ class _CumlModelWithColumns(_CumlModel):
         pred_col = predict_udf(struct(*select_cols))
 
         if self._is_single_pred(dataset.schema):
-            if "array" in output_schema:
+            output_schema_str = (
+                output_schema
+                if isinstance(output_schema, str)
+                else output_schema.simpleString()
+            )
+            if (
+                "array<float>" in output_schema_str
+                or "array<double>" in output_schema_str
+            ):
                 input_col, input_cols = self._get_input_columns()
                 if input_col is not None:
                     input_datatype = dataset.schema[input_col].dataType
