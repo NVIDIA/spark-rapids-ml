@@ -111,18 +111,18 @@ class _ClassificationModelEvaluationMixIn:
     _this_model: Union["RandomForestClassificationModel", "LogisticRegressionModel"]
 
     def _get_evaluate_fn(self, eval_metric_info: EvalMetricInfo) -> _EvaluateFunc:
-        def _evaluate(
-            input: TransformInputType,
-            transformed: TransformInputType,
-        ) -> pd.DataFrame:
-            # calculate the count of (label, prediction)
-            # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
-
-            if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
-                comb = pd.DataFrame(
+        if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
+            def _evaluate(
+                input: TransformInputType,
+                transformed: "cp.ndarray",
+            ) -> pd.DataFrame:
+                # calculate the count of (label, prediction)
+                # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
+                import cudf
+                comb = cudf.DataFrame(
                     {
                         "label": input[alias.label],
-                        "prediction": transformed[pred.prediction],
+                        "prediction": transformed,
                     }
                 )
                 confusion = (
@@ -130,18 +130,19 @@ class _ClassificationModelEvaluationMixIn:
                     .size()
                     .reset_index(name="total")
                 )
+                
+                confusion = confusion.to_pandas()
 
                 return confusion
-            else:
-                # once data is maintained on gpu replace with cuml.metrics.log_loss
-                from spark_rapids_ml.metrics.MulticlassMetrics import log_loss
+        else:
+            def _evaluate(
+                input: TransformInputType,
+                transformed: "cp.ndarray",
+            ) -> pd.DataFrame:
+                from cuml.metrics import log_loss
 
-                _log_loss = log_loss(
-                    np.array(input[alias.label]),
-                    np.array(list(transformed[pred.probability])),
-                    eval_metric_info.eps,
-                )
-
+                _log_loss = log_loss(input[alias.label], transformed, normalize=False)
+                
                 _log_loss_pdf = pd.DataFrame(
                     {"total": [len(input[alias.label])], "log_loss": [_log_loss]}
                 )
@@ -950,6 +951,7 @@ class LogisticRegression(
         ) -> Dict[str, Any]:
             import cupyx
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
+            import cupyx
 
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
@@ -1456,33 +1458,45 @@ class LogisticRegressionModel(
             self._get_evaluate_fn(eval_metric_info) if eval_metric_info else None
         )
 
-        def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
-            import cupy as cp
+        if eval_metric_info:
+            if eval_metric_info.eval_metric == transform_evaluate_metric.log_loss:
+                def _predict(lr: CumlT, pdf: TransformInputType) -> "cp.ndarray":
 
-            data = {}
-            scores = lr.decision_function(pdf).T
-            assert isinstance(scores, cp.ndarray)
-            _num_classes = max(scores.shape[1] if len(scores.shape) == 2 else 2, 2)
-            data[pred.prediction] = pd.Series(
-                list(_predict_labels(scores, _num_classes).get())
-            )
-            # non log-loss metric doesn't need probs.
-            if (
-                not eval_metric_info
-                or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
-            ):
-                data[pred.probability] = pd.Series(
-                    list(_predict_proba(scores, _num_classes).get())
+                    return lr.predict_proba(pdf)
+            else: 
+                def _predict(lr: CumlT, pdf: TransformInputType) -> "cp.ndarray":
+
+                    return lr.predict(pdf)
+        else:
+            def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
+                import cupy as cp
+
+                data = {}
+
+                scores = lr.decision_function(pdf).T
+                assert isinstance(scores, cp.ndarray)
+                _num_classes = max(scores.shape[1] if len(scores.shape) == 2 else 2, 2)
+
+                data[pred.prediction] = pd.Series(
+                    list(_predict_labels(scores, _num_classes).get())
                 )
-                if _num_classes == 2:
-                    raw_prediction = cp.zeros((scores.shape[0], 2))
-                    raw_prediction[:, 1] = scores.ravel()
-                    raw_prediction[:, 0] = -raw_prediction[:, 1]
-                elif _num_classes > 2:
-                    raw_prediction = scores
-                data[pred.raw_prediction] = pd.Series(list(cp.asnumpy(raw_prediction)))
+                # non log-loss metric doesn't need probs.
+                if (
+                    not eval_metric_info
+                    or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
+                ):
+                    data[pred.probability] = pd.Series(
+                        list(_predict_proba(scores, _num_classes).get())
+                    )
+                    if _num_classes == 2:
+                        raw_prediction = cp.zeros((scores.shape[0], 2))
+                        raw_prediction[:, 1] = scores.ravel()
+                        raw_prediction[:, 0] = -raw_prediction[:, 1]
+                    elif _num_classes > 2:
+                        raw_prediction = scores
+                    data[pred.raw_prediction] = pd.Series(list(cp.asnumpy(raw_prediction)))
 
-            return pd.DataFrame(data)
+                return pd.DataFrame(data)
 
         return _construct_lr, _predict, _evaluate
 
