@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     import cupy as cp
     from pyspark.ml._typing import ParamMap
 
-import cupyx
 import numpy as np
 import pandas as pd
 import scipy
@@ -960,6 +959,7 @@ class LogisticRegression(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
+            import cupyx
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
 
             X_list = [x for (x, _, _) in dfs]
