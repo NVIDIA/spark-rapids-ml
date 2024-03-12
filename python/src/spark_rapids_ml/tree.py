@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023, NVIDIA CORPORATION.
+# Copyright (c) 2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -270,7 +270,10 @@ class _RandomForestEstimator(
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         # Each element of n_estimators_of_all_params is a list value which
         # is composed of n_estimators per worker.
         n_estimators_of_all_params: List[List[int]] = []
@@ -553,7 +556,11 @@ class _RandomForestModel(
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
         treelite_model = self._treelite_model
         is_classification = self._is_classification()
 

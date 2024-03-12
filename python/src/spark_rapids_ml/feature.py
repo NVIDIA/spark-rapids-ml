@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -209,7 +209,10 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         def _cuml_fit(
             dfs: FitInputType,
             params: Dict[str, Any],
@@ -377,7 +380,11 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
         cuml_alg_params = self.cuml_params.copy()
 
         n_cols = self.n_cols

@@ -42,11 +42,10 @@ jobs:
       rongou,\
       wjxiz1992,\
       GaryShen2008,\
-      pxLi,\
       NvTimLiu,\
       YanxuanLiu,\
       zhanga5,\
-      rishic3,\
+      Er1cCheng,\
       ', format('{0},', github.actor)) && github.event.comment.body == 'build'
     steps:
       - name: Check if comment is issued by authorized person

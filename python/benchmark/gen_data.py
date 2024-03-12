@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -132,16 +132,55 @@ class DataGenBase(DataGen):
     def _add_extra_parameters(self) -> None:
         self.supported_extra_params = self._supported_extra_params()
         for name, value in self.supported_extra_params.items():
+            if name == "effective_rank":
+                help_msg = "The approximate number of singular vectors required to explain most of the data by linear combinations, refer to sklearn.datasets.make_low_rank_matrix()"
+            elif name == "random_state":
+                help_msg = "seed for random feature generation"
+            elif name == "use_gpu":
+                help_msg = "boolean for whether to use gpu processing and cupy library"
+            elif name == "logistic_regression":
+                help_msg = "boolean for whether the regression model is linear (continuous label) or logistic (binary label)"
+            elif name == "density":
+                help_msg = "the density ratio for the sparse feature matrix"
+            elif name == "redundant_cols":
+                help_msg = "the number of extra columns in the sparse matrix that is linear combination of original feature matrix, does not change rank"
+            elif name == "n_informative":
+                help_msg = "the number of non-zero weights in the regression model"
+            elif name == "n_targets":
+                help_msg = (
+                    "the number of target labels to get from the regression model"
+                )
+            elif name == "bias":
+                help_msg = "the bias parameter of the linear/logistic model"
+            elif name == "noise":
+                help_msg = "the strength of random noise by random sampling from a normal distribution centered at this value"
+            elif name == "shuffle":
+                help_msg = "boolean for whether the shuffle the rows and cols of the feature matrix"
+            elif name == "tail_strength":
+                help_msg = "tail strength for random low rank feature matrix generation, refer to sklearn.datasets.make_low_rank_matrix()"
+            elif name == "density_curve":
+                help_msg = "Specify columns wise density curve, support Linear or Exponential. The density of the generated matrix will have a density growing linearly/exponentially from the first to the last column. \
+                            Argument density would not be used to represent the max density in the curve"
+            else:
+                help_msg = ""
+
+            # Support multiple biases
+            if name == "bias" or name == "density":
+                self._parser.add_argument(
+                    "--" + name, nargs="+", type=float, help=help_msg
+                )
+                continue
+
             if value is None:
                 raise RuntimeError("Must convert None value to the correct type")
+            elif type(value) is bool or value is bool:
+                self._parser.add_argument("--" + name, type=to_bool, help=help_msg)
             elif type(value) is type:
                 # value is already type
-                self._parser.add_argument("--" + name, type=value)
-            elif type(value) is bool:
-                self._parser.add_argument("--" + name, type=to_bool)
+                self._parser.add_argument("--" + name, type=value, help=help_msg)
             else:
                 # get the type from the value
-                self._parser.add_argument("--" + name, type=type(value))
+                self._parser.add_argument("--" + name, type=type(value), help=help_msg)
 
     def _supported_extra_params(self) -> Dict[str, Any]:
         """Function to inspect the specific function to get the parameters and values"""
@@ -433,6 +472,7 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
        regression            Generate random regression datasets using sklearn's make_regression
        classification        Generate random classification datasets using sklearn's make_classification
        low_rank_matrix       Generate random dataset using sklearn's make_low_rank_matrix
+       sparse_regression     Generate random sparse regression datasets stored as sparse vectors
        default               Generate default dataset using pyspark RandomRDDs.uniformVectorRDD
     """,
     )
@@ -451,6 +491,8 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
     # Must repartition for default.
     if args.type == "default":
         repartition = True
+
+    model = args.type
     assert data_gen.args is not None
     args = data_gen.args
 
@@ -461,7 +503,7 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
             df = df.withColumn("feature_array", array(*feature_cols)).drop(
                 *feature_cols
             )
-        elif args.feature_type == "vector":
+        elif args.feature_type == "vector" and model != "sparse_regression":
             from pyspark.ml.feature import VectorAssembler
 
             df = (

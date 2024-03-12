@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023, NVIDIA CORPORATION.
+# Copyright (c) 2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -762,9 +762,9 @@ def test_fit_multiple_in_single_pass(
                 rf.maxBins: 3,
                 rf.numTrees: 5,
                 rf.featureSubsetStrategy: "onethird",
-                rf.impurity: "entropy"
-                if isinstance(rf, RandomForestClassifier)
-                else "variance",
+                rf.impurity: (
+                    "entropy" if isinstance(rf, RandomForestClassifier) else "variance"
+                ),
                 rf.minInstancesPerNode: 2,
             },
             # different values for all supported pyspark parameters
@@ -773,9 +773,9 @@ def test_fit_multiple_in_single_pass(
                 rf.maxBins: 4,
                 rf.numTrees: 6,
                 rf.featureSubsetStrategy: "sqrt",
-                rf.impurity: "gini"
-                if isinstance(rf, RandomForestClassifier)
-                else "variance",
+                rf.impurity: (
+                    "gini" if isinstance(rf, RandomForestClassifier) else "variance"
+                ),
                 rf.minInstancesPerNode: 3,
             },
             # part of all supported pyspark parameters.

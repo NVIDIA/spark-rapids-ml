@@ -9,6 +9,6 @@ then
     echo "Tests use at most 4 GPUs. If failed, try setting CUDA_VISIBLE_DEVICES."
 fi
 echo "use --runslow to run all tests"
-pytest benchmark/test_gen_data.py
+pytest "$@" benchmark/test_gen_data.py
 pytest -ra "$@" --durations=10 tests
 # pytest -ra --runslow --durations=10 tests

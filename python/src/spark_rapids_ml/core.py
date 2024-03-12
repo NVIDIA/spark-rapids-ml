@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -446,9 +446,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return dataset.repartition(self.num_workers)
 
-    def _pre_process_data(
-        self, dataset: DataFrame
-    ) -> Tuple[
+    def _pre_process_data(self, dataset: DataFrame) -> Tuple[
         List[Column],
         Optional[List[str]],
         int,
@@ -586,7 +584,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         """
         Subclass must implement this function to return a cuml fit function that will be
         sent to executor to run.
@@ -1478,7 +1479,9 @@ class _CumlModelWithColumns(_CumlModel):
 
         use_sparse_array = _use_sparse_in_cuml(dataset)
 
-        @pandas_udf(self._out_schema(dataset.schema))  # type: ignore
+        output_schema = self._out_schema(dataset.schema)
+
+        @pandas_udf(output_schema)  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
             from pyspark import TaskContext
 
@@ -1504,6 +1507,21 @@ class _CumlModelWithColumns(_CumlModel):
         pred_col = predict_udf(struct(*select_cols))
 
         if self._is_single_pred(dataset.schema):
+            output_schema_str = (
+                output_schema
+                if isinstance(output_schema, str)
+                else output_schema.simpleString()
+            )
+            if (
+                "array<float>" in output_schema_str
+                or "array<double>" in output_schema_str
+            ):
+                input_col, input_cols = self._get_input_columns()
+                if input_col is not None:
+                    input_datatype = dataset.schema[input_col].dataType
+                    if isinstance(input_datatype, VectorUDT):
+                        pred_col = array_to_vector(pred_col)
+
             return dataset.withColumn(pred_name, pred_col).drop(*tmp_cols)
         else:
             # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Set, Tuple
 if TYPE_CHECKING:
     import cudf
     import cupy as cp
+    import cupyx
 
-import cupyx
 import numpy as np
 import pandas as pd
 import scipy
@@ -218,6 +218,8 @@ def _concat_and_free(
 
     if the type of input arrays is scipy or cupyx csr_matrix, 'order' parameter will not be used.
     """
+    import cupyx
+
     if isinstance(array_list[0], scipy.sparse.csr_matrix):
         concated = scipy.sparse.vstack(array_list)
     elif isinstance(array_list[0], cupyx.scipy.sparse.csr_matrix):

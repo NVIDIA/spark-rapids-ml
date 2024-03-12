@@ -42,12 +42,14 @@ local_threads=${local_threads:-4}
 num_gpus=1
 if [[ $cluster_type == "gpu" || $cluster_type == "gpu_etl" ]]; then
     num_cpus=0
+    use_gpu=true
     if [[ -n $CUDA_VISIBLE_DEVICES ]]; then
         num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
     fi
 elif [[ $cluster_type == "cpu" ]]; then
     num_cpus=$local_threads
     num_gpus=0
+    use_gpu=false
 else
     echo "unknown cluster type $cluster_type"
     echo "usage: $0 cpu|gpu|gpu_etl mode [extra-args] "
@@ -66,11 +68,14 @@ unset SPARK_HOME
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
 num_cols=${num_cols:-3000}
+num_sparse_cols=${num_sparse_cols:-3000}
+density=${density:-0.1}
 
 # for large num_rows (e.g. > 100k), set below to ./benchmark/gen_data_distributed.py and /tmp/distributed
-gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
-#gen_data_script=./benchmark/gen_data_distributed.py
-gen_data_root=/tmp/data
+# gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
+# gen_data_root=/tmp/data
+gen_data_script=${gen_data_script:-./benchmark/gen_data_distributed.py}
+gen_data_root=/tmp/distributed
 
 # if num_rows=1m => output_files=50, scale linearly
 output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
@@ -99,7 +104,7 @@ EOF
 
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=23.12.1
+SPARK_RAPIDS_VERSION=24.02.0
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
@@ -417,7 +422,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             family="Multinomial"
         fi
 
-        echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
+        echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
         python ./benchmark/benchmark_runner.py logistic_regression \
             --standardization False \
             --maxIter 200 \
@@ -433,6 +438,50 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             $common_confs $spark_rapids_confs \
             ${EXTRA_ARGS}
     done
+    
+    # Logistic Regression with sparse vector dataset
+    PYSPARK_4_below=$(python -c "import pyspark; from packaging import version; cmp = version.parse(pyspark.__version__) < version.parse('3.4.0'); print(cmp);")
+    if [ $PYSPARK_4_below = "True" ]; then
+        echo "Skip benchmarking logistic regression on sparse vectors. Spark 3.4 and above is required."
+    else
+        for num_classes in ${num_classes_list}; do
+            data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_sparse_cols}_float64_ncls${num_classes}.parquet
+
+            if [[ ! -d ${data_path} ]]; then
+                python $gen_data_script sparse_regression \
+                --n_informative $( expr $num_cols / 3 )  \
+                --num_rows $num_rows \
+                --num_cols $num_sparse_cols \
+                --output_num_files $output_num_files \
+                --dtype "float64" \
+                --feature_type "vector" \
+                --output_dir ${data_path} \
+                --density $density \
+                --logistic_regression "True" \
+                --n_classes ${num_classes} \
+                --use_gpu ${use_gpu} \
+                $common_confs
+            fi
+
+            family="Binomial"
+                
+            echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
+            python ./benchmark/benchmark_runner.py logistic_regression \
+                --standardization False \
+                --maxIter 200 \
+                --tol 1e-30 \
+                --regParam 0.00001 \
+                --elasticNetParam 0.2 \
+                --num_gpus $num_gpus \
+                --num_cpus $num_cpus \
+                --num_runs $num_runs \
+                --train_path ${data_path} \
+                --transform_path ${data_path} \
+                --report_path "report_sparse_logistic_regression_${cluster_type}.csv" \
+                $common_confs $spark_rapids_confs \
+                ${EXTRA_ARGS}
+        done
+    fi
 fi
 
 # UMAP

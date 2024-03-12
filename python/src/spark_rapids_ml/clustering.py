@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,6 +80,24 @@ class KMeansClass(_CumlClass):
             param_map.pop("maxBlockSizeInMB")
 
         return param_map
+
+    @classmethod
+    def _param_value_mapping(
+        cls,
+    ) -> Dict[str, Callable[[Any], Union[None, str, float, int]]]:
+        def tol_value_mapper(x: float) -> float:
+            if x == 0.0:
+                logger = get_logger(cls)
+                logger.warn(
+                    "tol=0 is not supported in cuml yet. "
+                    + "It will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny."
+                )
+
+                return np.finfo("float32").tiny.item()
+            else:
+                return x
+
+        return {"tol": lambda x: tol_value_mapper(x)}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -311,7 +329,10 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         self,
         dataset: DataFrame,
         extra_params: Optional[List[Dict[str, Any]]] = None,
-    ) -> Callable[[FitInputType, Dict[str, Any]], Dict[str, Any],]:
+    ) -> Callable[
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
         cls = self.__class__
 
         array_order = self._fit_array_order()
@@ -436,7 +457,11 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
-    ) -> Tuple[_ConstructFunc, _TransformFunc, Optional[_EvaluateFunc],]:
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
         cuml_alg_params = self.cuml_params.copy()
 
         cluster_centers_ = self.cluster_centers_

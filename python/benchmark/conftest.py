@@ -1,6 +1,5 @@
-#!/bin/bash
 #
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2024, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +14,12 @@
 # limitations under the License.
 #
 
-set -ex
+import os
+import sys
 
-# build whl package
-pushd python
-pip install -r requirements_dev.txt && pip install -e .
-python -m build
-popd
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tests.conftest import (
+    pytest_addoption,
+    pytest_collection_modifyitems,
+    pytest_configure,
+)
