@@ -203,6 +203,7 @@ pipeline {
                     // upload log only in case of build failure
                     def guardWords = ["gitlab.*?\\.com", "urm.*?\\.com"]
                     guardWords.add("nvidia-smi(?s)(.*?)(?=git)") // hide GPU info
+                    guardWords.add("sc-ipp*") // hide cloud info
                     githubHelper.uploadLogs(this, env.JOB_NAME, env.BUILD_NUMBER, null, guardWords)
 
                     githubHelper.updateCommitStatus("$BUILD_URL", "Fail", GitHubCommitState.FAILURE)
