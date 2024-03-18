@@ -977,17 +977,13 @@ class LogisticRegression(
                 concated, cupyx.scipy.sparse.csr_matrix
             )
 
-            # densifying sparse vectors into dense to use standardization
-            if standardization is True and is_sparse is True:
-                concated = concated.toarray()
-
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
                 params[param_alias.num_cols],
             )
 
             # Use cupy to standardize dataset as a workaround to gain better numeric stability
-            standarization_with_cupy = standardization
+            standarization_with_cupy = standardization and not is_sparse
             if standarization_with_cupy is True:
                 import cupy as cp
 
