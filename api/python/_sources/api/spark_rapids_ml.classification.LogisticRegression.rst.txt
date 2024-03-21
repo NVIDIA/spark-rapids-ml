@@ -54,6 +54,7 @@ LogisticRegression
        ~LogisticRegression.getProbabilityCol
        ~LogisticRegression.getRawPredictionCol
        ~LogisticRegression.getRegParam
+       ~LogisticRegression.getStandardization
        ~LogisticRegression.getTol
        ~LogisticRegression.hasDefault
        ~LogisticRegression.hasParam
@@ -100,6 +101,7 @@ LogisticRegression
        ~LogisticRegression.probabilityCol
        ~LogisticRegression.rawPredictionCol
        ~LogisticRegression.regParam
+       ~LogisticRegression.standardization
        ~LogisticRegression.tol
 
     
@@ -130,6 +132,7 @@ LogisticRegression
     .. automethod:: getProbabilityCol
     .. automethod:: getRawPredictionCol
     .. automethod:: getRegParam
+    .. automethod:: getStandardization
     .. automethod:: getTol
     .. automethod:: hasDefault
     .. automethod:: hasParam
@@ -175,6 +178,7 @@ LogisticRegression
     .. autoattribute:: probabilityCol
     .. autoattribute:: rawPredictionCol
     .. autoattribute:: regParam
+    .. autoattribute:: standardization
     .. autoattribute:: tol
 
     
