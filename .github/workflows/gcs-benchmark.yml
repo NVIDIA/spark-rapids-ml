@@ -39,7 +39,7 @@ jobs:
       SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
       CLUSTER_NAME: github-spark-rapids-ml-${{github.run_number}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: run benchmark
         shell: bash
