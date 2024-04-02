@@ -257,6 +257,121 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols):
 
 
 class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
+    """
+    The Density-Based Spatial Clustering of Applications with Noise (DBSCAN) is a non-parametric
+    data clustering algorithm based on data density. It groups points close to each other that form a dense cluster
+    and mark the far-away points as noise and exclude them from all clusters.
+
+    Parameters
+    ----------
+    featuresCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
+
+    predictionCol: str
+        the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
+
+    num_workers:
+        Number of cuML workers, where each cuML worker corresponds to one Spark task
+        running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+        cuML workers (i.e. GPUs in cluster) from the Spark environment.
+
+    eps: float (default = 0.5)
+        The maximum distance between 2 points such they reside in the same neighborhood.
+
+    min_samples: int (default = 5)
+        The number of samples in a neighborhood such that this group can be considered as
+        an important core point (including the point itself).
+
+    metric: {'euclidean', 'cosine', 'precomputed'}, default = 'euclidean'
+        The metric to use when calculating distances between points.
+        If metric is 'precomputed', X is assumed to be a distance matrix and must be square.
+        The input will be modified temporarily when cosine distance is used and the restored input matrix might not match completely due to numerical rounding.
+
+    verbose: int or boolean (default=False)
+        Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+
+    max_mbytes_per_batch(optional): int
+        Calculate batch size using no more than this number of megabytes for the pairwise distance computation.
+        This enables the trade-off between runtime and memory usage for making the N^2 pairwise distance computations more tractable for large numbers of samples.
+        If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device.
+
+    calc_core_sample_indices(optional): boolean (default = True)
+        Indicates whether the indices of the core samples should be calculated.
+        Setting this to False will avoid unnecessary kernel launches
+
+    idCol: str (default = 'unique_id')
+        The internal unique id column name for label matching, will not reveal in the output.
+        Need to be set to a name that does not conflict with an existing column name in the original input data.
+
+    Examples
+    ----------
+    >>> from spark_rapids_ml.clustering import DBSCAN
+    >>> data = [([0.0, 0.0],),
+    ...        ([1.0, 1.0],),
+    ...        ([9.0, 8.0],),
+    ...        ([8.0, 9.0],),]
+    >>> df = spark.createDataFrame(data, ["features"])
+    >>> df.show()
+    +----------+
+    |  features|
+    +----------+
+    |[0.0, 0.0]|
+    |[1.0, 1.0]|
+    |[9.0, 8.0]|
+    |[8.0, 9.0]|
+    +----------+
+    >>> gpu_dbscan = DBSCAN(eps=3, metric="euclidean").setFeaturesCol("features")
+    >>> gpu_model = gpu_dbscan.fit(df)
+    >>> gpu_model.setPredictionCol("prediction")
+    >>> transformed = gpu_model.transform(df)
+    >>> transformed.show()
+    +----------+----------+
+    |  features|prediction|
+    +----------+----------+
+    |[0.0, 0.0]|         0|
+    |[1.0, 1.0]|         0|
+    |[9.0, 8.0]|         1|
+    |[8.0, 9.0]|         1|
+    +----------+----------+
+    >>> gpu_dbscan.save("/tmp/dbscan")
+    >>> gpu_model.save("/tmp/dbscan_model")
+
+    >>> # vector column input
+    >>> from spark_rapids_ml.clustering import KMeans
+    >>> from pyspark.ml.linalg import Vectors
+    >>> data = [(Vectors.dense([0.0, 0.0]),),
+    ...        (Vectors.dense([1.0, 1.0]),),
+    ...        (Vectors.dense([9.0, 8.0]),),
+    ...        (Vectors.dense([8.0, 9.0]),),]
+    >>> df = spark.createDataFrame(data, ["features"])
+    >>> gpu_dbscan = DBSCAN(eps=3, metric="euclidean").setFeaturesCol("features")
+    >>> gpu_dbscan.getFeaturesCol()
+    'features'
+    >>> gpu_model = gpu_dbscan.fit(df)
+
+
+    >>> # multi-column input
+    >>> data = [(0.0, 0.0),
+    ...        (1.0, 1.0),
+    ...        (9.0, 8.0),
+    ...        (8.0, 9.0),]
+    >>> df = spark.createDataFrame(data, ["f1", "f2"])
+    >>> gpu_dbscan = DBSCAN(eps=3, metric="euclidean").setFeaturesCols(["f1", "f2"])
+    >>> gpu_dbscan.getFeaturesCols()
+    ['f1', 'f2']
+    >>> gpu_model = gpu_dbscan.fit(df)
+
+    """
+
     @keyword_only
     def __init__(
         self,
@@ -411,6 +526,7 @@ class DBSCANModel(
             feature_type,
         ) = _CumlCaller._pre_process_data(self, dataset)
 
+        # Must retain idCol for label matching
         if self.hasParam("idCol") and self.isDefined("idCol"):
             id_col_name = self.getOrDefault("idCol")
             select_cols.append(col(id_col_name).alias(alias.row_number))
@@ -589,6 +705,7 @@ class DBSCANModel(
         idCols: np.ndarray = np.array(pd_dataset[self.getIdCol()])
         input_col, input_cols = self._get_input_columns()
 
+        # Broadcast preprocessed input dataset and the idCol
         broadcast_raw_data = [
             spark.sparkContext.broadcast(chunk) for chunk in _chunk_arr(raw_data)
         ]
@@ -607,7 +724,6 @@ class DBSCANModel(
 
         default_num_partitions = dataset.rdd.getNumPartitions()
 
-        # Return
         rdd = self._call_cuml_fit_func(
             dataset=dataset,
             partially_collect=False,
@@ -617,6 +733,8 @@ class DBSCANModel(
 
         pred_df = rdd.toDF()
 
+        # JOIN the transformed label column into the original input dataset
+        # and discard the internal idCol for row matching
         return dataset.join(pred_df, idCol_name).drop(idCol_name)
 
     def _get_model_attributes(self) -> Optional[Dict[str, Any]]:
