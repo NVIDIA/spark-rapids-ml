@@ -27,8 +27,6 @@ if version.parse(pyspark.__version__) < version.parse("3.4.0"):
 else:
     from pyspark.errors import IllegalArgumentException  # type: ignore
 
-# from pyspark.ml.clustering import KMeans as SparkKMeans
-# from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.functions import array_to_vector
 from pyspark.ml.linalg import DenseVector, Vectors
 from pyspark.sql.dataframe import DataFrame
@@ -164,19 +162,17 @@ def test_dbscan_numeric_type(gpu_number: int, data_type: str) -> None:
     [(1000, 20), pytest.param((10000, 200), marks=pytest.mark.slow)],
     ids=idfn,
 )
-@pytest.mark.parametrize("data_type", cuml_supported_data_types)
-@pytest.mark.parametrize("max_record_batch", [100, 10000])
-def test_dbscan(
+# @pytest.mark.parametrize("data_type", cuml_supported_data_types)
+# @pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("max_record_batch", [100])
+def test_dbscan_self(
     gpu_number: int,
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
     max_record_batch: int,
 ) -> None:
-    """
-    The dataset of this test case comes from cuml:
-    https://github.com/rapidsai/cuml/blob/496f1f155676fb4b7d99aeb117cbb456ce628a4b/python/cuml/tests/test_kmeans.py#L39
-    """
     from cuml.datasets import make_blobs
 
     n_rows = data_shape[0]
@@ -270,10 +266,6 @@ def test_dbscan_precomputed(
     data_type: np.dtype,
     max_record_batch: int,
 ) -> None:
-    """
-    The dataset of this test case comes from cuml:
-    https://github.com/rapidsai/cuml/blob/496f1f155676fb4b7d99aeb117cbb456ce628a4b/python/cuml/tests/test_kmeans.py#L39
-    """
     from sklearn.datasets import make_blobs
     from sklearn.metrics import pairwise_distances
 

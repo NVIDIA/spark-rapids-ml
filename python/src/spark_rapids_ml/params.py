@@ -30,6 +30,8 @@ from typing import (
 from pyspark import SparkContext
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
+from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.functions import col, monotonically_increasing_id
 
 from .utils import _get_spark_session, _is_local, get_logger
 
@@ -84,6 +86,48 @@ class HasFeaturesCols(Params):
         """
         return self.getOrDefault(self.featuresCols)
 
+class HasIDCol(Params):
+    """
+    Mixin for param idCol: ID for each row of input dataset for row matching.
+    """
+
+    idCol = Param(
+        Params._dummy(),
+        "idCol",
+        "id column name.",
+        typeConverter=TypeConverters.toString,
+    )
+
+    def setIdCol(self: P, value: str) -> P:
+        """
+        Sets the value of `idCol`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
+        """
+        self._set_params(idCol=value)
+        return self
+
+    def getIdCol(self) -> str:
+        """
+        Gets the value of `idCol`.
+        """
+        return self.getOrDefault("idCol")
+
+    def _ensureIdCol(self, df: DataFrame) -> DataFrame:
+        """
+        Ensure an id column exists in the input dataframe. Add the column if not exists.
+        """
+        if not self.isSet("idCol") and self.getIdCol() in df.columns:
+            raise ValueError(
+                f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
+                + "Please specify an id column"
+            )
+        
+        id_col_name = self.getIdCol()
+        df_withid = (
+            df
+            if self.isSet("idCol")
+            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
+        )
+        return df_withid
 
 class _CumlClass(object):
     """
