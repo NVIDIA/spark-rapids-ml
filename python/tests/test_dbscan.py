@@ -162,11 +162,9 @@ def test_dbscan_numeric_type(gpu_number: int, data_type: str) -> None:
     [(1000, 20), pytest.param((10000, 200), marks=pytest.mark.slow)],
     ids=idfn,
 )
-# @pytest.mark.parametrize("data_type", cuml_supported_data_types)
-# @pytest.mark.parametrize("max_record_batch", [100, 10000])
-@pytest.mark.parametrize("data_type", [np.float32])
-@pytest.mark.parametrize("max_record_batch", [100])
-def test_dbscan_self(
+@pytest.mark.parametrize("data_type", cuml_supported_data_types)
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
+def test_dbscan(
     gpu_number: int,
     feature_type: str,
     data_shape: Tuple[int, int],
