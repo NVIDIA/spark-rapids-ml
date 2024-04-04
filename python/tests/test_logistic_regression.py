@@ -1575,7 +1575,7 @@ def test_sparse_nlp20news(
     y = twenty_train.target.tolist()
 
     conf: Dict[str, Any] = {
-        # "spark.rapids.ml.uvm.enabled": True # Commenting this out can resolve a cudaMemSet error
+        "spark.rapids.ml.uvm.enabled": True  # Commenting this out can resolve a cudaMemSet error
     }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
     with CleanSparkSession(conf) as spark:
         data = [
@@ -1626,15 +1626,15 @@ def test_sparse_nlp20news(
 
         # temporarily comment out uvm and compare_model
         # assert "CUDA managed memory enabled." in caplog.text
-        # if standardization is True:
-        #    compare_model(
-        #        gpu_model,
-        #        cpu_model,
-        #        df_train,
-        #        unit_tol=tolerance,
-        #        total_tol=tolerance,
-        #        accuracy_and_probability_only=True,
-        #    )
+        if standardization is True:
+            compare_model(
+                gpu_model,
+                cpu_model,
+                df_train,
+                unit_tol=tolerance,
+                total_tol=tolerance,
+                accuracy_and_probability_only=True,
+            )
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -1763,10 +1763,6 @@ def test_compat_standardization(
             blor.setWeightCol("weight")
 
         blor_model = blor.fit(bdf)
-
-        if isinstance(blor, LogisticRegression):
-            warning_log = "when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training."
-            assert warning_log in caplog.text
 
         blor_model.setFeaturesCol("features")
         blor_model.setProbabilityCol("newProbability")
@@ -1901,7 +1897,8 @@ def test_standardization(
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
-    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+    "reg_factors",
+    [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)],
 )
 def test_standardization_sparse_example(
     fit_intercept: bool,
@@ -1981,8 +1978,6 @@ def test_standardization_sparse_example(
         cpu_lr = SparkLogisticRegression(**est_params)
 
         gpu_model = gpu_lr.fit(df)
-        warning_log = "when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training."
-        assert warning_log in caplog.text
 
         cpu_model = cpu_lr.fit(df)
 

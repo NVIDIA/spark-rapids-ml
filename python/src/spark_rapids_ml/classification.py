@@ -945,15 +945,6 @@ class LogisticRegression(
         fit_intercept = self.getFitIntercept()
 
         logger = get_logger(self.__class__)
-        if (
-            self.getStandardization() is True
-            and self.getOrDefault("enable_sparse_data_optim") is not False
-        ):
-            logger.warning(
-                (
-                    "when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training."
-                )
-            )
 
         def _logistic_regression_fit(
             dfs: FitInputType,
