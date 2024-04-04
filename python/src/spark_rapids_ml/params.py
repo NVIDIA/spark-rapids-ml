@@ -86,6 +86,7 @@ class HasFeaturesCols(Params):
         """
         return self.getOrDefault(self.featuresCols)
 
+
 class HasIDCol(Params):
     """
     Mixin for param idCol: ID for each row of input dataset for row matching.
@@ -120,7 +121,7 @@ class HasIDCol(Params):
                 f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
                 + "Please specify an id column"
             )
-        
+
         id_col_name = self.getIdCol()
         df_withid = (
             df
@@ -128,6 +129,7 @@ class HasIDCol(Params):
             else df.select(monotonically_increasing_id().alias(id_col_name), "*")
         )
         return df_withid
+
 
 class _CumlClass(object):
     """

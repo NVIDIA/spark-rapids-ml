@@ -60,7 +60,7 @@ from .core import (
     param_alias,
 )
 from .metrics import EvalMetricInfo
-from .params import HasFeaturesCols, P, _CumlClass, _CumlParams, HasIDCol
+from .params import HasFeaturesCols, HasIDCol, P, _CumlClass, _CumlParams
 from .utils import _ArrayOrder, _concat_and_free, _get_spark_session, get_logger
 
 if TYPE_CHECKING:
@@ -122,7 +122,7 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
         "metric",
         (
             f"The metric to use when calculating distances between points."
-            f"If metric is ‘precomputed’, X is assumed to be a distance matrix and must be square."
+            f"Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead."
             f"The input will be modified temporarily when cosine distance is used and the restored input matrix might not match completely due to numerical rounding."
         ),
         typeConverter=TypeConverters.toString,
@@ -219,9 +219,9 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         The number of samples in a neighborhood such that this group can be considered as
         an important core point (including the point itself).
 
-    metric: {'euclidean', 'cosine', 'precomputed'}, default = 'euclidean'
+    metric: {'euclidean', 'cosine'}, default = 'euclidean'
         The metric to use when calculating distances between points.
-        If metric is 'precomputed', X is assumed to be a distance matrix and must be square.
+        Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead
         The input will be modified temporarily when cosine distance is used and the restored input matrix might not match completely due to numerical rounding.
 
     verbose: int or boolean (default=False)
@@ -304,18 +304,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     >>> gpu_dbscan.getFeaturesCols()
     ['f1', 'f2']
     >>> gpu_model = gpu_dbscan.fit(df)
-
-
-    >>> # precomputed distance matrix input
-    >>> data = [([0.0, 1.4, 12.0, 12.0],),
-    ...         ([1.4, 0.0, 10.6, 10.6],),
-    ...         ([12.0, 10.6, 0.0, 1.4],),
-    ...         ([12.0, 10.6, 1.4, 0.0],),]
-    >>> df = spark.createDataFrame(data, ["features"])
-    >>> gpu_dbscan = DBSCAN(eps=3, metric="precomputed").setFeaturesCol("features")
-    >>> gpu_model = gpu_dbscan.fit(df)
-    >>> gpu_model.setPredictionCol("prediction")
-    >>> transformed = gpu_model.transform(df)
     """
 
     @keyword_only
@@ -374,15 +362,15 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     def getCalcCoreSampleIndices(self) -> bool:
         return self.getOrDefault("calc_core_sample_indices")
 
-
     def _fit(self, dataset: DataFrame) -> _CumlModel:
+        if self.getMetric() == "precomputed":
+            raise ValueError(
+                "Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead"
+            )
+
         # Create parameter-copied model without assess the input dataframe
         # All information will be retrieved from Model and transform
-        model = DBSCANModel(
-            verbose=self.verbose,
-            n_cols=0,
-            dtype=""
-        )
+        model = DBSCANModel(verbose=self.verbose, n_cols=0, dtype="")
 
         model._num_workers = self.num_workers
         self._copyValues(model)
@@ -608,10 +596,10 @@ class DBSCANModel(
         pd_dataset: pd.DataFrame = input_dataset.toPandas()
         raw_data: np.ndarray = np.array(pd_dataset.drop(columns=[self.getIdCol()]))
         idCols: np.ndarray = np.array(pd_dataset[self.getIdCol()])
-        
+
         # Set input metadata
-        self.n_cols=len(raw_data[0])
-        self.dtype=(
+        self.n_cols = len(raw_data[0])
+        self.dtype = (
             type(raw_data[0][0][0]).__name__
             if isinstance(raw_data[0][0], List)
             or isinstance(raw_data[0][0], np.ndarray)
