@@ -123,7 +123,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
         (
             f"The metric to use when calculating distances between points."
             f"Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead."
-            f"The input will be modified temporarily when cosine distance is used and the restored input matrix might not match completely due to numerical rounding."
         ),
         typeConverter=TypeConverters.toString,
     )
@@ -229,7 +228,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     metric: {'euclidean', 'cosine'}, default = 'euclidean'
         The metric to use when calculating distances between points.
         Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead
-        The input will be modified temporarily when cosine distance is used and the restored input matrix might not match completely due to numerical rounding.
 
     verbose: int or boolean (default=False)
         Logging level.
@@ -375,7 +373,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
                 "Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead"
             )
 
-        # Create parameter-copied model without assess the input dataframe
+        # Create parameter-copied model without accessing the input dataframe
         # All information will be retrieved from Model and transform
         model = DBSCANModel(verbose=self.verbose, n_cols=0, dtype="")
 
@@ -395,10 +393,10 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         [FitInputType, Dict[str, Any]],
         Dict[str, Any],
     ]:
-        raise NotImplementedError("DBSCAN does not can not fit and generate model")
+        raise NotImplementedError("DBSCAN does not fit and generate model")
 
     def _out_schema(self) -> Union[StructType, str]:
-        return StructType()
+        raise NotImplementedError("DBSCAN does not output for fit and generate model")
 
 
 class DBSCANModel(
@@ -438,7 +436,7 @@ class DBSCANModel(
         # Must retain idCol for label matching
         if self.hasParam("idCol") and self.isDefined("idCol"):
             id_col_name = self.getOrDefault("idCol")
-            select_cols.append(col(id_col_name).alias(alias.row_number))
+            select_cols.append(col(id_col_name))
         else:
             select_cols.append(col(alias.row_number))
 
@@ -479,7 +477,6 @@ class DBSCANModel(
         array_order = self._fit_array_order()
         pred_name = self._get_prediction_name()
         idCol_name = self.getIdCol()
-        logger = get_logger(self.__class__)
 
         cuda_managed_mem_enabled = (
             _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
@@ -495,33 +492,16 @@ class DBSCANModel(
         )
 
         for pdf_bc in self.raw_data_:
-            pdf = pd.DataFrame(data=pdf_bc.value, columns=self.processed_input_cols)
-
-            if self.multi_col_names:
-                features = np.array(pdf[self.multi_col_names], order=array_order)
-            elif self.use_sparse_array:
-                # sparse vector
-                features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
-            else:
-                # dense vector
-                features = np.array(list(pdf[alias.data]), order=array_order)
+            features = pdf_bc.value
 
             # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
             # invoking cupy array on the list
             if cuda_managed_mem_enabled:
-                features = (
-                    cp.array(features)
-                    if self.use_sparse_array is False
-                    else cupyx.scipy.sparse.csr_matrix(features)
-                )
+                features = cp.array(features)
 
             inputs.append(features)
 
-        if isinstance(inputs[0], pd.DataFrame):
-            concated = pd.concat(inputs)
-        else:
-            # features are either cp or np arrays here
-            concated = _concat_and_free(inputs, order=array_order)
+        concated = _concat_and_free(inputs, order=array_order)
 
         def _cuml_fit(
             dfs: FitInputType,
@@ -598,10 +578,20 @@ class DBSCANModel(
 
         dataset = self._ensureIdCol(dataset)
         select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
-        use_sparse_array = _use_sparse_in_cuml(dataset)
         input_dataset = dataset.select(*select_cols)
         pd_dataset: pd.DataFrame = input_dataset.toPandas()
-        raw_data: np.ndarray = np.array(pd_dataset.drop(columns=[self.getIdCol()]))
+
+        if multi_col_names:
+            raw_data = np.array(
+                pd_dataset.drop(columns=[self.getIdCol()]),
+                order=self._fit_array_order(),
+            )
+        else:
+            raw_data = np.array(
+                list(pd_dataset.drop(columns=[self.getIdCol()])[alias.data]),
+                order=self._fit_array_order(),
+            )
+
         idCols: np.ndarray = np.array(pd_dataset[self.getIdCol()])
 
         # Set input metadata
@@ -626,7 +616,6 @@ class DBSCANModel(
         self.raw_data_ = broadcast_raw_data
         self.idCols_ = broadcast_idCol
         self.multi_col_names = multi_col_names
-        self.use_sparse_array = use_sparse_array
 
         idCol_name = self.getIdCol()
 

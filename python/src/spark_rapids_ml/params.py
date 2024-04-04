@@ -112,16 +112,17 @@ class HasIDCol(Params):
         """
         Ensure an id column exists in the input dataframe. Add the column if not exists.
         """
-        if not self.isSet("idCol") and self.getIdCol() in df.columns:
-            raise ValueError(
-                f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
-                + "Please specify an id column"
-            )
+        dedup = False
+        if not self.isSet("idCol"):
+            while self.getIdCol() in df.columns:
+                self._set(**{"idCol": self.getIdCol() + "_dedup"})
+                dedup = True
 
         id_col_name = self.getIdCol()
+        df_withid = df.select(monotonically_increasing_id().alias(id_col_name), "*")
         df_withid = (
             df
-            if self.isSet("idCol")
+            if self.isSet("idCol") and not dedup
             else df.select(monotonically_increasing_id().alias(id_col_name), "*")
         )
         return df_withid
