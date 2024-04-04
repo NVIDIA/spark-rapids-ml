@@ -80,7 +80,7 @@ class DBSCANClass(_CumlClass):
             "metric": "euclidean",
             "verbose": False,
             "max_mbytes_per_batch": None,
-            "calc_core_sample_indices": True,
+            "calc_core_sample_indices": False,
         }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:

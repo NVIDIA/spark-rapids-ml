@@ -50,6 +50,7 @@ def test_default_cuml_params() -> None:
     from cuml import DBSCAN as CumlDBSCAN
 
     cuml_params = get_default_cuml_parameters([CumlDBSCAN], ["handle", "output_type"])
+    cuml_params["calc_core_sample_indices"] = False
     spark_params = DBSCAN()._get_cuml_params_default()
     assert cuml_params == spark_params
 
@@ -65,7 +66,7 @@ def test_dbscan_params(
         "metric": "euclidean",
         "verbose": False,
         "max_mbytes_per_batch": None,
-        "calc_core_sample_indices": True,
+        "calc_core_sample_indices": False,
     }
     default_dbscan = DBSCAN()
     assert_params(default_dbscan, default_spark_params, default_cuml_params)
