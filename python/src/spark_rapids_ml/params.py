@@ -93,18 +93,14 @@ class HasIDCol(Params):
     """
 
     idCol = Param(
-        Params._dummy(),
+        Params._dummy(),  # type: ignore
         "idCol",
         "id column name.",
         typeConverter=TypeConverters.toString,
     )
 
-    def setIdCol(self: P, value: str) -> P:
-        """
-        Sets the value of `idCol`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
-        """
-        self._set_params(idCol=value)
-        return self
+    def __init__(self) -> None:
+        super(HasIDCol, self).__init__()
 
     def getIdCol(self) -> str:
         """
