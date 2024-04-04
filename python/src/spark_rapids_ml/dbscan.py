@@ -408,7 +408,7 @@ class DBSCANModel(
         self,
         n_cols: int,
         dtype: str,
-        verbose: int | bool,
+        verbose: Union[int, bool],
     ):
         super(DBSCANClass, self).__init__()
         super(_CumlModelWithPredictionCol, self).__init__(n_cols=n_cols, dtype=dtype)
