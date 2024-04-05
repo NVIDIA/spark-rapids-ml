@@ -112,3 +112,16 @@ UMAP
 
     UMAP
     UMAPModel
+
+
+DBSCAN
+------
+
+.. currentmodule:: spark_rapids_ml.dbscan
+
+.. autosummary::
+    :template: autosummary/class_with_docs.rst
+    :toctree: api
+
+    DBSCAN
+    DBSCANModel
