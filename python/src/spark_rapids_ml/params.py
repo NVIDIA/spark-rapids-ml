@@ -30,6 +30,8 @@ from typing import (
 from pyspark import SparkContext
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
+from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.functions import col, monotonically_increasing_id
 
 from .utils import _get_spark_session, _is_local, get_logger
 
@@ -83,6 +85,47 @@ class HasFeaturesCols(Params):
         Gets the value of featuresCols or its default value.
         """
         return self.getOrDefault(self.featuresCols)
+
+
+class HasIDCol(Params):
+    """
+    Mixin for param idCol: ID for each row of input dataset for row matching.
+    """
+
+    idCol = Param(
+        Params._dummy(),  # type: ignore
+        "idCol",
+        "id column name.",
+        typeConverter=TypeConverters.toString,
+    )
+
+    def __init__(self) -> None:
+        super(HasIDCol, self).__init__()
+
+    def getIdCol(self) -> str:
+        """
+        Gets the value of `idCol`.
+        """
+        return self.getOrDefault("idCol")
+
+    def _ensureIdCol(self, df: DataFrame) -> DataFrame:
+        """
+        Ensure an id column exists in the input dataframe. Add the column if not exists.
+        """
+        dedup = False
+        if not self.isSet("idCol"):
+            while self.getIdCol() in df.columns:
+                self._set(**{"idCol": self.getIdCol() + "_dedup"})
+                dedup = True
+
+        id_col_name = self.getIdCol()
+        df_withid = df.select(monotonically_increasing_id().alias(id_col_name), "*")
+        df_withid = (
+            df
+            if self.isSet("idCol") and not dedup
+            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
+        )
+        return df_withid
 
 
 class _CumlClass(object):
