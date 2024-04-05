@@ -191,7 +191,7 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
 
     def setIdCol(self: P, value: str) -> P:
         """
-        Sets the value of `idCol`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify nearest neighbor vectors by associated id value.
+        Sets the value of `idCol`. If not set, an id column will be added with column name `unique_id`. The id column is used to specify dbscan vectors by associated id value.
         """
         self._set_params(idCol=value)
         return self
