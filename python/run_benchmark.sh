@@ -517,3 +517,32 @@ if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
         $common_confs $spark_rapids_confs_umap \
         ${EXTRA_ARGS}
 fi
+
+# DBSCAN
+if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script blobs \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --numPartitions $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+           
+    fi
+
+    echo "$sep algo: dbscan $sep"
+    python ./benchmark/benchmark_runner.py dbscan \
+        --eps 1 \
+        --min_samples 10 \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --no_cache \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_dbscan_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+fi
