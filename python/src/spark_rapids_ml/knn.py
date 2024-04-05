@@ -57,7 +57,7 @@ from .core import (
     param_alias,
 )
 from .metrics import EvalMetricInfo
-from .params import P, _CumlClass, _CumlParams
+from .params import HasIDCol, P, _CumlClass, _CumlParams
 from .utils import _concat_and_free, get_logger
 
 
@@ -73,7 +73,9 @@ class NearestNeighborsClass(_CumlClass):
         return None
 
 
-class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInputCols):
+class _NearestNeighborsCumlParams(
+    _CumlParams, HasInputCol, HasLabelCol, HasInputCols, HasIDCol
+):
     """
     Shared Spark Params for NearestNeighbor and NearestNeighborModel.
     """
@@ -125,30 +127,6 @@ class _NearestNeighborsCumlParams(_CumlParams, HasInputCol, HasLabelCol, HasInpu
         """
         self._set_params(idCol=value)
         return self
-
-    def getIdCol(self) -> str:
-        """
-        Gets the value of `idCol`.
-        """
-        return self.getOrDefault(self.idCol)
-
-    def _ensureIdCol(self, df: DataFrame) -> DataFrame:
-        """
-        Ensure an id column exists in the input dataframe. Add the column if not exists.
-        """
-        if not self.isSet("idCol") and self.getIdCol() in df.columns:
-            raise ValueError(
-                f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
-                + "Please specify an id column"
-            )
-
-        id_col_name = self.getIdCol()
-        df_withid = (
-            df
-            if self.isSet("idCol")
-            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
-        )
-        return df_withid
 
 
 class NearestNeighbors(
