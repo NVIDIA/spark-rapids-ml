@@ -326,7 +326,6 @@ def test_make_sparse_regression(
 
         assert len(X) == row_num, "X row number mismatch"
         for sparseVec in X:
-            # assert sparseVec.toArray().dtype == np.dtype(dtype), "Unexpected dtype"
             assert sparseVec.size == col_num, "X col number mismatch"
         assert y.shape == (row_num,), "y shape mismatch"
 

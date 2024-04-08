@@ -721,7 +721,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         for i in range(len(density_values)):
             if density_values[i] > 1:
                 density_values[i] = 1
-        print(density_values)
 
         # Generate ground truth upfront.
         if multinomial_log:
