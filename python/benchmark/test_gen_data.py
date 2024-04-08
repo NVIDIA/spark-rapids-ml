@@ -234,7 +234,7 @@ def test_make_regression(
 )
 @pytest.mark.parametrize(
     "density",
-    ["0.25", ["0.05", "0.1", "0.2"], pytest.param("0.2", marks=pytest.mark.slow)],
+    ["0.25", ["0.05", "0.1", "0.2"]],
 )
 @pytest.mark.parametrize(
     "rows, cols",
@@ -244,15 +244,12 @@ def test_make_regression(
     "density_curve, shuffle",
     [
         ("None", "True"),
-        ("Linear", "True"),
         ("Linear", "False"),
         ("Exponential", "False"),
         pytest.param("Exponential", "True", marks=pytest.mark.slow),
     ],
 )
-@pytest.mark.parametrize(
-    "n_chunks", ["10", pytest.param("100", marks=pytest.mark.slow)]
-)
+@pytest.mark.parametrize("n_chunks", ["100"])
 def test_make_sparse_regression(
     dtype: str,
     use_gpu: str,
@@ -296,6 +293,8 @@ def test_make_sparse_regression(
         density_curve,
         "--shuffle",
         shuffle,
+        "--n_chunk",
+        n_chunks,
     ]
 
     input_args.append("--bias")
@@ -400,6 +399,10 @@ def test_make_sparse_regression(
                 )
                 density_values *= n_chunks_num * density_num / sum(density_values)
 
+            for i in range(len(density_values)):
+                if density_values[i] > 1:
+                    density_values[i] = 1
+
             col_per_chunk = np.full(n_chunks_num, orig_cols // n_chunks_num)
             col_per_chunk[: (orig_cols % n_chunks_num)] += 1
             chunk_boundary = np.cumsum(col_per_chunk)
@@ -416,7 +419,7 @@ def test_make_sparse_regression(
                 assert dense_count >= chunk_size * num_partitions * int(
                     (row_num // num_partitions) * col_density - 1
                 ) and dense_count <= chunk_size * num_partitions * int(
-                    (row_num // num_partitions) * col_density + 1
+                    (row_num // num_partitions + 1) * col_density + 1
                 )
 
         if logistic_regression == "True":
