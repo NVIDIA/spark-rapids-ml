@@ -297,7 +297,7 @@ def test_make_sparse_regression(
         n_chunks,
     ]
 
-    # Add parameters with multiple values
+    # Add parameters with multiple value
     input_args.append("--bias")
     if isinstance(bias, List):
         input_args.extend(bias)
