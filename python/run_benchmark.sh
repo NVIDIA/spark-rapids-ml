@@ -3,6 +3,7 @@
 # Usage: ./run_benchmark.sh cpu|gpu|gpu_etl <mode> [<args>]
 # where <mode> can be:
 #     all
+#     dbscan
 #     kmeans
 #     knn
 #     linear_regression
@@ -525,7 +526,6 @@ if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
             --num_rows $num_rows \
             --num_cols $num_cols \
             --output_num_files $output_num_files \
-            --numPartitions $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
             --output_dir "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \

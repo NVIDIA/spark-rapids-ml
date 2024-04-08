@@ -16,6 +16,7 @@
 import argparse
 import sys
 
+from benchmark.bench_dbscan import BenchmarkDBSCAN
 from benchmark.bench_kmeans import BenchmarkKMeans
 from benchmark.bench_linear_regression import BenchmarkLinearRegression
 from benchmark.bench_logistic_regression import BenchmarkLogisticRegression
@@ -31,6 +32,7 @@ from benchmark.bench_umap import BenchmarkUMAP
 class BenchmarkRunner:
     def __init__(self) -> None:
         registered_algorithms = {
+            "dbscan": BenchmarkDBSCAN,
             "kmeans": BenchmarkKMeans,
             "knn": BenchmarkNearestNeighbors,
             "linear_regression": BenchmarkLinearRegression,
