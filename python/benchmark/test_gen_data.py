@@ -421,6 +421,7 @@ def test_make_sparse_regression(
                     (row_num // num_partitions + 1) * col_density + 1
                 )
 
+        # Check all clusters exists
         if logistic_regression == "True":
             assert np.unique(y).shape[0] == n_classes_num
 
