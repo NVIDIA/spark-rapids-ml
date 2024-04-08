@@ -535,8 +535,8 @@ if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
 
     echo "$sep algo: dbscan $sep"
     python ./benchmark/benchmark_runner.py dbscan \
-        --eps 1 \
-        --min_samples 10 \
+        --eps 100 \
+        --min_samples 5 \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \

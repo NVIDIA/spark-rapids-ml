@@ -15,7 +15,7 @@
 #
 
 from abc import ABCMeta
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -23,8 +23,8 @@ import pyspark
 from pyspark import keyword_only
 from pyspark.ml.clustering import KMeansModel as SparkKMeansModel
 from pyspark.ml.clustering import _KMeansParams
-from pyspark.ml.param.shared import HasFeaturesCol, Param, Params, TypeConverters
 from pyspark.ml.linalg import Vector
+from pyspark.ml.param.shared import HasFeaturesCol, Param, Params, TypeConverters
 from pyspark.sql import Column
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col
@@ -498,6 +498,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
 
         return _construct_kmeans, _transform_internal, None
 
+
 class DBSCANClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
@@ -684,7 +685,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
     Examples
     ----------
-    >>> from spark_rapids_ml.dbscan import DBSCAN
+    >>> from spark_rapids_ml.clustering import DBSCAN
     >>> data = [([0.0, 0.0],),
     ...        ([1.0, 1.0],),
     ...        ([9.0, 8.0],),
@@ -716,7 +717,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     >>> gpu_model.save("/tmp/dbscan_model")
 
     >>> # vector column input
-    >>> from spark_rapids_ml.dbscan import DBSCAN
+    >>> from spark_rapids_ml.clustering import DBSCAN
     >>> from pyspark.ml.linalg import Vectors
     >>> data = [(Vectors.dense([0.0, 0.0]),),
     ...        (Vectors.dense([1.0, 1.0]),),

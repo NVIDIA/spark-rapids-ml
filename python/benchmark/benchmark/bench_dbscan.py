@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import pprint
 import time
 from typing import Any, Dict, Iterator, List, Optional, Union
 
@@ -30,11 +31,12 @@ from .utils import inspect_default_params_from_func, with_benchmark
 
 class BenchmarkDBSCAN(BenchmarkBase):
     def _supported_class_params(self) -> Dict[str, Any]:
-        from pyspark.ml.clustering import DBSCAN
+        from pyspark.ml.clustering import KMeans
 
         params = inspect_default_params_from_func(
-            DBSCAN.__init__,
+            KMeans.__init__,
             [
+                "distanceMeasure",
                 "featuresCol",
                 "labelCol",
                 "predictionCol",
@@ -44,7 +46,36 @@ class BenchmarkDBSCAN(BenchmarkBase):
                 "leafCol",
             ],
         )
+        params["seed"] = 1
+        params["eps"] = float
+        params["min_samples"] = int
         return params
+
+    def _parse_arguments(self, argv: List[Any]) -> None:
+        """Override to set class params based on cpu or gpu run (umap or pca)"""
+        pp = pprint.PrettyPrinter()
+
+        self._args = self._parser.parse_args(argv)
+        print("command line arguments:")
+        pp.pprint(vars(self._args))
+
+        if self._args.num_cpus > 0:
+            supported_class_params = self._supported_class_params()
+            supported_class_params.pop("eps", None)
+            supported_class_params.pop("min_samples", None)
+        else:
+            supported_class_params = {
+                "eps": float,
+                "min_samples": int,
+            }
+        self._class_params = {
+            k: v
+            for k, v in vars(self._args).items()
+            if k in supported_class_params and v is not None
+        }
+        print("\nclass params:")
+        pp.pprint(self._class_params)
+        print()
 
     def _add_extra_arguments(self) -> None:
         self._parser.add_argument(
@@ -56,59 +87,41 @@ class BenchmarkDBSCAN(BenchmarkBase):
 
     def score(
         self,
-        centers: np.ndarray,
         transformed_df: DataFrame,
         features_col: str,
         prediction_col: str,
     ) -> float:
-        """Computes the sum of squared euclidean distances between vectors in the features_col
-        of transformed_df and the vector in centers having the corresponding index value in prediction_col.
-        This is the objective function being optimized by the kmeans algorithm.  It is also referred to as inertia.
+        """Computes the silhoutte score for the clustering result. This is a common metric to measure
+        how well the clustering algorithm performs.
 
         Parameters
         ----------
-        centers
-            KMeans computed center/centroid vectors.
         transformed_df
-            KMeansModel transformed data.
+            Model transformed data.
         features_col
             Name of features column.
             Note: this column is assumed to be of pyspark sql 'array' type.
         prediction_col
-            Name of prediction column (index of nearest centroid, as computed by KMeansModel.transform)
+            Name of prediction column
 
         Returns
         -------
         float
-            The computed inertia score, per description above.
+            The computed silhoutte score.
 
         """
+        from sklearn.metrics import silhouette_score
 
         sc = transformed_df.rdd.context
-        centers_bc = sc.broadcast(centers)
 
-        def partition_score_udf(
-            pdf_iter: Iterator[pd.DataFrame],
-        ) -> Iterator[pd.DataFrame]:
-            local_centers = centers_bc.value.astype(np.float64)
-            partition_score = 0.0
-            for pdf in pdf_iter:
-                input_vecs = np.array(list(pdf[features_col]), dtype=np.float64)
-                predictions = list(pdf[prediction_col])
-                center_vecs = local_centers[predictions, :]
-                partition_score += np.sum((input_vecs - center_vecs) ** 2)
-            yield pd.DataFrame({"partition_score": [partition_score]})
+        pdf: pd.DataFrame = transformed_df.toPandas()
+        features_pdf = pdf.drop(columns=[prediction_col])
+        prediction_pdf = pdf[prediction_col]
 
-        total_score = (
-            transformed_df.mapInPandas(
-                partition_score_udf,  # type: ignore
-                StructType([StructField("partition_score", DoubleType(), True)]),
-            )
-            .agg(sum("partition_score").alias("total_score"))
-            .toPandas()
-        )  # type: ignore
-        total_score = total_score["total_score"][0]  # type: ignore
-        return total_score
+        features_np = np.stack(features_pdf.to_numpy().squeeze())
+        prediction_np = prediction_pdf.to_numpy()
+
+        return silhouette_score(features_np, prediction_np)
 
     def run_once(
         self,
@@ -150,11 +163,11 @@ class BenchmarkDBSCAN(BenchmarkBase):
                 )
 
             params = self.class_params
-            print(f"Passing {params} to KMeans")
+            print(f"Passing {params} to DBSCAN")
 
             gpu_estimator = DBSCAN(
                 num_workers=num_gpus, verbose=self.args.verbose, **params
-            ).setPredictionCol(output_col)
+            )
 
             if is_single_col:
                 gpu_estimator = gpu_estimator.setFeaturesCol(first_col)
@@ -185,8 +198,6 @@ class BenchmarkDBSCAN(BenchmarkBase):
                 df_for_scoring = transformed_df.select(
                     vector_to_array(col(feature_col)), output_col
                 )
-
-            # cluster_centers = gpu_model.cluster_centers_
 
         if num_cpus > 0:
             from pyspark.ml.clustering import KMeans as SparkKMeans
@@ -252,9 +263,7 @@ class BenchmarkDBSCAN(BenchmarkBase):
             cluster_centers = cpu_model.clusterCenters()
 
         # either cpu or gpu mode is run, not both in same run
-        score = self.score(
-            np.array(cluster_centers), df_for_scoring, feature_col, output_col
-        )
+        score = self.score(df_for_scoring, feature_col, output_col)
         # note: seems that inertia matches score at iterations-1
         print(f"score: {score}")
 
@@ -263,9 +272,8 @@ class BenchmarkDBSCAN(BenchmarkBase):
             "transform_time": transform_time,
             "total_time": total_time,
             "score": score,
-            "k": self.args.k,
-            "maxIter": self.args.maxIter,
-            "tol": self.args.tol,
+            "eps": self.args.eps,
+            "min_samples": self.args.min_samples,
             "num_gpus": num_gpus,
             "num_cpus": num_cpus,
             "no_cache": no_cache,
