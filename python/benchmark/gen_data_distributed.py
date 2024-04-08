@@ -717,6 +717,11 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 redundant_cols = 0
                 orig_cols = cols
 
+        # Crop too large value
+        for i in range(len(density_values)):
+            if density_values[i] > 1:
+                density_values[i] = 1
+
         # Generate ground truth upfront.
         if multinomial_log:
             ground_truth = np.zeros((cols, n_classes))
@@ -775,7 +780,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 d = density_values[i]
                 chunk_cols = col_per_chunk[i]
 
-                # Generate a column
+                # Generate a chunk
                 sparse_col = sp.sparse.random(
                     num_rows_per_partition,
                     chunk_cols,
