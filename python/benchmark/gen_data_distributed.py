@@ -780,7 +780,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 d = density_values[i]
                 chunk_cols = col_per_chunk[i]
 
-                # Generate a column
+                # Generate a chunk
                 sparse_col = sp.sparse.random(
                     num_rows_per_partition,
                     chunk_cols,
