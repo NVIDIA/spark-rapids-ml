@@ -128,6 +128,25 @@ class _NearestNeighborsCumlParams(
         self._set_params(idCol=value)
         return self
 
+    def _ensureIdCol(self, df: DataFrame) -> DataFrame:
+        """
+        Ensure an id column exists in the input dataframe. Add the column if not exists.
+        Overwritten for knn assumption on error for not setting idCol and duplicate exists.
+        """
+        if not self.isSet("idCol") and self.getIdCol() in df.columns:
+            raise ValueError(
+                f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
+                + "Please specify an id column"
+            )
+
+        id_col_name = self.getIdCol()
+        df_withid = (
+            df
+            if self.isSet("idCol")
+            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
+        )
+        return df_withid
+
 
 class NearestNeighbors(
     NearestNeighborsClass, _CumlEstimatorSupervised, _NearestNeighborsCumlParams
