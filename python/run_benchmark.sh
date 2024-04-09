@@ -537,6 +537,10 @@ if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
     python ./benchmark/benchmark_runner.py dbscan \
         --eps 100 \
         --min_samples 5 \
+        --k 3 \
+        --tol 1.0e-20 \
+        --maxIter 30 \
+        --initMode random \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \

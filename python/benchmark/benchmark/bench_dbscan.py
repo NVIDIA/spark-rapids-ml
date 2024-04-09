@@ -32,7 +32,7 @@ from .utils import inspect_default_params_from_func, with_benchmark
 class BenchmarkDBSCAN(BenchmarkBase):
     def _supported_class_params(self) -> Dict[str, Any]:
         from pyspark.ml.clustering import KMeans
-
+        
         params = inspect_default_params_from_func(
             KMeans.__init__,
             [
