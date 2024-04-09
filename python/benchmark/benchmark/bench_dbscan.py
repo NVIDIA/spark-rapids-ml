@@ -32,7 +32,7 @@ from .utils import inspect_default_params_from_func, with_benchmark
 class BenchmarkDBSCAN(BenchmarkBase):
     def _supported_class_params(self) -> Dict[str, Any]:
         from pyspark.ml.clustering import KMeans
-        
+
         params = inspect_default_params_from_func(
             KMeans.__init__,
             [
@@ -178,11 +178,17 @@ class BenchmarkDBSCAN(BenchmarkBase):
                 "gpu fit", lambda: gpu_estimator.fit(train_df)
             )
 
-            transformed_df = gpu_model.setPredictionCol(output_col).transform(train_df)
             # count doesn't trigger compute so do something not too compute intensive
-            _, transform_time = with_benchmark(
-                "gpu transform", lambda: transformed_df.agg(sum(output_col)).collect()
+            transformed_df, transform_time = with_benchmark(
+                "gpu transform",
+                lambda: gpu_model.setPredictionCol(output_col).transform(train_df),
             )
+
+            _, extra_transform_time = with_benchmark(
+                "gpu transform extra",
+                lambda: transformed_df.agg(sum(output_col)).collect(),
+            )
+            transform_time += extra_transform_time
 
             total_time = round(time.time() - func_start_time, 2)
             print(f"gpu total time: {total_time} sec")
@@ -267,17 +273,32 @@ class BenchmarkDBSCAN(BenchmarkBase):
         # note: seems that inertia matches score at iterations-1
         print(f"score: {score}")
 
-        result = {
-            "fit_time": fit_time,
-            "transform_time": transform_time,
-            "total_time": total_time,
-            "score": score,
-            "eps": self.args.eps,
-            "min_samples": self.args.min_samples,
-            "num_gpus": num_gpus,
-            "num_cpus": num_cpus,
-            "no_cache": no_cache,
-            "train_path": train_path,
-        }
+        if num_gpus > 0:
+            result = {
+                "fit_time": fit_time,
+                "transform_time": transform_time,
+                "total_time": total_time,
+                "score": score,
+                "eps": self.args.eps,
+                "min_samples": self.args.min_samples,
+                "num_gpus": num_gpus,
+                "num_cpus": num_cpus,
+                "no_cache": no_cache,
+                "train_path": train_path,
+            }
+        else:
+            result = {
+                "fit_time": fit_time,
+                "transform_time": transform_time,
+                "total_time": total_time,
+                "score": score,
+                "k": self.args.k,
+                "maxIter": self.args.maxIter,
+                "tol": self.args.tol,
+                "num_gpus": num_gpus,
+                "num_cpus": num_cpus,
+                "no_cache": no_cache,
+                "train_path": train_path,
+            }
 
         return result
