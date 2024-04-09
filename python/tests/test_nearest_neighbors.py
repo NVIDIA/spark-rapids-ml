@@ -302,11 +302,12 @@ def test_example_with_id(gpu_number: int) -> None:
 )  # vector feature type will be converted to float32 to be compatible with cuml multi-gpu NearestNeighbors Class
 @pytest.mark.parametrize("data_shape", [(1000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
-@pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize(
-    "batch_size", [100, 10000]
+    "max_record_batch", [pytest.param(100, marks=pytest.mark.slow), 10000]
+)
+@pytest.mark.parametrize(
+    "batch_size", [pytest.param(100, marks=pytest.mark.slow), 10000]
 )  # larger batch_size higher query throughput, yet more memory
-@pytest.mark.slow
 def test_nearest_neighbors(
     gpu_number: int,
     feature_type: str,
