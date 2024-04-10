@@ -52,7 +52,7 @@ class BenchmarkDBSCAN(BenchmarkBase):
         return params
 
     def _parse_arguments(self, argv: List[Any]) -> None:
-        """Override to set class params based on cpu or gpu run (umap or pca)"""
+        """Override to set class params based on cpu or gpu run (dbscan or kmeans)"""
         pp = pprint.PrettyPrinter()
 
         self._args = self._parser.parse_args(argv)
@@ -178,14 +178,14 @@ class BenchmarkDBSCAN(BenchmarkBase):
                 "gpu fit", lambda: gpu_estimator.fit(train_df)
             )
 
-            # count doesn't trigger compute so do something not too compute intensive
             transformed_df, transform_time = with_benchmark(
                 "gpu transform",
                 lambda: gpu_model.setPredictionCol(output_col).transform(train_df),
             )
 
+            # count doesn't trigger compute so do something not too compute intensive
             _, extra_transform_time = with_benchmark(
-                "gpu transform extra",
+                "gpu transform result gathering",
                 lambda: transformed_df.agg(sum(output_col)).collect(),
             )
             transform_time += extra_transform_time
@@ -266,11 +266,9 @@ class BenchmarkDBSCAN(BenchmarkBase):
             df_for_scoring = transformed_df.select(
                 vector_to_array(col(feature_col)).alias(feature_col), output_col
             )
-            cluster_centers = cpu_model.clusterCenters()
 
         # either cpu or gpu mode is run, not both in same run
         score = self.score(df_for_scoring, feature_col, output_col)
-        # note: seems that inertia matches score at iterations-1
         print(f"score: {score}")
 
         if num_gpus > 0:

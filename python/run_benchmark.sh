@@ -547,6 +547,7 @@ if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
         --num_runs $num_runs \
         --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_dbscan_${cluster_type}.csv" \
+        --spark_confs spark.driver.maxResultSize=0 \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
 fi
