@@ -914,8 +914,25 @@ class DBSCANModel(
             == "true"
         )
 
-        idCol_bc = self.idCols_
-        raw_data_bc = self.raw_data_
+        inputs = []  # type: ignore
+
+        idCol = list(
+            self.idCols_[0].value
+            if len(self.idCols_) == 1
+            else np.concatenate([chunk.value for chunk in self.idCols_])
+        )
+
+        for pdf_bc in self.raw_data_:
+            features = pdf_bc.value
+
+            # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
+            # invoking cupy array on the list
+            if cuda_managed_mem_enabled:
+                features = cp.array(features)
+
+            inputs.append(features)
+
+        concated = _concat_and_free(inputs, order=array_order)
 
         def _cuml_fit(
             dfs: FitInputType,
@@ -928,25 +945,6 @@ class DBSCANModel(
             partition_id = context.partitionId()
 
             logger = get_logger(self.__class__)
-
-            idCol = list(
-                self.idCols_[0].value
-                if len(self.idCols_) == 1
-                else np.concatenate([chunk.value for chunk in self.idCols_])
-            )
-
-            inputs = []  # type: ignore
-            for pdf_bc in self.raw_data_:
-                features = pdf_bc.value
-
-                # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
-                # invoking cupy array on the list
-                if cuda_managed_mem_enabled:
-                    features = cp.array(features)
-
-                inputs.append(features)
-
-            concated = _concat_and_free(inputs, order=array_order)
 
             dbscan = CumlDBSCANMG(
                 handle=params[param_alias.handle],
