@@ -275,7 +275,11 @@ class BenchmarkDBSCAN(BenchmarkBase):
             )
 
         # either cpu or gpu mode is run, not both in same run
-        score = self.score(df_for_scoring, feature_col, output_col) if compute_score else "Not Computed"
+        score = (
+            self.score(df_for_scoring, feature_col, output_col)
+            if compute_score
+            else "Not Computed"
+        )
         print(f"score: {score}")
 
         if num_gpus > 0:
