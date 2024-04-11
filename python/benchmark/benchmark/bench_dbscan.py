@@ -84,6 +84,12 @@ class BenchmarkDBSCAN(BenchmarkBase):
             default=False,
             help="whether to enable dataframe repartition, cache and cout outside fit function",
         )
+        self._parser.add_argument(
+            "--compute_score",
+            action="store_true",
+            default=False,
+            help="whether to compute algorithm evaluation score for benchmarking",
+        )
 
     def score(
         self,
@@ -135,6 +141,7 @@ class BenchmarkDBSCAN(BenchmarkBase):
         num_cpus = self.args.num_cpus
         no_cache = self.args.no_cache
         train_path = self.args.train_path
+        compute_score = self.args.compute_score
 
         func_start_time = time.time()
 
@@ -268,7 +275,7 @@ class BenchmarkDBSCAN(BenchmarkBase):
             )
 
         # either cpu or gpu mode is run, not both in same run
-        score = self.score(df_for_scoring, feature_col, output_col)
+        score = self.score(df_for_scoring, feature_col, output_col) if compute_score else "Not Computed"
         print(f"score: {score}")
 
         if num_gpus > 0:
