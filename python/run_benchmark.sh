@@ -3,6 +3,7 @@
 # Usage: ./run_benchmark.sh cpu|gpu|gpu_etl <mode> [<args>]
 # where <mode> can be:
 #     all
+#     dbscan
 #     kmeans
 #     knn
 #     linear_regression
@@ -515,5 +516,45 @@ if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_umap_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs_umap \
+        ${EXTRA_ARGS}
+fi
+
+# DBSCAN
+if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script blobs \
+            --num_rows $num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+           
+    fi
+
+    # DBSCAN involves a large amount of data transfer to the driver for broadcast
+    spark_rapids_confs_dbscan="$spark_rapids_confs --spark_confs spark.driver.maxResultSize=0"
+
+    # Compute score when datasize is suitable
+    if (($num_rows * $num_cols < 50000000)); then
+        spark_rapids_confs_dbscan="$spark_rapids_confs_dbscan --compute_score"
+    fi
+
+    echo "$sep algo: dbscan $sep"
+    python ./benchmark/benchmark_runner.py dbscan \
+        --eps 100 \
+        --min_samples 5 \
+        --k 3 \
+        --tol 1.0e-20 \
+        --maxIter 30 \
+        --initMode random \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --no_cache \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_dbscan_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs_dbscan \
         ${EXTRA_ARGS}
 fi

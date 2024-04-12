@@ -32,7 +32,7 @@ from pyspark.ml.linalg import DenseVector, Vectors
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import col
 
-from spark_rapids_ml.dbscan import DBSCAN, DBSCANModel
+from spark_rapids_ml.clustering import DBSCAN, DBSCANModel
 
 from .sparksession import CleanSparkSession
 from .utils import (
