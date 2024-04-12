@@ -87,7 +87,7 @@ pipeline {
 
                     def title = githubHelper.getIssue().title
                     if (title ==~ /.*\[skip ci\].*/) {
-                        githubHelper.updateCommitStatus("$BUILD_URL", "Skipped", GitHubCommitState.SUCCESS)
+                        githubHelper.updateCommitStatus("", "Skipped", GitHubCommitState.SUCCESS)
                         currentBuild.result == "SUCCESS"
                         skipped = true
                         return
@@ -116,7 +116,7 @@ pipeline {
 
             steps {
                 script {
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Running - preparing", GitHubCommitState.PENDING)
+                    githubHelper.updateCommitStatus("", "Running - preparing", GitHubCommitState.PENDING)
                     checkout(
                         changelog: false,
                         poll: true,
@@ -178,7 +178,7 @@ pipeline {
 
             steps {
                 script {
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Running - tests", GitHubCommitState.PENDING)
+                    githubHelper.updateCommitStatus("", "Running - tests", GitHubCommitState.PENDING)
                     container('gpu') {
                         timeout(time: 2, unit: 'HOURS') { // step only timeout for test run
                             common.resolveIncompatibleDriverIssue(this)
@@ -198,7 +198,7 @@ pipeline {
                 }
 
                 if (currentBuild.currentResult == "SUCCESS") {
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Success", GitHubCommitState.SUCCESS)
+                    githubHelper.updateCommitStatus("", "Success", GitHubCommitState.SUCCESS)
                 } else {
                     // upload log only in case of build failure
                     def guardWords = ["gitlab.*?\\.com", "urm.*?\\.com"]
@@ -206,7 +206,7 @@ pipeline {
                     guardWords.add("sc-ipp*") // hide cloud info
                     githubHelper.uploadLogs(this, env.JOB_NAME, env.BUILD_NUMBER, null, guardWords)
 
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Fail", GitHubCommitState.FAILURE)
+                    githubHelper.updateCommitStatus("", "Fail", GitHubCommitState.FAILURE)
                 }
 
                 if (TEMP_IMAGE_BUILD) {
