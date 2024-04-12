@@ -960,13 +960,6 @@ class DBSCANModel(
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)
 
-            # get_logger(self.__class__).info("Row", concated.shape)
-            # get_logger(self.__class__).info("Col", concated[0].shape)
-            # get_logger(self.__class__).info("Col", concated[1].shape)
-            # get_logger(self.__class__).info("Col", concated[1000].shape)
-            # for row in concated:
-            #     get_logger(self.__class__).info("Col", row.shape)
-
             res = list(dbscan.fit_predict(concated).to_numpy())
 
             # Only node 0 from cuML will contain the correct label output
