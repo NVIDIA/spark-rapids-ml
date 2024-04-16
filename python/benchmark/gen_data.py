@@ -465,15 +465,27 @@ def main(registered_data_gens: Dict[str, Any], repartition: bool) -> None:
 
     parser = argparse.ArgumentParser(
         description="Generate random dataset.",
-        usage="""gen_data.py <type> [<args>]
+        usage="""python gen_data_distributed.py <type> [<args>]
 
-    Supported types are:
-       blobs                 Generate random blobs datasets using sklearn's make_blobs
-       regression            Generate random regression datasets using sklearn's make_regression
-       classification        Generate random classification datasets using sklearn's make_classification
-       low_rank_matrix       Generate random dataset using sklearn's make_low_rank_matrix
-       sparse_regression     Generate random sparse regression datasets stored as sparse vectors
-       default               Generate default dataset using pyspark RandomRDDs.uniformVectorRDD
+Supported types are:
+    blobs                 Generate random blobs datasets using sklearn's make_blobs
+    regression            Generate random regression datasets using sklearn's make_regression
+    classification        Generate random classification datasets using sklearn's make_classification
+    low_rank_matrix       Generate random dataset using sklearn's make_low_rank_matrix
+    sparse_regression     Generate random sparse regression datasets stored as sparse vectors
+    default               Generate default dataset using pyspark RandomRDDs.uniformVectorRDD
+
+Example:
+python gen_data_distributed.py [regression|blobs|low_rank_matrix|default|classification|sparse_regression] \\
+    --feature_type array \\
+    --num_rows 5000 \\
+    --num_cols 3000 \\
+    --dtype "float64" \\
+    --output_num_files 100 \\
+    --overwrite \\
+    --output_dir "./5k_3k_float64.parquet" \\
+    --spark_confs "spark.master=local[*]" \\
+    --spark_confs "spark.driver.memory=128g"
     """,
     )
     parser.add_argument("type", help="Generate random dataset")
