@@ -509,6 +509,7 @@ class DBSCANClass(_CumlClass):
             "eps": 0.5,
             "min_samples": 5,
             "metric": "euclidean",
+            "algorithm": "brute",
             "verbose": False,
             "max_mbytes_per_batch": None,
             "calc_core_sample_indices": False,
@@ -525,6 +526,7 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             eps=0.5,
             min_samples=5,
             metric="euclidean",
+            algorithm="brute",
             max_mbytes_per_batch=None,
             calc_core_sample_indices=True,
             idCol=alias.row_number,
@@ -555,6 +557,13 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             f"The metric to use when calculating distances between points."
             f"Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead."
         ),
+        typeConverter=TypeConverters.toString,
+    )
+
+    algorithm = Param(
+        Params._dummy(),
+        "algorithm",
+        (f"The algorithm to be used by for nearest neighbor computations."),
         typeConverter=TypeConverters.toString,
     )
 
@@ -660,6 +669,9 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         The metric to use when calculating distances between points.
         Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead
 
+    algorithm: {'brute', 'rbc'}, default = 'rbc'
+        The algorithm to be used by for nearest neighbor computations.
+
     verbose: int or boolean (default=False)
         Logging level.
             * ``0`` - Disables all log messages.
@@ -751,6 +763,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         eps: float = 0.5,
         min_samples: int = 5,
         metric: str = "euclidean",
+        algorithm: str = "brute",
         max_mbytes_per_batch: Optional[int] = None,
         calc_core_sample_indices: bool = True,
         verbose: Union[int, bool] = False,
@@ -785,6 +798,12 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
     def getMetric(self) -> str:
         return self.getOrDefault("metric")
+
+    def setAlgorithm(self: P, value: str) -> P:
+        return self._set_params(algorithm=value)
+
+    def getAlgorithm(self) -> str:
+        return self.getOrDefault("algorithm")
 
     def setMaxMbytesPerBatch(self: P, value: Optional[int]) -> P:
         return self._set_params(max_mbytes_per_batch=value)
@@ -953,6 +972,7 @@ class DBSCANModel(
                 eps=self.getOrDefault("eps"),
                 min_samples=self.getOrDefault("min_samples"),
                 metric=self.getOrDefault("metric"),
+                algorithm=self.getOrDefault("algorithm"),
                 max_mbytes_per_batch=self.getOrDefault("max_mbytes_per_batch"),
                 calc_core_sample_indices=self.getOrDefault("calc_core_sample_indices"),
                 verbose=self.verbose,
