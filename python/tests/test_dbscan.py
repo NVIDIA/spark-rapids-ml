@@ -52,8 +52,6 @@ def test_default_cuml_params() -> None:
     cuml_params = get_default_cuml_parameters([CumlDBSCAN], ["handle", "output_type"])
     cuml_params["calc_core_sample_indices"] = False
     spark_params = DBSCAN()._get_cuml_params_default()
-    # TODO: support algorithm parameter added in cuML 24.04
-    cuml_params.pop("algorithm")
     assert cuml_params == spark_params
 
 
@@ -166,13 +164,17 @@ def test_dbscan_numeric_type(gpu_number: int, data_type: str) -> None:
     ids=idfn,
 )
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
-@pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.parametrize(
+    "max_record_batch", [pytest.param(100, marks=pytest.mark.slow), 10000]
+)
+@pytest.mark.parametrize("algorithm", ["brute", "rbc"])
 def test_dbscan(
     gpu_number: int,
     feature_type: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
     max_record_batch: int,
+    algorithm: str,
 ) -> None:
     from cuml.datasets import make_blobs
 
@@ -192,7 +194,12 @@ def test_dbscan(
     from cuml import DBSCAN as cuDBSCAN
 
     cuml_dbscan = cuDBSCAN(
-        eps=eps, min_samples=min_samples, metric=metric, output_type="numpy", verbose=7
+        eps=eps,
+        min_samples=min_samples,
+        metric=metric,
+        algorithm=algorithm,
+        output_type="numpy",
+        verbose=7,
     )
 
     import cudf
