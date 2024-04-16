@@ -669,7 +669,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         The metric to use when calculating distances between points.
         Spark Rapids ML does not support the 'precomputed' mode from sklearn and cuML, please use those libraries instead
 
-    algorithm: {'brute', 'rbc'}, default = 'rbc'
+    algorithm: {'brute', 'rbc'}, default = 'brute'
         The algorithm to be used by for nearest neighbor computations.
 
     verbose: int or boolean (default=False)
