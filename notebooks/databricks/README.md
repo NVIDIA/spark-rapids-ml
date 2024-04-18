@@ -33,9 +33,16 @@ If you already have a Databricks account, you can run the example notebooks on a
   ```bash
   export WS_SAVE_DIR="/path/to/directory/in/workspace"
   databricks workspace mkdirs ${WS_SAVE_DIR} --profile ${PROFILE}
+  ```
+  For Mac
+  ```bash
   databricks workspace import --format AUTO --content $(base64 -i init-pip-cuda-11.8.sh) ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
   ```
-- Create a cluster using **Databricks 12.2 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
+  For Linux
+  ```bash
+  databricks workspace import --format AUTO --content $(base64 -w 0 init-pip-cuda-11.8.sh) ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
+  ```
+- Create a cluster using **Databricks 13.3 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
   - **Init Scripts**
     - add the workspace path to the uploaded init script, e.g. `${WS_SAVE_DIR}/init-pip-cuda-11.8.sh`.
   - **Spark**
