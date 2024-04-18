@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import numpy as np
 import pandas as pd
 from pyspark import keyword_only
+from pyspark.broadcast import Broadcast
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -58,7 +59,7 @@ from .core import (
 )
 from .metrics import EvalMetricInfo
 from .params import HasIDCol, P, _CumlClass, _CumlParams
-from .utils import _concat_and_free, get_logger
+from .utils import _concat_and_free, _get_spark_session, get_logger
 
 
 class NearestNeighborsClass(_CumlClass):
@@ -104,6 +105,12 @@ class _NearestNeighborsCumlParams(
         """
         self._set_params(k=value)
         return self
+
+    def getK(self: P) -> int:
+        """
+        Get the value of `k`.
+        """
+        return self.getOrDefault("k")
 
     def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
@@ -686,3 +693,244 @@ class NearestNeighborsModel(
         raise NotImplementedError(
             "NearestNeighborsModel does not support loading/loading, just re-fit the estimator to re-create a model."
         )
+
+
+class ApproximateNearestNeighbors(NearestNeighbors):
+    """
+    IVF_FLAT retrieves the k approximate nearest neighbors in item vectors for each query
+    """
+
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        k: Optional[int] = None,
+        inputCol: Optional[Union[str, List[str]]] = None,
+        idCol: Optional[str] = None,
+        num_workers: Optional[int] = None,
+        verbose: Union[int, bool] = False,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__()
+
+    def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
+        self._item_df_withid = self._ensureIdCol(item_df)
+
+        # TODO: should test this at scale to see if/when we hit limits
+        model = self._create_pyspark_model(
+            Row(
+                item_df_withid=self._item_df_withid,
+            )
+        )
+        model._float32_inputs = self._float32_inputs
+        self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
+        return model
+
+    def _create_pyspark_model(self, result: Row) -> "ApproximateNearestNeighborsModel":  # type: ignore
+        return ApproximateNearestNeighborsModel._from_row(result)
+
+
+class ApproximateNearestNeighborsModel(
+    NearestNeighborsClass, _CumlModel, _NearestNeighborsCumlParams
+):
+    def __init__(
+        self,
+        item_df_withid: DataFrame,
+    ):
+        super().__init__()
+
+        self._item_df_withid = item_df_withid
+
+        self.bcast_qids: Optional[Broadcast] = None
+        self.bcast_qfeatures: Optional[Broadcast] = None
+
+    def _out_schema(self) -> Union[StructType, str]:  # type: ignore
+        return f"query_{self.getIdCol()} long, indices array<long>, distances array<double>"
+
+    def write(self) -> MLWriter:
+        raise NotImplementedError(
+            "ApproximateNearestNeighborsModel does not support saving/loading, just re-fit the estimator to re-create a model."
+        )
+
+    @classmethod
+    def read(cls) -> MLReader:
+        raise NotImplementedError(
+            "ApproximateNearestNeighborsModel does not support loading/loading, just re-fit the estimator to re-create a model."
+        )
+
+    def _pre_process_data(
+        self, dataset: DataFrame
+    ) -> Tuple[DataFrame, List[str], bool, List[str]]:
+
+        dataset, select_cols, input_is_multi_cols, tmp_cols = super()._pre_process_data(
+            dataset
+        )
+
+        if self.hasParam("idCol") and self.isDefined("idCol"):
+            id_col_name = self.getOrDefault("idCol")
+            dataset.withColumnRenamed(id_col_name, alias.row_number)
+
+        select_cols.append(alias.row_number)
+
+        return dataset, select_cols, input_is_multi_cols, tmp_cols
+
+    # TODO: should we support dtype?
+    def _broadcast_as_nparray(
+        self,
+        query_df_withid: DataFrame,
+        dtype: Union[str, np.dtype] = "float32",
+        BROADCAST_LIMIT: int = 8 << 30,
+    ) -> Tuple[Broadcast, Broadcast]:
+        """
+        broadcast idCol and inputCol/inputCols of a query_df
+        the broadcast splits an array by the BROADCAST_LIMIT bytes
+        """
+
+        query_df_withid, select_cols, input_is_multi_cols, tmp_cols = (
+            self._pre_process_data(query_df_withid)
+        )
+        query_id_pd = query_df_withid.select(*select_cols).toPandas()
+
+        id_col = self.getIdCol()
+        query_ids = query_id_pd[id_col].to_numpy()  # type: ignore
+        query_pd = query_id_pd.drop(id_col, axis=1)  # type: ignore
+
+        if input_is_multi_cols:
+            assert len(query_pd.columns) == len(self.getInputCols())
+            query_features = query_pd.to_numpy()
+        else:
+            assert len(query_pd.columns) == 1
+            query_features = np.array(list(query_pd[query_pd.columns[0]]), dtype=dtype)
+
+        # def _split_by_bytes(arr: np.ndarray) -> List[np.ndarray]:
+        #     if arr.nbytes <= BROADCAST_LIMIT:
+        #         return [arr]
+        #     rows_per_chunk = BROADCAST_LIMIT // arr.itemsize
+        #     num_chunks = (arr.shape[0] + rows_per_chunk - 1) // rows_per_chunk
+        #     return np.array_split(arr, num_chunks)
+
+        bcast_qids = _get_spark_session().sparkContext.broadcast(query_ids)
+        bcast_qfeatures = _get_spark_session().sparkContext.broadcast(query_features)
+
+        return (bcast_qids, bcast_qfeatures)
+
+    @classmethod
+    def _agg_topk(
+        cls: Type["ApproximateNearestNeighborsModel"],
+        knn_df: DataFrame,
+        id_col_name: str,
+        indices_col_name: str,
+        distances_col_name: str,
+        k: int,
+    ) -> DataFrame:
+        from pyspark.sql.functions import pandas_udf
+
+        @pandas_udf("array<long>")  # type: ignore
+        def func_agg_indices(indices: pd.Series, distances: pd.Series) -> list[int]:
+            flat_indices = indices.explode().reset_index(drop=True)
+            flat_distances = (
+                distances.explode().reset_index(drop=True).astype("float64")
+            )
+            topk_index = flat_distances.nsmallest(k).index
+            res = flat_indices[topk_index].to_numpy()
+            return res
+
+        @pandas_udf("array<double>")  # type: ignore
+        def func_agg_distances(distances: pd.Series) -> list[float]:
+            flat_distances = (
+                distances.explode().reset_index(drop=True).astype("float64")
+            )
+            res = flat_distances.nsmallest(k).to_numpy()
+            return res
+
+        res_df = knn_df.groupBy(id_col_name).agg(
+            func_agg_indices(
+                knn_df[indices_col_name], knn_df[distances_col_name]
+            ).alias(indices_col_name),
+            func_agg_distances(knn_df[distances_col_name]).alias(distances_col_name),
+        )
+
+        return res_df
+
+    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+        """Return the approximate nearest neighbors for each query in query_df."""
+
+        query_df_withid = self._ensureIdCol(query_df)
+        self.bcast_qids, self.bcast_qfeatures = self._broadcast_as_nparray(
+            query_df_withid
+        )
+
+        knn_df = self._transform_evaluate_internal(
+            self._item_df_withid, schema=self._out_schema()
+        )
+        k = self.getK()
+
+        query_id_col_name = f"query_{self.getIdCol()}"
+        knn_df_agg = self.__class__._agg_topk(
+            knn_df, query_id_col_name, "indices", "distances", k
+        )
+
+        return (self._item_df_withid, query_df_withid, knn_df_agg)
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
+
+        cuml_alg_params = self.cuml_params.copy()
+
+        def _construct_sgnn() -> CumlT:
+
+            from cuml.neighbors import NearestNeighbors as SGNN
+
+            nn_object = SGNN(output_type="numpy", **cuml_alg_params)
+
+            return nn_object
+
+        row_number_col = alias.row_number
+        input_col, input_cols = self._get_input_columns()
+        assert input_col is not None or input_cols is not None
+        id_col_name = self.getIdCol()
+
+        bcast_qids = self.bcast_qids
+        bcast_qfeatures = self.bcast_qfeatures
+
+        assert bcast_qids is not None and bcast_qfeatures is not None
+
+        def _transform_internal(
+            nn_object: CumlT, df: Union[pd.DataFrame, np.ndarray]
+        ) -> pd.DataFrame:
+
+            item_row_number = df[row_number_col].to_numpy()
+            item = df.drop(row_number_col, axis=1)  # type: ignore
+            if input_col is not None:
+                assert len(item.columns) == 1
+                item = np.array(list(item[item.columns[0]]), order="C")
+
+            if len(item) == 0:
+                return pd.DataFrame(
+                    {
+                        "query_{id_col_name}": [],
+                        "indices": [],
+                        "distances": [],
+                    }
+                )
+
+            nn_object.fit(item)
+            distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
+
+            indices_global = item_row_number[indices]
+
+            return pd.DataFrame(
+                {
+                    f"query_{id_col_name}": bcast_qids.value,
+                    "indices": list(indices_global),
+                    "distances": list(distances),
+                }
+            )
+
+        return _construct_sgnn, _transform_internal, None
