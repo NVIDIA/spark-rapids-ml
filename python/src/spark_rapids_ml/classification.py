@@ -118,7 +118,6 @@ class _ClassificationModelEvaluationMixIn:
                 transformed: "cp.ndarray",
             ) -> pd.DataFrame:
                 # calculate the count of (label, prediction)
-                # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
                 import cudf
 
                 comb = cudf.DataFrame(
