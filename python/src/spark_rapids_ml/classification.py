@@ -849,9 +849,7 @@ class LogisticRegression(
     fitIntercept:
         Whether to fit an intercept term.
     standardization:
-        Whether to standardize the training data. If true, spark rapids ml sets enable_sparse_data_optim=False
-        to densify sparse vectors into dense vectors for fitting. Currently there is no support for sparse vectors
-        standardization in cuml yet.
+        Whether to standardize the training data before fit.
     num_workers:
         Number of cuML workers, where each cuML worker corresponds to one Spark task
         running on one GPU. If not set, spark-rapids-ml tries to infer the number of
@@ -945,15 +943,6 @@ class LogisticRegression(
         fit_intercept = self.getFitIntercept()
 
         logger = get_logger(self.__class__)
-        if (
-            self.getStandardization() is True
-            and self.getOrDefault("enable_sparse_data_optim") is not False
-        ):
-            logger.warning(
-                (
-                    "when standardization is True, spark rapids ml forces densifying sparse vectors to dense vectors for training."
-                )
-            )
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -977,17 +966,13 @@ class LogisticRegression(
                 concated, cupyx.scipy.sparse.csr_matrix
             )
 
-            # densifying sparse vectors into dense to use standardization
-            if standardization is True and is_sparse is True:
-                concated = concated.toarray()
-
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
                 params[param_alias.num_cols],
             )
 
             # Use cupy to standardize dataset as a workaround to gain better numeric stability
-            standarization_with_cupy = standardization
+            standarization_with_cupy = standardization and not is_sparse
             if standarization_with_cupy is True:
                 import cupy as cp
 
