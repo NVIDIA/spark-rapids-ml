@@ -1575,7 +1575,7 @@ def test_sparse_nlp20news(
     y = twenty_train.target.tolist()
 
     conf: Dict[str, Any] = {
-        "spark.rapids.ml.uvm.enabled": True  # Commenting this out can resolve a cudaMemSet error
+        "spark.rapids.ml.uvm.enabled": True
     }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
     with CleanSparkSession(conf) as spark:
         data = [
@@ -1624,8 +1624,6 @@ def test_sparse_nlp20news(
             or abs(gpu_model.objective - cpu_objective) < tolerance
         )
 
-        # temporarily comment out uvm and compare_model
-        # assert "CUDA managed memory enabled." in caplog.text
         if standardization is True:
             compare_model(
                 gpu_model,
