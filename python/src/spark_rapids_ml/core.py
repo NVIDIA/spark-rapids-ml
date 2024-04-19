@@ -105,7 +105,10 @@ TransformInputType = Union["cudf.DataFrame", np.ndarray]
 _ConstructFunc = Callable[..., Union[CumlT, List[CumlT]]]
 
 # Function to do the inference using cuml instance constructed by _ConstructFunc
-_TransformFunc = Union[Callable[[CumlT, TransformInputType], pd.DataFrame], Callable[[CumlT, TransformInputType], "cp.ndarray"]]
+_TransformFunc = Union[
+    Callable[[CumlT, TransformInputType], pd.DataFrame],
+    Callable[[CumlT, TransformInputType], "cp.ndarray"],
+]
 
 # Function to do evaluation based on the prediction result got from _TransformFunc
 _EvaluateFunc = Callable[

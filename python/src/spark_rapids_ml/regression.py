@@ -77,6 +77,7 @@ from .tree import (
 from .utils import PartitionDescriptor, _get_spark_session, cudf_to_cuml_array, java_uid
 
 if TYPE_CHECKING:
+    import cupy as cp
     from pyspark.ml._typing import ParamMap
 
 T = TypeVar("T")
@@ -143,13 +144,15 @@ class _RegressionModelEvaluationMixIn:
     @staticmethod
     def _calculate_regression_metrics(
         input: TransformInputType,
-        transformed: TransformInputType,
+        transformed: "cp.array",
     ) -> pd.DataFrame:
         """calculate the metrics: mean/m2n/m2/l1 ...
 
         input must have `alias.label` column"""
 
-        comb = pd.DataFrame(
+        import cudf
+
+        comb = cudf.DataFrame(
             {
                 "label": input[alias.label],
                 "prediction": transformed,
@@ -159,10 +162,12 @@ class _RegressionModelEvaluationMixIn:
         total_cnt = comb.shape[0]
         return pd.DataFrame(
             data={
-                reg_metrics.mean: [comb.mean().to_list()],
-                reg_metrics.m2n: [(comb.var(ddof=0) * total_cnt).to_list()],
-                reg_metrics.m2: [comb.pow(2).sum().to_list()],
-                reg_metrics.l1: [comb.abs().sum().to_list()],
+                reg_metrics.mean: [comb.mean().to_arrow().to_pylist()],
+                reg_metrics.m2n: [
+                    (comb.var(ddof=0) * total_cnt).to_arrow().to_pylist()
+                ],
+                reg_metrics.m2: [comb.pow(2).sum().to_arrow().to_pylist()],
+                reg_metrics.l1: [comb.abs().sum().to_arrow().to_pylist()],
                 reg_metrics.total_count: total_cnt,
             }
         )
@@ -741,9 +746,16 @@ class LinearRegressionModel(
 
             return lrs
 
-        def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
-            ret = lr.predict(pdf)
-            return pd.Series(ret)
+        if eval_metric_info:
+
+            def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
+                return lr.predict(pdf)
+
+        else:
+
+            def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
+                ret = lr.predict(pdf)
+                return pd.Series(ret)
 
         return _construct_lr, _predict, self._calculate_regression_metrics
 

@@ -112,6 +112,7 @@ class _ClassificationModelEvaluationMixIn:
 
     def _get_evaluate_fn(self, eval_metric_info: EvalMetricInfo) -> _EvaluateFunc:
         if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
+
             def _evaluate(
                 input: TransformInputType,
                 transformed: "cp.ndarray",
@@ -119,6 +120,7 @@ class _ClassificationModelEvaluationMixIn:
                 # calculate the count of (label, prediction)
                 # TBD: keep all intermediate transform output on gpu as long as possible to avoid copies
                 import cudf
+
                 comb = cudf.DataFrame(
                     {
                         "label": input[alias.label],
@@ -130,11 +132,13 @@ class _ClassificationModelEvaluationMixIn:
                     .size()
                     .reset_index(name="total")
                 )
-                
+
                 confusion = confusion.to_pandas()
 
                 return confusion
+
         else:
+
             def _evaluate(
                 input: TransformInputType,
                 transformed: "cp.ndarray",
@@ -142,7 +146,7 @@ class _ClassificationModelEvaluationMixIn:
                 from cuml.metrics import log_loss
 
                 _log_loss = log_loss(input[alias.label], transformed, normalize=False)
-                
+
                 _log_loss_pdf = pd.DataFrame(
                     {"total": [len(input[alias.label])], "log_loss": [_log_loss]}
                 )
@@ -622,16 +626,26 @@ class RandomForestClassificationModel(
     ]:
         _construct_rf, _, _ = super()._get_cuml_transform_func(dataset)
 
-        def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
-            data = {}
-            rf.update_labels = False
-            data[pred.prediction] = rf.predict(pdf)
+        if eval_metric_info:
+            if eval_metric_info.eval_metric == transform_evaluate_metric.log_loss:
 
-            # non log-loss metric doesn't need probs.
-            if (
-                not eval_metric_info
-                or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
-            ):
+                def _predict(rf: CumlT, pdf: TransformInputType) -> "cp.ndarray":
+                    rf.update_labels = False
+                    return rf.predict_proba(pdf)
+
+            else:
+
+                def _predict(rf: CumlT, pdf: TransformInputType) -> "cp.ndarray":
+                    rf.update_labels = False
+                    return rf.predict(pdf)
+
+        else:
+
+            def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
+                data = {}
+                rf.update_labels = False
+                data[pred.prediction] = rf.predict(pdf)
+
                 probs = rf.predict_proba(pdf)
                 if isinstance(probs, pd.DataFrame):
                     # For 2302, when input is multi-cols, the output will be DataFrame
@@ -640,7 +654,7 @@ class RandomForestClassificationModel(
                     # should be np.ndarray
                     data[pred.probability] = pd.Series(list(probs))
 
-            return pd.DataFrame(data)
+                return pd.DataFrame(data)
 
         _evaluate = (
             self._get_evaluate_fn(eval_metric_info) if eval_metric_info else None
@@ -951,7 +965,6 @@ class LogisticRegression(
         ) -> Dict[str, Any]:
             import cupyx
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
-            import cupyx
 
             X_list = [x for (x, _, _) in dfs]
             y_list = [y for (_, y, _) in dfs]
@@ -1460,14 +1473,19 @@ class LogisticRegressionModel(
 
         if eval_metric_info:
             if eval_metric_info.eval_metric == transform_evaluate_metric.log_loss:
+
                 def _predict(lr: CumlT, pdf: TransformInputType) -> "cp.ndarray":
 
                     return lr.predict_proba(pdf)
-            else: 
+
+            else:
+
                 def _predict(lr: CumlT, pdf: TransformInputType) -> "cp.ndarray":
 
                     return lr.predict(pdf)
+
         else:
+
             def _predict(lr: CumlT, pdf: TransformInputType) -> pd.DataFrame:
                 import cupy as cp
 
@@ -1480,21 +1498,17 @@ class LogisticRegressionModel(
                 data[pred.prediction] = pd.Series(
                     list(_predict_labels(scores, _num_classes).get())
                 )
-                # non log-loss metric doesn't need probs.
-                if (
-                    not eval_metric_info
-                    or eval_metric_info.eval_metric == transform_evaluate_metric.log_loss
-                ):
-                    data[pred.probability] = pd.Series(
-                        list(_predict_proba(scores, _num_classes).get())
-                    )
-                    if _num_classes == 2:
-                        raw_prediction = cp.zeros((scores.shape[0], 2))
-                        raw_prediction[:, 1] = scores.ravel()
-                        raw_prediction[:, 0] = -raw_prediction[:, 1]
-                    elif _num_classes > 2:
-                        raw_prediction = scores
-                    data[pred.raw_prediction] = pd.Series(list(cp.asnumpy(raw_prediction)))
+
+                data[pred.probability] = pd.Series(
+                    list(_predict_proba(scores, _num_classes).get())
+                )
+                if _num_classes == 2:
+                    raw_prediction = cp.zeros((scores.shape[0], 2))
+                    raw_prediction[:, 1] = scores.ravel()
+                    raw_prediction[:, 0] = -raw_prediction[:, 1]
+                elif _num_classes > 2:
+                    raw_prediction = scores
+                data[pred.raw_prediction] = pd.Series(list(cp.asnumpy(raw_prediction)))
 
                 return pd.DataFrame(data)
 

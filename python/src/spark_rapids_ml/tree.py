@@ -582,10 +582,18 @@ class _RandomForestModel(
 
             return rfs
 
-        def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
-            rf.update_labels = False
-            ret = rf.predict(pdf)
-            return pd.Series(ret)
+        if eval_metric_info:
+
+            def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
+                rf.update_labels = False
+                return rf.predict(pdf)
+
+        else:
+
+            def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
+                rf.update_labels = False
+                ret = rf.predict(pdf)
+                return pd.Series(ret)
 
         # TBD: figure out why RF algo's warns regardless of what np array order is set
         return _construct_rf, _predict, None
