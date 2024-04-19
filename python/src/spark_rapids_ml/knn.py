@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 from pyspark import keyword_only
 from pyspark.broadcast import Broadcast
+from pyspark.ml import Estimator
 from pyspark.ml.functions import vector_to_array
 from pyspark.ml.linalg import VectorUDT
 from pyspark.ml.param.shared import (
@@ -50,6 +51,7 @@ from .core import (
     FitInputType,
     _ConstructFunc,
     _CumlCaller,
+    _CumlEstimator,
     _CumlEstimatorSupervised,
     _CumlModel,
     _EvaluateFunc,
@@ -695,7 +697,63 @@ class NearestNeighborsModel(
         )
 
 
-class ApproximateNearestNeighbors(NearestNeighbors):
+class ApproximateNearestNeighborsClass(_CumlClass):
+
+    @classmethod
+    def _param_mapping(cls) -> Dict[str, Optional[str]]:
+        return {
+            "k": "n_neighbors",
+            "algorithm": "algorithm",
+            "algo_params": "algo_params",
+        }
+
+    def _get_cuml_params_default(self) -> Dict[str, Any]:
+        return {"n_neighbors": 5, "verbose": False, "algorithm": "ivfflat"}
+
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return None
+
+
+class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
+    def __init__(self) -> None:
+        super().__init__()
+        self._setDefault(algorithm="ivfflat")
+        self._setDefault(algo_params=None)
+
+    @staticmethod
+    def _toDict(value: Any) -> Dict[str, Any]:
+        """
+        Convert a value to a Dict type for Param typeConverter, if possible.
+        """
+        if isinstance(value, Dict):
+            return {TypeConverters.toString(k): v for k, v in value.items()}
+        raise TypeError("Could not convert %s to Dict[str, Any]" % value)
+
+    algorithm = Param(
+        Params._dummy(),
+        "algorithm",
+        "The algorithm to use for approximate nearest neighbors search.",
+        typeConverter=TypeConverters.toString,
+    )
+
+    algo_params = Param(
+        Params._dummy(),
+        "algo_params",
+        "The parameters to use to set up a neighbor algorithm.",
+        typeConverter=_toDict,
+    )
+
+    # nlist = Param(
+    #     Params._dummy(),
+    #     "algorithm",
+    #     "The algorithm to use for approximate nearest neighbors search.",
+    #     typeConverter=TypeConverters.toString,
+    # )
+
+
+class ApproximateNearestNeighbors(
+    ApproximateNearestNeighborsClass, _CumlEstimator, _ApproximateNearestNeighborsParams
+):
     """
     IVF_FLAT retrieves the k approximate nearest neighbors in item vectors for each query
     """
@@ -705,6 +763,8 @@ class ApproximateNearestNeighbors(NearestNeighbors):
         self,
         *,
         k: Optional[int] = None,
+        algorithm: str = "ivfflat",
+        algo_params: Optional[Dict[str, Any]] = None,
         inputCol: Optional[Union[str, List[str]]] = None,
         idCol: Optional[str] = None,
         num_workers: Optional[int] = None,
@@ -712,6 +772,8 @@ class ApproximateNearestNeighbors(NearestNeighbors):
         **kwargs: Any,
     ) -> None:
         super().__init__()
+        assert algorithm in {"brute", "ivfflat"}
+        self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
         self._item_df_withid = self._ensureIdCol(item_df)
@@ -730,9 +792,35 @@ class ApproximateNearestNeighbors(NearestNeighbors):
     def _create_pyspark_model(self, result: Row) -> "ApproximateNearestNeighborsModel":  # type: ignore
         return ApproximateNearestNeighborsModel._from_row(result)
 
+    def _out_schema(self) -> Union[StructType, str]:  # type: ignore
+        """
+        This class overrides _fit and will not call _out_schema.
+        """
+        pass
+
+    def _get_cuml_fit_func(self, dataset: DataFrame) -> Callable[  # type: ignore
+        [FitInputType, Dict[str, Any]],
+        Dict[str, Any],
+    ]:
+        """
+        This class overrides _fit and will not call _get_cuml_fit_func.
+        """
+        pass
+
+    def write(self) -> MLWriter:
+        raise NotImplementedError(
+            "ApproximateNearestNeighbors does not support saving/loading, just re-create the estimator."
+        )
+
+    @classmethod
+    def read(cls) -> MLReader:
+        raise NotImplementedError(
+            "ApproximateNearestNeighbors does not support saving/loading, just re-create the estimator."
+        )
+
 
 class ApproximateNearestNeighborsModel(
-    NearestNeighborsClass, _CumlModel, _NearestNeighborsCumlParams
+    ApproximateNearestNeighborsClass, _CumlModel, _ApproximateNearestNeighborsParams
 ):
     def __init__(
         self,
@@ -746,7 +834,9 @@ class ApproximateNearestNeighborsModel(
         self.bcast_qfeatures: Optional[Broadcast] = None
 
     def _out_schema(self) -> Union[StructType, str]:  # type: ignore
-        return f"query_{self.getIdCol()} long, indices array<long>, distances array<double>"
+        return (
+            f"query_{self.getIdCol()} long, indices array<long>, distances array<float>"
+        )
 
     def write(self) -> MLWriter:
         raise NotImplementedError(
@@ -769,7 +859,7 @@ class ApproximateNearestNeighborsModel(
 
         if self.hasParam("idCol") and self.isDefined("idCol"):
             id_col_name = self.getOrDefault("idCol")
-            dataset.withColumnRenamed(id_col_name, alias.row_number)
+            dataset = dataset.withColumnRenamed(id_col_name, alias.row_number)
 
         select_cols.append(alias.row_number)
 
@@ -792,7 +882,7 @@ class ApproximateNearestNeighborsModel(
         )
         query_id_pd = query_df_withid.select(*select_cols).toPandas()
 
-        id_col = self.getIdCol()
+        id_col = alias.row_number
         query_ids = query_id_pd[id_col].to_numpy()  # type: ignore
         query_pd = query_id_pd.drop(id_col, axis=1)  # type: ignore
 
@@ -836,7 +926,7 @@ class ApproximateNearestNeighborsModel(
             res = flat_indices[topk_index].to_numpy()
             return res
 
-        @pandas_udf("array<double>")  # type: ignore
+        @pandas_udf("array<float>")  # type: ignore
         def func_agg_distances(distances: pd.Series) -> list[float]:
             flat_distances = (
                 distances.explode().reset_index(drop=True).astype("float64")
@@ -873,6 +963,11 @@ class ApproximateNearestNeighborsModel(
 
         return (self._item_df_withid, query_df_withid, knn_df_agg)
 
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        raise NotImplementedError(
+            "ApproximateNearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
+        )
+
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[
@@ -887,7 +982,7 @@ class ApproximateNearestNeighborsModel(
 
             from cuml.neighbors import NearestNeighbors as SGNN
 
-            nn_object = SGNN(output_type="numpy", **cuml_alg_params)
+            nn_object = SGNN(output_type="cupy", **cuml_alg_params)
 
             return nn_object
 
@@ -921,16 +1016,74 @@ class ApproximateNearestNeighborsModel(
                 )
 
             nn_object.fit(item)
+            import cupy as cp
+
             distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
 
+            if cuml_alg_params["algorithm"] == "ivfflat":
+                distances = distances * distances
+
+            indices = indices.get()
             indices_global = item_row_number[indices]
 
-            return pd.DataFrame(
+            res = pd.DataFrame(
                 {
                     f"query_{id_col_name}": bcast_qids.value,
                     "indices": list(indices_global),
-                    "distances": list(distances),
+                    "distances": list(distances.get()),
                 }
             )
 
+            return res
+
         return _construct_sgnn, _transform_internal, None
+
+    def approxSimilarityJoin(
+        self,
+        query_df: DataFrame,
+        distCol: str = "distCol",
+    ) -> DataFrame:
+        """
+        TODO: merge code with NearestNeighborsModel class
+        """
+
+        id_col_name = self.getIdCol()
+
+        # call kneighbors then prepare return results
+        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df)
+
+        from pyspark.sql.functions import arrays_zip, col, explode, struct
+
+        knn_pair_df = knn_df.select(
+            f"query_{id_col_name}",
+            explode(arrays_zip("indices", "distances")).alias("zipped"),
+        ).select(
+            f"query_{id_col_name}",
+            col("zipped.indices").alias(f"item_{id_col_name}"),
+            col("zipped.distances").alias(distCol),
+        )
+
+        item_df_struct = item_df_withid.select(struct("*").alias("item_df"))
+        query_df_struct = query_df_withid.select(struct("*").alias("query_df"))
+
+        knnjoin_df = item_df_struct.join(
+            knn_pair_df,
+            item_df_struct[f"item_df.{id_col_name}"]
+            == knn_pair_df[f"item_{id_col_name}"],
+        )
+        knnjoin_df = knnjoin_df.join(
+            query_df_struct,
+            knnjoin_df[f"query_{id_col_name}"]
+            == query_df_struct[f"query_df.{id_col_name}"],
+        )
+
+        if self.isSet(self.idCol):
+            knnjoin_df = knnjoin_df.select("item_df", "query_df", distCol)
+        else:
+            knnjoin_df = knnjoin_df.select(
+                knnjoin_df["item_df"].dropFields(id_col_name).alias("item_df"),
+                knnjoin_df["query_df"].dropFields(id_col_name).alias("query_df"),
+                distCol,
+            )
+
+        return knnjoin_df

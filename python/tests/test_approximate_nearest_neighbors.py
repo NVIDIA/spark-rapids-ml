@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,12 @@ from spark_rapids_ml.knn import (
 )
 
 from .sparksession import CleanSparkSession
+from .test_nearest_neighbors import (
+    NNEstimator,
+    NNModel,
+    func_test_example_no_id,
+    func_test_example_with_id,
+)
 from .utils import (
     array_equal,
     create_pyspark_dataframe,
@@ -23,51 +29,45 @@ from .utils import (
 )
 
 
-def test_example(gpu_number: int, tmp_path: str) -> None:
-    # reduce the number of GPUs for toy dataset to avoid empty partition
-    gpu_number = min(gpu_number, 2)
+def test_default_cuml_params() -> None:
+    from cuml import NearestNeighbors as CumlNearestNeighbors
 
-    data = [
-        ([1.0, 1.0], "a"),
-        ([2.0, 2.0], "b"),
-        ([3.0, 3.0], "c"),
-        ([4.0, 4.0], "d"),
-        ([5.0, 5.0], "e"),
-        ([6.0, 6.0], "f"),
-        ([7.0, 7.0], "g"),
-        ([8.0, 8.0], "h"),
-    ]
+    cuml_params = get_default_cuml_parameters(
+        [CumlNearestNeighbors],
+        [
+            "handle",
+            "metric",
+            "p",
+            "algo_params",
+            "metric_expanded",
+            "metric_params",
+            "output_type",
+        ],
+    )
 
-    query = [
-        ([0.0, 0.0], "qa"),
-        ([1.0, 1.0], "qb"),
-        ([4.1, 4.1], "qc"),
-        ([8.0, 8.0], "qd"),
-        ([9.0, 9.0], "qe"),
-    ]
+    spark_params = ApproximateNearestNeighbors()._get_cuml_params_default()
+    cuml_params["algorithm"] = "ivfflat"  # change cuml default 'auto' to 'ivfflat'
+    assert cuml_params == spark_params
 
-    topk = 2
 
-    # conf: Dict[str, Any] = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(20)}
-    conf: Dict[str, Any] = {}
-    with CleanSparkSession(conf) as spark:
-        schema = f"features array<float>, metadata string"
-        data_df = spark.createDataFrame(data, schema)
-        query_df = spark.createDataFrame(query, schema)
+@pytest.mark.parametrize(
+    "algo_and_params", [("brute", None), ("ivfflat", {"nlist": 1, "nprobe": 2})]
+)
+@pytest.mark.parametrize(
+    "func_test", [func_test_example_no_id, func_test_example_with_id]
+)
+def test_example(
+    algo_and_params: Tuple[str, Optional[dict[str, Any]]],
+    func_test: Callable[[NNEstimator, str], Tuple[NNEstimator, NNModel]],
+    gpu_number: int,
+    tmp_path: str,
+) -> None:
+    algorithm = algo_and_params[0]
+    algo_params = algo_and_params[1]
 
-        ivfflat = ApproximateNearestNeighbors(num_workers=gpu_number)
-        ivfflat = ivfflat.setInputCol("features")
-        ivfflat = ivfflat.setK(topk)
+    gpu_knn = ApproximateNearestNeighbors(algorithm=algorithm, algo_params=algo_params)
+    gpu_knn, gpu_model = func_test(tmp_path, gpu_knn)  # type: ignore
 
-        with pytest.raises(NotImplementedError):
-            ivfflat.save(tmp_path + "/knn_esimator")
-
-        ivfflat_model = ivfflat.fit(data_df)
-
-        with pytest.raises(NotImplementedError):
-            ivfflat_model.save(tmp_path + "/knn_model")
-
-        (item_df_withid, query_df_withid, knn_df) = ivfflat_model.kneighbors(query_df)
-        item_df_withid.show()
-        query_df_withid.show()
-        knn_df.show()
+    for obj in [gpu_knn, gpu_model]:
+        assert obj._cuml_params["algorithm"] == algorithm
+        assert obj._cuml_params["algo_params"] == algo_params
