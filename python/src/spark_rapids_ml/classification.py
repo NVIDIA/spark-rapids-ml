@@ -849,9 +849,7 @@ class LogisticRegression(
     fitIntercept:
         Whether to fit an intercept term.
     standardization:
-        Whether to standardize the training data. If true, spark rapids ml sets enable_sparse_data_optim=False
-        to densify sparse vectors into dense vectors for fitting. Currently there is no support for sparse vectors
-        standardization in cuml yet.
+        Whether to standardize the training data before fit.
     num_workers:
         Number of cuML workers, where each cuML worker corresponds to one Spark task
         running on one GPU. If not set, spark-rapids-ml tries to infer the number of
