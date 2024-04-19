@@ -57,6 +57,8 @@ Clustering
     :template: autosummary/class_with_docs.rst
     :toctree: api
 
+    DBSCAN
+    DBSCANModel
     KMeans
     KMeansModel
 
