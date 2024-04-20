@@ -270,6 +270,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
 </ul>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.DBSCAN.html">DBSCAN</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.DBSCANModel.html">DBSCANModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
 </ul>
@@ -406,9 +408,7 @@ Note this is only supported in spark &gt;= 3.4.</p>
 </dd>
 <dt><strong>fitIntercept:</strong></dt><dd><p>Whether to fit an intercept term.</p>
 </dd>
-<dt><strong>standardization:</strong></dt><dd><p>Whether to standardize the training data. If true, spark rapids ml sets enable_sparse_data_optim=False
-to densify sparse vectors into dense vectors for fitting. Currently there is no support for sparse vectors
-standardization in cuml yet.</p>
+<dt><strong>standardization:</strong></dt><dd><p>Whether to standardize the training data before fit.</p>
 </dd>
 <dt><strong>num_workers:</strong></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task
 running on one GPU. If not set, spark-rapids-ml tries to infer the number of
