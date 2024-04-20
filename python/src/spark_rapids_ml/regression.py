@@ -748,7 +748,7 @@ class LinearRegressionModel(
 
         if eval_metric_info:
 
-            def _predict(lr: CumlT, pdf: TransformInputType) -> pd.Series:
+            def _predict(lr: CumlT, pdf: TransformInputType) -> "cp.ndarray":
                 return lr.predict(pdf)
 
         else:

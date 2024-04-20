@@ -18,7 +18,18 @@ import json
 import math
 import pickle
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -61,6 +72,9 @@ from .utils import (
     java_uid,
     translate_trees,
 )
+
+if TYPE_CHECKING:
+    import cupy as cp
 
 
 class _RandomForestClass(_CumlClass):
@@ -584,7 +598,7 @@ class _RandomForestModel(
 
         if eval_metric_info:
 
-            def _predict(rf: CumlT, pdf: TransformInputType) -> pd.Series:
+            def _predict(rf: CumlT, pdf: TransformInputType) -> "cp.ndarray":
                 rf.update_labels = False
                 return rf.predict(pdf)
 
