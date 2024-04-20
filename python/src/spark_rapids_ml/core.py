@@ -85,6 +85,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import cudf
+    import cupy as cp
     from pyspark.ml._typing import ParamMap
 
 CumlT = Any
@@ -104,13 +105,16 @@ TransformInputType = Union["cudf.DataFrame", np.ndarray]
 _ConstructFunc = Callable[..., Union[CumlT, List[CumlT]]]
 
 # Function to do the inference using cuml instance constructed by _ConstructFunc
-_TransformFunc = Callable[[CumlT, TransformInputType], pd.DataFrame]
+_TransformFunc = Union[
+    Callable[[CumlT, TransformInputType], pd.DataFrame],
+    Callable[[CumlT, TransformInputType], "cp.ndarray"],
+]
 
 # Function to do evaluation based on the prediction result got from _TransformFunc
 _EvaluateFunc = Callable[
     [
         TransformInputType,  # input dataset with label column
-        TransformInputType,  # inferred dataset with prediction column
+        "cp.ndarray",  # inferred dataset with prediction column
     ],
     pd.DataFrame,
 ]
