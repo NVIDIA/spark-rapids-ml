@@ -934,7 +934,8 @@ class DBSCANModel(
         )
 
         idCol_bc = self.idCols_
-        raw_data_dc = self.raw_data_
+        raw_data_bc = self.raw_data_
+        data_size = self.data_size
 
         def _cuml_fit(
             dfs: FitInputType,
@@ -951,7 +952,7 @@ class DBSCANModel(
                 else np.concatenate([chunk.value for chunk in idCol_bc])
             )
 
-            for pdf_bc in raw_data_dc:
+            for pdf_bc in raw_data_bc:
                 features = pdf_bc.value
 
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
@@ -980,7 +981,9 @@ class DBSCANModel(
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)
 
-            res = list(dbscan.fit_predict(concated).to_numpy())
+            # Set out_dtype tp 64bit to get larger indexType in cuML for avoiding overflow
+            out_dtype = np.int32 if data_size < 2147000000 else np.int64
+            res = list(dbscan.fit_predict(concated, out_dtype=out_dtype).to_numpy())
 
             # Only node 0 from cuML will contain the correct label output
             if partition_id == 0:
@@ -1044,6 +1047,7 @@ class DBSCANModel(
                 order=self._fit_array_order(),
             )
 
+        self.data_size = len(raw_data) * len(raw_data[0])
         idCols: np.ndarray = np.array(pd_dataset[self.getIdCol()])
 
         # Set input metadata
