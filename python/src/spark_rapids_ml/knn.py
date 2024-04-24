@@ -920,8 +920,9 @@ class ApproximateNearestNeighborsModel(
         def func_agg_indices(indices: pd.Series, distances: pd.Series) -> list[int]:
             flat_indices = indices.explode().reset_index(drop=True)
             flat_distances = (
-                distances.explode().reset_index(drop=True).astype("float64")
+                distances.explode().reset_index(drop=True).astype("float32")
             )
+            assert len(flat_indices) == len(flat_distances)
             topk_index = flat_distances.nsmallest(k).index
             res = flat_indices[topk_index].to_numpy()
             return res
@@ -929,7 +930,7 @@ class ApproximateNearestNeighborsModel(
         @pandas_udf("array<float>")  # type: ignore
         def func_agg_distances(distances: pd.Series) -> list[float]:
             flat_distances = (
-                distances.explode().reset_index(drop=True).astype("float64")
+                distances.explode().reset_index(drop=True).astype("float32")
             )
             res = flat_distances.nsmallest(k).to_numpy()
             return res
@@ -1033,7 +1034,6 @@ class ApproximateNearestNeighborsModel(
                     "distances": list(distances.get()),
                 }
             )
-
             return res
 
         return _construct_sgnn, _transform_internal, None

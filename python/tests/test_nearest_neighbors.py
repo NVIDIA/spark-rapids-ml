@@ -564,6 +564,8 @@ def reconstruct_knn_df(
     """
     This function accepts the returned dataframe (denoted as knnjoin_df) of exactNearestNeighborsjoin,
     then reconstructs the returned dataframe (i.e. knn_df) of kneighbors.
+
+    Note the reconstructed knn_df does not guarantee the same indices as the original knn_df, because the distances to two neighbors can be the same.
     """
     knn_df: DataFrame = knnjoin_df.select(
         knnjoin_df[f"query_df.{row_identifier_col}"].alias(f"query_id"),
@@ -578,15 +580,19 @@ def reconstruct_knn_df(
         query_id = pdf[f"query_id"].tolist()[0]
 
         return pd.DataFrame(
-            {"query_id": [query_id], "indices": [indices], "distances": [distances]}
+            {
+                f"query_{row_identifier_col}": [query_id],
+                "indices": [indices],
+                "distances": [distances],
+            }
         )
 
     knn_df = knn_df.groupBy("query_id").applyInPandas(
         functor,
-        schema=f"query_id {knn_df.dtypes[0][1]}, "
+        schema=f"query_{row_identifier_col} {knn_df.dtypes[0][1]}, "
         + f"indices array<{knn_df.dtypes[1][1]}>, "
         + f"distances array<{knn_df.dtypes[2][1]}>",
     )
 
-    knn_df = knn_df.sort("query_id")
+    knn_df = knn_df.sort(f"query_{row_identifier_col}")
     return knn_df
