@@ -714,12 +714,7 @@ class ApproximateNearestNeighborsClass(_CumlClass):
         return None
 
 
-class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
-    def __init__(self) -> None:
-        super().__init__()
-        self._setDefault(algorithm="ivfflat")
-        self._setDefault(algo_params=None)
-
+class DictTypeConverters(TypeConverters):
     @staticmethod
     def _toDict(value: Any) -> Dict[str, Any]:
         """
@@ -728,6 +723,13 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         if isinstance(value, Dict):
             return {TypeConverters.toString(k): v for k, v in value.items()}
         raise TypeError("Could not convert %s to Dict[str, Any]" % value)
+
+
+class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
+    def __init__(self) -> None:
+        super().__init__()
+        self._setDefault(algorithm="ivfflat")
+        self._setDefault(algo_params=None)
 
     algorithm = Param(
         Params._dummy(),
@@ -740,15 +742,8 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         Params._dummy(),
         "algo_params",
         "The parameters to use to set up a neighbor algorithm.",
-        typeConverter=_toDict,
+        typeConverter=DictTypeConverters._toDict,
     )
-
-    # nlist = Param(
-    #     Params._dummy(),
-    #     "algorithm",
-    #     "The algorithm to use for approximate nearest neighbors search.",
-    #     typeConverter=TypeConverters.toString,
-    # )
 
 
 class ApproximateNearestNeighbors(
