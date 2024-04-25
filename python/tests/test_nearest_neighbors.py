@@ -185,7 +185,7 @@ def func_test_example_no_id(
         assert_knn_metadata_equal(reconstructed_knn_metadata)
         reconstructed_distances = [r.distances for r in reconstructed_rows]
         assert_distances_equal(reconstructed_distances)
-        reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
+        reconstructed_query_ids = [r.query_metadata for r in reconstructed_rows]
         assert reconstructed_query_ids == ["qa", "qb", "qc", "qd", "qe"]
 
         knnjoin_items = (
