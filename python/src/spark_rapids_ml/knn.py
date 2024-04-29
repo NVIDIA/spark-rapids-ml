@@ -773,7 +773,6 @@ class ApproximateNearestNeighbors(
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
         self._item_df_withid = self._ensureIdCol(item_df)
 
-        # TODO: should test this at scale to see if/when we hit limits
         model = self._create_pyspark_model(
             Row(
                 item_df_withid=self._item_df_withid,
@@ -1039,7 +1038,8 @@ class ApproximateNearestNeighborsModel(
         distCol: str = "distCol",
     ) -> DataFrame:
         """
-        TODO: merge code with NearestNeighborsModel class
+        TODO: merge code with NearestNeighborsModel class,
+        And explore other opportunities to dedup code (eg. broadcasts).
         """
 
         id_col_name = self.getIdCol()
