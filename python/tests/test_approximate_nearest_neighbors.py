@@ -55,7 +55,7 @@ def test_default_cuml_params() -> None:
 
 @pytest.mark.parametrize(
     "algo_and_params",
-    [("brute", None), ("ivfflat", {"nlist": 1, "nprobe": 2})],
+    [("ivfflat", {"nlist": 1, "nprobe": 2})],
 )
 @pytest.mark.parametrize(
     "func_test",

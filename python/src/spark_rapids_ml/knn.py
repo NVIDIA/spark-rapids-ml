@@ -767,7 +767,7 @@ class ApproximateNearestNeighbors(
         **kwargs: Any,
     ) -> None:
         super().__init__()
-        assert algorithm in {"brute", "ivfflat"}
+        assert algorithm in {"ivfflat"}, "currently only ivfflat algorithm is supported"
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
