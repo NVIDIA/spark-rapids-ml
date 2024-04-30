@@ -423,7 +423,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             family="Multinomial"
         fi
 
-        echo "$sep algo: sparse ${family} logistic regression - elasticnet regularization $sep"
+        echo "$sep algo: ${family} logistic regression - elasticnet regularization $sep"
         python ./benchmark/benchmark_runner.py logistic_regression \
             --standardization False \
             --maxIter 200 \
