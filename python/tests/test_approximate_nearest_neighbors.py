@@ -68,14 +68,14 @@ def test_example(
     tmp_path: str,
 ) -> None:
     algorithm = algo_and_params[0]
-    algo_params = algo_and_params[1]
+    algoParams = algo_and_params[1]
 
-    gpu_knn = ApproximateNearestNeighbors(algorithm=algorithm, algo_params=algo_params)
+    gpu_knn = ApproximateNearestNeighbors(algorithm=algorithm, algoParams=algoParams)
     gpu_knn, gpu_model = func_test(tmp_path, gpu_knn)  # type: ignore
 
     for obj in [gpu_knn, gpu_model]:
         assert obj._cuml_params["algorithm"] == algorithm
-        assert obj._cuml_params["algo_params"] == algo_params
+        assert obj._cuml_params["algo_params"] == algoParams
 
 
 @pytest.mark.parametrize(
@@ -96,7 +96,7 @@ def test_ivfflat(
 
     feature_type = combo[0]
     max_record_batch = combo[1]
-    algo_params = combo[2]
+    algoParams = combo[2]
     n_neighbors = 50
     n_clusters = 10
     tolerance = 1e-4
@@ -146,7 +146,7 @@ def test_ivfflat(
 
         knn_est = (
             ApproximateNearestNeighbors(
-                algorithm="ivfflat", algo_params=algo_params, k=n_neighbors
+                algorithm="ivfflat", algoParams=algoParams, k=n_neighbors
             )
             .setInputCol(features_col)
             .setIdCol(id_col)
@@ -174,7 +174,7 @@ def test_ivfflat(
 
         # test kneighbors: compare with cuml ANN on avg_recall and dist
         cuml_ivfflat = cuNN(
-            algorithm="ivfflat", algo_params=algo_params, n_neighbors=n_neighbors
+            algorithm="ivfflat", algo_params=algoParams, n_neighbors=n_neighbors
         )
         cuml_ivfflat.fit(X)
         distances_cumlann, indices_cumlann = cuml_ivfflat.kneighbors(X)

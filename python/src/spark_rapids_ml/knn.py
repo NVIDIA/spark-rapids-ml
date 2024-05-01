@@ -704,7 +704,7 @@ class ApproximateNearestNeighborsClass(_CumlClass):
         return {
             "k": "n_neighbors",
             "algorithm": "algorithm",
-            "algo_params": "algo_params",
+            "algoParams": "algo_params",
         }
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
@@ -729,7 +729,7 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
     def __init__(self) -> None:
         super().__init__()
         self._setDefault(algorithm="ivfflat")
-        self._setDefault(algo_params=None)
+        self._setDefault(algoParams=None)
 
     algorithm = Param(
         Params._dummy(),
@@ -738,19 +738,190 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         typeConverter=TypeConverters.toString,
     )
 
-    algo_params = Param(
+    algoParams = Param(
         Params._dummy(),
-        "algo_params",
+        "algoParams",
         "The parameters to use to set up a neighbor algorithm.",
         typeConverter=DictTypeConverters._toDict,
     )
+
+    def setAlgorithm(self: P, value: str) -> P:
+        """
+        Sets the value of `algorithm`.
+        """
+        assert value == "ivfflat", "Only IVFFLAT algorithm is currently supported"
+        self._set_params(algorithm=value)
+        return self
+
+    def getAlgorithm(self: P) -> str:
+        """
+        Gets the value of `algorithm`.
+        """
+        return self.getOrDefault("algorithm")
+
+    def setAlgoParams(self: P, value: Dict[str, Any]) -> P:
+        """
+        Sets the value of `algoParams`.
+        """
+        self._set_params(algoParams=value)
+        return self
+
+    def getAlgoParams(self: P) -> Dict[str, Any]:
+        """
+        Gets the value of `algoParams`.
+        """
+        return self.getOrDefault("algoParams")
 
 
 class ApproximateNearestNeighbors(
     ApproximateNearestNeighborsClass, _CumlEstimator, _ApproximateNearestNeighborsParams
 ):
     """
-    IVF_FLAT retrieves the k approximate nearest neighbors in item vectors for each query
+    ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
+    The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
+    The ApproximateNearestNeighbors is currently built on the IVFFLAT algorithm of cuML, and is expected to support
+    other algorithms such as IVFPQ.
+
+    IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
+    phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
+    the end the top k closest items will be returned as the approximate nearest neighbors.
+
+    The current implementation build kmeans index independently on every GPU with its part of item vectors. Queries will be broadcast
+    to all GPUs, then every query probes closest centers on individual index. Local topk results will be aggregated to obtain
+    global topk ANNs.
+
+
+    Parameters
+    ----------
+    k: int (default = 5)
+        the default number of approximate nearest neighbors to retrieve for each query.
+
+    algorithm: str (default = 'ivfflat')
+        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat'. Other algorithms such as
+        'ivfpq' are expected to be supported later.
+
+    algoParams: Optional[Dict[str, Any]] (default = None)
+        if set, algoParam is used to configure the algorithm.
+        When algorithm is 'ivfflat':
+            *nlist: (int) number of kmeans clusters to partition the dataframe into.
+            *nprobe: (int) number of closest clusters to probe for topk ANNs.
+
+    inputCol: str or List[str]
+        The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
+            * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
+            * When the value is a list of strings, the feature columns must be numeric types.
+
+    idCol: str
+        the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
+        if such a column exists in the dataframe. If idCol is not set, a column with the name `unique_id`
+        will be automatically added to the dataframe and used as unique identifier for each vector.
+
+    verbose:
+    Logging level.
+            * ``0`` - Disables all log messages.
+            * ``1`` - Enables only critical messages.
+            * ``2`` - Enables all messages up to and including errors.
+            * ``3`` - Enables all messages up to and including warnings.
+            * ``4 or False`` - Enables all messages up to and including information messages.
+            * ``5 or True`` - Enables all messages up to and including debug messages.
+            * ``6`` - Enables all messages up to and including trace messages.
+
+    Examples
+    --------
+    >>> from spark_rapids_ml.knn import ApproximateNearestNeighbors
+    >>> data = [(0, [0.0, 0.0]),
+    ...         (1, [1.0, 1.0]),
+    ...         (2, [2.0, 2.0]),
+    ...         (3, [30.0, 30.0]),
+    ...         (4, [40.0, 40.0]),
+    ...         (5, [50.0, 50.0]),]
+    >>> data_df = spark.createDataFrame(data, schema="id int, features array<float>")
+    >>> data_df = data_df.repartition(2) # ensure each partition having more data vectors than the 'nlist' of 'ivfflat'
+    >>> query = [(10, [0.0, 0.0]),
+    ...          (11, [50.0, 50.0]),]
+    >>> query_df = spark.createDataFrame(query, schema="id int, features array<float>")
+    >>> topk = 2
+    >>> gpu_knn = ApproximateNearestNeighbors().setAlgorithm('ivfflat').setAlgoParams({"nlist" : 2, "nprobe": 1})
+    >>> gpu_knn = gpu_knn.setInputCol("features").setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
+    >>> (data_df, query_df, knn_df) = gpu_model.kneighbors(query_df)
+    >>> knn_df.show()
+    +--------+-------+----------------+
+    |query_id|indices|       distances|
+    +--------+-------+----------------+
+    |      10| [0, 1]|[0.0, 1.4142134]|
+    |      11| [5, 4]|[0.0, 14.142137]|
+    +--------+-------+----------------+
+    >>> data_df.show()
+    +---+------------+
+    | id|    features|
+    +---+------------+
+    |  0|  [0.0, 0.0]|
+    |  1|  [1.0, 1.0]|
+    |  4|[40.0, 40.0]|
+    |  2|  [2.0, 2.0]|
+    |  3|[30.0, 30.0]|
+    |  5|[50.0, 50.0]|
+    +---+------------+
+
+    >>> query_df.show()
+    +---+------------+
+    | id|    features|
+    +---+------------+
+    | 10|  [0.0, 0.0]|
+    | 11|[50.0, 50.0]|
+    +---+------------+
+
+    >>> knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="EuclideanDistance")
+    +-----------------+------------------+-----------------+
+    |          item_df|          query_df|EuclideanDistance|
+    +-----------------+------------------+-----------------+
+    |  {0, [0.0, 0.0]}|  {10, [0.0, 0.0]}|              0.0|
+    |  {1, [1.0, 1.0]}|  {10, [0.0, 0.0]}|        1.4142134|
+    |{5, [50.0, 50.0]}|{11, [50.0, 50.0]}|              0.0|
+    |{4, [40.0, 40.0]}|{11, [50.0, 50.0]}|        14.142137|
+    +-----------------+------------------+-----------------+
+
+
+    >>> # vector column input
+    >>> from spark_rapids_ml.knn import ApproximateNearestNeighbors
+    >>> from pyspark.ml.linalg import Vectors
+    >>> data = [(0, Vectors.dense([0.0, 0.0])),
+    ...         (1, Vectors.dense([1.0, 1.0])),
+    ...         (2, Vectors.dense([2.0, 2.0])),
+    ...         (3, Vectors.dense([30.0, 30.0])),
+    ...         (4, Vectors.dense([40.0, 40.0])),
+    ...         (5, Vectors.dense([50.0, 50.0])),]
+    >>> data_df = spark.createDataFrame(data, ["id", "features"]).repartition(2)
+    >>> query = [(10, Vectors.dense([0.0, 0.0])),
+    ...          (11, Vectors.dense([50.0, 50.0])),]
+    >>> query_df = spark.createDataFrame(query, ["id", "features"])
+    >>> topk = 2
+    >>> gpu_knn = ApproximateNearestNeighbors().setAlgorithm('ivfflat').setAlgoParams({"nlist" : 2, "nprobe": 1})
+    >>> gpu_knn = gpu_knn.setInputCol("features").setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
+    >>> (data_df, query_df, knn_df) = gpu_model.kneighbors(query_df)
+    >>> knn_df.show()
+
+
+    >>> # multi-column input
+    >>> from spark_rapids_ml.knn import ApproximateNearestNeighbors
+    >>> data = [(0, 0.0, 0.0),
+    ...         (1, 1.0, 1.0),
+    ...         (2, 2.0, 2.0),
+    ...         (3, 30.0, 30.0),
+    ...         (4, 40.0, 40.0),
+    ...         (5, 50.0, 50.0),]
+    >>> data_df = spark.createDataFrame(data, schema="id int, f1 float, f2 float").repartition(2)
+    >>> query = [(10, 0.0, 0.0),
+    ...          (11, 50.0, 50.0),]
+    >>> query_df = spark.createDataFrame(query, schema="id int, f1 float, f2 float")
+    >>> topk = 2
+    >>> gpu_knn = ApproximateNearestNeighbors().setAlgorithm('ivfflat').setAlgoParams({"nlist" : 2, "nprobe": 1})
+    >>> gpu_knn = gpu_knn.setInputCols(["f1", "f2"]).setIdCol("id").setK(topk)
+    >>> gpu_model = gpu_knn.fit(data_df)
+    >>> (data_df, query_df, knn_df) = gpu_model.kneighbors(query_df)
+    >>> knn_df.show()
     """
 
     @keyword_only
@@ -759,10 +930,9 @@ class ApproximateNearestNeighbors(
         *,
         k: Optional[int] = None,
         algorithm: str = "ivfflat",
-        algo_params: Optional[Dict[str, Any]] = None,
+        algoParams: Optional[Dict[str, Any]] = None,
         inputCol: Optional[Union[str, List[str]]] = None,
         idCol: Optional[str] = None,
-        num_workers: Optional[int] = None,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
