@@ -1109,7 +1109,35 @@ class ApproximateNearestNeighborsModel(
         return res_df
 
     def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
-        """Return the approximate nearest neighbors for each query in query_df."""
+        """Return the approximate nearest neighbors for each query in query_df. The data
+        vectors (or equivalently item vectors) should be provided through the fit
+        function (see Examples in the spark_rapids_ml.knn.ApproximateNearestNeighbors). The
+        distance measure here is euclidean distance and the number of target approximate
+        nearest neighbors can be set through setK(). The function currently only
+        supports float32 type and will convert other data types into float32.
+
+        Parameters
+        ----------
+        query_df: pyspark.sql.DataFrame
+            query vectors where each row corresponds to one query. The query_df can be in the
+            format of a single array column, a single vector column, or multiple float columns.
+
+        Returns
+        -------
+        query_df: pyspark.sql.DataFrame
+            the query_df itself if it has an id column set through setIdCol(). If not,
+            a monotonically increasing id column will be added.
+
+        item_df: pyspark.sql.DataFrame
+            the item_df (or equivalently data_df) itself if it has an id column set
+            through setIdCol(). If not, a monotonically increasing id column will be added.
+
+        knn_df: pyspark.sql.DataFrame
+            the result k approximate nearest neighbors (ANNs) dataframe that has three
+            columns (id, indices, distances). Each row of knn_df corresponds to the k-ANNs
+            result of a query vector, identified by the id column. The indices/distances
+            column stores the ids/distances of knn item_df vectors.
+        """
 
         query_df_withid = self._ensureIdCol(query_df)
         self.bcast_qids, self.bcast_qfeatures = self._broadcast_as_nparray(
@@ -1208,8 +1236,27 @@ class ApproximateNearestNeighborsModel(
         distCol: str = "distCol",
     ) -> DataFrame:
         """
-        TODO: merge code with NearestNeighborsModel class,
-        And explore other opportunities to dedup code (eg. broadcasts).
+        This function returns the k approximate nearest neighbors (k-ANNs) in item_df of each query vector in query_df.
+        item_df is the dataframe passed to the fit function of the ApproximateNearestNeighbors estimator.
+        Note that the knn relationship is asymmetric with respect to the input datasets (e.g., if x is a ann of y
+        , y is not necessarily a ann of x).
+
+        Parameters
+        ----------
+        query_df: pyspark.sql.DataFrame
+            the query_df dataframe. Each row represents a query vector.
+
+        distCol: str
+            the name of the output distance column
+
+        Returns
+        -------
+        knnjoin_df: pyspark.sql.DataFrame
+            the result dataframe that has three columns (item_df, query_df, distCol).
+            item_df column is of struct type that includes as fields all the columns of input item dataframe.
+            Similarly, query_df column is of struct type that includes as fields all the columns of input query dataframe.
+            distCol is the distance column. A row in knnjoin_df is in the format (v1, v2, dist(v1, v2)),
+            where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
         """
 
         id_col_name = self.getIdCol()
