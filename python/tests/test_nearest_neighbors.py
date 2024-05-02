@@ -90,10 +90,14 @@ def func_test_example_no_id(
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setK(topk)
 
+        assert topk == gpu_knn.getK()
+
         with pytest.raises(NotImplementedError):
             gpu_knn.save(tmp_path + "/knn_esimator")
 
         gpu_model = gpu_knn.fit(data_df)
+
+        assert topk == gpu_knn.getK()
 
         with pytest.raises(NotImplementedError):
             gpu_model.save(tmp_path + "/knn_model")

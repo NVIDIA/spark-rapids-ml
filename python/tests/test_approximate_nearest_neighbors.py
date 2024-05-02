@@ -154,6 +154,17 @@ def test_ivfflat(
 
         # test kneighbors: obtain spark results
         knn_model = knn_est.fit(data_df)
+
+        for obj in [knn_est, knn_model]:
+            assert obj.getK() == n_neighbors
+            assert obj.getAlgorithm() == "ivfflat"
+            assert obj.getAlgoParams() == algoParams
+            if feature_type == "multi_cols":
+                assert obj.getInputCols() == features_col
+            else:
+                assert obj.getInputCol() == features_col
+            assert obj.getIdCol() == id_col
+
         query_df = data_df
         (item_df_withid, query_df_withid, knn_df) = knn_model.kneighbors(query_df)
 
