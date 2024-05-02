@@ -15,7 +15,7 @@
 #
 
 import asyncio
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -367,8 +367,9 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
             "'_CumlModel._get_cuml_transform_func' method is not implemented. Use 'kneighbors' instead."
         )
 
+    @abstractmethod
     def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
-        pass
+        raise NotImplementedError()
 
     def exactNearestNeighborsJoin(
         self,
@@ -988,7 +989,7 @@ class ApproximateNearestNeighbors(
 
 
 class ApproximateNearestNeighborsModel(
-    ApproximateNearestNeighborsClass, _CumlModel, _ApproximateNearestNeighborsParams
+    ApproximateNearestNeighborsClass, _NNModelBase, _ApproximateNearestNeighborsParams
 ):
     def __init__(
         self,
@@ -1004,17 +1005,6 @@ class ApproximateNearestNeighborsModel(
     def _out_schema(self) -> Union[StructType, str]:  # type: ignore
         return (
             f"query_{self.getIdCol()} long, indices array<long>, distances array<float>"
-        )
-
-    def write(self) -> MLWriter:
-        raise NotImplementedError(
-            "ApproximateNearestNeighborsModel does not support saving/loading, just re-fit the estimator to re-create a model."
-        )
-
-    @classmethod
-    def read(cls) -> MLReader:
-        raise NotImplementedError(
-            "ApproximateNearestNeighborsModel does not support loading/loading, just re-fit the estimator to re-create a model."
         )
 
     def _pre_process_data(
@@ -1160,11 +1150,6 @@ class ApproximateNearestNeighborsModel(
 
         return (self._item_df_withid, query_df_withid, knn_df_agg)
 
-    def _transform(self, dataset: DataFrame) -> DataFrame:
-        raise NotImplementedError(
-            "ApproximateNearestNeighborsModel does not provide a transform function. Use 'kneighbors' instead."
-        )
-
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
     ) -> Tuple[
@@ -1263,43 +1248,4 @@ class ApproximateNearestNeighborsModel(
             where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
         """
 
-        id_col_name = self.getIdCol()
-
-        # call kneighbors then prepare return results
-        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df)
-
-        from pyspark.sql.functions import arrays_zip, col, explode, struct
-
-        knn_pair_df = knn_df.select(
-            f"query_{id_col_name}",
-            explode(arrays_zip("indices", "distances")).alias("zipped"),
-        ).select(
-            f"query_{id_col_name}",
-            col("zipped.indices").alias(f"item_{id_col_name}"),
-            col("zipped.distances").alias(distCol),
-        )
-
-        item_df_struct = item_df_withid.select(struct("*").alias("item_df"))
-        query_df_struct = query_df_withid.select(struct("*").alias("query_df"))
-
-        knnjoin_df = item_df_struct.join(
-            knn_pair_df,
-            item_df_struct[f"item_df.{id_col_name}"]
-            == knn_pair_df[f"item_{id_col_name}"],
-        )
-        knnjoin_df = knnjoin_df.join(
-            query_df_struct,
-            knnjoin_df[f"query_{id_col_name}"]
-            == query_df_struct[f"query_df.{id_col_name}"],
-        )
-
-        if self.isSet(self.idCol):
-            knnjoin_df = knnjoin_df.select("item_df", "query_df", distCol)
-        else:
-            knnjoin_df = knnjoin_df.select(
-                knnjoin_df["item_df"].dropFields(id_col_name).alias("item_df"),
-                knnjoin_df["query_df"].dropFields(id_col_name).alias("query_df"),
-                distCol,
-            )
-
-        return knnjoin_df
+        return self.exactNearestNeighborsJoin(query_df, distCol)
