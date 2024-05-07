@@ -563,7 +563,10 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
 
 
 def reconstruct_knn_df(
-    knnjoin_df: DataFrame, row_identifier_col: str, distCol: str = "distCol"
+    knnjoin_df: DataFrame,
+    row_identifier_col: str,
+    distCol: str = "distCol",
+    ascending: bool = True,
 ) -> DataFrame:
     """
     This function accepts the returned dataframe (denoted as knnjoin_df) of exactNearestNeighborsjoin,
@@ -578,7 +581,7 @@ def reconstruct_knn_df(
     )
 
     def functor(pdf: pd.DataFrame) -> pd.DataFrame:
-        pdf = pdf.sort_values(by=["distance"])
+        pdf = pdf.sort_values(by=["distance"], ascending=ascending)
         indices = pdf["index"].tolist()
         distances = pdf["distance"].tolist()
         query_id = pdf[f"query_id"].tolist()[0]

@@ -709,11 +709,18 @@ class ApproximateNearestNeighborsClass(_CumlClass):
         return {
             "k": "n_neighbors",
             "algorithm": "algorithm",
+            "metric": "metric",
             "algoParams": "algo_params",
         }
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
-        return {"n_neighbors": 5, "verbose": False, "algorithm": "ivfflat"}
+        return {
+            "n_neighbors": 5,
+            "verbose": False,
+            "algorithm": "ivfflat",
+            "metric": "euclidean",
+            "algo_params": None,
+        }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
         return None
@@ -735,6 +742,7 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         super().__init__()
         self._setDefault(algorithm="ivfflat")
         self._setDefault(algoParams=None)
+        self._setDefault(metric="euclidean")
 
     algorithm = Param(
         Params._dummy(),
@@ -748,6 +756,13 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         "algoParams",
         "The parameters to use to set up a neighbor algorithm.",
         typeConverter=DictTypeConverters._toDict,
+    )
+
+    metric = Param(
+        Params._dummy(),
+        "metric",
+        "The distance metric to use.",
+        typeConverter=TypeConverters.toString,
     )
 
     def setAlgorithm(self: P, value: str) -> P:
@@ -777,6 +792,19 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         """
         return self.getOrDefault("algoParams")
 
+    def setMetric(self: P, value: str) -> P:
+        """
+        Sets the value of `metric`.
+        """
+        self._set_params(metric=value)
+        return self
+
+    def getMetric(self: P) -> str:
+        """
+        Gets the value of `metric`.
+        """
+        return self.getOrDefault("metric")
+
 
 class ApproximateNearestNeighbors(
     ApproximateNearestNeighborsClass, _CumlEstimator, _ApproximateNearestNeighborsParams
@@ -791,8 +819,8 @@ class ApproximateNearestNeighbors(
     phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
     the end the top k closest items will be returned as the approximate nearest neighbors.
 
-    The current implementation build kmeans index independently on every GPU with its part of item vectors. Queries will be broadcast
-    to all GPUs, then every query probes closest centers on individual index. Local topk results will be aggregated to obtain
+    The current implementation build kmeans index independently on  each data partition (or maxRecordsPerBatch if Arrow is enabled) of item_df.
+    Queries will be broadcast to all GPUs, then every query probes closest centers on individual index. Local topk results will be aggregated to obtain
     global topk ANNs.
 
 
@@ -806,10 +834,15 @@ class ApproximateNearestNeighbors(
         'ivfpq' are expected to be supported later.
 
     algoParams: Optional[Dict[str, Any]] (default = None)
-        if set, algoParam is used to configure the algorithm.
+        if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
+        Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).
+
         When algorithm is 'ivfflat':
             *nlist: (int) number of kmeans clusters to partition the dataframe into.
             *nprobe: (int) number of closest clusters to probe for topk ANNs.
+
+    metric: str (default = "euclidean")
+        the distance metric to use. 'ivfflat' algorithm supports ['euclidean', 'sqeuclidean', 'l2', 'inner_product'].
 
     inputCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
@@ -935,6 +968,7 @@ class ApproximateNearestNeighbors(
         *,
         k: Optional[int] = None,
         algorithm: str = "ivfflat",
+        metric: str = "euclidean",
         algoParams: Optional[Dict[str, Any]] = None,
         inputCol: Optional[Union[str, List[str]]] = None,
         idCol: Optional[str] = None,
@@ -1051,13 +1085,6 @@ class ApproximateNearestNeighborsModel(
             assert len(query_pd.columns) == 1
             query_features = np.array(list(query_pd[query_pd.columns[0]]), dtype=dtype)
 
-        # def _split_by_bytes(arr: np.ndarray) -> List[np.ndarray]:
-        #     if arr.nbytes <= BROADCAST_LIMIT:
-        #         return [arr]
-        #     rows_per_chunk = BROADCAST_LIMIT // arr.itemsize
-        #     num_chunks = (arr.shape[0] + rows_per_chunk - 1) // rows_per_chunk
-        #     return np.array_split(arr, num_chunks)
-
         bcast_qids = _get_spark_session().sparkContext.broadcast(query_ids)
         bcast_qfeatures = _get_spark_session().sparkContext.broadcast(query_features)
 
@@ -1071,6 +1098,7 @@ class ApproximateNearestNeighborsModel(
         indices_col_name: str,
         distances_col_name: str,
         k: int,
+        ascending: bool = True,
     ) -> DataFrame:
         from pyspark.sql.functions import pandas_udf
 
@@ -1081,7 +1109,11 @@ class ApproximateNearestNeighborsModel(
                 distances.explode().reset_index(drop=True).astype("float32")
             )
             assert len(flat_indices) == len(flat_distances)
-            topk_index = flat_distances.nsmallest(k).index
+            if ascending:
+                topk_index = flat_distances.nsmallest(k).index
+            else:
+                topk_index = flat_distances.nlargest(k).index
+
             res = flat_indices[topk_index].to_numpy()
             return res
 
@@ -1090,7 +1122,11 @@ class ApproximateNearestNeighborsModel(
             flat_distances = (
                 distances.explode().reset_index(drop=True).astype("float32")
             )
-            res = flat_distances.nsmallest(k).to_numpy()
+            if ascending:
+                res = flat_distances.nsmallest(k).to_numpy()
+            else:
+                res = flat_distances.nlargest(k).to_numpy()
+
             return res
 
         res_df = knn_df.groupBy(id_col_name).agg(
@@ -1144,8 +1180,16 @@ class ApproximateNearestNeighborsModel(
         k = self.getK()
 
         query_id_col_name = f"query_{self.getIdCol()}"
+
+        ascending = False if self.getMetric() == "inner_product" else True 
+
         knn_df_agg = self.__class__._agg_topk(
-            knn_df, query_id_col_name, "indices", "distances", k
+            knn_df,
+            query_id_col_name,
+            "indices",
+            "distances",
+            k,
+            ascending,
         )
 
         return (self._item_df_withid, query_df_withid, knn_df_agg)
@@ -1159,6 +1203,12 @@ class ApproximateNearestNeighborsModel(
     ]:
 
         cuml_alg_params = self.cuml_params.copy()
+        assert cuml_alg_params["metric"] in {
+            "euclidean",
+            "sqeuclidean",
+            "inner_product",
+            "l2",
+        }
 
         def _construct_sgnn() -> CumlT:
 
@@ -1191,7 +1241,7 @@ class ApproximateNearestNeighborsModel(
             if len(item) == 0:
                 return pd.DataFrame(
                     {
-                        "query_{id_col_name}": [],
+                        f"query_{id_col_name}": [],
                         "indices": [],
                         "distances": [],
                     }
@@ -1202,8 +1252,14 @@ class ApproximateNearestNeighborsModel(
 
             distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
 
+            # Note cuML kneighbors applys an extra square root on the l2 distances.
+            # Here applies square to obtain the actual l2 distances.
             if cuml_alg_params["algorithm"] == "ivfflat":
-                distances = distances * distances
+                if (
+                    cuml_alg_params["metric"] == "euclidean"
+                    or cuml_alg_params["metric"] == "l2"
+                ):
+                    distances = distances * distances
 
             indices = indices.get()
             indices_global = item_row_number[indices]

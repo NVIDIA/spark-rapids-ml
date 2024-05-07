@@ -35,13 +35,12 @@ from .utils import (
 def test_default_cuml_params() -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
 
+    # obtain n_neighbors, verbose, algorithm, algo_params, metric
     cuml_params = get_default_cuml_parameters(
         [CumlNearestNeighbors],
         [
             "handle",
-            "metric",
             "p",
-            "algo_params",
             "metric_expanded",
             "metric_params",
             "output_type",
@@ -92,7 +91,8 @@ def test_ivfflat(
     combo: Tuple[str, int, Optional[Dict[str, Any]]],
     data_shape: Tuple[int, int],
     data_type: np.dtype,
-) -> None:
+    metric: str = "euclidean",
+) -> Tuple[ApproximateNearestNeighbors, ApproximateNearestNeighborsModel]:
 
     feature_type = combo[0]
     max_record_batch = combo[1]
@@ -100,6 +100,8 @@ def test_ivfflat(
     n_neighbors = 50
     n_clusters = 10
     tolerance = 1e-4
+
+    expected_avg_recall = 0.95
 
     X, _ = make_blobs(
         n_samples=data_shape[0],
@@ -113,12 +115,24 @@ def test_ivfflat(
     root_ave_norm_sq = np.sqrt(np.average(np.linalg.norm(X, ord=2, axis=1) ** 2))
     X = X / root_ave_norm_sq
 
-    # obtain exact knn cuml results
-    from cuml import NearestNeighbors as cuNN
+    # obtain exact knn distances and indices
+    if metric == "inner_product":
+        from cuml import NearestNeighbors as cuNN
 
-    cuml_knn = cuNN(algorithm="brute", n_neighbors=n_neighbors, output_type="numpy")
-    cuml_knn.fit(X)
-    distances_exact, indices_exact = cuml_knn.kneighbors(X)
+        cuml_knn = cuNN(
+            algorithm="brute",
+            n_neighbors=n_neighbors,
+            output_type="numpy",
+            metric=metric,
+        )
+        cuml_knn.fit(X)
+        distances_exact, indices_exact = cuml_knn.kneighbors(X)
+    else:
+        from sklearn.neighbors import NearestNeighbors as skNN
+
+        sk_knn = skNN(algorithm="brute", n_neighbors=n_neighbors, metric=metric)
+        sk_knn.fit(X)
+        distances_exact, indices_exact = sk_knn.kneighbors(X)
 
     def cal_avg_recall(indices_ann: np.ndarray) -> float:
         assert indices_ann.shape == indices_exact.shape
@@ -146,7 +160,7 @@ def test_ivfflat(
 
         knn_est = (
             ApproximateNearestNeighbors(
-                algorithm="ivfflat", algoParams=algoParams, k=n_neighbors
+                algorithm="ivfflat", algoParams=algoParams, k=n_neighbors, metric=metric
             )
             .setInputCol(features_col)
             .setIdCol(id_col)
@@ -177,19 +191,26 @@ def test_ivfflat(
 
         # test kneighbors: compare top-1 nn indices(self) and distances(self)
 
-        self_index = [knn[0] for knn in indices]
-        assert np.all(self_index == y)
+        if metric != "inner_product":
+            self_index = [knn[0] for knn in indices]
+            assert np.all(self_index == y)
 
-        self_distance = [dist[0] for dist in distances]
-        assert self_distance == [0.0] * len(X)
+            self_distance = [dist[0] for dist in distances]
+            assert self_distance == [0.0] * len(X)
 
         # test kneighbors: compare with cuml ANN on avg_recall and dist
+        from cuml import NearestNeighbors as cuNN
+
         cuml_ivfflat = cuNN(
-            algorithm="ivfflat", algo_params=algoParams, n_neighbors=n_neighbors
+            algorithm="ivfflat",
+            algo_params=algoParams,
+            n_neighbors=n_neighbors,
+            metric=metric,
         )
         cuml_ivfflat.fit(X)
         distances_cumlann, indices_cumlann = cuml_ivfflat.kneighbors(X)
-        distances_cumlann **= 2  # square up to get l2 distances
+        if metric == "euclidean" or metric == "l2":
+            distances_cumlann **= 2  # square up cuml distances to get l2 distances
 
         avg_recall_cumlann = cal_avg_recall(indices_cumlann)
         avg_recall = cal_avg_recall(indices)
@@ -199,10 +220,16 @@ def test_ivfflat(
         avg_dist_gap = cal_avg_dist_gap(distances)
         assert abs(avg_dist_gap - avg_dist_gap_cumlann) < tolerance
 
+        # test kneighbors: compare with sklearn brute NN on avg_recall and dist
+        assert avg_recall >= expected_avg_recall
+        assert np.all(np.abs(avg_dist_gap) < tolerance)
+
         # test exactNearestNeighborsJoin
         knnjoin_df = knn_model.approxSimilarityJoin(query_df_withid)
+
+        ascending = False if metric == "inner_product" else True
         reconstructed_knn_df = reconstruct_knn_df(
-            knnjoin_df, row_identifier_col=knn_model.getIdCol()
+            knnjoin_df, row_identifier_col=knn_model.getIdCol(), ascending=ascending
         )
         reconstructed_collect = reconstructed_knn_df.collect()
 
@@ -231,3 +258,40 @@ def test_ivfflat(
             r1 = reconstructed_collect[i]
             r2 = knn_df_collect[i]
             assert_row_equal(r1, r2)
+
+        return (knn_est, knn_model)
+
+
+@pytest.mark.parametrize(
+    "combo",  # feature_type, max_batch_size, algo_param, metric
+    [
+        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
+        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
+        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
+    ],
+)
+def test_metric(
+    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
+) -> None:
+    data_shape = (10000, 50)
+    data_type = np.float32
+
+    from cuml.neighbors import VALID_METRICS
+
+    assert VALID_METRICS["ivfflat"] == {
+        "euclidean",
+        "sqeuclidean",
+        "cosine",
+        "inner_product",
+        "l2",
+        "correlation",
+    }
+
+    gpu_est, gpu_model = test_ivfflat(
+        combo=(combo[0], combo[1], combo[2]),
+        data_shape=data_shape,
+        data_type=data_type,
+        metric=combo[3],
+    )
+    assert gpu_est._cuml_params["metric"] == combo[3]
+    assert gpu_model._cuml_params["metric"] == combo[3]
