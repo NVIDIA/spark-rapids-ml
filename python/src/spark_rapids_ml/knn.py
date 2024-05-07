@@ -1181,7 +1181,7 @@ class ApproximateNearestNeighborsModel(
 
         query_id_col_name = f"query_{self.getIdCol()}"
 
-        ascending = False if self.getMetric() == "inner_product" else True 
+        ascending = False if self.getMetric() == "inner_product" else True
 
         knn_df_agg = self.__class__._agg_topk(
             knn_df,
