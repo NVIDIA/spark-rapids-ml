@@ -905,10 +905,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
             )
             return True
 
-        if not _is_standalone_or_localcluster(conf):
+        if "3.4.0" <= spark_version < "3.5.1" and not _is_standalone_or_localcluster(
+            conf
+        ):
             self.logger.info(
-                "Stage-level scheduling in spark-rapids-ml requires spark standalone or "
-                "local-cluster mode"
+                "For Spark %s, Stage-level scheduling in spark-rapids-ml requires spark "
+                "standalone or local-cluster mode",
+                spark_version,
             )
             return True
 
@@ -956,7 +959,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         ss = _get_spark_session()
         sc = ss.sparkContext
 
-        if self._skip_stage_level_scheduling(ss.version, sc.getConf()):
+        if _is_local(sc) or self._skip_stage_level_scheduling(ss.version, sc.getConf()):
             return rdd
 
         # executor_cores will not be None
