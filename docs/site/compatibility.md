@@ -13,7 +13,7 @@ The following table shows the currently supported algorithms.  The goal is to ex
 | CrossValidator         |   √    |       |
 | DBSCAN (*)             |   √    |       |
 | KMeans                 |   √    |       |
-| k-NN (*)               |   √    |       |
+| approx/exact k-NN (*)  |   √    |       |
 | LinearRegression       |   √    |       |
 | LogisticRegression     |   √    |       | 
 | PCA                    |   √    |   √   |
