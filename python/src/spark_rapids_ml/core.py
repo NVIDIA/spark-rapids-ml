@@ -1349,10 +1349,17 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             )
 
             # TODO try to concatenate all the data and do the transform.
+            has_row_number = None
             for pdf in pdf_iter:
+                if has_row_number is None:
+                    has_row_number = True if alias.row_number in pdf.columns else False
+                else:
+                    assert has_row_number == (alias.row_number in pdf.columns)
+
                 for index, cuml_object in enumerate(cuml_objects):
-                    # Transform the dataset
-                    if use_sparse_array:
+                    if has_row_number:
+                        data = cuml_transform_func(cuml_object, pdf)
+                    elif use_sparse_array:
                         features = _read_csr_matrix_from_unwrapped_spark_vec(
                             pdf[select_cols]
                         )
@@ -1362,10 +1369,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     else:
                         nparray = np.array(list(pdf[select_cols[0]]), order=array_order)
                         data = cuml_transform_func(cuml_object, nparray)
+
                     # Evaluate the dataset if necessary.
                     if evaluate_func is not None:
                         data = evaluate_func(pdf, data)
                         data[pred.model_index] = index
+
                     yield data
 
         return dataset.mapInPandas(_transform_udf, schema=schema)  # type: ignore
