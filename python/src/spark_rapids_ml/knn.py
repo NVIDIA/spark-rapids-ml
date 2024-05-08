@@ -151,7 +151,7 @@ class _NearestNeighborsCumlParams(
         id_col_name = self.getIdCol()
         df_withid = (
             df
-            if self.isSet("idCol")
+            if id_col_name in df.columns
             else df.select(monotonically_increasing_id().alias(id_col_name), "*")
         )
         return df_withid
