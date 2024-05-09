@@ -838,8 +838,8 @@ class ApproximateNearestNeighbors(
         Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).
 
         When algorithm is 'ivfflat':
-            *nlist: (int) number of kmeans clusters to partition the dataframe into.
-            *nprobe: (int) number of closest clusters to probe for topk ANNs.
+            * nlist: (int) number of kmeans clusters to partition the dataframe into.
+            * nprobe: (int) number of closest clusters to probe for topk ANNs.
 
     metric: str (default = "euclidean")
         the distance metric to use. 'ivfflat' algorithm supports ['euclidean', 'sqeuclidean', 'l2', 'inner_product'].
