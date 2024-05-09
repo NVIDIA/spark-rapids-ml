@@ -229,7 +229,9 @@ def test_ivfflat(
 
         ascending = False if metric == "inner_product" else True
         reconstructed_knn_df = reconstruct_knn_df(
-            knnjoin_df, row_identifier_col=knn_model.getIdCol(), ascending=ascending
+            knnjoin_df,
+            row_identifier_col=knn_model._getIdColOrDefault(),
+            ascending=ascending,
         )
         reconstructed_collect = reconstructed_knn_df.collect()
 

@@ -234,6 +234,17 @@ def func_test_example_no_id(
                 assert knnjoin_queries[i]["features"] == query[i][0]
             assert knnjoin_queries[i]["metadata"] == query[i][1]
 
+        # Test fit(dataset, ParamMap) that copies existing estimator
+        # After copy, self.isSet("idCol") becomes true. But the added id column does not exist in the dataframe
+        paramMap = gpu_knn.extractParamMap()
+        gpu_model_v2 = gpu_knn.fit(data_df, paramMap)
+
+        assert gpu_knn.isSet("idCol") is False
+        assert gpu_model_v2.isSet("idCol") is True
+
+        (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
+        assert knn_df_v2.collect() == knn_df.collect()
+
         return gpu_knn, gpu_model
 
 
@@ -432,7 +443,7 @@ def test_nearest_neighbors(
         knn_model.setIdCol(item_df_withid.dtypes[0][0])
         knnjoin_df = knn_model.exactNearestNeighborsJoin(query_df_withid)
         reconstructed_knn_df = reconstruct_knn_df(
-            knnjoin_df, row_identifier_col=knn_model.getIdCol()
+            knnjoin_df, row_identifier_col=knn_model._getIdColOrDefault()
         )
         assert reconstructed_knn_df.collect() == knn_df.collect()
 
