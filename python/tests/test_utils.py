@@ -61,8 +61,35 @@ def test_unsupported_methods_attributes() -> None:
         def _param_mapping(cls) -> Dict[str, Optional[str]]:
             return {"param1": "param2", "param3": None, "param4": ""}
 
+        @classmethod
+        def unsupported_method(cls) -> None:
+            """Unsupported."""
+            pass
+
+        def unsupported_function(self) -> None:
+            """Unsupported."""
+            pass
+
+        @classmethod
+        def supported_method(cls) -> None:
+            """supported"""
+            pass
+
+        def supported_function(self) -> None:
+            """supported"""
+            pass
+
     assert _unsupported_methods_attributes(A) == set(
-        ["param3", "getParam3", "setParam3", "param4", "getParam4", "setParam4"]
+        [
+            "param3",
+            "getParam3",
+            "setParam3",
+            "param4",
+            "getParam4",
+            "setParam4",
+            "unsupported_method",
+            "unsupported_function",
+        ]
     )
 
 
