@@ -394,34 +394,11 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
     def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
         raise NotImplementedError()
 
-    def exactNearestNeighborsJoin(
+    def _nearest_neighbors_join(
         self,
         query_df: DataFrame,
         distCol: str = "distCol",
     ) -> DataFrame:
-        """
-        This function returns the k exact nearest neighbors (knn) in item_df of each query vector in query_df.
-        item_df is the dataframe passed to the fit function of the NearestNeighbors estimator.
-        Note that the knn relationship is asymmetric with respect to the input datasets (e.g., if x is a knn of y
-        , y is not necessarily a knn of x).
-
-        Parameters
-        ----------
-        query_df: pyspark.sql.DataFrame
-            the query_df dataframe. Each row represents a query vector.
-
-        distCol: str
-            the name of the output distance column
-
-        Returns
-        -------
-        knnjoin_df: pyspark.sql.DataFrame
-            the result dataframe that has three columns (item_df, query_df, distCol).
-            item_df column is of struct type that includes as fields all the columns of input item dataframe.
-            Similarly, query_df column is of struct type that includes as fields all the columns of input query dataframe.
-            distCol is the distance column. A row in knnjoin_df is in the format (v1, v2, dist(v1, v2)),
-            where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
-        """
 
         id_col_name = self._getIdColOrDefault()
 
@@ -722,6 +699,37 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
             }
 
         return _cuml_fit
+
+    def exactNearestNeighborsJoin(
+        self,
+        query_df: DataFrame,
+        distCol: str = "distCol",
+    ) -> DataFrame:
+        """
+        This function returns the k exact nearest neighbors (knn) in item_df of each query vector in query_df.
+        item_df is the dataframe passed to the fit function of the NearestNeighbors estimator.
+        Note that the knn relationship is asymmetric with respect to the input datasets (e.g., if x is a knn of y
+        , y is not necessarily a knn of x).
+
+        Parameters
+        ----------
+        query_df: pyspark.sql.DataFrame
+            the query_df dataframe. Each row represents a query vector.
+
+        distCol: str
+            the name of the output distance column
+
+        Returns
+        -------
+        knnjoin_df: pyspark.sql.DataFrame
+            the result dataframe that has three columns (item_df, query_df, distCol).
+            item_df column is of struct type that includes as fields all the columns of input item dataframe.
+            Similarly, query_df column is of struct type that includes as fields all the columns of input query dataframe.
+            distCol is the distance column. A row in knnjoin_df is in the format (v1, v2, dist(v1, v2)),
+            where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
+        """
+
+        return self._nearest_neighbors_join(query_df=query_df, distCol=distCol)
 
 
 class ApproximateNearestNeighborsClass(_CumlClass):
@@ -1323,4 +1331,4 @@ class ApproximateNearestNeighborsModel(
             where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
         """
 
-        return self.exactNearestNeighborsJoin(query_df, distCol)
+        return self._nearest_neighbors_join(query_df, distCol)
