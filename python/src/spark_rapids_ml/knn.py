@@ -464,7 +464,7 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
 
     @classmethod
     def read(cls) -> MLReader:
-        """Uunsupported."""
+        """Unsupported."""
         raise NotImplementedError(
             f"{cls} does not support saving/loading, just re-fit the estimator to re-create a model."
         )
