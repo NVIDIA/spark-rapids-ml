@@ -45,6 +45,7 @@ NearestNeighborsModel
        ~NearestNeighborsModel.getIdCol
        ~NearestNeighborsModel.getInputCol
        ~NearestNeighborsModel.getInputCols
+       ~NearestNeighborsModel.getK
        ~NearestNeighborsModel.getLabelCol
        ~NearestNeighborsModel.getOrDefault
        ~NearestNeighborsModel.getParam
@@ -102,6 +103,7 @@ NearestNeighborsModel
     .. automethod:: getIdCol
     .. automethod:: getInputCol
     .. automethod:: getInputCols
+    .. automethod:: getK
     .. automethod:: getLabelCol
     .. automethod:: getOrDefault
     .. automethod:: getParam

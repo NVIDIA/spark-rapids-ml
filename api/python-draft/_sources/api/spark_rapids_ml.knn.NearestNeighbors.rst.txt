@@ -45,6 +45,7 @@ NearestNeighbors
        ~NearestNeighbors.getIdCol
        ~NearestNeighbors.getInputCol
        ~NearestNeighbors.getInputCols
+       ~NearestNeighbors.getK
        ~NearestNeighbors.getLabelCol
        ~NearestNeighbors.getOrDefault
        ~NearestNeighbors.getParam
@@ -100,6 +101,7 @@ NearestNeighbors
     .. automethod:: getIdCol
     .. automethod:: getInputCol
     .. automethod:: getInputCols
+    .. automethod:: getK
     .. automethod:: getLabelCol
     .. automethod:: getOrDefault
     .. automethod:: getParam
