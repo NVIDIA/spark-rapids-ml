@@ -85,7 +85,7 @@ class _NearestNeighborsCumlParams(
 
     def __init__(self) -> None:
         super().__init__()
-        self._setDefault(idCol=alias.row_number)
+        self._setDefault(idCol=None)
 
     k = Param(
         Params._dummy(),
@@ -113,6 +113,16 @@ class _NearestNeighborsCumlParams(
         Get the value of `k`.
         """
         return self.getOrDefault("k")
+
+    def _getIdColOrDefault(self) -> str:
+        """
+        Gets the value of `idCol`.
+        """
+
+        res = self.getIdCol()
+        if res is None:
+            res = alias.row_number
+        return res
 
     def setInputCol(self: P, value: Union[str, List[str]]) -> P:
         """
@@ -142,19 +152,32 @@ class _NearestNeighborsCumlParams(
         Ensure an id column exists in the input dataframe. Add the column if not exists.
         Overwritten for knn assumption on error for not setting idCol and duplicate exists.
         """
-        if not self.isSet("idCol") and self.getIdCol() in df.columns:
-            raise ValueError(
-                f"Cannot create a default id column since a column with the default name '{self.getIdCol()}' already exists."
-                + "Please specify an id column"
-            )
 
         id_col_name = self.getIdCol()
-        df_withid = (
-            df
-            if self.isSet("idCol")
-            else df.select(monotonically_increasing_id().alias(id_col_name), "*")
-        )
-        return df_withid
+        if id_col_name is None:
+            if alias.row_number in df.columns:
+                raise ValueError(
+                    f"Trying to create an id column with default name {alias.row_number}. But a column with the same name already exists."
+                )
+            else:
+                get_logger(self.__class__).info(
+                    f"idCol not set. Spark Rapids ML will create one with default name {alias.row_number}."
+                )
+                df_withid = df.select(
+                    monotonically_increasing_id().alias(alias.row_number), "*"
+                )
+                return df_withid
+        else:
+            if id_col_name in df.columns:
+                return df
+            else:
+                get_logger(self.__class__).info(
+                    f"column {id_col_name} does not exists in the input dataframe. Spark Rapids ML will create the {id_col_name} column."
+                )
+                df_withid = df.select(
+                    monotonically_increasing_id().alias(alias.row_number), "*"
+                )
+                return df_withid
 
 
 class NearestNeighbors(
@@ -179,7 +202,7 @@ class NearestNeighbors(
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
 
-    idCol: str
+    idCol: str (default = None)
         the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
         if such a column exists in the dataframe. If idCol is not set, a column with the name `unique_id`
         will be automatically added to the dataframe and used as unique identifier for each vector.
@@ -400,7 +423,7 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
             where item_vector v1 is one of the k nearest neighbors of query_vector v2 and their distance is dist(v1, v2).
         """
 
-        id_col_name = self.getIdCol()
+        id_col_name = self._getIdColOrDefault()
 
         # call kneighbors then prepare return results
         (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df)
@@ -471,7 +494,9 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
         return StructType(
             [
                 StructField(
-                    f"query_{self.getIdCol()}", ArrayType(LongType(), False), False
+                    f"query_{self._getIdColOrDefault()}",
+                    ArrayType(LongType(), False),
+                    False,
                 ),
                 StructField(
                     "indices", ArrayType(ArrayType(LongType(), False), False), False
@@ -509,11 +534,8 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
 
         select_cols.append(col(alias.label))
 
-        if self.hasParam("idCol") and self.isDefined("idCol"):
-            id_col_name = self.getOrDefault("idCol")
-            select_cols.append(col(id_col_name).alias(alias.row_number))
-        else:
-            select_cols.append(col(alias.row_number))
+        id_col_name = self._getIdColOrDefault()
+        select_cols.append(col(id_col_name).alias(alias.row_number))
 
         return select_cols, multi_col_names, dimension, feature_type
 
@@ -561,8 +583,8 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
         pipelinedrdd = self._call_cuml_fit_func(union_df, partially_collect=False)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
 
-        query_id_col_name = f"query_{self.getIdCol()}"
-        id_col_type = dict(union_df.dtypes)[self.getIdCol()]
+        query_id_col_name = f"query_{self._getIdColOrDefault()}"
+        id_col_type = dict(union_df.dtypes)[self._getIdColOrDefault()]
         knn_rdd = pipelinedrdd.flatMap(
             lambda row: list(
                 zip(row[query_id_col_name], row["indices"], row["distances"])
@@ -584,7 +606,7 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
     ]:
         label_isdata = self._label_isdata
         label_isquery = self._label_isquery
-        id_col_name = self.getIdCol()
+        id_col_name = self._getIdColOrDefault()
 
         def _cuml_fit(
             dfs: FitInputType,
@@ -849,7 +871,7 @@ class ApproximateNearestNeighbors(
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
 
-    idCol: str
+    idCol: str (default = None)
         the name of the column in a dataframe that uniquely identifies each vector. idCol should be set
         if such a column exists in the dataframe. If idCol is not set, a column with the name `unique_id`
         will be automatically added to the dataframe and used as unique identifier for each vector.
@@ -1037,9 +1059,7 @@ class ApproximateNearestNeighborsModel(
         self.bcast_qfeatures: Optional[Broadcast] = None
 
     def _out_schema(self) -> Union[StructType, str]:  # type: ignore
-        return (
-            f"query_{self.getIdCol()} long, indices array<long>, distances array<float>"
-        )
+        return f"query_{self._getIdColOrDefault()} long, indices array<long>, distances array<float>"
 
     def _pre_process_data(
         self, dataset: DataFrame
@@ -1049,9 +1069,8 @@ class ApproximateNearestNeighborsModel(
             dataset
         )
 
-        if self.hasParam("idCol") and self.isDefined("idCol"):
-            id_col_name = self.getOrDefault("idCol")
-            dataset = dataset.withColumnRenamed(id_col_name, alias.row_number)
+        id_col_name = self._getIdColOrDefault()
+        dataset = dataset.withColumnRenamed(id_col_name, alias.row_number)
 
         select_cols.append(alias.row_number)
 
@@ -1179,7 +1198,7 @@ class ApproximateNearestNeighborsModel(
         )
         k = self.getK()
 
-        query_id_col_name = f"query_{self.getIdCol()}"
+        query_id_col_name = f"query_{self._getIdColOrDefault()}"
 
         ascending = False if self.getMetric() == "inner_product" else True
 
@@ -1221,7 +1240,7 @@ class ApproximateNearestNeighborsModel(
         row_number_col = alias.row_number
         input_col, input_cols = self._get_input_columns()
         assert input_col is not None or input_cols is not None
-        id_col_name = self.getIdCol()
+        id_col_name = self._getIdColOrDefault()
 
         bcast_qids = self.bcast_qids
         bcast_qfeatures = self.bcast_qfeatures
