@@ -87,6 +87,8 @@ Nearest Neighbors
     :template: autosummary/class_with_docs.rst
     :toctree: api
 
+    ApproximateNearestNeighbors
+    ApproximateNearestNeighborsModel
     NearestNeighbors
     NearestNeighborsModel
 
