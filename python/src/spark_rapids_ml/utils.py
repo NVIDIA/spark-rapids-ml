@@ -56,7 +56,17 @@ def _unsupported_methods_attributes(clazz: Any) -> Set[str]:
         _unsupported_methods: List[str] = sum(
             [_method_names_from_param(k) for k in _unsupported_params], []
         )
-        return set(_unsupported_params + _unsupported_methods)
+        methods_and_functions = inspect.getmembers(
+            clazz,
+            predicate=lambda member: inspect.isfunction(member)
+            or inspect.ismethod(member),
+        )
+        _other_unsupported = [
+            entry[0]
+            for entry in methods_and_functions
+            if entry and (entry[1].__doc__) == "Unsupported."
+        ]
+        return set(_unsupported_params + _unsupported_methods + _other_unsupported)
     else:
         return set()
 
