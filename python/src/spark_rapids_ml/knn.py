@@ -353,14 +353,14 @@ class NearestNeighbors(
     def save(self, path: str) -> None:
         """Unsupported."""
         raise NotImplementedError(
-            "ApproximateNearestNeighbors does not support saving/loading, just re-create the estimator."
+            "NearestNeighbors does not support saving/loading, just re-create the estimator."
         )
 
     @classmethod
     def load(cls, path: str) -> MLReader:
         """Unsupported."""
         raise NotImplementedError(
-            "ApproximateNearestNeighbors does not support saving/loading, just re-create the estimator."
+            "NearestNeighbors does not support saving/loading, just re-create the estimator."
         )
 
 
@@ -466,20 +466,20 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
     def read(cls) -> MLReader:
         """Uunsupported."""
         raise NotImplementedError(
-            f"{cls} does not support loading/loading, just re-fit the estimator to re-create a model."
+            f"{cls} does not support saving/loading, just re-fit the estimator to re-create a model."
         )
 
     def save(self, path: str) -> None:
         """Unsupported."""
         raise NotImplementedError(
-            "ApproximateNearestNeighbors does not support saving/loading, just re-create the estimator."
+            f"{self.__class__} does not support saving/loading, just re-create the estimator."
         )
 
     @classmethod
     def load(cls, path: str) -> MLReader:
         """Unsupported."""
         raise NotImplementedError(
-            "ApproximateNearestNeighbors does not support saving/loading, just re-create the estimator."
+            f"{cls} does not support saving/loading, just re-create the estimator."
         )
 
 
