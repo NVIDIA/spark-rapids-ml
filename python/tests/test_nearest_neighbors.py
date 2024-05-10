@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,12 @@ from pyspark.sql import DataFrame
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
-from spark_rapids_ml.knn import NearestNeighbors
+from spark_rapids_ml.knn import (
+    ApproximateNearestNeighbors,
+    ApproximateNearestNeighborsModel,
+    NearestNeighbors,
+    NearestNeighborsModel,
+)
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -18,6 +23,9 @@ from .utils import (
     idfn,
     pyspark_supported_feature_types,
 )
+
+NNEstimator = Union[NearestNeighbors, ApproximateNearestNeighbors]
+NNModel = Union[NearestNeighborsModel, ApproximateNearestNeighborsModel]
 
 
 def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
@@ -48,9 +56,9 @@ def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
     assert nn_float32._float32_inputs
 
 
-def test_example(gpu_number: int, tmp_path: str) -> None:
-    # reduce the number of GPUs for toy dataset to avoid empty partition
-    gpu_number = min(gpu_number, 2)
+def func_test_example_no_id(
+    tmp_path: str, gpu_knn: NNEstimator
+) -> Tuple[NNEstimator, NNModel]:
 
     data = [
         ([1.0, 1.0], "a"),
@@ -79,14 +87,17 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
         data_df = spark.createDataFrame(data, schema)
         query_df = spark.createDataFrame(query, schema)
 
-        gpu_knn = NearestNeighbors(num_workers=gpu_number)
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setK(topk)
+
+        assert topk == gpu_knn.getK()
 
         with pytest.raises(NotImplementedError):
             gpu_knn.save(tmp_path + "/knn_esimator")
 
         gpu_model = gpu_knn.fit(data_df)
+
+        assert topk == gpu_knn.getK()
 
         with pytest.raises(NotImplementedError):
             gpu_model.save(tmp_path + "/knn_model")
@@ -137,7 +148,14 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
             gpu_model.transform(query_df)
 
         # test exactNearestNeighborsJoin
-        knnjoin_df = gpu_model.exactNearestNeighborsJoin(query_df, distCol="distCol")
+
+        if isinstance(gpu_knn, NearestNeighbors):
+            knnjoin_df = gpu_model.exactNearestNeighborsJoin(
+                query_df, distCol="distCol"
+            )
+        else:
+            knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
+
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -171,7 +189,7 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
         assert_knn_metadata_equal(reconstructed_knn_metadata)
         reconstructed_distances = [r.distances for r in reconstructed_rows]
         assert_distances_equal(reconstructed_distances)
-        reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
+        reconstructed_query_ids = [r.query_metadata for r in reconstructed_rows]
         assert reconstructed_query_ids == ["qa", "qb", "qc", "qd", "qe"]
 
         knnjoin_items = (
@@ -216,10 +234,31 @@ def test_example(gpu_number: int, tmp_path: str) -> None:
                 assert knnjoin_queries[i]["features"] == query[i][0]
             assert knnjoin_queries[i]["metadata"] == query[i][1]
 
+        # Test fit(dataset, ParamMap) that copies existing estimator
+        # After copy, self.isSet("idCol") becomes true. But the added id column does not exist in the dataframe
+        paramMap = gpu_knn.extractParamMap()
+        gpu_model_v2 = gpu_knn.fit(data_df, paramMap)
 
-def test_example_with_id(gpu_number: int) -> None:
+        assert gpu_knn.isSet("idCol") is False
+        assert gpu_model_v2.isSet("idCol") is True
+
+        (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
+        assert knn_df_v2.collect() == knn_df.collect()
+
+        return gpu_knn, gpu_model
+
+
+def test_example(gpu_number: int, tmp_path: str) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
+    gpu_knn = NearestNeighbors(num_workers=gpu_number)
+    func_test_example_no_id(tmp_path, gpu_knn)
+
+
+def func_test_example_with_id(
+    tmp_path: str, gpu_knn: NNEstimator
+) -> Tuple[NNEstimator, NNModel]:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
 
     data = [
         (101, [1.0, 1.0], "a"),
@@ -247,7 +286,6 @@ def test_example_with_id(gpu_number: int) -> None:
         data_df = spark.createDataFrame(data, schema)
         query_df = spark.createDataFrame(query, schema)
 
-        gpu_knn = NearestNeighbors(num_workers=gpu_number)
         gpu_knn = gpu_knn.setInputCol("features")
         gpu_knn = gpu_knn.setIdCol("id")
         gpu_knn = gpu_knn.setK(topk)
@@ -272,7 +310,13 @@ def test_example_with_id(gpu_number: int) -> None:
             assert indices[4] == [108, 107]
 
         # test exactNearestNeighborsJoin
-        knnjoin_df = gpu_model.exactNearestNeighborsJoin(query_df, distCol="distCol")
+        if isinstance(gpu_model, NearestNeighborsModel):
+            knnjoin_df = gpu_model.exactNearestNeighborsJoin(
+                query_df, distCol="distCol"
+            )
+        else:
+            knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
+
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -296,17 +340,27 @@ def test_example_with_id(gpu_number: int) -> None:
         reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
         assert reconstructed_query_ids == [201, 202, 203, 204, 205]
 
+        return (gpu_knn, gpu_model)
+
+
+def test_example_with_id(gpu_number: int, tmp_path: str) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+    gpu_knn = NearestNeighbors(num_workers=gpu_number)
+    func_test_example_no_id(tmp_path, gpu_knn)
+
 
 @pytest.mark.parametrize(
     "feature_type", pyspark_supported_feature_types
 )  # vector feature type will be converted to float32 to be compatible with cuml multi-gpu NearestNeighbors Class
 @pytest.mark.parametrize("data_shape", [(1000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
-@pytest.mark.parametrize("max_record_batch", [100, 10000])
 @pytest.mark.parametrize(
-    "batch_size", [100, 10000]
+    "max_record_batch", [pytest.param(100, marks=pytest.mark.slow), 10000]
+)
+@pytest.mark.parametrize(
+    "batch_size", [pytest.param(100, marks=pytest.mark.slow), 10000]
 )  # larger batch_size higher query throughput, yet more memory
-@pytest.mark.slow
 def test_nearest_neighbors(
     gpu_number: int,
     feature_type: str,
@@ -389,7 +443,7 @@ def test_nearest_neighbors(
         knn_model.setIdCol(item_df_withid.dtypes[0][0])
         knnjoin_df = knn_model.exactNearestNeighborsJoin(query_df_withid)
         reconstructed_knn_df = reconstruct_knn_df(
-            knnjoin_df, row_identifier_col=knn_model.getIdCol()
+            knnjoin_df, row_identifier_col=knn_model._getIdColOrDefault()
         )
         assert reconstructed_knn_df.collect() == knn_df.collect()
 
@@ -520,11 +574,16 @@ def test_lsh_spark_compat(gpu_number: int) -> None:
 
 
 def reconstruct_knn_df(
-    knnjoin_df: DataFrame, row_identifier_col: str, distCol: str = "distCol"
+    knnjoin_df: DataFrame,
+    row_identifier_col: str,
+    distCol: str = "distCol",
+    ascending: bool = True,
 ) -> DataFrame:
     """
     This function accepts the returned dataframe (denoted as knnjoin_df) of exactNearestNeighborsjoin,
     then reconstructs the returned dataframe (i.e. knn_df) of kneighbors.
+
+    Note the reconstructed knn_df does not guarantee the same indices as the original knn_df, because the distances to two neighbors can be the same.
     """
     knn_df: DataFrame = knnjoin_df.select(
         knnjoin_df[f"query_df.{row_identifier_col}"].alias(f"query_id"),
@@ -533,21 +592,25 @@ def reconstruct_knn_df(
     )
 
     def functor(pdf: pd.DataFrame) -> pd.DataFrame:
-        pdf = pdf.sort_values(by=["distance"])
+        pdf = pdf.sort_values(by=["distance"], ascending=ascending)
         indices = pdf["index"].tolist()
         distances = pdf["distance"].tolist()
         query_id = pdf[f"query_id"].tolist()[0]
 
         return pd.DataFrame(
-            {"query_id": [query_id], "indices": [indices], "distances": [distances]}
+            {
+                f"query_{row_identifier_col}": [query_id],
+                "indices": [indices],
+                "distances": [distances],
+            }
         )
 
     knn_df = knn_df.groupBy("query_id").applyInPandas(
         functor,
-        schema=f"query_id {knn_df.dtypes[0][1]}, "
+        schema=f"query_{row_identifier_col} {knn_df.dtypes[0][1]}, "
         + f"indices array<{knn_df.dtypes[1][1]}>, "
         + f"distances array<{knn_df.dtypes[2][1]}>",
     )
 
-    knn_df = knn_df.sort("query_id")
+    knn_df = knn_df.sort(f"query_{row_identifier_col}")
     return knn_df

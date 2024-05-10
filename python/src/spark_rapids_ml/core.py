@@ -85,6 +85,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import cudf
+    import cupy as cp
     from pyspark.ml._typing import ParamMap
 
 CumlT = Any
@@ -104,13 +105,16 @@ TransformInputType = Union["cudf.DataFrame", np.ndarray]
 _ConstructFunc = Callable[..., Union[CumlT, List[CumlT]]]
 
 # Function to do the inference using cuml instance constructed by _ConstructFunc
-_TransformFunc = Callable[[CumlT, TransformInputType], pd.DataFrame]
+_TransformFunc = Union[
+    Callable[[CumlT, TransformInputType], pd.DataFrame],
+    Callable[[CumlT, TransformInputType], "cp.ndarray"],
+]
 
 # Function to do evaluation based on the prediction result got from _TransformFunc
 _EvaluateFunc = Callable[
     [
         TransformInputType,  # input dataset with label column
-        TransformInputType,  # inferred dataset with prediction column
+        "cp.ndarray",  # inferred dataset with prediction column
     ],
     pd.DataFrame,
 ]
@@ -901,10 +905,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
             )
             return True
 
-        if not _is_standalone_or_localcluster(conf):
+        if "3.4.0" <= spark_version < "3.5.1" and not _is_standalone_or_localcluster(
+            conf
+        ):
             self.logger.info(
-                "Stage-level scheduling in spark-rapids-ml requires spark standalone or "
-                "local-cluster mode"
+                "For Spark %s, Stage-level scheduling in spark-rapids-ml requires spark "
+                "standalone or local-cluster mode",
+                spark_version,
             )
             return True
 
@@ -952,7 +959,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
         ss = _get_spark_session()
         sc = ss.sparkContext
 
-        if self._skip_stage_level_scheduling(ss.version, sc.getConf()):
+        if _is_local(sc) or self._skip_stage_level_scheduling(ss.version, sc.getConf()):
             return rdd
 
         # executor_cores will not be None
@@ -1342,10 +1349,17 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             )
 
             # TODO try to concatenate all the data and do the transform.
+            has_row_number = None
             for pdf in pdf_iter:
+                if has_row_number is None:
+                    has_row_number = True if alias.row_number in pdf.columns else False
+                else:
+                    assert has_row_number == (alias.row_number in pdf.columns)
+
                 for index, cuml_object in enumerate(cuml_objects):
-                    # Transform the dataset
-                    if use_sparse_array:
+                    if has_row_number:
+                        data = cuml_transform_func(cuml_object, pdf)
+                    elif use_sparse_array:
                         features = _read_csr_matrix_from_unwrapped_spark_vec(
                             pdf[select_cols]
                         )
@@ -1355,10 +1369,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     else:
                         nparray = np.array(list(pdf[select_cols[0]]), order=array_order)
                         data = cuml_transform_func(cuml_object, nparray)
+
                     # Evaluate the dataset if necessary.
                     if evaluate_func is not None:
                         data = evaluate_func(pdf, data)
                         data[pred.model_index] = index
+
                     yield data
 
         return dataset.mapInPandas(_transform_udf, schema=schema)  # type: ignore

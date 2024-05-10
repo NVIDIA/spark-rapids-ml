@@ -1,6 +1,6 @@
 #!/usr/local/env groovy
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION.
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ pipeline {
     agent {
         kubernetes {
             label "premerge-init-${BUILD_TAG}"
-            cloud 'sc-ipp-blossom-prod'
+            cloud "${common.CLOUD_NAME}"
             yaml cpuImage
         }
     }
@@ -87,7 +87,7 @@ pipeline {
 
                     def title = githubHelper.getIssue().title
                     if (title ==~ /.*\[skip ci\].*/) {
-                        githubHelper.updateCommitStatus("$BUILD_URL", "Skipped", GitHubCommitState.SUCCESS)
+                        githubHelper.updateCommitStatus("", "Skipped", GitHubCommitState.SUCCESS)
                         currentBuild.result == "SUCCESS"
                         skipped = true
                         return
@@ -107,7 +107,7 @@ pipeline {
             agent {
                 kubernetes {
                     label "premerge-docker-${BUILD_TAG}"
-                    cloud 'sc-ipp-blossom-prod'
+                    cloud "${common.CLOUD_NAME}"
                     yaml pod.getDockerBuildYAML()
                     workspaceVolume persistentVolumeClaimWorkspaceVolume(claimName: "${PVC}", readOnly: false)
                     customWorkspace "${CUSTOM_WORKSPACE}"
@@ -116,7 +116,7 @@ pipeline {
 
             steps {
                 script {
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Running - preparing", GitHubCommitState.PENDING)
+                    githubHelper.updateCommitStatus("", "Running - preparing", GitHubCommitState.PENDING)
                     checkout(
                         changelog: false,
                         poll: true,
@@ -169,7 +169,7 @@ pipeline {
             agent {
                 kubernetes {
                     label "premerge-ci-${BUILD_TAG}"
-                    cloud 'sc-ipp-blossom-prod'
+                    cloud "${common.CLOUD_NAME}"
                     yaml pod.getGPUYAML("${IMAGE_PREMERGE}", "${env.GPU_RESOURCE}", '8', '32Gi')
                     workspaceVolume persistentVolumeClaimWorkspaceVolume(claimName: "${PVC}", readOnly: false)
                     customWorkspace "${CUSTOM_WORKSPACE}"
@@ -178,7 +178,7 @@ pipeline {
 
             steps {
                 script {
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Running - tests", GitHubCommitState.PENDING)
+                    githubHelper.updateCommitStatus("", "Running - tests", GitHubCommitState.PENDING)
                     container('gpu') {
                         timeout(time: 2, unit: 'HOURS') { // step only timeout for test run
                             common.resolveIncompatibleDriverIssue(this)
@@ -198,14 +198,15 @@ pipeline {
                 }
 
                 if (currentBuild.currentResult == "SUCCESS") {
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Success", GitHubCommitState.SUCCESS)
+                    githubHelper.updateCommitStatus("", "Success", GitHubCommitState.SUCCESS)
                 } else {
                     // upload log only in case of build failure
-                    def guardWords = ["gitlab.*?\\.com", "urm.*?\\.com"]
+                    def guardWords = ["gitlab.*?\\.com", "urm.*?\\.com", "sc-ipp-*"]
                     guardWords.add("nvidia-smi(?s)(.*?)(?=git)") // hide GPU info
+                    guardWords.add("sc-ipp*") // hide cloud info
                     githubHelper.uploadLogs(this, env.JOB_NAME, env.BUILD_NUMBER, null, guardWords)
 
-                    githubHelper.updateCommitStatus("$BUILD_URL", "Fail", GitHubCommitState.FAILURE)
+                    githubHelper.updateCommitStatus("", "Fail", GitHubCommitState.FAILURE)
                 }
 
                 if (TEMP_IMAGE_BUILD) {

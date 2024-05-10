@@ -532,56 +532,107 @@ def test_num_workers_validation() -> None:
 
 def test_stage_level_scheduling() -> None:
     dummy = SparkRapidsMLDummy()
-    assert dummy._skip_stage_level_scheduling("3.3.1", SparkConf())
 
-    conf = SparkConf().setMaster("yarn")
-    assert dummy._skip_stage_level_scheduling("3.4.0", conf)
-
-    # lack of executor cores/gpu configuration => skip
-    conf = SparkConf().setMaster("spark://foo")
-    assert dummy._skip_stage_level_scheduling("3.4.0", conf)
-
-    # spark.executor.cores=1 => skip
-    conf = (
-        SparkConf()
-        .setMaster("spark://foo")
-        .set("spark.executor.cores", "1")
-        .set("spark.executor.resource.gpu.amount", "1")
-    )
-    assert dummy._skip_stage_level_scheduling("3.4.0", conf)
-
-    # spark.executor.resource.gpu.amount > 1 => skip
-    conf = (
+    standalone_conf = (
         SparkConf()
         .setMaster("spark://foo")
         .set("spark.executor.cores", "12")
-        .set("spark.executor.resource.gpu.amount", "2")
-    )
-    assert dummy._skip_stage_level_scheduling("3.4.0", conf)
-
-    # executor.gpu.amount = task.gpu.amount => skip
-    conf = (
-        SparkConf()
-        .setMaster("spark://foo")
-        .set("spark.executor.cores", "12")
-        .set("spark.executor.resource.gpu.amount", "1")
-        .set("spark.task.resource.gpu.amount", "1")
-    )
-    assert dummy._skip_stage_level_scheduling("3.4.0", conf)
-
-    conf = (
-        SparkConf()
-        .setMaster("spark://foo")
-        .set("spark.executor.cores", "12")
-        .set("spark.executor.resource.gpu.amount", "1")
-    )
-    assert not dummy._skip_stage_level_scheduling("3.4.0", conf)
-
-    conf = (
-        SparkConf()
-        .setMaster("spark://foo")
-        .set("spark.executor.cores", "12")
+        .set("spark.task.cpus", "1")
         .set("spark.executor.resource.gpu.amount", "1")
         .set("spark.task.resource.gpu.amount", "0.08")
     )
-    assert not dummy._skip_stage_level_scheduling("3.4.0", conf)
+
+    # the correct configurations should not skip stage-level scheduling
+    assert not dummy._skip_stage_level_scheduling("3.4.0", standalone_conf)
+    assert not dummy._skip_stage_level_scheduling("3.4.1", standalone_conf)
+    assert not dummy._skip_stage_level_scheduling("3.5.0", standalone_conf)
+    assert not dummy._skip_stage_level_scheduling("3.5.1", standalone_conf)
+
+    # spark version < 3.4.0
+    assert dummy._skip_stage_level_scheduling("3.3.0", standalone_conf)
+
+    # spark.executor.cores is not set
+    bad_conf = (
+        SparkConf()
+        .setMaster("spark://foo")
+        .set("spark.task.cpus", "1")
+        .set("spark.executor.resource.gpu.amount", "1")
+        .set("spark.task.resource.gpu.amount", "0.08")
+    )
+    assert dummy._skip_stage_level_scheduling("3.4.0", bad_conf)
+
+    # spark.executor.cores=1
+    bad_conf = (
+        SparkConf()
+        .setMaster("spark://foo")
+        .set("spark.executor.cores", "1")
+        .set("spark.task.cpus", "1")
+        .set("spark.executor.resource.gpu.amount", "1")
+        .set("spark.task.resource.gpu.amount", "0.08")
+    )
+    assert dummy._skip_stage_level_scheduling("3.4.0", bad_conf)
+
+    # spark.executor.resource.gpu.amount is not set
+    bad_conf = (
+        SparkConf()
+        .setMaster("spark://foo")
+        .set("spark.executor.cores", "12")
+        .set("spark.task.cpus", "1")
+        .set("spark.task.resource.gpu.amount", "0.08")
+    )
+    assert dummy._skip_stage_level_scheduling("3.4.0", bad_conf)
+
+    # spark.executor.resource.gpu.amount>1
+    bad_conf = (
+        SparkConf()
+        .setMaster("spark://foo")
+        .set("spark.executor.cores", "12")
+        .set("spark.task.cpus", "1")
+        .set("spark.executor.resource.gpu.amount", "2")
+        .set("spark.task.resource.gpu.amount", "0.08")
+    )
+    assert dummy._skip_stage_level_scheduling("3.4.0", bad_conf)
+
+    # spark.task.resource.gpu.amount is not set
+    bad_conf = (
+        SparkConf()
+        .setMaster("spark://foo")
+        .set("spark.executor.cores", "12")
+        .set("spark.task.cpus", "1")
+        .set("spark.executor.resource.gpu.amount", "1")
+    )
+    assert not dummy._skip_stage_level_scheduling("3.4.0", bad_conf)
+
+    # spark.task.resource.gpu.amount=1
+    bad_conf = (
+        SparkConf()
+        .setMaster("spark://foo")
+        .set("spark.executor.cores", "12")
+        .set("spark.task.cpus", "1")
+        .set("spark.executor.resource.gpu.amount", "1")
+        .set("spark.task.resource.gpu.amount", "1")
+    )
+    assert dummy._skip_stage_level_scheduling("3.4.0", bad_conf)
+
+    # For Yarn and K8S
+    for mode in ["yarn", "k8s://"]:
+        for gpu_amount in ["0.08", "0.2", "1.0"]:
+            conf = (
+                SparkConf()
+                .setMaster(mode)
+                .set("spark.executor.cores", "12")
+                .set("spark.task.cpus", "1")
+                .set("spark.executor.resource.gpu.amount", "1")
+                .set("spark.task.resource.gpu.amount", gpu_amount)
+            )
+            assert dummy._skip_stage_level_scheduling("3.3.0", conf)
+            assert dummy._skip_stage_level_scheduling("3.4.0", conf)
+            assert dummy._skip_stage_level_scheduling("3.4.1", conf)
+            assert dummy._skip_stage_level_scheduling("3.5.0", conf)
+
+            # This will be fixed when spark 4.0.0 is released.
+            if gpu_amount == "1.0":
+                assert dummy._skip_stage_level_scheduling("3.5.1", conf)
+            else:
+                # Starting from 3.5.1+, stage-level scheduling is working for Yarn and K8s
+                assert not dummy._skip_stage_level_scheduling("3.5.1", conf)
