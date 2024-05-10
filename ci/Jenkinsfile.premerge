@@ -1,6 +1,6 @@
 #!/usr/local/env groovy
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION.
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -201,7 +201,7 @@ pipeline {
                     githubHelper.updateCommitStatus("", "Success", GitHubCommitState.SUCCESS)
                 } else {
                     // upload log only in case of build failure
-                    def guardWords = ["gitlab.*?\\.com", "urm.*?\\.com"]
+                    def guardWords = ["gitlab.*?\\.com", "urm.*?\\.com", "sc-ipp-*"]
                     guardWords.add("nvidia-smi(?s)(.*?)(?=git)") // hide GPU info
                     guardWords.add("sc-ipp*") // hide cloud info
                     githubHelper.uploadLogs(this, env.JOB_NAME, env.BUILD_NUMBER, null, guardWords)
