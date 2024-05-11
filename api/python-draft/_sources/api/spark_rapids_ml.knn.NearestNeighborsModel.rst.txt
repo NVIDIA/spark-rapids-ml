@@ -54,16 +54,12 @@ NearestNeighborsModel
        ~NearestNeighborsModel.isDefined
        ~NearestNeighborsModel.isSet
        ~NearestNeighborsModel.kneighbors
-       ~NearestNeighborsModel.load
-       ~NearestNeighborsModel.read
-       ~NearestNeighborsModel.save
        ~NearestNeighborsModel.set
        ~NearestNeighborsModel.setIdCol
        ~NearestNeighborsModel.setInputCol
        ~NearestNeighborsModel.setInputCols
        ~NearestNeighborsModel.setK
        ~NearestNeighborsModel.transform
-       ~NearestNeighborsModel.write
 
     
     
@@ -112,16 +108,12 @@ NearestNeighborsModel
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: kneighbors
-    .. automethod:: load
-    .. automethod:: read
-    .. automethod:: save
     .. automethod:: set
     .. automethod:: setIdCol
     .. automethod:: setInputCol
     .. automethod:: setInputCols
     .. automethod:: setK
     .. automethod:: transform
-    .. automethod:: write
 
     
     

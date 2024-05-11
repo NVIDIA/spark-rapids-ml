@@ -39,7 +39,6 @@ ApproximateNearestNeighborsModel
        ~ApproximateNearestNeighborsModel.clear
        ~ApproximateNearestNeighborsModel.copy
        ~ApproximateNearestNeighborsModel.cpu
-       ~ApproximateNearestNeighborsModel.exactNearestNeighborsJoin
        ~ApproximateNearestNeighborsModel.explainParam
        ~ApproximateNearestNeighborsModel.explainParams
        ~ApproximateNearestNeighborsModel.extractParamMap
@@ -58,9 +57,6 @@ ApproximateNearestNeighborsModel
        ~ApproximateNearestNeighborsModel.isDefined
        ~ApproximateNearestNeighborsModel.isSet
        ~ApproximateNearestNeighborsModel.kneighbors
-       ~ApproximateNearestNeighborsModel.load
-       ~ApproximateNearestNeighborsModel.read
-       ~ApproximateNearestNeighborsModel.save
        ~ApproximateNearestNeighborsModel.set
        ~ApproximateNearestNeighborsModel.setAlgoParams
        ~ApproximateNearestNeighborsModel.setAlgorithm
@@ -70,7 +66,6 @@ ApproximateNearestNeighborsModel
        ~ApproximateNearestNeighborsModel.setK
        ~ApproximateNearestNeighborsModel.setMetric
        ~ApproximateNearestNeighborsModel.transform
-       ~ApproximateNearestNeighborsModel.write
 
     
     
@@ -107,7 +102,6 @@ ApproximateNearestNeighborsModel
     .. automethod:: clear
     .. automethod:: copy
     .. automethod:: cpu
-    .. automethod:: exactNearestNeighborsJoin
     .. automethod:: explainParam
     .. automethod:: explainParams
     .. automethod:: extractParamMap
@@ -126,9 +120,6 @@ ApproximateNearestNeighborsModel
     .. automethod:: isDefined
     .. automethod:: isSet
     .. automethod:: kneighbors
-    .. automethod:: load
-    .. automethod:: read
-    .. automethod:: save
     .. automethod:: set
     .. automethod:: setAlgoParams
     .. automethod:: setAlgorithm
@@ -138,7 +129,6 @@ ApproximateNearestNeighborsModel
     .. automethod:: setK
     .. automethod:: setMetric
     .. automethod:: transform
-    .. automethod:: write
 
     
     

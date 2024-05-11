@@ -56,9 +56,6 @@ ApproximateNearestNeighbors
        ~ApproximateNearestNeighbors.hasParam
        ~ApproximateNearestNeighbors.isDefined
        ~ApproximateNearestNeighbors.isSet
-       ~ApproximateNearestNeighbors.load
-       ~ApproximateNearestNeighbors.read
-       ~ApproximateNearestNeighbors.save
        ~ApproximateNearestNeighbors.set
        ~ApproximateNearestNeighbors.setAlgoParams
        ~ApproximateNearestNeighbors.setAlgorithm
@@ -67,7 +64,6 @@ ApproximateNearestNeighbors
        ~ApproximateNearestNeighbors.setInputCols
        ~ApproximateNearestNeighbors.setK
        ~ApproximateNearestNeighbors.setMetric
-       ~ApproximateNearestNeighbors.write
 
     
     
@@ -121,9 +117,6 @@ ApproximateNearestNeighbors
     .. automethod:: hasParam
     .. automethod:: isDefined
     .. automethod:: isSet
-    .. automethod:: load
-    .. automethod:: read
-    .. automethod:: save
     .. automethod:: set
     .. automethod:: setAlgoParams
     .. automethod:: setAlgorithm
@@ -132,7 +125,6 @@ ApproximateNearestNeighbors
     .. automethod:: setInputCols
     .. automethod:: setK
     .. automethod:: setMetric
-    .. automethod:: write
 
     
     
