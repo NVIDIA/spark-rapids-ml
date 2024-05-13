@@ -199,6 +199,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             "transform": transform_time,
             "total_time": total_time,
             "n_neighbors": n_neighbors,
+            "fraction_sampled_queries": fraction_sampled_queries,
             "num_gpus": num_gpus,
             "num_cpus": num_cpus,
             "no_cache": no_cache,
