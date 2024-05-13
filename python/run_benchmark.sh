@@ -68,6 +68,7 @@ unset SPARK_HOME
 # data set params
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
+knn_fraction_sampled_queries=${knn_fraction_sampled_queries:-0.01}
 num_cols=${num_cols:-3000}
 num_sparse_cols=${num_sparse_cols:-3000}
 density=${density:-0.1}
@@ -186,7 +187,8 @@ if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
 
     echo "$sep algo: knn $sep"
     python ./benchmark/benchmark_runner.py knn \
-        --n_neighbors 3 \
+        --n_neighbors 20 \
+        --fraction_sampled_queries ${knn_fraction_sampled_queries} \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \

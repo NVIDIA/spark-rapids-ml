@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
@@ -22,6 +22,43 @@ from pyspark.sql import DataFrame, SparkSession
 
 from benchmark.base import BenchmarkBase
 from benchmark.utils import with_benchmark
+from spark_rapids_ml.core import (
+    EvalMetricInfo,
+    _ConstructFunc,
+    _EvaluateFunc,
+    _TransformFunc,
+    alias,
+)
+from spark_rapids_ml.knn import ApproximateNearestNeighborsModel
+
+
+class CPUNearestNeighborsModel(ApproximateNearestNeighborsModel):
+    def __init__(self, item_df: DataFrame):
+        super().__init__(item_df)
+        self._item_df_withid = self._ensureIdCol(item_df)
+
+    def _get_cuml_transform_func(
+        self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
+    ) -> Tuple[
+        _ConstructFunc,
+        _TransformFunc,
+        Optional[_EvaluateFunc],
+    ]:
+
+        self._cuml_params["algorithm"] = "brute"
+        _, _transform_internal, _ = super()._get_cuml_transform_func(
+            dataset, eval_metric_info
+        )
+
+        from sklearn.neighbors import NearestNeighbors as SKNN
+
+        n_neighbors = self.getK()
+
+        def _construct_sknn() -> SKNN:
+            nn_object = SKNN(algorithm="brute", n_neighbors=n_neighbors)
+            return nn_object
+
+        return _construct_sknn, _transform_internal, None
 
 
 class BenchmarkNearestNeighbors(BenchmarkBase):
@@ -35,6 +72,13 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
             action="store_true",
             default=False,
             help="whether to enable dataframe repartition, cache and cout outside fit function",
+        )
+
+        self._parser.add_argument(
+            "--fraction_sampled_queries",
+            type=float,
+            required=True,
+            help="the number of vectors sampled from the dataset as query vectors",
         )
 
     def run_once(
@@ -54,6 +98,8 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
         num_cpus = self.args.num_cpus
         no_cache = self.args.no_cache
         n_neighbors = self.args.n_neighbors
+        fraction_sampled_queries = self.args.fraction_sampled_queries
+        seed = 0
 
         func_start_time = time.time()
 
@@ -65,22 +111,27 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
         if not is_single_col:
             input_cols = [c for c in train_df.schema.names]
 
+        query_df = train_df.sample(
+            withReplacement=False, fraction=fraction_sampled_queries, seed=seed
+        )
+
+        def cache_df(dfA: DataFrame, dfB: DataFrame) -> Tuple[DataFrame, DataFrame]:
+            dfA = dfA.cache()
+            dfB = dfB.cache()
+            dfA.count()
+            dfB.count()
+            return (dfA, dfB)
+
+        params = self.class_params
         if num_gpus > 0:
             from spark_rapids_ml.knn import NearestNeighbors, NearestNeighborsModel
 
             assert num_cpus <= 0
             if not no_cache:
-
-                def gpu_cache_df(df: DataFrame) -> DataFrame:
-                    df = df.repartition(num_gpus).cache()
-                    df.count()
-                    return df
-
-                train_df, prepare_time = with_benchmark(
-                    "prepare dataset", lambda: gpu_cache_df(train_df)
+                train_df, query_df, prepare_time = with_benchmark(
+                    "prepare dataset", lambda: cache_df(train_df, query_df)
                 )
 
-            params = self.class_params
             gpu_estimator = NearestNeighbors(
                 num_workers=num_gpus, verbose=self.args.verbose, **params
             )
@@ -100,67 +151,44 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
                 return knn_df
 
             knn_df, transform_time = with_benchmark(
-                "gpu transform", lambda: transform(gpu_model, train_df)
+                "gpu transform", lambda: transform(gpu_model, query_df)
             )
             total_time = round(time.time() - func_start_time, 2)
             print(f"gpu total took: {total_time} sec")
 
         if num_cpus > 0:
             assert num_gpus <= 0
-            if is_array_col:
-                vector_df = train_df.select(
-                    array_to_vector(train_df[first_col]).alias(first_col)
-                )
-            elif not is_vector_col:
-                vector_assembler = VectorAssembler(outputCol="features").setInputCols(
-                    input_cols
-                )
-                vector_df = vector_assembler.transform(train_df).drop(*input_cols)
-                first_col = "features"
-            else:
-                vector_df = train_df
-
             if not no_cache:
-
-                def cpu_cache_df(df: DataFrame) -> DataFrame:
-                    df = df.cache()
-                    df.count()
-                    return df
-
-                vector_df, prepare_time = with_benchmark(
-                    "prepare dataset", lambda: cpu_cache_df(vector_df)
+                train_df, query_df, prepare_time = with_benchmark(
+                    "prepare dataset", lambda: cache_df(train_df, query_df)
                 )
 
-            from pyspark.ml.feature import (
-                BucketedRandomProjectionLSH,
-                BucketedRandomProjectionLSHModel,
-            )
+            def get_cpu_model() -> CPUNearestNeighborsModel:
+                cpu_estimator = CPUNearestNeighborsModel(train_df).setK(
+                    params["n_neighbors"]
+                )
 
-            cpu_estimator = BucketedRandomProjectionLSH(
-                inputCol=first_col,
-                outputCol="hashes",
-                bucketLength=2.0,
-                numHashTables=3,
-            )
+                return cpu_estimator
 
             cpu_model, fit_time = with_benchmark(
-                "cpu fit time", lambda: cpu_estimator.fit(vector_df)
+                "cpu fit time", lambda: get_cpu_model()
             )
 
-            def cpu_transform(
-                model: BucketedRandomProjectionLSHModel, df: DataFrame, n_neighbors: int
-            ) -> None:
-                queries = df.collect()
-                for row in queries:
-                    query = row[first_col]
-                    knn_df = model.approxNearestNeighbors(
-                        dataset=df, key=query, numNearestNeighbors=n_neighbors
-                    )
-                    knn_df.count()
+            if is_single_col:
+                cpu_model = cpu_model.setInputCol(first_col)
+            else:
+                cpu_model = cpu_model.setInputCols(input_cols)
 
-            _, transform_time = with_benchmark(
+            def cpu_transform(
+                model: CPUNearestNeighborsModel, df: DataFrame
+            ) -> DataFrame:
+                (item_df_withid, query_df_withid, knn_df) = model.kneighbors(df)
+                knn_df.count()
+                return knn_df
+
+            knn_df, transform_time = with_benchmark(
                 "cpu transform",
-                lambda: cpu_transform(cpu_model, vector_df, n_neighbors),
+                lambda: cpu_transform(cpu_model, query_df),
             )
 
             total_time = round(time.time() - func_start_time, 2)
