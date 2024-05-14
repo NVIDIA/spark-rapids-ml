@@ -198,6 +198,21 @@ if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
         --spark_confs "spark.driver.maxResultSize=0" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
+
+    echo "$sep algo: approx knn $sep"
+    python ./benchmark/benchmark_runner.py knn_approx \
+        --n_neighbors 20 \
+        --fraction_sampled_queries ${knn_fraction_sampled_queries} \
+        --num_gpus $num_gpus \
+        --num_cpus $num_cpus \
+        --no_cache \
+        --num_runs $num_runs \
+        --train_path "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
+        --report_path "report_knn_${cluster_type}.csv" \
+        --spark_confs "spark.driver.maxResultSize=0" \
+        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=0" \
+        $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
 fi
 
 # Linear Regression
