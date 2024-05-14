@@ -35,7 +35,10 @@ from spark_rapids_ml.knn import ApproximateNearestNeighborsModel
 class CPUNearestNeighborsModel(ApproximateNearestNeighborsModel):
     def __init__(self, item_df: DataFrame):
         super().__init__(item_df)
-        self._item_df_withid = self._ensureIdCol(item_df)
+
+    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+        self._item_df_withid = self._ensureIdCol(self._item_df_withid)
+        return super().kneighbors(query_df)
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
@@ -44,7 +47,6 @@ class CPUNearestNeighborsModel(ApproximateNearestNeighborsModel):
         _TransformFunc,
         Optional[_EvaluateFunc],
     ]:
-
         self._cuml_params["algorithm"] = "brute"
         _, _transform_internal, _ = super()._get_cuml_transform_func(
             dataset, eval_metric_info
