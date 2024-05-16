@@ -1,0 +1,1128 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>DBSCAN &#8212; spark-rapids-ml 24.04.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.1/css/all.min.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.1/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.1/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.1/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="https://docs.rapids.ai/assets/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae" />
+  <script src="../_static/vendor/fontawesome/6.5.1/js/all.min.js?digest=8d27b9dea8ad943066ae"></script>
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script defer="defer" src="https://docs.rapids.ai/assets/js/custom.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/spark_rapids_ml.clustering.DBSCAN';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="DBSCANModel" href="spark_rapids_ml.clustering.DBSCANModel.html" />
+    <link rel="prev" title="RandomForestClassificationModel" href="spark_rapids_ml.classification.RandomForestClassificationModel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a id="pst-skip-link" class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">spark-rapids-ml 24.04.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../spark_rapids_ml.html">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
+      <span class="fa-solid fa-outdent"></span>
+    </label>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item current active">
+                      <a class="nav-link nav-internal" href="../spark_rapids_ml.html">
+                        Spark Rapids ML
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCA.html">PCA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="feature/spark_rapids_ml.feature.PCAModel.html">PCAModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegression.html">LogisticRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.LogisticRegressionModel.html">LogisticRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassifier.html">RandomForestClassifier</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
+</ul>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">DBSCAN</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.DBSCANModel.html">DBSCANModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.LinearRegression.html">LinearRegression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.LinearRegressionModel.html">LinearRegressionModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressor.html">RandomForestRegressor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressionModel.html">RandomForestRegressionModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.ApproximateNearestNeighbors.html">ApproximateNearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.ApproximateNearestNeighborsModel.html">ApproximateNearestNeighborsModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighbors.html">NearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighborsModel.html">NearestNeighborsModel</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.tuning.CrossValidator.html">CrossValidator</a></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAP.html">UMAP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.umap.UMAPModel.html">UMAPModel</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../spark_rapids_ml.html" class="nav-link">Spark Rapids ML</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">DBSCAN</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="dbscan">
+<h1>DBSCAN<a class="headerlink" href="#dbscan" title="Permalink to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.clustering.</span></span><span class="sig-name descname"><span class="pre">DBSCAN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">featuresCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'features'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predictionCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'prediction'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'euclidean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'brute'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_mbytes_per_batch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_core_sample_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN" title="Permalink to this definition">#</a></dt>
+<dd><p>The Density-Based Spatial Clustering of Applications with Noise (DBSCAN) is a non-parametric
+data clustering algorithm based on data density. It groups points close to each other that form a dense cluster
+and mark the far-away points as noise and exclude them from all clusters.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
+<li><p>When the value is a list of strings, the feature columns must be numeric types.</p></li>
+</ul>
+</div></blockquote>
+</dd>
+<dt><strong>predictionCol: str</strong></dt><dd><p>the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.</p>
+</dd>
+<dt><strong>num_workers:</strong></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task
+running on one GPU. If not set, spark-rapids-ml tries to infer the number of
+cuML workers (i.e. GPUs in cluster) from the Spark environment.</p>
+</dd>
+<dt><strong>eps: float (default = 0.5)</strong></dt><dd><p>The maximum distance between 2 points such they reside in the same neighborhood.</p>
+</dd>
+<dt><strong>min_samples: int (default = 5)</strong></dt><dd><p>The number of samples in a neighborhood such that this group can be considered as
+an important core point (including the point itself).</p>
+</dd>
+<dt><strong>metric: {‘euclidean’, ‘cosine’}, default = ‘euclidean’</strong></dt><dd><p>The metric to use when calculating distances between points.
+Spark Rapids ML does not support the ‘precomputed’ mode from sklearn and cuML, please use those libraries instead</p>
+</dd>
+<dt><strong>algorithm: {‘brute’, ‘rbc’}, default = ‘brute’</strong></dt><dd><p>The algorithm to be used by for nearest neighbor computations.</p>
+</dd>
+<dt><strong>verbose: int or boolean (default=False)</strong></dt><dd><dl class="simple">
+<dt>Logging level.</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code> - Disables all log messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code> - Enables only critical messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">2</span></code> - Enables all messages up to and including errors.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">3</span></code> - Enables all messages up to and including warnings.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">4</span> <span class="pre">or</span> <span class="pre">False</span></code> - Enables all messages up to and including information messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">5</span> <span class="pre">or</span> <span class="pre">True</span></code> - Enables all messages up to and including debug messages.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">6</span></code> - Enables all messages up to and including trace messages.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt><strong>max_mbytes_per_batch(optional): int</strong></dt><dd><p>Calculate batch size using no more than this number of megabytes for the pairwise distance computation.
+This enables the trade-off between runtime and memory usage for making the N^2 pairwise distance computations more tractable for large numbers of samples.
+If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device.</p>
+</dd>
+<dt><strong>calc_core_sample_indices(optional): boolean (default = True)</strong></dt><dd><p>Indicates whether the indices of the core samples should be calculated.
+Setting this to False will avoid unnecessary kernel launches</p>
+</dd>
+<dt><strong>idCol: str (default = ‘unique_id’)</strong></dt><dd><p>The internal unique id column name for label matching, will not reveal in the output.
+Need to be set to a name that does not conflict with an existing column name in the original input data.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.clustering</span> <span class="kn">import</span> <span class="n">DBSCAN</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],),</span>
+<span class="gp">... </span>       <span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],),</span>
+<span class="gp">... </span>       <span class="p">([</span><span class="mf">9.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">],),</span>
+<span class="gp">... </span>       <span class="p">([</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">],),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">+----------+</span>
+<span class="go">|  features|</span>
+<span class="go">+----------+</span>
+<span class="go">|[0.0, 0.0]|</span>
+<span class="go">|[1.0, 1.0]|</span>
+<span class="go">|[9.0, 8.0]|</span>
+<span class="go">|[8.0, 9.0]|</span>
+<span class="go">+----------+</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_dbscan</span> <span class="o">=</span> <span class="n">DBSCAN</span><span class="p">(</span><span class="n">eps</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;euclidean&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setFeaturesCol</span><span class="p">(</span><span class="s2">&quot;features&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_dbscan</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span><span class="o">.</span><span class="n">setPredictionCol</span><span class="p">(</span><span class="s2">&quot;prediction&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">transformed</span> <span class="o">=</span> <span class="n">gpu_model</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">transformed</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">+----------+----------+</span>
+<span class="go">|  features|prediction|</span>
+<span class="go">+----------+----------+</span>
+<span class="go">|[0.0, 0.0]|         0|</span>
+<span class="go">|[1.0, 1.0]|         0|</span>
+<span class="go">|[9.0, 8.0]|         1|</span>
+<span class="go">|[8.0, 9.0]|         1|</span>
+<span class="go">+----------+----------+</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_dbscan</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;/tmp/dbscan&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;/tmp/dbscan_model&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># vector column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.clustering</span> <span class="kn">import</span> <span class="n">DBSCAN</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]),),</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]),),</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">9.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">]),),</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">([</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">]),),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_dbscan</span> <span class="o">=</span> <span class="n">DBSCAN</span><span class="p">(</span><span class="n">eps</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;euclidean&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setFeaturesCol</span><span class="p">(</span><span class="s2">&quot;features&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_dbscan</span><span class="o">.</span><span class="n">getFeaturesCol</span><span class="p">()</span>
+<span class="go">&#39;features&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_dbscan</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># multi-column input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="mf">9.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">),</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">),]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;f1&quot;</span><span class="p">,</span> <span class="s2">&quot;f2&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_dbscan</span> <span class="o">=</span> <span class="n">DBSCAN</span><span class="p">(</span><span class="n">eps</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;euclidean&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setFeaturesCols</span><span class="p">([</span><span class="s2">&quot;f1&quot;</span><span class="p">,</span> <span class="s2">&quot;f2&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_dbscan</span><span class="o">.</span><span class="n">getFeaturesCols</span><span class="p">()</span>
+<span class="go">[&#39;f1&#39;, &#39;f2&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gpu_model</span> <span class="o">=</span> <span class="n">gpu_dbscan</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.clear" title="spark_rapids_ml.clustering.DBSCAN.clear"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code></a>(param)</p></td>
+<td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.copy" title="spark_rapids_ml.clustering.DBSCAN.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.explainParam" title="spark_rapids_ml.clustering.DBSCAN.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
+<td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.explainParams" title="spark_rapids_ml.clustering.DBSCAN.explainParams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParams</span></code></a>()</p></td>
+<td><p>Returns the documentation of all params with their optionally default values and user-supplied values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.extractParamMap" title="spark_rapids_ml.clustering.DBSCAN.extractParamMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extractParamMap</span></code></a>([extra])</p></td>
+<td><p>Extracts the embedded default param values and user-supplied values, and then merges them with extra values from input into a flat param map, where the latter value is used if there exist conflicts, i.e., with ordering: default param values &lt; user-supplied values &lt; extra.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.fit" title="spark_rapids_ml.clustering.DBSCAN.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(dataset[, params])</p></td>
+<td><p>Fits a model to the input dataset with optional parameters.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.fitMultiple" title="spark_rapids_ml.clustering.DBSCAN.fitMultiple"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fitMultiple</span></code></a>(dataset, paramMaps)</p></td>
+<td><p>Fits multiple models to the input dataset for all param maps in a single pass.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getAlgorithm" title="spark_rapids_ml.clustering.DBSCAN.getAlgorithm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getAlgorithm</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getCalcCoreSampleIndices" title="spark_rapids_ml.clustering.DBSCAN.getCalcCoreSampleIndices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getCalcCoreSampleIndices</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getEps" title="spark_rapids_ml.clustering.DBSCAN.getEps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getEps</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getFeaturesCol" title="spark_rapids_ml.clustering.DBSCAN.getFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCol</span></code></a>()</p></td>
+<td><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol" title="spark_rapids_ml.clustering.DBSCAN.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getFeaturesCols" title="spark_rapids_ml.clustering.DBSCAN.getFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getFeaturesCols</span></code></a>()</p></td>
+<td><p>Gets the value of featuresCols or its default value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getIdCol" title="spark_rapids_ml.clustering.DBSCAN.getIdCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getIdCol</span></code></a>()</p></td>
+<td><p>Gets the value of <cite>idCol</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getMaxMbytesPerBatch" title="spark_rapids_ml.clustering.DBSCAN.getMaxMbytesPerBatch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMaxMbytesPerBatch</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getMetric" title="spark_rapids_ml.clustering.DBSCAN.getMetric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMetric</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getMinSamples" title="spark_rapids_ml.clustering.DBSCAN.getMinSamples"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getMinSamples</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getOrDefault" title="spark_rapids_ml.clustering.DBSCAN.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
+<td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.getParam" title="spark_rapids_ml.clustering.DBSCAN.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
+<td><p>Gets a param by its name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.hasDefault" title="spark_rapids_ml.clustering.DBSCAN.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
+<td><p>Checks whether a param has a default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.hasParam" title="spark_rapids_ml.clustering.DBSCAN.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
+<td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.isDefined" title="spark_rapids_ml.clustering.DBSCAN.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.isSet" title="spark_rapids_ml.clustering.DBSCAN.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
+<td><p>Checks whether a param is explicitly set by user.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.load" title="spark_rapids_ml.clustering.DBSCAN.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
+<td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.read" title="spark_rapids_ml.clustering.DBSCAN.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.save" title="spark_rapids_ml.clustering.DBSCAN.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
+<td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.set" title="spark_rapids_ml.clustering.DBSCAN.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
+<td><p>Sets a parameter in the embedded param map.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setAlgorithm" title="spark_rapids_ml.clustering.DBSCAN.setAlgorithm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setAlgorithm</span></code></a>(value)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setCalcCoreSampleIndices" title="spark_rapids_ml.clustering.DBSCAN.setCalcCoreSampleIndices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setCalcCoreSampleIndices</span></code></a>(value)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setEps" title="spark_rapids_ml.clustering.DBSCAN.setEps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setEps</span></code></a>(value)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setFeaturesCol" title="spark_rapids_ml.clustering.DBSCAN.setFeaturesCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol" title="spark_rapids_ml.clustering.DBSCAN.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setFeaturesCols" title="spark_rapids_ml.clustering.DBSCAN.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setIdCol" title="spark_rapids_ml.clustering.DBSCAN.setIdCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setIdCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <cite>idCol</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setMaxMbytesPerBatch" title="spark_rapids_ml.clustering.DBSCAN.setMaxMbytesPerBatch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMaxMbytesPerBatch</span></code></a>(value)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setMetric" title="spark_rapids_ml.clustering.DBSCAN.setMetric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMetric</span></code></a>(value)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setMinSamples" title="spark_rapids_ml.clustering.DBSCAN.setMinSamples"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMinSamples</span></code></a>(value)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.setPredictionCol" title="spark_rapids_ml.clustering.DBSCAN.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<td><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.write" title="spark_rapids_ml.clustering.DBSCAN.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable table autosummary">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.algorithm" title="spark_rapids_ml.clustering.DBSCAN.algorithm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">algorithm</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.calc_core_sample_indices" title="spark_rapids_ml.clustering.DBSCAN.calc_core_sample_indices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calc_core_sample_indices</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.cuml_params" title="spark_rapids_ml.clustering.DBSCAN.cuml_params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cuml_params</span></code></a></p></td>
+<td><p>Returns the dictionary of parameters intended for the underlying cuML class.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.eps" title="spark_rapids_ml.clustering.DBSCAN.eps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">eps</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol" title="spark_rapids_ml.clustering.DBSCAN.featuresCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.idCol" title="spark_rapids_ml.clustering.DBSCAN.idCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">idCol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.max_mbytes_per_batch" title="spark_rapids_ml.clustering.DBSCAN.max_mbytes_per_batch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_mbytes_per_batch</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.metric" title="spark_rapids_ml.clustering.DBSCAN.metric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">metric</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.min_samples" title="spark_rapids_ml.clustering.DBSCAN.min_samples"><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_samples</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.num_workers" title="spark_rapids_ml.clustering.DBSCAN.num_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_workers</span></code></a></p></td>
+<td><p>Number of cuML workers, where each cuML worker corresponds to one Spark task running on one GPU.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.params" title="spark_rapids_ml.clustering.DBSCAN.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
+<td><p>Returns all params ordered by name.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods Documentation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.clear" title="Permalink to this definition">#</a></dt>
+<dd><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.copy" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.explainParam">
+<span class="sig-name descname"><span class="pre">explainParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.explainParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Explains a single param and returns its name, doc, and optional
+default value and user-supplied value in a string.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.explainParams">
+<span class="sig-name descname"><span class="pre">explainParams</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.explainParams" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the documentation of all params with their optionally
+default values and user-supplied values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.extractParamMap">
+<span class="sig-name descname"><span class="pre">extractParamMap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ParamMap</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.extractParamMap" title="Permalink to this definition">#</a></dt>
+<dd><p>Extracts the embedded default param values and user-supplied
+values, and then merges them with extra values from input into
+a flat param map, where the latter value is used if there exist
+conflicts, i.e., with ordering: default param values &lt;
+user-supplied values &lt; extra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">dict, optional</span></dt><dd><p>extra param values</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict</dt><dd><p>merged param map</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">M</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">M</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.fit" title="Permalink to this definition">#</a></dt>
+<dd><p>Fits a model to the input dataset with optional parameters.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version 1.3.0.</span></p>
+</div>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>dataset</strong><span class="classifier"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></span></dt><dd><p>input dataset.</p>
+</dd>
+<dt><strong>params</strong><span class="classifier">dict or list or tuple, optional</span></dt><dd><p>an optional param map that overrides embedded params. If a list/tuple of
+param maps is given, this calls fit on each param map and returns a list of
+models.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">Transformer</span></code> or a list of <code class="xref py py-class docutils literal notranslate"><span class="pre">Transformer</span></code></dt><dd><p>fitted model(s)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.fitMultiple">
+<span class="sig-name descname"><span class="pre">fitMultiple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paramMaps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">_CumlModel</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.fitMultiple" title="Permalink to this definition">#</a></dt>
+<dd><p>Fits multiple models to the input dataset for all param maps in a single pass.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>dataset</strong><span class="classifier"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspark.sql.DataFrame</span></code></a></span></dt><dd><p>input dataset.</p>
+</dd>
+<dt><strong>paramMaps</strong><span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.Sequence</span></code></span></dt><dd><p>A Sequence of param maps.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><code class="xref py py-class docutils literal notranslate"><span class="pre">_FitMultipleIterator</span></code></dt><dd><p>A thread safe iterable which contains one model for each param map. Each
+call to <cite>next(modelIterator)</cite> will return <cite>(index, model)</cite> where model was fit
+using <cite>paramMaps[index]</cite>. <cite>index</cite> values may not be sequential.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getAlgorithm">
+<span class="sig-name descname"><span class="pre">getAlgorithm</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getAlgorithm" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getCalcCoreSampleIndices">
+<span class="sig-name descname"><span class="pre">getCalcCoreSampleIndices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getCalcCoreSampleIndices" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getEps">
+<span class="sig-name descname"><span class="pre">getEps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getEps" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getFeaturesCol">
+<span class="sig-name descname"><span class="pre">getFeaturesCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol" title="spark_rapids_ml.clustering.DBSCAN.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getFeaturesCols">
+<span class="sig-name descname"><span class="pre">getFeaturesCols</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getFeaturesCols" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of featuresCols or its default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getIdCol">
+<span class="sig-name descname"><span class="pre">getIdCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getIdCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of <cite>idCol</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getMaxMbytesPerBatch">
+<span class="sig-name descname"><span class="pre">getMaxMbytesPerBatch</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getMaxMbytesPerBatch" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getMetric">
+<span class="sig-name descname"><span class="pre">getMetric</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getMetric" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getMinSamples">
+<span class="sig-name descname"><span class="pre">getMinSamples</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getMinSamples" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getOrDefault">
+<span class="sig-name descname"><span class="pre">getOrDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getOrDefault" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets the value of a param in the user-supplied param map or its
+default value. Raises an error if neither is set.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.getParam">
+<span class="sig-name descname"><span class="pre">getParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.getParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Gets a param by its name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.hasDefault">
+<span class="sig-name descname"><span class="pre">hasDefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.hasDefault" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param has a default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.hasParam">
+<span class="sig-name descname"><span class="pre">hasParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paramName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.hasParam" title="Permalink to this definition">#</a></dt>
+<dd><p>Tests whether this instance contains a param with a given
+(string) name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.isDefined">
+<span class="sig-name descname"><span class="pre">isDefined</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.isDefined" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param is explicitly set by user or has
+a default value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.isSet">
+<span class="sig-name descname"><span class="pre">isSet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.isSet" title="Permalink to this definition">#</a></dt>
+<dd><p>Checks whether a param is explicitly set by user.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.load">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RL</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.load" title="Permalink to this definition">#</a></dt>
+<dd><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.read">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLReader.html#pyspark.ml.util.MLReader" title="(in PySpark vmaster)"><span class="pre">MLReader</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.read" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.save" title="Permalink to this definition">#</a></dt>
+<dd><p>Save this ML instance to the given path, a shortcut of ‘write().save(path)’.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.set" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets a parameter in the embedded param map.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setAlgorithm">
+<span class="sig-name descname"><span class="pre">setAlgorithm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setAlgorithm" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setCalcCoreSampleIndices">
+<span class="sig-name descname"><span class="pre">setCalcCoreSampleIndices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setCalcCoreSampleIndices" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setEps">
+<span class="sig-name descname"><span class="pre">setEps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setEps" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setFeaturesCol">
+<span class="sig-name descname"><span class="pre">setFeaturesCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setFeaturesCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol" title="spark_rapids_ml.clustering.DBSCAN.featuresCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCol</span></code></a> or <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setFeaturesCols">
+<span class="sig-name descname"><span class="pre">setFeaturesCols</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setFeaturesCols" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>. Used when input vectors are stored as multiple feature columns.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setIdCol">
+<span class="sig-name descname"><span class="pre">setIdCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setIdCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <cite>idCol</cite>. If not set, an id column will be added with column name <cite>unique_id</cite>. The id column is used to specify dbscan vectors by associated id value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setMaxMbytesPerBatch">
+<span class="sig-name descname"><span class="pre">setMaxMbytesPerBatch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setMaxMbytesPerBatch" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setMetric">
+<span class="sig-name descname"><span class="pre">setMetric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setMetric" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setMinSamples">
+<span class="sig-name descname"><span class="pre">setMinSamples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setMinSamples" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.setPredictionCol">
+<span class="sig-name descname"><span class="pre">setPredictionCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.setPredictionCol" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLWriter.html#pyspark.ml.util.MLWriter" title="(in PySpark vmaster)"><span class="pre">MLWriter</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.write" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Attributes Documentation</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.algorithm">
+<span class="sig-name descname"><span class="pre">algorithm</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='algorithm',</span> <span class="pre">doc='The</span> <span class="pre">algorithm</span> <span class="pre">to</span> <span class="pre">be</span> <span class="pre">used</span> <span class="pre">by</span> <span class="pre">for</span> <span class="pre">nearest</span> <span class="pre">neighbor</span> <span class="pre">computations.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.algorithm" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.calc_core_sample_indices">
+<span class="sig-name descname"><span class="pre">calc_core_sample_indices</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='calc_core_sample_indices',</span> <span class="pre">doc='Indicates</span> <span class="pre">whether</span> <span class="pre">the</span> <span class="pre">indices</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">core</span> <span class="pre">samples</span> <span class="pre">should</span> <span class="pre">be</span> <span class="pre">calculated.Setting</span> <span class="pre">this</span> <span class="pre">to</span> <span class="pre">False</span> <span class="pre">will</span> <span class="pre">avoid</span> <span class="pre">unnecessary</span> <span class="pre">kernel</span> <span class="pre">launches')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.calc_core_sample_indices" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.cuml_params">
+<span class="sig-name descname"><span class="pre">cuml_params</span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.cuml_params" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the dictionary of parameters intended for the underlying cuML class.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.eps">
+<span class="sig-name descname"><span class="pre">eps</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='eps',</span> <span class="pre">doc='The</span> <span class="pre">maximum</span> <span class="pre">distance</span> <span class="pre">between</span> <span class="pre">2</span> <span class="pre">points</span> <span class="pre">such</span> <span class="pre">they</span> <span class="pre">reside</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">same</span> <span class="pre">neighborhood.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.eps" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.featuresCol">
+<span class="sig-name descname"><span class="pre">featuresCol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='featuresCol',</span> <span class="pre">doc='features</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.featuresCols">
+<span class="sig-name descname"><span class="pre">featuresCols</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='featuresCols',</span> <span class="pre">doc='features</span> <span class="pre">column</span> <span class="pre">names</span> <span class="pre">for</span> <span class="pre">multi-column</span> <span class="pre">input.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.idCol">
+<span class="sig-name descname"><span class="pre">idCol</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='idCol',</span> <span class="pre">doc='id</span> <span class="pre">column</span> <span class="pre">name.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.idCol" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.max_mbytes_per_batch">
+<span class="sig-name descname"><span class="pre">max_mbytes_per_batch</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_mbytes_per_batch',</span> <span class="pre">doc='Calculate</span> <span class="pre">batch</span> <span class="pre">size</span> <span class="pre">using</span> <span class="pre">no</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">this</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">megabytes</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">pairwise</span> <span class="pre">distance</span> <span class="pre">computation.This</span> <span class="pre">enables</span> <span class="pre">the</span> <span class="pre">trade-off</span> <span class="pre">between</span> <span class="pre">runtime</span> <span class="pre">and</span> <span class="pre">memory</span> <span class="pre">usage</span> <span class="pre">for</span> <span class="pre">making</span> <span class="pre">the</span> <span class="pre">N^2</span> <span class="pre">pairwise</span> <span class="pre">distance</span> <span class="pre">computations</span> <span class="pre">more</span> <span class="pre">tractable</span> <span class="pre">for</span> <span class="pre">large</span> <span class="pre">numbers</span> <span class="pre">of</span> <span class="pre">samples.If</span> <span class="pre">you</span> <span class="pre">are</span> <span class="pre">experiencing</span> <span class="pre">out</span> <span class="pre">of</span> <span class="pre">memory</span> <span class="pre">errors</span> <span class="pre">when</span> <span class="pre">running</span> <span class="pre">DBSCAN,</span> <span class="pre">you</span> <span class="pre">can</span> <span class="pre">set</span> <span class="pre">this</span> <span class="pre">value</span> <span class="pre">based</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">memory</span> <span class="pre">size</span> <span class="pre">of</span> <span class="pre">your</span> <span class="pre">device.')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.max_mbytes_per_batch" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.metric">
+<span class="sig-name descname"><span class="pre">metric</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='metric',</span> <span class="pre">doc=&quot;The</span> <span class="pre">metric</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">when</span> <span class="pre">calculating</span> <span class="pre">distances</span> <span class="pre">between</span> <span class="pre">points.Spark</span> <span class="pre">Rapids</span> <span class="pre">ML</span> <span class="pre">does</span> <span class="pre">not</span> <span class="pre">support</span> <span class="pre">the</span> <span class="pre">'precomputed'</span> <span class="pre">mode</span> <span class="pre">from</span> <span class="pre">sklearn</span> <span class="pre">and</span> <span class="pre">cuML,</span> <span class="pre">please</span> <span class="pre">use</span> <span class="pre">those</span> <span class="pre">libraries</span> <span class="pre">instead.&quot;)</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.metric" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.min_samples">
+<span class="sig-name descname"><span class="pre">min_samples</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='min_samples',</span> <span class="pre">doc='The</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">samples</span> <span class="pre">in</span> <span class="pre">a</span> <span class="pre">neighborhood</span> <span class="pre">such</span> <span class="pre">that</span> <span class="pre">this</span> <span class="pre">group</span> <span class="pre">can</span> <span class="pre">be</span> <span class="pre">considered</span> <span class="pre">as</span> <span class="pre">an</span> <span class="pre">important</span> <span class="pre">core</span> <span class="pre">point</span> <span class="pre">(including</span> <span class="pre">the</span> <span class="pre">point</span> <span class="pre">itself).')</span></em><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.min_samples" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.num_workers">
+<span class="sig-name descname"><span class="pre">num_workers</span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.num_workers" title="Permalink to this definition">#</a></dt>
+<dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task
+running on one GPU.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.DBSCAN.params">
+<span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#spark_rapids_ml.clustering.DBSCAN.params" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns all params ordered by name. The default implementation
+uses <code class="xref py py-func docutils literal notranslate"><span class="pre">dir()</span></code> to get all attributes of type
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Param</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="spark_rapids_ml.classification.RandomForestClassificationModel.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">RandomForestClassificationModel</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="spark_rapids_ml.clustering.DBSCANModel.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">DBSCANModel</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN"><code class="docutils literal notranslate"><span class="pre">DBSCAN</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.clear"><code class="docutils literal notranslate"><span class="pre">DBSCAN.clear()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.copy"><code class="docutils literal notranslate"><span class="pre">DBSCAN.copy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.explainParam"><code class="docutils literal notranslate"><span class="pre">DBSCAN.explainParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.explainParams"><code class="docutils literal notranslate"><span class="pre">DBSCAN.explainParams()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.extractParamMap"><code class="docutils literal notranslate"><span class="pre">DBSCAN.extractParamMap()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.fit"><code class="docutils literal notranslate"><span class="pre">DBSCAN.fit()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.fitMultiple"><code class="docutils literal notranslate"><span class="pre">DBSCAN.fitMultiple()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getAlgorithm"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getAlgorithm()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getCalcCoreSampleIndices"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getCalcCoreSampleIndices()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getEps"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getEps()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getFeaturesCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getFeaturesCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getFeaturesCols"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getFeaturesCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getIdCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getIdCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getMaxMbytesPerBatch"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getMaxMbytesPerBatch()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getMetric"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getMetric()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getMinSamples"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getMinSamples()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getOrDefault"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getOrDefault()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.getParam"><code class="docutils literal notranslate"><span class="pre">DBSCAN.getParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.hasDefault"><code class="docutils literal notranslate"><span class="pre">DBSCAN.hasDefault()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.hasParam"><code class="docutils literal notranslate"><span class="pre">DBSCAN.hasParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.isDefined"><code class="docutils literal notranslate"><span class="pre">DBSCAN.isDefined()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.isSet"><code class="docutils literal notranslate"><span class="pre">DBSCAN.isSet()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.load"><code class="docutils literal notranslate"><span class="pre">DBSCAN.load()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.read"><code class="docutils literal notranslate"><span class="pre">DBSCAN.read()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.save"><code class="docutils literal notranslate"><span class="pre">DBSCAN.save()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.set"><code class="docutils literal notranslate"><span class="pre">DBSCAN.set()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setAlgorithm"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setAlgorithm()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setCalcCoreSampleIndices"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setCalcCoreSampleIndices()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setEps"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setEps()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setFeaturesCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setFeaturesCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setFeaturesCols"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setFeaturesCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setIdCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setIdCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setMaxMbytesPerBatch"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setMaxMbytesPerBatch()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setMetric"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setMetric()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setMinSamples"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setMinSamples()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.setPredictionCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.setPredictionCol()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.write"><code class="docutils literal notranslate"><span class="pre">DBSCAN.write()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.algorithm"><code class="docutils literal notranslate"><span class="pre">DBSCAN.algorithm</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.calc_core_sample_indices"><code class="docutils literal notranslate"><span class="pre">DBSCAN.calc_core_sample_indices</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.cuml_params"><code class="docutils literal notranslate"><span class="pre">DBSCAN.cuml_params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.eps"><code class="docutils literal notranslate"><span class="pre">DBSCAN.eps</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.featuresCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.featuresCol</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.featuresCols"><code class="docutils literal notranslate"><span class="pre">DBSCAN.featuresCols</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.idCol"><code class="docutils literal notranslate"><span class="pre">DBSCAN.idCol</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.max_mbytes_per_batch"><code class="docutils literal notranslate"><span class="pre">DBSCAN.max_mbytes_per_batch</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.metric"><code class="docutils literal notranslate"><span class="pre">DBSCAN.metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.min_samples"><code class="docutils literal notranslate"><span class="pre">DBSCAN.min_samples</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.num_workers"><code class="docutils literal notranslate"><span class="pre">DBSCAN.num_workers</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.DBSCAN.params"><code class="docutils literal notranslate"><span class="pre">DBSCAN.params</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, NVIDIA.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.2.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

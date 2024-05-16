@@ -45,6 +45,7 @@ NearestNeighbors
        ~NearestNeighbors.getIdCol
        ~NearestNeighbors.getInputCol
        ~NearestNeighbors.getInputCols
+       ~NearestNeighbors.getK
        ~NearestNeighbors.getLabelCol
        ~NearestNeighbors.getOrDefault
        ~NearestNeighbors.getParam
@@ -52,15 +53,11 @@ NearestNeighbors
        ~NearestNeighbors.hasParam
        ~NearestNeighbors.isDefined
        ~NearestNeighbors.isSet
-       ~NearestNeighbors.load
-       ~NearestNeighbors.read
-       ~NearestNeighbors.save
        ~NearestNeighbors.set
        ~NearestNeighbors.setIdCol
        ~NearestNeighbors.setInputCol
        ~NearestNeighbors.setInputCols
        ~NearestNeighbors.setK
-       ~NearestNeighbors.write
 
     
     
@@ -100,6 +97,7 @@ NearestNeighbors
     .. automethod:: getIdCol
     .. automethod:: getInputCol
     .. automethod:: getInputCols
+    .. automethod:: getK
     .. automethod:: getLabelCol
     .. automethod:: getOrDefault
     .. automethod:: getParam
@@ -107,15 +105,11 @@ NearestNeighbors
     .. automethod:: hasParam
     .. automethod:: isDefined
     .. automethod:: isSet
-    .. automethod:: load
-    .. automethod:: read
-    .. automethod:: save
     .. automethod:: set
     .. automethod:: setIdCol
     .. automethod:: setInputCol
     .. automethod:: setInputCols
     .. automethod:: setK
-    .. automethod:: write
 
     
     

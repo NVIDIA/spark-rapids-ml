@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Spark Rapids ML &#8212; spark-rapids-ml 24.02.0 documentation</title>
+    <title>Spark Rapids ML &#8212; spark-rapids-ml 24.04.0 documentation</title>
   
   
   
@@ -121,7 +121,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 24.02.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 24.04.0 documentation</p>
   
 </a></div>
     
@@ -270,6 +270,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
 </ul>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.clustering.DBSCAN.html">DBSCAN</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.clustering.DBSCANModel.html">DBSCANModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
 </ul>
@@ -280,6 +282,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.regression.RandomForestRegressionModel.html">RandomForestRegressionModel</a></li>
 </ul>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.knn.ApproximateNearestNeighbors.html">ApproximateNearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.knn.ApproximateNearestNeighborsModel.html">ApproximateNearestNeighborsModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighbors.html">NearestNeighbors</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighborsModel.html">NearestNeighborsModel</a></li>
 </ul>
@@ -383,6 +387,12 @@ document.write(`
 <h2>Clustering<a class="headerlink" href="#clustering" title="Permalink to this heading">#</a></h2>
 <table class="autosummary longtable table autosummary">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.DBSCAN.html#spark_rapids_ml.clustering.DBSCAN" title="spark_rapids_ml.clustering.DBSCAN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DBSCAN</span></code></a>(*[, featuresCol, predictionCol, eps, ...])</p></td>
+<td><p>The Density-Based Spatial Clustering of Applications with Noise (DBSCAN) is a non-parametric data clustering algorithm based on data density.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.DBSCANModel.html#spark_rapids_ml.clustering.DBSCANModel" title="spark_rapids_ml.clustering.DBSCANModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DBSCANModel</span></code></a>(n_cols, dtype, verbose)</p></td>
+<td><p></p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.clustering.KMeans.html#spark_rapids_ml.clustering.KMeans" title="spark_rapids_ml.clustering.KMeans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KMeans</span></code></a>(*[, featuresCol, predictionCol, k, ...])</p></td>
 <td><p>KMeans algorithm partitions data points into a fixed number (denoted as k) of clusters.</p></td>
 </tr>
@@ -415,6 +425,12 @@ document.write(`
 <h2>Nearest Neighbors<a class="headerlink" href="#nearest-neighbors" title="Permalink to this heading">#</a></h2>
 <table class="autosummary longtable table autosummary">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.knn.ApproximateNearestNeighbors.html#spark_rapids_ml.knn.ApproximateNearestNeighbors" title="spark_rapids_ml.knn.ApproximateNearestNeighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ApproximateNearestNeighbors</span></code></a>(*[, k, ...])</p></td>
+<td><p>ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/spark_rapids_ml.knn.ApproximateNearestNeighborsModel.html#spark_rapids_ml.knn.ApproximateNearestNeighborsModel" title="spark_rapids_ml.knn.ApproximateNearestNeighborsModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ApproximateNearestNeighborsModel</span></code></a>(item_df_withid)</p></td>
+<td><p></p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/spark_rapids_ml.knn.NearestNeighbors.html#spark_rapids_ml.knn.NearestNeighbors" title="spark_rapids_ml.knn.NearestNeighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NearestNeighbors</span></code></a>(*[, k, inputCol, idCol, ...])</p></td>
 <td><p>NearestNeighbors retrieves the exact k nearest neighbors in item vectors for each query vector.</p></td>
 </tr>

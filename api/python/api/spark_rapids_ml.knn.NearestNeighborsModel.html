@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>NearestNeighborsModel &#8212; spark-rapids-ml 24.02.0 documentation</title>
+    <title>NearestNeighborsModel &#8212; spark-rapids-ml 24.04.0 documentation</title>
   
   
   
@@ -121,7 +121,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 24.02.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 24.04.0 documentation</p>
   
 </a></div>
     
@@ -270,6 +270,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.classification.RandomForestClassificationModel.html">RandomForestClassificationModel</a></li>
 </ul>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.DBSCAN.html">DBSCAN</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.DBSCANModel.html">DBSCANModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeans.html">KMeans</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.clustering.KMeansModel.html">KMeansModel</a></li>
 </ul>
@@ -280,6 +282,8 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.regression.RandomForestRegressionModel.html">RandomForestRegressionModel</a></li>
 </ul>
 <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.ApproximateNearestNeighbors.html">ApproximateNearestNeighbors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.ApproximateNearestNeighborsModel.html">ApproximateNearestNeighborsModel</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spark_rapids_ml.knn.NearestNeighbors.html">NearestNeighbors</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">NearestNeighborsModel</a></li>
 </ul>
@@ -384,38 +388,32 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getInputCols" title="spark_rapids_ml.knn.NearestNeighborsModel.getInputCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getInputCols</span></code></a>()</p></td>
 <td><p>Gets the value of inputCols or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol" title="spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getK" title="spark_rapids_ml.knn.NearestNeighborsModel.getK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getK</span></code></a>()</p></td>
+<td><p>Get the value of <cite>k</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol" title="spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getLabelCol</span></code></a>()</p></td>
 <td><p>Gets the value of labelCol or its default value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getOrDefault" title="spark_rapids_ml.knn.NearestNeighborsModel.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getOrDefault" title="spark_rapids_ml.knn.NearestNeighborsModel.getOrDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getOrDefault</span></code></a>(param)</p></td>
 <td><p>Gets the value of a param in the user-supplied param map or its default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getParam" title="spark_rapids_ml.knn.NearestNeighborsModel.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.getParam" title="spark_rapids_ml.knn.NearestNeighborsModel.getParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getParam</span></code></a>(paramName)</p></td>
 <td><p>Gets a param by its name.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.hasDefault" title="spark_rapids_ml.knn.NearestNeighborsModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.hasDefault" title="spark_rapids_ml.knn.NearestNeighborsModel.hasDefault"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasDefault</span></code></a>(param)</p></td>
 <td><p>Checks whether a param has a default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.hasParam" title="spark_rapids_ml.knn.NearestNeighborsModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.hasParam" title="spark_rapids_ml.knn.NearestNeighborsModel.hasParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasParam</span></code></a>(paramName)</p></td>
 <td><p>Tests whether this instance contains a param with a given (string) name.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.isDefined" title="spark_rapids_ml.knn.NearestNeighborsModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.isDefined" title="spark_rapids_ml.knn.NearestNeighborsModel.isDefined"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isDefined</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user or has a default value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.isSet" title="spark_rapids_ml.knn.NearestNeighborsModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.isSet" title="spark_rapids_ml.knn.NearestNeighborsModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kneighbors</span></code></a>(query_df)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kneighbors</span></code></a>(query_df)</p></td>
 <td><p>Return the exact nearest neighbors for each query in query_df.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.load" title="spark_rapids_ml.knn.NearestNeighborsModel.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(path)</p></td>
-<td><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.read" title="spark_rapids_ml.knn.NearestNeighborsModel.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>()</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.save" title="spark_rapids_ml.knn.NearestNeighborsModel.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(path)</p></td>
-<td><p>Save this ML instance to the given path, a shortcut of 'write().save(path)'.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.set" title="spark_rapids_ml.knn.NearestNeighborsModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
 <td><p>Sets a parameter in the embedded param map.</p></td>
@@ -434,9 +432,6 @@ document.write(`
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.transform" title="spark_rapids_ml.knn.NearestNeighborsModel.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code></a>(dataset[, params])</p></td>
 <td><p>Transforms the input dataset with optional parameters.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.write" title="spark_rapids_ml.knn.NearestNeighborsModel.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
-<td><p></p></td>
 </tr>
 </tbody>
 </table>
@@ -573,6 +568,12 @@ user-supplied values &lt; extra.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.getK">
+<span class="sig-name descname"><span class="pre">getK</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.getK" title="Permalink to this definition">#</a></dt>
+<dd><p>Get the value of <cite>k</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol">
 <span class="sig-name descname"><span class="pre">getLabelCol</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Gets the value of labelCol or its default value.</p>
@@ -653,23 +654,6 @@ column stores the ids/distances of knn item_df vectors.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.load">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RL</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.load" title="Permalink to this definition">#</a></dt>
-<dd><p>Reads an ML instance from the input path, a shortcut of <cite>read().load(path)</cite>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.read">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLReader.html#pyspark.ml.util.MLReader" title="(in PySpark vmaster)"><span class="pre">MLReader</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.read" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.save">
-<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.save" title="Permalink to this definition">#</a></dt>
-<dd><p>Save this ML instance to the given path, a shortcut of ‘write().save(path)’.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.set">
 <span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.param.Param.html#pyspark.ml.param.Param" title="(in PySpark vmaster)"><span class="pre">Param</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.set" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets a parameter in the embedded param map.</p>
@@ -723,11 +707,6 @@ column stores the ids/distances of knn item_df vectors.</p>
 </dd>
 </dl>
 </dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.write">
-<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.util.MLWriter.html#pyspark.ml.util.MLWriter" title="(in PySpark vmaster)"><span class="pre">MLWriter</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.write" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
 
 <p class="rubric">Attributes Documentation</p>
 <dl class="py attribute">
@@ -837,6 +816,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getIdCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getIdCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getInputCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getInputCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getInputCols"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getInputCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getK"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getK()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getLabelCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getLabelCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getOrDefault"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getOrDefault()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.getParam"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.getParam()</span></code></a></li>
@@ -845,16 +825,12 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.isDefined"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.isDefined()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.isSet"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.isSet()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.kneighbors()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.load"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.load()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.read"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.read()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.save"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.save()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.set"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.set()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.setIdCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.setIdCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.setInputCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.setInputCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.setInputCols"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.setInputCols()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.setK"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.setK()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.transform"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.transform()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.write"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.cuml_params"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.cuml_params</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.idCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.idCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.NearestNeighborsModel.inputCol"><code class="docutils literal notranslate"><span class="pre">NearestNeighborsModel.inputCol</span></code></a></li>

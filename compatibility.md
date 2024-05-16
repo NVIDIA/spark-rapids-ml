@@ -11,8 +11,9 @@ The following table shows the currently supported algorithms.  The goal is to ex
 | Supported Algorithms   | Python | Scala |
 | :--------------------- | :----: | :---: |
 | CrossValidator         |   √    |       |
+| DBSCAN (*)             |   √    |       |
 | KMeans                 |   √    |       |
-| k-NN (*)               |   √    |       |
+| approx/exact k-NN (*)  |   √    |       |
 | LinearRegression       |   √    |       |
 | LogisticRegression     |   √    |       | 
 | PCA                    |   √    |   √   |
@@ -20,7 +21,7 @@ The following table shows the currently supported algorithms.  The goal is to ex
 | RandomForestRegressor  |   √    |       |
 | UMAP (*)               |   √    |       |
 
-Note: Spark does not provide a k-Nearest Neighbors (k-NN) implementation, but it does have an [LSH-based Approximate Nearest Neighbor](https://spark.apache.org/docs/latest/ml-features.html#approximate-nearest-neighbor-search) implementation.   As an alternative to PCA, we also provide a Spark API for GPU accelerated Uniform Manifold Approximation and Projection (UMAP), a non-linear dimensionality reduction algorithm in the RAPIDS cuML library.
+Note: Spark does not provide a k-Nearest Neighbors (k-NN) implementation, but it does have an [LSH-based Approximate Nearest Neighbor](https://spark.apache.org/docs/latest/ml-features.html#approximate-nearest-neighbor-search) implementation.   As an alternative to PCA, we also provide a Spark API for GPU accelerated Uniform Manifold Approximation and Projection (UMAP), a non-linear dimensionality reduction algorithm in the RAPIDS cuML library.   As an alternative to KMeans, we also provide a Spark API for GPU accelerated Density-Based Spatial Clustering of Applications with Noise (DBSCAN), a density based clustering algorithm in the RAPIDS cuML library.
 
 
 ## Supported Versions
