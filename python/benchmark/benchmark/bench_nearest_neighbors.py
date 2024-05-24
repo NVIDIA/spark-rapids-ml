@@ -120,8 +120,14 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
         def cache_df(dfA: DataFrame, dfB: DataFrame) -> Tuple[DataFrame, DataFrame]:
             dfA = dfA.cache()
             dfB = dfB.cache()
-            dfA.count()
-            dfB.count()
+
+            def func_dummy(pdf_iter):  # type: ignore
+                import pandas as pd
+
+                yield pd.DataFrame({"dummy": [1]})
+
+            dfA.mapInPandas(func_dummy, schema="dummy int").count()
+            dfB.mapInPandas(func_dummy, schema="dummy int").count()
             return (dfA, dfB)
 
         params = self.class_params
@@ -130,7 +136,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
 
             assert num_cpus <= 0
             if not no_cache:
-                train_df, query_df, prepare_time = with_benchmark(
+                (train_df, query_df), prepare_time = with_benchmark(
                     "prepare dataset", lambda: cache_df(train_df, query_df)
                 )
 
@@ -161,7 +167,7 @@ class BenchmarkNearestNeighbors(BenchmarkBase):
         if num_cpus > 0:
             assert num_gpus <= 0
             if not no_cache:
-                train_df, query_df, prepare_time = with_benchmark(
+                (train_df, query_df), prepare_time = with_benchmark(
                     "prepare dataset", lambda: cache_df(train_df, query_df)
                 )
 
