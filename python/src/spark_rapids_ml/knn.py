@@ -1320,6 +1320,11 @@ class ApproximateNearestNeighborsModel(
                     }
                 )
 
+            #from pyspark import TaskContext
+            #ctx = TaskContext.get()
+            #pid = ctx.partitionId
+            #print(f"debug pid {pid} len(item) {len(item)}")
+
             nn_object.fit(item)
             import cupy as cp
 

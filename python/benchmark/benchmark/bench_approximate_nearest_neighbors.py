@@ -126,14 +126,19 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
 
         # for i, size in enumerate(partition_sizes):
         #     print(f"debug Partition {i}: {size} elements")
-
         # return {}
 
         def cache_df(dfA: DataFrame, dfB: DataFrame) -> Tuple[DataFrame, DataFrame]:
             dfA = dfA.cache()
             dfB = dfB.cache()
-            dfA.count()
-            dfB.count()
+
+            def func_dummy(pdf_iter):  # type: ignore
+                import pandas as pd
+
+                yield pd.DataFrame({"dummy": [1]})
+
+            dfA.mapInPandas(func_dummy, schema="dummy int").count()
+            dfB.mapInPandas(func_dummy, schema="dummy int").count()
             return (dfA, dfB)
 
         if num_gpus > 0:
@@ -144,7 +149,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
 
             assert num_cpus <= 0
             if not no_cache:
-                train_df, query_df, prepare_time = with_benchmark(
+                (train_df, query_df), prepare_time = with_benchmark(
                     "prepare dataset", lambda: cache_df(train_df, query_df)
                 )
 
@@ -208,7 +213,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
 
             if not no_cache:
 
-                vector_df, vector_query_df, prepare_time = with_benchmark(
+                (vector_df, vector_query_df), prepare_time = with_benchmark(
                     "prepare dataset", lambda: cache_df(vector_df, vector_query_df)
                 )
 
@@ -256,7 +261,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         avg_recall = self.evaluate_avg_recall(
             train_df, query_df, knn_df, n_neighbors, input_col_actual
         )
-        print(f"calculating average recall took: {round(time.time() - eval_start_time, 2)} sec")
+        print(f"evaluation took: {round(time.time() - eval_start_time, 2)} sec")
 
         report_dict = {
             "fit": fit_time,
@@ -311,7 +316,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         from .bench_nearest_neighbors import CPUNearestNeighborsModel
         cpu_nn = CPUNearestNeighborsModel(train_df)
         cpu_nn = cpu_nn.setK(n_neighbors).setInputCol(input_col).setIdCol("id")
-        knn_df_exact = cpu_nn.kneighbors(query_df_eval_set)
+        _, _, knn_df_exact = cpu_nn.kneighbors(query_df_eval_set)
 
         knn_exact_selected = knn_df_exact.filter(knn_df_exact["query_id"].isin(qid_eval_set)).sort("query_id").collect()
         print(f"debug: finished training")

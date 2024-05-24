@@ -215,10 +215,15 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
 
     echo "$sep algo: approximate_nearest_neighbors $sep"
 
-    nlist=`echo "scale=0; sqrt($knn_num_rows)" | bc`
-    nprobe=100
+    nvecs_per_gpu=$knn_num_rows
+    if [ $num_gpus -gt 1 ]; then
+        nvecs_per_gpu=$(echo "$nvecs_per_gpu / $num_gpus" | bc)
+    fi
+    #nlist=$(echo "scale=0; sqrt($nvecs_per_gpu)" | bc)
+    nlist=100
+    nprobe=$(echo "$nlist * 0.05" | bc | awk '{print int($1 + 0.9999)}')
 
-    cpu_algo_params='numHashTables=3,bucketLength=1.0' 
+    cpu_algo_params='numHashTables=3,bucketLength=2.0' 
     gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
     python ./benchmark/benchmark_runner.py approximate_nearest_neighbors \
         --n_neighbors 20 \
@@ -233,7 +238,6 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
         --report_path "report_knn_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         --spark_confs spark.driver.maxResultSize=0 \
-        --spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=0 \
         ${EXTRA_ARGS}
 fi
 
