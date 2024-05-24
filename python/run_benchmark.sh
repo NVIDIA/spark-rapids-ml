@@ -198,20 +198,42 @@ if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
         --spark_confs "spark.driver.maxResultSize=0" \
         $common_confs $spark_rapids_confs \
         ${EXTRA_ARGS}
+fi
 
-    echo "$sep algo: approx knn $sep"
-    python ./benchmark/benchmark_runner.py knn_approx \
+# ApproximateNearestNeighbors
+if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]]; then
+    if [[ ! -d "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" ]]; then
+        python $gen_data_script blobs \
+            --num_rows $knn_num_rows \
+            --num_cols $num_cols \
+            --output_num_files $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
+            $common_confs
+    fi
+
+    echo "$sep algo: approximate_nearest_neighbors $sep"
+
+    nlist=`echo "scale=0; sqrt($knn_num_rows)" | bc`
+    nprobe=100
+
+    cpu_algo_params='numHashTables=3,bucketLength=1.0' 
+    gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
+    python ./benchmark/benchmark_runner.py approximate_nearest_neighbors \
         --n_neighbors 20 \
         --fraction_sampled_queries ${knn_fraction_sampled_queries} \
         --num_gpus $num_gpus \
+        --gpu_algo_params $gpu_algo_params \
         --num_cpus $num_cpus \
+        --cpu_algo_params $cpu_algo_params \
         --no_cache \
         --num_runs $num_runs \
         --train_path "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_knn_${cluster_type}.csv" \
-        --spark_confs "spark.driver.maxResultSize=0" \
-        --spark_confs "spark.sql.execution.arrow.maxRecordsPerBatch=0" \
         $common_confs $spark_rapids_confs \
+        --spark_confs spark.driver.maxResultSize=0 \
+        --spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=0 \
         ${EXTRA_ARGS}
 fi
 
