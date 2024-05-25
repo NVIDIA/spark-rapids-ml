@@ -1334,14 +1334,19 @@ class ApproximateNearestNeighborsModel(
                 ):
                     distances = distances * distances
 
-            indices = indices.get()
+            if isinstance(distances, cp.ndarray):
+                distances = distances.get()
+
+            if isinstance(indices, cp.ndarray):
+                indices = indices.get()
+
             indices_global = item_row_number[indices]
 
             res = pd.DataFrame(
                 {
                     f"query_{id_col_name}": bcast_qids.value,
                     "indices": list(indices_global),
-                    "distances": list(distances.get()),
+                    "distances": list(distances),
                 }
             )
             return res
