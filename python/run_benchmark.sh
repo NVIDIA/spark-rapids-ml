@@ -186,7 +186,7 @@ if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
     fi
 
     echo "$sep algo: knn $sep"
-    python ./benchmark/benchmark_runner.py knn \
+    OMP_NUM_THREADS=1 python ./benchmark/benchmark_runner.py knn \
         --n_neighbors 20 \
         --fraction_sampled_queries ${knn_fraction_sampled_queries} \
         --num_gpus $num_gpus \
