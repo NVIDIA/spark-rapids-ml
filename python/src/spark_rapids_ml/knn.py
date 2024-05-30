@@ -61,7 +61,12 @@ from .core import (
 )
 from .metrics import EvalMetricInfo
 from .params import HasIDCol, P, _CumlClass, _CumlParams
-from .utils import _concat_and_free, _get_spark_session, get_logger
+from .utils import (
+    _concat_and_free,
+    _get_class_or_callable_name,
+    _get_spark_session,
+    get_logger,
+)
 
 
 class NearestNeighborsClass(_CumlClass):
@@ -1040,7 +1045,7 @@ class ApproximateNearestNeighbors(
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
-        self._item_df_withid = self._ensureIdCol(item_df)
+        self._item_df_withid = self._ensureIdCol(item_df).coalesce(self.num_workers)
 
         model = self._create_pyspark_model(
             Row(
@@ -1173,6 +1178,10 @@ class ApproximateNearestNeighborsModel(
         k: int,
         ascending: bool = True,
     ) -> DataFrame:
+
+        if knn_df.rdd.getNumPartitions() == 1:
+            return knn_df
+
         from pyspark.sql.functions import pandas_udf
 
         @pandas_udf("array<long>")  # type: ignore
@@ -1247,6 +1256,7 @@ class ApproximateNearestNeighborsModel(
             query_df_withid
         )
 
+        item_npartitions_before = self._item_df_withid.rdd.getNumPartitions()
         knn_df = self._transform_evaluate_internal(
             self._item_df_withid, schema=self._out_schema()
         )
@@ -1266,6 +1276,9 @@ class ApproximateNearestNeighborsModel(
         )
 
         return (self._item_df_withid, query_df_withid, knn_df_agg)
+
+    def _concate_pdf_batches(self) -> bool:
+        return True
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
@@ -1301,6 +1314,8 @@ class ApproximateNearestNeighborsModel(
 
         assert bcast_qids is not None and bcast_qfeatures is not None
 
+        logging_class_name = _get_class_or_callable_name(self.__class__)
+
         def _transform_internal(
             nn_object: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.DataFrame:
@@ -1320,12 +1335,17 @@ class ApproximateNearestNeighborsModel(
                     }
                 )
 
-            #from pyspark import TaskContext
-            #ctx = TaskContext.get()
-            #pid = ctx.partitionId
-            #print(f"debug pid {pid} len(item) {len(item)}")
+            from pyspark import TaskContext
+
+            ctx = TaskContext.get()
+            pid = ctx.partitionId() if ctx is not None else -1
+
+            logger = get_logger(logging_class_name)
+            logger.info(f"partition {pid} starts with {len(item)} item vectors")
 
             nn_object.fit(item)
+
+            logger.info(f"partition {pid} fit finished.")
             import cupy as cp
 
             distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
@@ -1346,6 +1366,8 @@ class ApproximateNearestNeighborsModel(
                 indices = indices.get()
 
             indices_global = item_row_number[indices]
+
+            logger.info(f"partition {pid} search finished")
 
             res = pd.DataFrame(
                 {

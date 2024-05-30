@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from pyspark.ml.feature import VectorAssembler
@@ -45,9 +45,9 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
             help="the number of vectors sampled from the dataset as query vectors",
         )
 
-        def dict_str_parse(value):
-            res = {}
-            for pair in value.split(","):
+        def dict_str_parse(cmd_value: str) -> Dict[str, Any]:
+            res: Dict[str, Any] = {}
+            for pair in cmd_value.split(","):
                 key, value = pair.split("=")
                 assert key in {
                     "algorithm",
@@ -113,20 +113,10 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         from pyspark.sql.functions import monotonically_increasing_id
 
         train_df = train_df.withColumn("id", monotonically_increasing_id())
+
         query_df = train_df.sample(
             withReplacement=False, fraction=fraction_sampled_queries, seed=seed
         )
-
-        # print(f"debug train_df.rdd.numPartitions: {train_df.rdd.getNumPartitions()}")
-
-        # def count_in_partition(partition):
-        #     yield len(list(partition))
-
-        # partition_sizes = train_df.rdd.mapPartitions(count_in_partition).collect()
-
-        # for i, size in enumerate(partition_sizes):
-        #     print(f"debug Partition {i}: {size} elements")
-        # return {}
 
         def cache_df(dfA: DataFrame, dfB: DataFrame) -> Tuple[DataFrame, DataFrame]:
             dfA = dfA.cache()
@@ -248,16 +238,18 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
 
             _, transform_time = with_benchmark(
                 "cpu transform",
-                lambda: cpu_transform(cpu_model, vector_df, n_neighbors),
+                lambda: cpu_transform(
+                    cpu_model, vector_df, vector_query_df, n_neighbors
+                ),
             )
 
             total_time = round(time.time() - func_start_time, 2)
             print(f"cpu total took: {total_time} sec")
 
-        # calculate average recall of 1000 queries
-
         eval_start_time = time.time()
-        input_col_actual = first_col if is_single_col else input_cols
+        input_col_actual: Union[str, List[str]] = (
+            first_col if is_single_col else input_cols
+        )
         avg_recall = self.evaluate_avg_recall(
             train_df, query_df, knn_df, n_neighbors, input_col_actual
         )
@@ -289,37 +281,39 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         knn_df: DataFrame,
         n_neighbors: int,
         input_col: Union[str, List[str]],
-        limit=1000,
-    ):
-
-        print(f"debug: entering evaluate_avg_recall")
+        limit: int = 1000,
+    ) -> float:
 
         knn_selected = knn_df.limit(limit).sort("query_id").collect()
         qid_eval_set = set([row["query_id"] for row in knn_selected])
 
         query_df_eval_set = query_df.filter(query_df["id"].isin(qid_eval_set))
 
-        # from spark_rapids_ml.knn import NearestNeighbors
-        #gpu_nn = (
-        #    NearestNeighbors(n_neighbors=n_neighbors).setK(n_neighbors).setIdCol("id")
-        #)
+        from spark_rapids_ml.knn import NearestNeighbors
 
-        # if isinstance(input_col, str):
-        #     gpu_nn = gpu_nn.setInputCol(input_col)
-        # else:
-        #     assert isinstance(input_col, List[str])
-        #     gpu_nn = gpu_nn.setInputCols(input_col)
+        gpu_nn = (
+            NearestNeighbors(n_neighbors=n_neighbors).setK(n_neighbors).setIdCol("id")
+        )
 
-        # gpu_model = gpu_nn.fit(train_df)
-        # _, _, knn_df_exact = gpu_model.kneighbors(query_df_eval_set)
+        if isinstance(input_col, str):
+            gpu_nn = gpu_nn.setInputCol(input_col)
+        else:
+            gpu_nn = gpu_nn.setInputCols(input_col)
 
-        from .bench_nearest_neighbors import CPUNearestNeighborsModel
-        cpu_nn = CPUNearestNeighborsModel(train_df)
-        cpu_nn = cpu_nn.setK(n_neighbors).setInputCol(input_col).setIdCol("id")
-        _, _, knn_df_exact = cpu_nn.kneighbors(query_df_eval_set)
+        gpu_model = gpu_nn.fit(train_df)
+        _, _, knn_df_exact = gpu_model.kneighbors(query_df_eval_set)
 
-        knn_exact_selected = knn_df_exact.filter(knn_df_exact["query_id"].isin(qid_eval_set)).sort("query_id").collect()
-        print(f"debug: finished training")
+        # from .bench_nearest_neighbors import CPUNearestNeighborsModel
+
+        # cpu_nn = CPUNearestNeighborsModel(train_df)
+        # cpu_nn = cpu_nn.setK(n_neighbors).setInputCol(input_col).setIdCol("id")
+        # _, _, knn_df_exact = cpu_nn.kneighbors(query_df_eval_set)
+
+        knn_exact_selected = (
+            knn_df_exact.filter(knn_df_exact["query_id"].isin(qid_eval_set))
+            .sort("query_id")
+            .collect()
+        )
 
         indices_ann = np.array([row["indices"] for row in knn_selected])
         indices_exact = np.array([row["indices"] for row in knn_exact_selected])

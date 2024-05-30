@@ -279,10 +279,14 @@ def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
 
 # similar to https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/utils.py
 def get_logger(
-    cls_or_callable: Union[type, Callable], level: str = "INFO"
+    cls_or_callable: Union[type, Callable, str], level: str = "INFO"
 ) -> logging.Logger:
     """Gets a logger by name, or creates and configures it for the first time."""
-    name = _get_class_or_callable_name(cls_or_callable)
+    name = (
+        cls_or_callable
+        if isinstance(cls_or_callable, str)
+        else _get_class_or_callable_name(cls_or_callable)
+    )
     logger = logging.getLogger(name)
 
     logger.setLevel(level)

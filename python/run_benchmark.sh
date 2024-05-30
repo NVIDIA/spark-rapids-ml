@@ -68,7 +68,7 @@ unset SPARK_HOME
 # data set params
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
-knn_fraction_sampled_queries=${knn_fraction_sampled_queries:-0.01}
+knn_fraction_sampled_queries=${knn_fraction_sampled_queries:-0.1}
 num_cols=${num_cols:-3000}
 num_sparse_cols=${num_sparse_cols:-3000}
 density=${density:-0.1}
@@ -202,14 +202,17 @@ fi
 
 # ApproximateNearestNeighbors
 if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" ]]; then
+    centers=1000
+    data_path=${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_cts${centers}_float32.parquet
+    if [[ ! -d ${data_path} ]]; then
         python $gen_data_script blobs \
-            --num_rows $knn_num_rows \
-            --num_cols $num_cols \
+            --num_rows ${knn_num_rows} \
+            --num_cols ${num_cols} \
+            --centers ${centers} \
             --output_num_files $output_num_files \
             --dtype "float32" \
             --feature_type "array" \
-            --output_dir "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
+            --output_dir ${data_path} \
             $common_confs
     fi
 
@@ -219,9 +222,9 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
     if [ $num_gpus -gt 1 ]; then
         nvecs_per_gpu=$(echo "$nvecs_per_gpu / $num_gpus" | bc)
     fi
-    #nlist=$(echo "scale=0; sqrt($nvecs_per_gpu)" | bc)
-    nlist=100
-    nprobe=$(echo "$nlist * 0.05" | bc | awk '{print int($1 + 0.9999)}')
+
+    nlist=$(echo "scale=0; sqrt($nvecs_per_gpu)" | bc)
+    nprobe=$(echo "$nlist * 0.001" | bc | awk '{print int($1 + 0.9999)}')
 
     cpu_algo_params='numHashTables=3,bucketLength=2.0' 
     gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
@@ -234,8 +237,8 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
         --cpu_algo_params $cpu_algo_params \
         --no_cache \
         --num_runs $num_runs \
-        --train_path "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
-        --report_path "report_knn_${cluster_type}.csv" \
+        --train_path ${data_path} \
+        --report_path "report_approximate_nearest_neighbors_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         --spark_confs spark.driver.maxResultSize=0 \
         ${EXTRA_ARGS}
