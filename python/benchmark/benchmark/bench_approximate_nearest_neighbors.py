@@ -246,14 +246,18 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
             total_time = round(time.time() - func_start_time, 2)
             print(f"cpu total took: {total_time} sec")
 
-        eval_start_time = time.time()
-        input_col_actual: Union[str, List[str]] = (
-            first_col if is_single_col else input_cols
-        )
-        avg_recall = self.evaluate_avg_recall(
-            train_df, query_df, knn_df, n_neighbors, input_col_actual
-        )
-        print(f"evaluation took: {round(time.time() - eval_start_time, 2)} sec")
+        if num_gpus > 0:
+            eval_start_time = time.time()
+            input_col_actual: Union[str, List[str]] = (
+                first_col if is_single_col else input_cols
+            )
+            avg_recall = self.evaluate_avg_recall(
+                train_df, query_df, knn_df, n_neighbors, input_col_actual
+            )
+            print(f"evaluation took: {round(time.time() - eval_start_time, 2)} sec")
+        else:
+            print(f"benchmark script does not evaluate LSH")
+            avg_recall = None
 
         report_dict = {
             "fit": fit_time,
