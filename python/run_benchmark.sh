@@ -202,7 +202,7 @@ fi
 
 # ApproximateNearestNeighbors
 if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]]; then
-    centers=1000
+    centers=100
     data_path=${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_cts${centers}_float32.parquet
     if [[ ! -d ${data_path} ]]; then
         python $gen_data_script blobs \
@@ -224,7 +224,7 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
     fi
 
     nlist=$(echo "scale=0; sqrt($nvecs_per_gpu)" | bc)
-    nprobe=$(echo "$nlist * 0.001" | bc | awk '{print int($1 + 0.9999)}')
+    nprobe=$(echo "$nlist * 0.01" | bc | awk '{print int($1 + 0.9999)}')
 
     cpu_algo_params='numHashTables=3,bucketLength=2.0' 
     gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"

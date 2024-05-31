@@ -303,12 +303,6 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         gpu_model = gpu_nn.fit(train_df)
         _, _, knn_df_exact = gpu_model.kneighbors(query_df_eval_set)
 
-        # from .bench_nearest_neighbors import CPUNearestNeighborsModel
-
-        # cpu_nn = CPUNearestNeighborsModel(train_df)
-        # cpu_nn = cpu_nn.setK(n_neighbors).setInputCol(input_col).setIdCol("id")
-        # _, _, knn_df_exact = cpu_nn.kneighbors(query_df_eval_set)
-
         knn_exact_selected = (
             knn_df_exact.filter(knn_df_exact["query_id"].isin(qid_eval_set))
             .sort("query_id")
