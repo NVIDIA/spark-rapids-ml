@@ -223,8 +223,8 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
         nvecs_per_gpu=$(echo "$nvecs_per_gpu / $num_gpus" | bc)
     fi
 
-    nlist=$(echo "scale=0; sqrt($nvecs_per_gpu)" | bc)
-    nprobe=$(echo "$nlist * 0.01" | bc | awk '{print int($1 + 0.9999)}')
+    nlist=$(echo "${nvecs_per_gpu}" | awk '{print int(sqrt($1))}')
+    nprobe=$(echo "$nlist" | awk '{print int($1 * 0.01 + 0.9999)}')
 
     cpu_algo_params='numHashTables=3,bucketLength=2.0' 
     gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
