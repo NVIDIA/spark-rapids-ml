@@ -305,6 +305,7 @@ def test_classifier(
     tolerance: float = 0.001,
     convert_to_sparse: bool = False,
     set_float32_inputs: Optional[bool] = None,
+    verbose: bool = False,
 ) -> LogisticRegression:
     standardization: bool = False
 
@@ -366,6 +367,7 @@ def test_classifier(
             elasticNetParam=elasticNet_param,
             num_workers=gpu_number,
             float32_inputs=float32_inputs,
+            verbose=verbose,
         )
 
         assert spark_lr._cuml_params["penalty"] == cu_lr.penalty
@@ -2091,4 +2093,32 @@ def test_quick_double_precision(
         fit_intercept=fit_intercept,
         reg_factors=reg_factors,
         float32_inputs=float32_inputs,
+    )
+
+@pytest.mark.slow
+def test_sparse_int64(
+    gpu_number: int,
+) -> None:
+
+    #data_shape = (100, 8)
+    data_shape = (int(1e7), 30)
+    n_classes = 4
+    convert_to_sparse = True
+    tolerance = 0.005
+    reg_param = 1.0
+    elasticNet_param = 0.
+
+    lr = test_classifier(
+        fit_intercept=True,
+        feature_type="vector",
+        data_shape=data_shape,
+        data_type=np.float32,
+        max_record_batch=20000,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        tolerance=tolerance,
+        reg_param=reg_param,
+        elasticNet_param=elasticNet_param,
+        convert_to_sparse=convert_to_sparse,
+        verbose=True,
     )
