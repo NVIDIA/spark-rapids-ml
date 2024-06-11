@@ -34,18 +34,20 @@ jobs:
       args: ${{ env.args }}
 
     # This job only runs for pull request comments
-    if: contains( '\
-      lijinf2,\
-      eordentlich,\
-      wbo4958,\
-      leewyang,\
-      rongou,\
-      wjxiz1992,\
-      GaryShen2008,\
-      NvTimLiu,\
-      YanxuanLiu,\
-      pxLi,\
-      ', format('{0},', github.actor)) && github.event.comment.body == 'build'
+    if: |
+      github.event.comment.body == 'build' &&
+      (
+        github.actor == 'lijinf2' ||
+        github.actor == 'eordentlich' ||
+        github.actor == 'wbo4958' ||
+        github.actor == 'leewyang' ||
+        github.actor == 'rongou' ||
+        github.actor == 'wjxiz1992' ||
+        github.actor == 'GaryShen2008' ||
+        github.actor == 'NvTimLiu' ||
+        github.actor == 'YanxuanLiu' ||
+        github.actor == 'pxLi'
+      )
     steps:
       - name: Check if comment is issued by authorized person
         run: blossom-ci
