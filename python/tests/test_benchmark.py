@@ -33,17 +33,22 @@ def get_sgnn_res(
 
 
 def assert_knn_equal(
-    knn_df: DataFrame, id_col_name: str, distances: np.ndarray, indices: np.ndarray
+    knn_df: DataFrame,
+    id_col_name: str,
+    distances: np.ndarray,
+    indices: np.ndarray,
+    total_tol: float = 1e-3,
 ) -> None:
     res_pd: pd.DataFrame = knn_df.sort(f"query_{id_col_name}").toPandas()
     mg_indices: np.ndarray = np.array(res_pd["indices"].to_list())
     mg_distances: np.ndarray = np.array(res_pd["distances"].to_list())
 
-    assert array_equal(mg_indices, indices)
     assert array_equal(mg_distances, distances)
 
+    # set total_tol because two nearest neighbors may have the same distance to the query
+    assert array_equal(mg_indices, indices, total_tol=total_tol)
 
-@pytest.mark.slow
+
 def test_cpunn_withid() -> None:
 
     n_samples = 1000
@@ -81,7 +86,6 @@ def test_cpunn_withid() -> None:
         assert_knn_equal(knn_df, "id", sg_distances, sg_indices)
 
 
-# @pytest.mark.slow
 def test_cpunn_noid() -> None:
 
     n_samples = 1000
@@ -98,7 +102,9 @@ def test_cpunn_noid() -> None:
 
     with CleanSparkSession({}) as spark:
 
-        df = spark.createDataFrame(X)
+        X_pylist = X.tolist()
+        df = spark.createDataFrame(X_pylist)
+
         from pyspark.sql.functions import array
 
         df = df.select(array(df.columns).alias("features"))
@@ -110,7 +116,12 @@ def test_cpunn_noid() -> None:
         df_withid, _, knn_df = mg_model.kneighbors(df)
 
         pdf: pd.DataFrame = df_withid.sort(alias.row_number).toPandas()
-        X = np.array(pdf["features"].to_list())
+        X_vec = np.array(pdf["features"].to_list())
+        distances, indices = get_sgnn_res(X_vec, X_vec, n_neighbors)
 
-        distances, indices = get_sgnn_res(X, X, n_neighbors)
-        assert_knn_equal(knn_df, alias.row_number, distances, indices)
+        X_sparkid = np.array(pdf[alias.row_number].to_list())
+        indices_maped_to_sparkid = X_sparkid[
+            indices
+        ]  # note spark created ids are non-continuous
+
+        assert_knn_equal(knn_df, alias.row_number, distances, indices_maped_to_sparkid)
