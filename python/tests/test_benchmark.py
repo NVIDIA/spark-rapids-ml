@@ -48,6 +48,11 @@ def assert_knn_equal(
     # set total_tol because two nearest neighbors may have the same distance to the query
     assert array_equal(mg_indices, indices, total_tol=total_tol)
 
+    for i in range(len(mg_indices)):
+        for j in range(len(mg_indices[i])):
+            if mg_indices[i][j] != indices[i][j]:
+                assert mg_distances[i][j] == distances[i][j]
+
 
 def test_cpunn_withid() -> None:
 
@@ -120,8 +125,8 @@ def test_cpunn_noid() -> None:
         distances, indices = get_sgnn_res(X_vec, X_vec, n_neighbors)
 
         X_sparkid = np.array(pdf[alias.row_number].to_list())
-        indices_maped_to_sparkid = X_sparkid[
+        indices_mapped_to_sparkid = X_sparkid[
             indices
         ]  # note spark created ids are non-continuous
 
-        assert_knn_equal(knn_df, alias.row_number, distances, indices_maped_to_sparkid)
+        assert_knn_equal(knn_df, alias.row_number, distances, indices_mapped_to_sparkid)
