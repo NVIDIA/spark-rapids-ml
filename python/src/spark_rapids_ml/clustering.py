@@ -96,7 +96,7 @@ class KMeansClass(_CumlClass):
         def tol_value_mapper(x: float) -> float:
             if x == 0.0:
                 logger = get_logger(cls)
-                logger.warn(
+                logger.warning(
                     "tol=0 is not supported in cuml yet. "
                     + "It will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny."
                 )

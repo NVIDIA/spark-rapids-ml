@@ -138,6 +138,7 @@ class CumlContext:
             inject_comms_on_handle(
                 self._handle,
                 self._nccl_comm,
+                False,  # is_ucxx - TODO: migrate to ucxx from ucp
                 self._ucx.get_worker(),  # type: ignore
                 self._ucx_eps,
                 self._nranks,

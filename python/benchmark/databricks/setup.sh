@@ -49,6 +49,13 @@ databricks workspace mkdirs ${INIT_SCRIPT_DIR} --profile ${DB_PROFILE} ${DB_OVER
 for init_script in init-pip-cuda-11.8.sh init-cpu.sh
 do
 # NOTE: on linux delete the .bu after -i
+    if base64 --help | grep '\-w'; then
+        # linux
+        base64_cmd="base64 -w 0"
+    else
+        # mac os
+        base64_cmd="base64 -i"
+    fi
     sed -e "s#/path/to/spark-rapids-ml\.zip#${SPARK_RAPIDS_ML_ZIP}#g" -e "s#/path/to/benchmark\.zip#${BENCHMARK_ZIP}#g" $init_script > ${init_script}.updated && \
-    databricks workspace import --format AUTO --content $(base64 -i ${init_script}.updated) ${INIT_SCRIPT_DIR}/${init_script} --profile ${DB_PROFILE} ${DB_OVERWRITE}
+    databricks workspace import --format AUTO --content $(${base64_cmd} ${init_script}.updated) ${INIT_SCRIPT_DIR}/${init_script} --profile ${DB_PROFILE} ${DB_OVERWRITE}
 done
