@@ -707,11 +707,11 @@ class LogisticRegressionClass(_CumlClass):
     @classmethod
     def _reg_params_value_mapping(
         cls, reg_param: float, elasticNet_param: float
-    ) -> Tuple[str, float, float]:
-        # Note cuml ignores l1_ratio when penalty is "none", "l2", and "l1"
+    ) -> Tuple[Optional[str], float, float]:
+        # Note cuml ignores l1_ratio when penalty is None, "l2", and "l1"
         # Spark Rapids ML sets it to elasticNet_param to be compatible with Spark
         if reg_param == 0.0:
-            penalty = "none"
+            penalty = None
             C = 0.0
             l1_ratio = elasticNet_param
         elif elasticNet_param == 0.0:
@@ -1041,7 +1041,7 @@ class LogisticRegression(
                     init_parameters["standardization"] = False
 
                 if init_parameters["C"] == 0.0:
-                    init_parameters["penalty"] = "none"
+                    init_parameters["penalty"] = None
 
                 elif init_parameters["l1_ratio"] == 0.0:
                     init_parameters["penalty"] = "l2"

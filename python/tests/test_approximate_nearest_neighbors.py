@@ -80,26 +80,40 @@ def test_example(
 @pytest.mark.parametrize(
     "combo",
     [
-        ("array", 10000, None),
-        ("vector", 2000, {"nlist": 10, "nprobe": 2}),
-        ("multi_cols", 5000, {"nlist": 20, "nprobe": 4}),
+        ("array", 10000, None, "euclidean"),
+        ("vector", 2000, {"nlist": 10, "nprobe": 2}, "euclidean"),
+        ("multi_cols", 5000, {"nlist": 20, "nprobe": 4}, "euclidean"),
+        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
+        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
+        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
     ],
 )  # vector feature type will be converted to float32 to be compatible with cuml single-GPU NearestNeighbors Class
 @pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 def test_ivfflat(
-    combo: Tuple[str, int, Optional[Dict[str, Any]]],
+    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
     data_shape: Tuple[int, int],
     data_type: np.dtype,
-    metric: str = "euclidean",
-) -> Tuple[ApproximateNearestNeighbors, ApproximateNearestNeighborsModel]:
+) -> None:
 
     feature_type = combo[0]
     max_record_batch = combo[1]
     algoParams = combo[2]
+    metric = combo[3]
     n_neighbors = 50
     n_clusters = 10
     tolerance = 1e-4
+
+    from cuml.neighbors import VALID_METRICS
+
+    assert VALID_METRICS["ivfflat"] == {
+        "euclidean",
+        "sqeuclidean",
+        "cosine",
+        "inner_product",
+        "l2",
+        "correlation",
+    }
 
     expected_avg_recall = 0.95
 
@@ -261,39 +275,5 @@ def test_ivfflat(
             r2 = knn_df_collect[i]
             assert_row_equal(r1, r2)
 
-        return (knn_est, knn_model)
-
-
-@pytest.mark.parametrize(
-    "combo",  # feature_type, max_batch_size, algo_param, metric
-    [
-        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
-        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
-        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
-    ],
-)
-def test_metric(
-    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
-) -> None:
-    data_shape = (10000, 50)
-    data_type = np.float32
-
-    from cuml.neighbors import VALID_METRICS
-
-    assert VALID_METRICS["ivfflat"] == {
-        "euclidean",
-        "sqeuclidean",
-        "cosine",
-        "inner_product",
-        "l2",
-        "correlation",
-    }
-
-    gpu_est, gpu_model = test_ivfflat(
-        combo=(combo[0], combo[1], combo[2]),
-        data_shape=data_shape,
-        data_type=data_type,
-        metric=combo[3],
-    )
-    assert gpu_est._cuml_params["metric"] == combo[3]
-    assert gpu_model._cuml_params["metric"] == combo[3]
+        assert knn_est._cuml_params["metric"] == combo[3]
+        assert knn_model._cuml_params["metric"] == combo[3]

@@ -177,9 +177,9 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "standardization": True,
     }
 
-    default_cuml_params = {
+    default_cuml_params: Dict[str, Any] = {
         "max_iter": 100,
-        "penalty": "none",
+        "penalty": None,
         "C": 0.0,
         "l1_ratio": 0.0,
         "tol": 1e-6,
@@ -1050,7 +1050,7 @@ def test_quick(
     sg = CUMLSG(penalty=penalty, C=C, l1_ratio=l1_ratio)
     l1_strength, l2_strength = sg._get_qn_params()
     if reg_param == 0.0:
-        assert penalty == "none"
+        assert penalty == None
         assert l1_strength == 0.0
         assert l2_strength == 0.0
     elif elasticNet_param == 0.0:
