@@ -181,6 +181,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
 
         if num_cpus > 0:
             assert num_gpus <= 0
+
             if is_array_col:
                 vector_df = train_df.select(
                     "id", array_to_vector(train_df[first_col]).alias(first_col)
@@ -228,13 +229,10 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
                 df_query: DataFrame,
                 n_neighbors: int,
             ) -> None:
-                queries = df_query.collect()
-                for row in queries:
-                    query = row[first_col]
-                    knn_df = model.approxNearestNeighbors(
-                        dataset=df, key=query, numNearestNeighbors=n_neighbors
-                    )
-                    knn_df.count()
+
+                assert (
+                    False
+                ), "Currently does not support CPU benchmarking for approximate nearest neighbors"
 
             _, transform_time = with_benchmark(
                 "cpu transform",
@@ -288,7 +286,8 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         limit: int = 1000,
     ) -> float:
 
-        knn_selected = knn_df.limit(limit).sort("query_id").collect()
+        fraction = limit / knn_df.count()
+        knn_selected = knn_df.sample(fraction).sort("query_id").collect()
         qid_eval_set = set([row["query_id"] for row in knn_selected])
 
         query_df_eval_set = query_df.filter(query_df["id"].isin(qid_eval_set))
