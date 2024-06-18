@@ -860,6 +860,8 @@ class LogisticRegression(
         If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
         If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
         Note this is only supported in spark >= 3.4.
+    float32_inputs: bool (default=True): 
+        Whether to convert double data type to float32 when copying the pyspark dataframe to GPUs 
     fitIntercept:
         Whether to fit an intercept term.
     standardization:
@@ -927,16 +929,11 @@ class LogisticRegression(
         fitIntercept: bool = True,
         standardization: bool = True,
         enable_sparse_data_optim: Optional[bool] = None,
+        float32_inputs: bool = True,
         num_workers: Optional[int] = None,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
-        if not self._input_kwargs.get("float32_inputs", True):
-            get_logger(self.__class__).warning(
-                "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
-            )
-            self._input_kwargs.pop("float32_inputs")
-
         super().__init__()
         self._set_cuml_reg_params()
         self._set_params(**self._input_kwargs)
@@ -957,6 +954,7 @@ class LogisticRegression(
         fit_intercept = self.getFitIntercept()
 
         logger = get_logger(self.__class__)
+        float32_input = self._float32_inputs
 
         def _logistic_regression_fit(
             dfs: FitInputType,
