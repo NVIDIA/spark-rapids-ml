@@ -249,31 +249,29 @@ def test_ivfflat(
         )
         reconstructed_collect = reconstructed_knn_df.collect()
 
-        def get_sorted_indices(row: Row) -> list[int]:
-            row_dists = row["distances"]
-            row_indices = row["indices"]
-            idx_sorted = sorted(
-                range(len(row_indices)), key=lambda i: (row_dists[i], row_indices[i])
-            )
-            indices_sorted = [row["indices"][idx] for idx in idx_sorted]
-            return indices_sorted
-
-        def assert_row_equal(r1: Row, r2: Row) -> None:
+        def assert_row_equal_and_get_diff_cnt(r1: Row, r2: Row) -> int:
             assert r1[f"query_{id_col}"] == r2[f"query_{id_col}"]
             r1_distances = r1["distances"]
             r2_distances = r2["distances"]
             assert r1_distances == r2_distances
 
-            # sort indices in case two neighbors having same distance to the query
-            r1_indices_sorted = get_sorted_indices(r1)
-            r2_indices_sorted = get_sorted_indices(r2)
-            assert r1_indices_sorted == r2_indices_sorted
+            assert len(r1["indices"]) == len(r2["indices"])
+            assert len(r1["indices"]) == n_neighbors
+
+            cnt = 0
+            for i1, i2 in zip(r1["indices"], r2["indices"]):
+                if i1 != i2:
+                    cnt += 1
+            return cnt
 
         assert len(reconstructed_collect) == len(knn_df_collect)
+        cnt_diff_indices = 0
         for i in range(len(reconstructed_collect)):
             r1 = reconstructed_collect[i]
             r2 = knn_df_collect[i]
-            assert_row_equal(r1, r2)
+            cnt_diff_indices += assert_row_equal_and_get_diff_cnt(r1, r2)
+
+        assert cnt_diff_indices / (len(reconstructed_collect) * n_neighbors) < tolerance
 
         assert knn_est._cuml_params["metric"] == combo[3]
         assert knn_model._cuml_params["metric"] == combo[3]

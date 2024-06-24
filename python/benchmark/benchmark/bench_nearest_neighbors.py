@@ -62,6 +62,9 @@ class CPUNearestNeighborsModel(ApproximateNearestNeighborsModel):
 
         return _construct_sknn, _transform_internal, None
 
+    def _concate_pdf_batches(self) -> bool:
+        return False
+
 
 class BenchmarkNearestNeighbors(BenchmarkBase):
     def _supported_class_params(self) -> Dict[str, Any]:
