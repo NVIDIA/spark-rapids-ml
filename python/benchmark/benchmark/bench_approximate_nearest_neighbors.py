@@ -180,69 +180,13 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
             print(f"gpu total took: {total_time} sec")
 
         if num_cpus > 0:
-            assert num_gpus <= 0
 
-            if is_array_col:
-                vector_df = train_df.select(
-                    "id", array_to_vector(train_df[first_col]).alias(first_col)
-                )
-
-                vector_query_df = query_df.select(
-                    "id", array_to_vector(train_df[first_col]).alias(first_col)
-                )
-
-            elif not is_vector_col:
-                vector_assembler = VectorAssembler(outputCol="features").setInputCols(
-                    input_cols
-                )
-                vector_df = vector_assembler.transform(train_df).drop(*input_cols)
-                vector_query_df = vector_assembler.transform(query_df).drop(*input_cols)
-                first_col = "features"
-            else:
-                vector_df = train_df
-                vector_query_df = query_df
-
-            if not no_cache:
-
-                (vector_df, vector_query_df), prepare_time = with_benchmark(
-                    "prepare dataset", lambda: cache_df(vector_df, vector_query_df)
-                )
-
-            from pyspark.ml.feature import (
-                BucketedRandomProjectionLSH,
-                BucketedRandomProjectionLSHModel,
+            fit_time = "Not-supported"
+            transform_time = "Not-supported"
+            total_time = "Not-supported"  # type: ignore
+            print(
+                "Currently does not support CPU benchmarking for approximate nearest neighbors"
             )
-
-            cpu_estimator = BucketedRandomProjectionLSH(
-                inputCol=first_col,
-                outputCol="hashes",
-                **cpu_algo_params,
-            )
-
-            cpu_model, fit_time = with_benchmark(
-                "cpu fit time", lambda: cpu_estimator.fit(vector_df)
-            )
-
-            def cpu_transform(
-                model: BucketedRandomProjectionLSHModel,
-                df: DataFrame,
-                df_query: DataFrame,
-                n_neighbors: int,
-            ) -> None:
-
-                assert (
-                    False
-                ), "Currently does not support CPU benchmarking for approximate nearest neighbors"
-
-            _, transform_time = with_benchmark(
-                "cpu transform",
-                lambda: cpu_transform(
-                    cpu_model, vector_df, vector_query_df, n_neighbors
-                ),
-            )
-
-            total_time = round(time.time() - func_start_time, 2)
-            print(f"cpu total took: {total_time} sec")
 
         if num_gpus > 0:
             eval_start_time = time.time()
@@ -255,7 +199,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
             print(f"evaluation took: {round(time.time() - eval_start_time, 2)} sec")
         else:
             print(f"benchmark script does not evaluate LSH")
-            avg_recall = None
+            avg_recall = "Not-supported"  # type: ignore
 
         report_dict = {
             "fit": fit_time,
