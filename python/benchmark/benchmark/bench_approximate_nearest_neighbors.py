@@ -230,7 +230,8 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         limit: int = 1000,
     ) -> float:
 
-        fraction = limit / knn_df.count()
+        fraction = min(limit / knn_df.count(), 1.0)
+
         knn_selected = knn_df.sample(fraction).sort("query_id").collect()
         qid_eval_set = set([row["query_id"] for row in knn_selected])
 
