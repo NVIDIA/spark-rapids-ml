@@ -386,7 +386,7 @@ def test_classifier(
         elif feature_type is "vector":
             assert spark_lr_model.dtype == "float64"
         else:
-            assert spark_lr_model.dtype == data_type
+            assert spark_lr_model.dtype == np.dtype(data_type)
 
         assert array_equal(np.array(spark_lr_model.coef_), cu_lr.coef_, tolerance)
         assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)  # type: ignore
