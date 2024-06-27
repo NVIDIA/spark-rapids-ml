@@ -860,8 +860,6 @@ class LogisticRegression(
         If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
         If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
         Note this is only supported in spark >= 3.4.
-    float32_inputs: bool (default=True):
-        Whether to convert double data type to float32 when copying the pyspark dataframe to GPUs
     fitIntercept:
         Whether to fit an intercept term.
     standardization:

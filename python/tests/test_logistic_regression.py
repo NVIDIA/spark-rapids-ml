@@ -305,9 +305,8 @@ def test_classifier(
 
     float32_inputs = set_float32_inputs
     if float32_inputs is None:
-        float32_inputs = True
-        if data_type == np.float64 and max_record_batch > 1000:
-            float32_inputs = False
+        random.seed(0)
+        float32_inputs = random.choice([True, False])
 
     if convert_to_sparse is True:
         assert feature_type == "vector"
@@ -1008,22 +1007,7 @@ def test_multiclass(
         gpu_number=gpu_number,
         reg_param=0.1,
         tolerance=tolerance,
-        set_float32_inputs=True,
     )
-
-    if data_type == np.float64:
-        test_classifier(
-            fit_intercept=fit_intercept,
-            feature_type=feature_type,
-            data_shape=data_shape,
-            data_type=data_type,
-            max_record_batch=max_record_batch,
-            n_classes=n_classes,
-            gpu_number=gpu_number,
-            reg_param=0.1,
-            tolerance=tolerance,
-            set_float32_inputs=False,
-        )
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -2042,6 +2026,7 @@ def test_double_precision(
     gpu_number: int,
 ) -> None:
 
+    random.seed(0)
     random_bool = random.choice([True, False])
     data_type = np.float32 if random_bool is True else np.float64
     float32_inputs = random.choice([True, False])

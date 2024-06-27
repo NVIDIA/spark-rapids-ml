@@ -161,7 +161,7 @@ from .utils import _get_unwrap_udt_fn
 
 
 # similar to the XGBOOST _get_unwrapped_vec_cols in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py
-def _get_unwrapped_vec_cols(feature_col: Column, float32_input: bool) -> List[Column]:
+def _get_unwrapped_vec_cols(feature_col: Column, float32_inputs: bool) -> List[Column]:
     unwrap_udt = _get_unwrap_udt_fn()
     features_unwrapped_vec_col = unwrap_udt(feature_col)
 
@@ -177,14 +177,15 @@ def _get_unwrapped_vec_cols(feature_col: Column, float32_input: bool) -> List[Co
     # For dense vector, `type` field is 1, `size` and `indices` fields are None,
     # `values` field is the array of the vector element values.
 
-    feature_type = FloatType() if float32_input is True else DoubleType()
+    values_col = features_unwrapped_vec_col.values
+    if float32_inputs is True:
+        values_col = values_col.cast(ArrayType(FloatType()))
+
     return [
         features_unwrapped_vec_col.type.alias(alias.featureVectorType),
         features_unwrapped_vec_col.size.alias(alias.featureVectorSize),
         features_unwrapped_vec_col.indices.alias(alias.featureVectorIndices),
-        features_unwrapped_vec_col.values.cast(ArrayType(feature_type)).alias(
-            alias.data
-        ),
+        values_col.alias(alias.data),
     ]
 
 
