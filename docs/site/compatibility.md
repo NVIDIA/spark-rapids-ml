@@ -34,4 +34,4 @@ Note: Spark does not provide a k-Nearest Neighbors (k-NN) implementation, but it
 ## Single vs Double precision inputs
 The underlying cuML implementations all accept single precision (e.g. Float or float32) input types and offer the best performance in this case.  As a result, by default, Spark RAPIDs ML converts Spark DataFrames supplied to `fit` and `transform` methods having double precision data types (i.e. `VectorUDT`, `ArrayType(DoubleType())`, `DoubleType()` columns) to single precision before passing them down to the cuML layer.  Most of the cuML algorithm implementations also support double precision inputs.   The Estimator (for all algorithms) constructor parameter `float32_inputs` can be used to control this behavior.  The default value is `True` which forces the conversion to single precision for all algorithms, but it can be set to `False` in which case double precision input data is passed to those cuML algorithms which support it.
 
-Currently all algorithms *except* the following support double precision:  LogisticRegression, k-NN, UMAP.
+Currently all algorithms *except* the following support double precision:  k-NN, UMAP.
