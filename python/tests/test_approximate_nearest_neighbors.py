@@ -32,6 +32,19 @@ from .utils import (
 )
 
 
+def cal_dist(v1: np.ndarray, v2: np.ndarray, metric: str) -> float:
+    if metric == "inner_product":
+        return np.dot(v1, v2)
+    elif metric in {"euclidean", "l2", "sqeuclidean"}:
+        dist = float(np.linalg.norm(v1 - v2))
+        if metric == "sqeuclidean":
+            return dist * dist
+        else:
+            return dist
+    else:
+        assert False, f"Does not recognize metric '{metric}'"
+
+
 def test_default_cuml_params() -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
 
@@ -249,7 +262,7 @@ def test_ivfflat(
         )
         reconstructed_collect = reconstructed_knn_df.collect()
 
-        def assert_row_equal_and_get_diff_cnt(r1: Row, r2: Row) -> int:
+        def assert_row_equal(r1: Row, r2: Row) -> None:
             assert r1[f"query_{id_col}"] == r2[f"query_{id_col}"]
             r1_distances = r1["distances"]
             r2_distances = r2["distances"]
@@ -258,20 +271,18 @@ def test_ivfflat(
             assert len(r1["indices"]) == len(r2["indices"])
             assert len(r1["indices"]) == n_neighbors
 
-            cnt = 0
             for i1, i2 in zip(r1["indices"], r2["indices"]):
                 if i1 != i2:
-                    cnt += 1
-            return cnt
+                    query_vec = X[r1[f"query_{id_col}"]]
+                    assert cal_dist(query_vec, X[i1], metric) == pytest.approx(
+                        cal_dist(query_vec, X[i2], metric)
+                    )
 
         assert len(reconstructed_collect) == len(knn_df_collect)
-        cnt_diff_indices = 0
         for i in range(len(reconstructed_collect)):
             r1 = reconstructed_collect[i]
             r2 = knn_df_collect[i]
-            cnt_diff_indices += assert_row_equal_and_get_diff_cnt(r1, r2)
-
-        assert cnt_diff_indices / (len(reconstructed_collect) * n_neighbors) < tolerance
+            assert_row_equal(r1, r2)
 
         assert knn_est._cuml_params["metric"] == combo[3]
         assert knn_model._cuml_params["metric"] == combo[3]
