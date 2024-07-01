@@ -2122,3 +2122,71 @@ def test_sparse_int64(
         convert_to_sparse=convert_to_sparse,
         verbose=True,
     )
+
+"""
+How to generate large csr
+
+gen_data_root="/raid/spark-team/jinfengl" 
+num_rows=100000
+num_sparse_cols=300
+num_classes=8
+density=0.1
+#output_num_files=$(( ( $num_rows * $num_sparse_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
+output_num_files=100
+use_gpu=True
+arrow_batch_size=20000
+local_threads=*
+data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_sparse_cols}_float64_ncls${num_classes}.parquet
+gen_data_script=${gen_data_script:-./benchmark/gen_data_distributed.py}
+
+
+common_confs=$( 
+cat <<EOF 
+--spark_confs spark.sql.execution.arrow.pyspark.enabled=true \
+    --spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=$arrow_batch_size \
+    --spark_confs spark.python.worker.reuse=true \
+    --spark_confs spark.master=local[$local_threads] \
+    --spark_confs spark.driver.memory=128g \
+    --spark_confs spark.rapids.ml.uvm.enabled=true
+EOF
+)
+
+if [[ ! -d ${data_path} ]]; then
+    python $gen_data_script sparse_regression \
+        --n_informative $( expr $num_sparse_cols / 3 )  \
+        --num_rows $num_rows \
+        --num_cols $num_sparse_cols \
+        --output_num_files $output_num_files \
+        --dtype "float64" \
+        --feature_type "vector" \
+        --output_dir ${data_path} \
+        --density $density \
+        --logistic_regression "True" \
+        --n_classes ${num_classes} \
+        --use_gpu ${use_gpu} \
+        $common_confs
+else
+    echo "already exists the data path ${data_path}"
+fi
+
+"""
+
+def test_sparse_dev():
+    num_rows=int(1e5)
+    num_cols=int(300)
+    num_classes=8
+    parquet_path = f"/raid/spark-team/jinfengl/sparse_logistic_regression/r{num_rows}_c{num_cols}_float64_ncls{num_classes}.parquet" 
+
+    with CleanSparkSession() as spark:
+        import time
+        start = time.time()
+        df_sparse = spark.read.parquet(parquet_path)
+        print(f"debug loading parquet took {time.time() - start} secs, num_rows: {df_sparse.count()}")
+        print(f"debug df_sparse.schema is {df_sparse.schema}")
+        print(f"debug type(df_sparse.first()) is {type(df_sparse.first())}")
+
+        start = time.time()
+        lr_est = LogisticRegression(enable_sparse_data_optim=True, featuresCol="features", labelCol="label")
+        lr_model = lr_est.fit(df_sparse)
+        print(f"debug fit took {time.time() - start} secs")
+        
