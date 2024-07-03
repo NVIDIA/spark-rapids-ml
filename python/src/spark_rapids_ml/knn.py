@@ -1184,7 +1184,7 @@ class ApproximateNearestNeighborsModel(
         return (bcast_qids, bcast_qfeatures)
 
     @classmethod
-    def _agg_topk_new(
+    def _agg_topk(
         cls: Type["ApproximateNearestNeighborsModel"],
         knn_df: DataFrame,
         id_col_name: str,
