@@ -1193,8 +1193,8 @@ class ApproximateNearestNeighborsModel(
         k: int,
         ascending: bool = True,
     ) -> DataFrame:
-        # if knn_df.rdd.getNumPartitions() == 1:
-        #    return knn_df
+        if knn_df.rdd.getNumPartitions() == 1:
+            return knn_df
 
         from pyspark.sql.functions import (
             arrays_zip,
