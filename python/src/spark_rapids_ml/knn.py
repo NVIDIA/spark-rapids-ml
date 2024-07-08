@@ -1207,7 +1207,6 @@ class ApproximateNearestNeighborsModel(
             sort_array,
             struct,
         )
-        from pyspark.sql.window import Window
 
         zip_df = knn_df.select(
             id_col_name,
