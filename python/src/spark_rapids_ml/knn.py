@@ -411,7 +411,9 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
         )
 
     @abstractmethod
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+    def kneighbors(
+        self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
+    ) -> Tuple[DataFrame, DataFrame, DataFrame]:
         raise NotImplementedError()
 
     def _nearest_neighbors_join(
@@ -423,7 +425,9 @@ class _NNModelBase(_CumlModel, _NearestNeighborsCumlParams):
         id_col_name = self._getIdColOrDefault()
 
         # call kneighbors then prepare return results
-        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(query_df)
+        (item_df_withid, query_df_withid, knn_df) = self.kneighbors(
+            query_df, sort_knn_df_by_query_id=False
+        )
 
         from pyspark.sql.functions import arrays_zip, col, explode, struct
 
@@ -551,7 +555,9 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
 
         return select_cols, multi_col_names, dimension, feature_type
 
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+    def kneighbors(
+        self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
+    ) -> Tuple[DataFrame, DataFrame, DataFrame]:
         """Return the exact nearest neighbors for each query in query_df. The data
         vectors (or equivalently item vectors) should be provided through the fit
         function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The
@@ -564,6 +570,9 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
         query_df: pyspark.sql.DataFrame
             query vectors where each row corresponds to one query. The query_df can be in the
             format of a single array column, a single vector column, or multiple float columns.
+
+        sort_knn_df_by_query_id: bool (default=True)
+            whether to sort the returned dataframe knn_df by query_id
 
         Returns
         -------
@@ -604,9 +613,15 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
         )
         knn_df = knn_rdd.toDF(
             schema=f"{query_id_col_name} {id_col_type}, indices array<{id_col_type}>, distances array<float>"
-        ).sort(query_id_col_name)
+        )
 
-        return (self._item_df_withid, query_df_withid, knn_df)
+        knn_df_returned = (
+            knn_df
+            if sort_knn_df_by_query_id is False
+            else knn_df.sort(query_id_col_name)
+        )
+
+        return (self._item_df_withid, query_df_withid, knn_df_returned)
 
     def _get_cuml_fit_func(
         self,
@@ -1178,49 +1193,41 @@ class ApproximateNearestNeighborsModel(
         k: int,
         ascending: bool = True,
     ) -> DataFrame:
-
         if knn_df.rdd.getNumPartitions() == 1:
             return knn_df
 
-        from pyspark.sql.functions import pandas_udf
-
-        @pandas_udf("array<long>")  # type: ignore
-        def func_agg_indices(indices: pd.Series, distances: pd.Series) -> list[int]:
-            flat_indices = indices.explode().reset_index(drop=True)
-            flat_distances = (
-                distances.explode().reset_index(drop=True).astype("float32")
-            )
-            assert len(flat_indices) == len(flat_distances)
-            if ascending:
-                topk_index = flat_distances.nsmallest(k).index
-            else:
-                topk_index = flat_distances.nlargest(k).index
-
-            res = flat_indices[topk_index].to_numpy()
-            return res
-
-        @pandas_udf("array<float>")  # type: ignore
-        def func_agg_distances(distances: pd.Series) -> list[float]:
-            flat_distances = (
-                distances.explode().reset_index(drop=True).astype("float32")
-            )
-            if ascending:
-                res = flat_distances.nsmallest(k).to_numpy()
-            else:
-                res = flat_distances.nlargest(k).to_numpy()
-
-            return res
-
-        res_df = knn_df.groupBy(id_col_name).agg(
-            func_agg_indices(
-                knn_df[indices_col_name], knn_df[distances_col_name]
-            ).alias(indices_col_name),
-            func_agg_distances(knn_df[distances_col_name]).alias(distances_col_name),
+        from pyspark.sql.functions import (
+            arrays_zip,
+            col,
+            collect_list,
+            desc,
+            explode,
+            row_number,
+            slice,
+            sort_array,
+            struct,
         )
 
-        return res_df
+        zip_df = knn_df.select(
+            id_col_name,
+            explode(arrays_zip(distances_col_name, indices_col_name)).alias("zipped"),
+        )
+        topk_df = zip_df.groupBy(id_col_name).agg(
+            slice(sort_array(collect_list("zipped"), asc=ascending), 1, k).alias(
+                "zipped"
+            )
+        )
+        global_knn_df = topk_df.select(
+            id_col_name,
+            col(f"zipped.{indices_col_name}").alias(indices_col_name),
+            col(f"zipped.{distances_col_name}").alias(distances_col_name),
+        )
 
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+        return global_knn_df
+
+    def kneighbors(
+        self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
+    ) -> Tuple[DataFrame, DataFrame, DataFrame]:
         """Return the approximate nearest neighbors for each query in query_df. The data
         vectors (or equivalently item vectors) should be provided through the fit
         function (see Examples in the spark_rapids_ml.knn.ApproximateNearestNeighbors). The
@@ -1233,6 +1240,9 @@ class ApproximateNearestNeighborsModel(
         query_df: pyspark.sql.DataFrame
             query vectors where each row corresponds to one query. The query_df can be in the
             format of a single array column, a single vector column, or multiple float columns.
+
+        sort_knn_df_by_query_id: bool (default=True)
+            whether to sort the returned dataframe knn_df by query_id
 
         Returns
         -------
@@ -1275,7 +1285,12 @@ class ApproximateNearestNeighborsModel(
             ascending,
         )
 
-        return (self._item_df_withid, query_df_withid, knn_df_agg)
+        knn_df_returned = (
+            knn_df_agg
+            if sort_knn_df_by_query_id is False
+            else knn_df_agg.sort(query_id_col_name)
+        )
+        return (self._item_df_withid, query_df_withid, knn_df_returned)
 
     def _concate_pdf_batches(self) -> bool:
         return True
