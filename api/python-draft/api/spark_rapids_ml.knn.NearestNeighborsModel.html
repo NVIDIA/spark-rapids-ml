@@ -418,7 +418,7 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.isSet" title="spark_rapids_ml.knn.NearestNeighborsModel.isSet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isSet</span></code></a>(param)</p></td>
 <td><p>Checks whether a param is explicitly set by user.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kneighbors</span></code></a>(query_df)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kneighbors</span></code></a>(query_df[, sort_knn_df_by_query_id])</p></td>
 <td><p>Return the exact nearest neighbors for each query in query_df.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.NearestNeighborsModel.set" title="spark_rapids_ml.knn.NearestNeighborsModel.set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set</span></code></a>(param, value)</p></td>
@@ -628,7 +628,7 @@ a default value.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.NearestNeighborsModel.kneighbors">
-<span class="sig-name descname"><span class="pre">kneighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">kneighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_knn_df_by_query_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.NearestNeighborsModel.kneighbors" title="Permalink to this definition">#</a></dt>
 <dd><p>Return the exact nearest neighbors for each query in query_df. The data
 vectors (or equivalently item vectors) should be provided through the fit
 function (see Examples in the spark_rapids_ml.knn.NearestNeighbors). The
@@ -640,6 +640,8 @@ supports float32 type and will convert other data types into float32.</p>
 <dd class="field-odd"><dl class="simple">
 <dt><strong>query_df: pyspark.sql.DataFrame</strong></dt><dd><p>query vectors where each row corresponds to one query. The query_df can be in the
 format of a single array column, a single vector column, or multiple float columns.</p>
+</dd>
+<dt><strong>sort_knn_df_by_query_id: bool (default=True)</strong></dt><dd><p>whether to sort the returned dataframe knn_df by query_id</p>
 </dd>
 </dl>
 </dd>
