@@ -55,9 +55,7 @@ def test_default_cuml_params() -> None:
     assert cuml_params == spark_params
 
 
-def test_dbscan_params(
-    gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
-) -> None:
+def test_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -> None:
     # Default constructor
     default_spark_params: Dict[str, Any] = {}
     default_cuml_params = {
@@ -77,6 +75,11 @@ def test_dbscan_params(
     default_dbscan.write().overwrite().save(estimator_path)
     loaded_dbscan = DBSCAN.load(estimator_path)
     assert_params(loaded_dbscan, default_spark_params, default_cuml_params)
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(DBSCAN)
 
 
 def test_dbscan_basic(

@@ -280,6 +280,11 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     loaded_lr = LogisticRegression.load(estimator_path)
     assert_params(loaded_lr, expected_spark_params, expected_cuml_params)
 
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(LogisticRegression)
+
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])

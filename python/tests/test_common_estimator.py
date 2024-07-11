@@ -317,6 +317,34 @@ class SparkRapidsMLDummyModel(
         return input_schema
 
 
+def _test_input_setter_getter(est_class: Any) -> None:
+    if est_class().hasParam("inputCol"):
+        assert est_class(inputCol="features").getInputCol() == "features"
+        assert est_class(inputCol=["f1", "f2"]).getInputCols() == ["f1", "f2"]
+        assert est_class(inputCols=["f1", "f2"]).getInputCols() == ["f1", "f2"]
+
+        assert est_class().setInputCol("features").getInputCol() == "features"
+        assert est_class().setInputCol(["f1", "f2"]).getInputCols() == ["f1", "f2"]
+        assert est_class().setInputCols(["f1", "f2"]).getInputCols() == ["f1", "f2"]
+
+    else:
+        assert est_class().hasParam("featuresCol")
+
+        assert est_class(featuresCol="features").getFeaturesCol() == "features"
+        assert est_class(featuresCol=["f1", "f2"]).getFeaturesCols() == ["f1", "f2"]
+        assert est_class(featuresCols=["f1", "f2"]).getFeaturesCols() == ["f1", "f2"]
+
+        assert est_class().setFeaturesCol("features").getFeaturesCol() == "features"
+        assert est_class().setFeaturesCol(["f1", "f2"]).getFeaturesCols() == [
+            "f1",
+            "f2",
+        ]
+        assert est_class().setFeaturesCols(["f1", "f2"]).getFeaturesCols() == [
+            "f1",
+            "f2",
+        ]
+
+
 def test_default_cuml_params() -> None:
     cuml_params = get_default_cuml_parameters([CumlDummy], ["b"])
     spark_params = SparkRapidsMLDummy()._get_cuml_params_default()

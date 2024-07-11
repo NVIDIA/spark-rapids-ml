@@ -28,7 +28,7 @@ NNEstimator = Union[NearestNeighbors, ApproximateNearestNeighbors]
 NNModel = Union[NearestNeighborsModel, ApproximateNearestNeighborsModel]
 
 
-def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
+def test_params(caplog: LogCaptureFixture) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
     from cuml.neighbors.nearest_neighbors_mg import (
         NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
@@ -54,6 +54,11 @@ def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
     nn_float32 = NearestNeighbors(float32_inputs=False)
     assert "float32_inputs to False" in caplog.text
     assert nn_float32._float32_inputs
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(NearestNeighbors)
 
 
 def func_test_example_no_id(
