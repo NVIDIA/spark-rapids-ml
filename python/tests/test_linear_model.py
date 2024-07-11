@@ -97,7 +97,7 @@ def train_with_cuml_linear_regression(
     return lr
 
 
-def test_default_cuml_params() -> None:
+def test_params() -> None:
     from cuml.linear_model.linear_regression import (
         LinearRegression as CumlLinearRegression,
     )
@@ -115,6 +115,11 @@ def test_default_cuml_params() -> None:
     if version.parse(cuml.__version__) < version.parse("23.08.00"):
         spark_params.pop("copy_X")
     assert cuml_params == spark_params
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(LinearRegression)
 
 
 @pytest.mark.parametrize("reg", [0.0, 0.7])
@@ -678,3 +683,8 @@ def test_parameters_validation() -> None:
 
         # shouldn't throw an exception for setting cuml values
         LinearRegression(loss="squared_loss")._validate_parameters()
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(LinearRegression)
