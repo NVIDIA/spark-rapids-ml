@@ -320,7 +320,17 @@ class _CumlParams(_CumlClass, Params):
                 )
 
         for k, v in kwargs.items():
-            if self.hasParam(k):
+            if k == "inputCol":
+                if isinstance(v, str):
+                    self._set(**{"inputCol": v})
+                elif isinstance(v, List):
+                    self._set(**{"inputCols": v})
+            elif k == "featuresCol":
+                if isinstance(v, str):
+                    self._set(**{"featuresCol": v})
+                elif isinstance(v, List):
+                    self._set(**{"featuresCols": v})
+            elif self.hasParam(k):
                 # standard Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
                 self._set_cuml_param(k, v, silent=False)

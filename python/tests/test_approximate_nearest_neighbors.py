@@ -45,7 +45,7 @@ def cal_dist(v1: np.ndarray, v2: np.ndarray, metric: str) -> float:
         assert False, f"Does not recognize metric '{metric}'"
 
 
-def test_default_cuml_params() -> None:
+def test_params() -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
 
     # obtain n_neighbors, verbose, algorithm, algo_params, metric
@@ -63,6 +63,11 @@ def test_default_cuml_params() -> None:
     spark_params = ApproximateNearestNeighbors()._get_cuml_params_default()
     cuml_params["algorithm"] = "ivfflat"  # change cuml default 'auto' to 'ivfflat'
     assert cuml_params == spark_params
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(ApproximateNearestNeighbors)
 
 
 @pytest.mark.parametrize(

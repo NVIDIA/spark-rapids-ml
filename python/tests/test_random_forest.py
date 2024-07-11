@@ -104,7 +104,7 @@ RandomForestModelType = TypeVar(
 
 
 @pytest.mark.parametrize("Estimator", [RandomForestClassifier, RandomForestRegressor])
-def test_default_cuml_params(Estimator: RandomForest) -> None:
+def test_params(Estimator: RandomForest) -> None:
     from cuml.ensemble.randomforest_common import BaseRandomForestModel
 
     cuml_params = get_default_cuml_parameters(
@@ -126,6 +126,11 @@ def test_default_cuml_params(Estimator: RandomForest) -> None:
     )
     spark_params = Estimator()._get_cuml_params_default()
     assert cuml_params == spark_params
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(Estimator)
 
 
 @pytest.mark.parametrize("RFEstimator", [RandomForestClassifier, RandomForestRegressor])
