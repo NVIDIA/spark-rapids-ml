@@ -284,7 +284,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     def __init__(
         self,
         *,
-        featuresCol: str = "features",
+        featuresCol: Union[str, List[str]] = "features",
         predictionCol: str = "prediction",
         k: int = 2,
         initMode: str = "k-means||",
@@ -758,7 +758,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     def __init__(
         self,
         *,
-        featuresCol: str = "features",
+        featuresCol: Union[str, List[str]] = "features",
         predictionCol: str = "prediction",
         eps: float = 0.5,
         min_samples: int = 5,
