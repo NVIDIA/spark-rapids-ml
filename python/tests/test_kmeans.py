@@ -63,12 +63,17 @@ def assert_centers_equal(
         assert a_center == pytest.approx(b_center, tolerance)
 
 
-def test_default_cuml_params() -> None:
+def test_params() -> None:
     from cuml import KMeans as CumlKMeans
 
     cuml_params = get_default_cuml_parameters([CumlKMeans], ["handle", "output_type"])
     spark_params = KMeans()._get_cuml_params_default()
     assert cuml_params == spark_params
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(KMeans)
 
 
 def test_kmeans_params(

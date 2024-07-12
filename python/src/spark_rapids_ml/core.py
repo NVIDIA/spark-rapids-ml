@@ -161,7 +161,7 @@ from .utils import _get_unwrap_udt_fn
 
 
 # similar to the XGBOOST _get_unwrapped_vec_cols in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py
-def _get_unwrapped_vec_cols(feature_col: Column) -> List[Column]:
+def _get_unwrapped_vec_cols(feature_col: Column, float32_inputs: bool) -> List[Column]:
     unwrap_udt = _get_unwrap_udt_fn()
     features_unwrapped_vec_col = unwrap_udt(feature_col)
 
@@ -176,15 +176,16 @@ def _get_unwrapped_vec_cols(feature_col: Column) -> List[Column]:
     # is the array of active element values.
     # For dense vector, `type` field is 1, `size` and `indices` fields are None,
     # `values` field is the array of the vector element values.
+
+    values_col = features_unwrapped_vec_col.values
+    if float32_inputs is True:
+        values_col = values_col.cast(ArrayType(FloatType()))
+
     return [
         features_unwrapped_vec_col.type.alias(alias.featureVectorType),
         features_unwrapped_vec_col.size.alias(alias.featureVectorSize),
         features_unwrapped_vec_col.indices.alias(alias.featureVectorIndices),
-        # Note: the value field is double array type, cast it to float32 array type
-        # for speedup following repartitioning.
-        features_unwrapped_vec_col.values.cast(ArrayType(FloatType())).alias(
-            alias.data
-        ),
+        values_col.alias(alias.data),
     ]
 
 
@@ -502,7 +503,9 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     use_sparse is None and first_vectorudt_type is SparseVector
                 ):
                     # Sparse Vector type
-                    select_cols += _get_unwrapped_vec_cols(col(input_col))
+                    select_cols += _get_unwrapped_vec_cols(
+                        col(input_col), self._float32_inputs
+                    )
                 else:
                     # Dense Vector type
                     assert use_sparse is False or (
@@ -1225,7 +1228,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
                 if use_cuml_sparse:
                     type_col, size_col, indices_col, data_col = _get_unwrapped_vec_cols(
-                        col(input_col)
+                        col(input_col), self._float32_inputs
                     )
 
                     dataset = dataset.withColumn(alias.featureVectorType, type_col)
@@ -1309,6 +1312,9 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         return dataset, select_cols, input_is_multi_cols, tmp_cols
 
+    def _concate_pdf_batches(self) -> bool:
+        return False
+
     def _transform_evaluate_internal(
         self,
         dataset: DataFrame,
@@ -1334,6 +1340,14 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         array_order = self._transform_array_order()
 
         use_sparse_array = _use_sparse_in_cuml(dataset)
+        concate_pdf_batches = self._concate_pdf_batches()
+
+        cuda_managed_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled:
+            get_logger(self.__class__).info("CUDA managed memory enabled.")
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             from pyspark import TaskContext
@@ -1342,15 +1356,38 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
             _CumlCommon._set_gpu_device(context, is_local, True)
 
+            if cuda_managed_mem_enabled:
+                import cupy as cp
+                import rmm
+                from rmm.allocators.cupy import rmm_cupy_allocator
+
+                rmm.reinitialize(
+                    managed_memory=True,
+                    devices=_CumlCommon._get_gpu_device(
+                        context, is_local, is_transform=True
+                    ),
+                )
+                cp.cuda.set_allocator(rmm_cupy_allocator)
+
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()
             cuml_objects = (
                 cuml_instance if isinstance(cuml_instance, list) else [cuml_instance]
             )
 
-            # TODO try to concatenate all the data and do the transform.
+            def process_pdf_iter(
+                pdf_iter: Iterator[pd.DataFrame],
+            ) -> Iterator[pd.DataFrame]:
+                if concate_pdf_batches is False:
+                    for pdf in pdf_iter:
+                        yield pdf
+                else:
+                    pdfs = [pdf for pdf in pdf_iter]
+                    yield pd.concat(pdfs, ignore_index=True)
+
+            processed_pdf_iter = process_pdf_iter(pdf_iter)
             has_row_number = None
-            for pdf in pdf_iter:
+            for pdf in processed_pdf_iter:
                 if has_row_number is None:
                     has_row_number = True if alias.row_number in pdf.columns else False
                 else:

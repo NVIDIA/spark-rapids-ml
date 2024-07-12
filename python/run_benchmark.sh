@@ -68,6 +68,7 @@ unset SPARK_HOME
 # data set params
 num_rows=${num_rows:-5000}
 knn_num_rows=$num_rows
+knn_fraction_sampled_queries=${knn_fraction_sampled_queries:-0.1}
 num_cols=${num_cols:-3000}
 num_sparse_cols=${num_sparse_cols:-3000}
 density=${density:-0.1}
@@ -105,7 +106,7 @@ EOF
 
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=24.02.0
+SPARK_RAPIDS_VERSION=24.04.1
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
@@ -185,15 +186,61 @@ if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
     fi
 
     echo "$sep algo: knn $sep"
-    python ./benchmark/benchmark_runner.py knn \
-        --n_neighbors 3 \
+    OMP_NUM_THREADS=1 python ./benchmark/benchmark_runner.py knn \
+        --n_neighbors 20 \
+        --fraction_sampled_queries ${knn_fraction_sampled_queries} \
         --num_gpus $num_gpus \
         --num_cpus $num_cpus \
         --no_cache \
         --num_runs $num_runs \
         --train_path "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_knn_${cluster_type}.csv" \
+        --spark_confs "spark.driver.maxResultSize=0" \
         $common_confs $spark_rapids_confs \
+        ${EXTRA_ARGS}
+fi
+
+# ApproximateNearestNeighbors
+if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]]; then
+    centers=100
+    data_path=${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_cts${centers}_float32.parquet
+    if [[ ! -d ${data_path} ]]; then
+        python $gen_data_script blobs \
+            --num_rows ${knn_num_rows} \
+            --num_cols ${num_cols} \
+            --centers ${centers} \
+            --output_num_files $output_num_files \
+            --dtype "float32" \
+            --feature_type "array" \
+            --output_dir ${data_path} \
+            $common_confs
+    fi
+
+    echo "$sep algo: approximate_nearest_neighbors $sep"
+
+    nvecs_per_gpu=$knn_num_rows
+    if [ $num_gpus -gt 1 ]; then
+        nvecs_per_gpu=$(echo "$nvecs_per_gpu / $num_gpus" | bc)
+    fi
+
+    nlist=$(echo "${nvecs_per_gpu}" | awk '{print int(sqrt($1))}')
+    nprobe=$(echo "$nlist" | awk '{print int($1 * 0.01 + 0.9999)}')
+
+    cpu_algo_params='numHashTables=3,bucketLength=2.0' 
+    gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
+    python ./benchmark/benchmark_runner.py approximate_nearest_neighbors \
+        --n_neighbors 20 \
+        --fraction_sampled_queries ${knn_fraction_sampled_queries} \
+        --num_gpus $num_gpus \
+        --gpu_algo_params $gpu_algo_params \
+        --num_cpus $num_cpus \
+        --cpu_algo_params $cpu_algo_params \
+        --no_cache \
+        --num_runs $num_runs \
+        --train_path ${data_path} \
+        --report_path "report_approximate_nearest_neighbors_${cluster_type}.csv" \
+        $common_confs $spark_rapids_confs \
+        --spark_confs spark.driver.maxResultSize=0 \
         ${EXTRA_ARGS}
 fi
 

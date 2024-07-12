@@ -128,7 +128,7 @@ class _RandomForestClass(_CumlClass):
             "n_streams": 4,
             "n_estimators": 100,
             "max_depth": 16,
-            "max_features": "auto",
+            "max_features": "sqrt",  # for classification, should be 1.0 for regressor, cuml is a little broken here
             "n_bins": 128,
             "bootstrap": True,
             "verbose": False,

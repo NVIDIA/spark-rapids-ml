@@ -52,7 +52,7 @@ PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
 PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 
 
-def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
+def test_params(caplog: LogCaptureFixture) -> None:
     from cuml import PCA as CumlPCA
 
     cuml_params = get_default_cuml_parameters(
@@ -73,6 +73,11 @@ def test_default_cuml_params(caplog: LogCaptureFixture) -> None:
     pca_float32 = PCA(float32_inputs=False)
     assert "float32_inputs to False" not in caplog.text
     assert not pca_float32._float32_inputs
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(PCA)
 
 
 def test_fit(gpu_number: int) -> None:
