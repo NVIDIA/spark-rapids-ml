@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cuml
+import cupyx.scipy.sparse
 import numpy as np
 import pyspark
 import pytest
@@ -1427,6 +1428,20 @@ def compare_model(
     # compare probability column
     gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
     cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
+
+    numDiff=0
+    numVals=len(gpu_prob) * len(gpu_prob[0])
+    for i in range(len(gpu_prob)):
+        for j in range(len(gpu_prob[i])):
+            gpu_val = gpu_prob[i][j]
+            cpu_val = cpu_prob[i][j]
+            diff = abs(gpu_val - cpu_val)
+            if diff > unit_tol:
+                print(f"[{i}][{j}], gpu {gpu_val}, cpu {cpu_val}, diff {diff}")
+                numDiff += 1
+    print(f"numDiff {numDiff}, numVals {numVals}, percent {numDiff / numVals}")
+
+
     assert array_equal(gpu_prob, cpu_prob, unit_tol, total_tol)
 
     if accuracy_and_probability_only:
@@ -2123,6 +2138,34 @@ def test_sparse_int64(
         verbose=True,
     )
 
+# @pytest.mark.slow
+# def test_sparse_int64(
+#     gpu_number: int,
+# ) -> None:
+# 
+#     # data_shape = (100, 8)
+#     data_shape = (int(1e7), 30)
+#     n_classes = 4
+#     convert_to_sparse = True
+#     tolerance = 0.005
+#     reg_param = 1.0
+#     elasticNet_param = 0.0
+# 
+#     lr = test_classifier(
+#         fit_intercept=True,
+#         feature_type="vector",
+#         data_shape=data_shape,
+#         data_type=np.float32,
+#         max_record_batch=20000,
+#         n_classes=n_classes,
+#         gpu_number=gpu_number,
+#         tolerance=tolerance,
+#         reg_param=reg_param,
+#         elasticNet_param=elasticNet_param,
+#         convert_to_sparse=convert_to_sparse,
+#         verbose=True,
+#     )
+
 """
 How to generate large csr
 
@@ -2171,22 +2214,71 @@ fi
 
 """
 
+
 def test_sparse_dev():
+
     num_rows=int(1e5)
     num_cols=int(300)
-    num_classes=8
-    parquet_path = f"/raid/spark-team/jinfengl/sparse_logistic_regression/r{num_rows}_c{num_cols}_float64_ncls{num_classes}.parquet" 
 
-    with CleanSparkSession() as spark:
+    #num_rows = int(1e7)
+    #num_cols = int(2200)
+
+    num_classes = 8
+    max_iter = 10
+    fraction_sampled_for_test = 1. if num_rows <= 100000 else 100000 / num_rows
+    standardization = (
+        False  # reduce memory usage since standardization requires copying value array
+    )
+    reg_param = 1e-2
+
+    tolerance = 0.001
+
+    parquet_path = f"/raid/spark-team/jinfengl/sparse_logistic_regression/r{num_rows}_c{num_cols}_float64_ncls{num_classes}.parquet"
+
+    conf: Dict[str, Any] = {
+        "spark.rapids.ml.uvm.enabled": True,
+        
+    }  # enable memory management to run the test case on GPU with small memory (e.g. 2G)
+
+    with CleanSparkSession(conf) as spark:
         import time
+
         start = time.time()
         df_sparse = spark.read.parquet(parquet_path)
-        print(f"debug loading parquet took {time.time() - start} secs, num_rows: {df_sparse.count()}")
-        print(f"debug df_sparse.schema is {df_sparse.schema}")
-        print(f"debug type(df_sparse.first()) is {type(df_sparse.first())}")
+        print(
+            f"loading parquet took {time.time() - start} secs, num_rows: {df_sparse.count()}"
+        )
 
         start = time.time()
-        lr_est = LogisticRegression(enable_sparse_data_optim=True, featuresCol="features", labelCol="label")
-        lr_model = lr_est.fit(df_sparse)
-        print(f"debug fit took {time.time() - start} secs")
-        
+        gpu_est = LogisticRegression(
+            enable_sparse_data_optim=True,
+            standardization=standardization,
+            maxIter=max_iter,
+            regParam=reg_param,
+            featuresCol="features",
+            labelCol="label",
+            verbose=True,
+        )
+        gpu_model = gpu_est.fit(df_sparse)
+        print(f"fit took {time.time() - start} secs")
+
+        # train CPU LR
+        cpu_est = SparkLogisticRegression(
+            standardization=standardization,
+            maxIter=max_iter,
+            regParam=reg_param,
+            featuresCol="features",
+            labelCol="label",
+        )
+        cpu_model = cpu_est.fit(df_sparse)
+
+        # compare with CPU
+        cpu_objective = cpu_model.summary.objectiveHistory[-1]
+        assert (
+            gpu_model.objective < cpu_objective
+            or abs(gpu_model.objective - cpu_objective) < tolerance
+        )
+
+        #df_test = df_sparse.sample(fraction_sampled_for_test, seed=0) # avoid reaching spark.driver.maxResultSizes limit
+        df_test = df_sparse
+        compare_model(gpu_model, cpu_model, df_test, unit_tol=tolerance, total_tol=tolerance, accuracy_and_probability_only=True)
