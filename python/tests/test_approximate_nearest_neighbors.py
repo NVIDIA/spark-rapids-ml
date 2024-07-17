@@ -291,3 +291,27 @@ def test_ivfflat(
 
         assert knn_est._cuml_params["metric"] == combo[3]
         assert knn_model._cuml_params["metric"] == combo[3]
+
+
+@pytest.mark.parametrize(
+    "combo",
+    [
+        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
+        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
+        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
+    ],
+)
+@pytest.mark.parametrize("data_shape", [(4000, 3000)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.slow
+def test_ivfflat_wide_matrix(
+    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+) -> None:
+    import time
+
+    start = time.time()
+    test_ivfflat(combo=combo, data_shape=data_shape, data_type=data_type)
+    duration_sec = time.time() - start
+    assert duration_sec < 10 * 60

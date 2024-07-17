@@ -1286,6 +1286,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
             if not self._float32_inputs and any_double_types:
                 feature_type = DoubleType
+
             for c in input_cols:
                 col_type = dataset.schema[c].dataType
                 if (
@@ -1295,9 +1296,6 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 ):
                     if not isinstance(col_type, feature_type):
                         tmp_input_col = f"{c}_c3BhcmstcmFwaWRzLW1sCg=="
-                        dataset = dataset.withColumn(
-                            tmp_input_col, col(c).cast(feature_type())
-                        )
                         select_cols.append(tmp_input_col)
                         tmp_cols.append(tmp_input_col)
                     else:
@@ -1306,6 +1304,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     raise ValueError(
                         "All columns must be integral types or float/double types."
                     )
+
+            taglen = len("_c3BhcmstcmFwaWRzLW1sCg==")
+            added_tmp_cols = [
+                col(c[:-taglen]).cast(feature_type()).alias(c) for c in tmp_cols
+            ]
+            dataset = dataset.select("*", *added_tmp_cols)
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")
