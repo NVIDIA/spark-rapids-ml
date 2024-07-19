@@ -284,6 +284,10 @@ def test_random_forest_numeric_type(
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
 
+    if RFEstimator is RandomForestClassifier:
+        # avoid multi GPUs, which will get different set of classes on the toy dataset
+        gpu_number = 1
+
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
