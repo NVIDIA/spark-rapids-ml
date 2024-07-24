@@ -292,6 +292,10 @@ def test_random_forest_numeric_type(
         [5, 2, 1, 3, 4],
     ]
 
+    if RFEstimator is RandomForestClassifier:
+        # avoid different GPU to get different set of classes on the toy dataset
+        data *= 100
+
     with CleanSparkSession() as spark:
         feature_cols = ["c1", "c2", "c3", "c4"]
         schema = (
