@@ -1308,7 +1308,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                         "All columns must be integral types or float/double types."
                     )
 
-            taglen = len(col_name_unique_tag)
+            taglen = len(col_name_unique_tag) + 1
             added_tmp_cols = [
                 col(c[:-taglen]).cast(feature_type()).alias(c) for c in tmp_cols
             ]
