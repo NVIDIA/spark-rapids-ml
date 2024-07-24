@@ -284,10 +284,6 @@ def test_random_forest_numeric_type(
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
 
-    if RFEstimator is RandomForestClassifier:
-        # avoid multi GPUs, which will get different set of classes on the toy dataset
-        gpu_number = 1
-
     data = [
         [1, 4, 4, 4, 0],
         [2, 2, 2, 2, 1],
@@ -295,6 +291,10 @@ def test_random_forest_numeric_type(
         [3, 3, 3, 2, 3],
         [5, 2, 1, 3, 4],
     ]
+
+    if RFEstimator is RandomForestClassifier:
+        # avoid different GPU to get different set of classes on the toy dataset
+        data *= 100
 
     with CleanSparkSession() as spark:
         feature_cols = ["c1", "c2", "c3", "c4"]
