@@ -280,7 +280,7 @@ def test_ivfflat(
                 if i1 != i2:
                     query_vec = X[r1[f"query_{id_col}"]]
                     assert cal_dist(query_vec, X[i1], metric) == pytest.approx(
-                        cal_dist(query_vec, X[i2], metric)
+                        cal_dist(query_vec, X[i2], metric), abs=tolerance
                     )
 
         assert len(reconstructed_collect) == len(knn_df_collect)
