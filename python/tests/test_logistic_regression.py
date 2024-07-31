@@ -307,6 +307,7 @@ def test_classifier(
     convert_to_sparse: bool = False,
     set_float32_inputs: Optional[bool] = None,
     verbose: bool = False,
+    spark_conf: Dict[str, Any] = {},
 ) -> LogisticRegression:
     standardization: bool = False
 
@@ -339,8 +340,11 @@ def test_classifier(
     cu_lr.solver_model.lbfgs_memory = 10
     cu_lr.fit(X_train, y_train)
 
-    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
-    with CleanSparkSession(conf) as spark:
+    spark_conf.update(
+        {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    )
+
+    with CleanSparkSession(spark_conf) as spark:
         train_df, features_col, label_col = create_pyspark_dataframe(
             spark, feature_type, data_type, X_train, y_train
         )
@@ -2127,9 +2131,16 @@ def test_sparse_int64() -> None:
     from pyspark.sql import SparkSession
 
     builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
-    builder.config("spark.master", "local[16]")
-    builder.config("spark.driver.host", "127.0.0.1")
-    builder.config("spark.driver.memory", "128g")
+
+    spark_conf = {
+        "spark.master": "local[*]",
+        "spark.driver.host": "127.0.0.1",
+        "spark.driver.memory": "64g",
+    }
+
+    for key, value in spark_conf.items():
+        builder.config(key, value)
+
     conftest._spark = builder.getOrCreate()
 
     import importlib
@@ -2151,6 +2162,7 @@ def test_sparse_int64() -> None:
         elasticNet_param=elasticNet_param,
         convert_to_sparse=convert_to_sparse,
         verbose=True,
+        spark_conf=spark_conf,
     )
 
     conftest._spark.stop()
