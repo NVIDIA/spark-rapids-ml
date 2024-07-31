@@ -754,7 +754,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
                     )
                 else:
-                    inputs = [(cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2]) for row in inputs]
+                    inputs = [
+                        (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
+                        for row in inputs
+                    ]
 
             if len(sizes) == 0 or all(sz == 0 for sz in sizes):
                 raise RuntimeError(
