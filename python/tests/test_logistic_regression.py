@@ -2133,7 +2133,7 @@ def test_sparse_int64() -> None:
     builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
 
     spark_conf = {
-        "spark.master": "local[*]",
+        "spark.master": "local[*]",  # avoid local[1] due to driver sending out large data that exceeds length limit 2^31 - 1 of java array
         "spark.driver.host": "127.0.0.1",
         "spark.driver.memory": "64g",
     }
