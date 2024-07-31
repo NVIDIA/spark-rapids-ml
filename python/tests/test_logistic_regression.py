@@ -341,11 +341,9 @@ def test_classifier(
 
     conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
     with CleanSparkSession(conf) as spark:
-        spark.conf.set("spark.master", "local[16]")
         train_df, features_col, label_col = create_pyspark_dataframe(
             spark, feature_type, data_type, X_train, y_train
         )
-
         if convert_to_sparse:
             assert type(features_col) is str
 
@@ -2122,6 +2120,24 @@ def test_sparse_int64() -> None:
     reg_param = 1.0
     elasticNet_param = 0.0
 
+    from . import conftest
+
+    conftest._spark.stop()
+
+    from pyspark.sql import SparkSession
+
+    builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
+    builder.config("spark.master", "local[16]")
+    builder.config("spark.driver.host", "127.0.0.1")
+    builder.config("spark.driver.memory", "128g")
+    conftest._spark = builder.getOrCreate()
+
+    import importlib
+
+    from . import sparksession
+
+    importlib.reload(sparksession)
+
     lr = test_classifier(
         fit_intercept=True,
         feature_type="vector",
@@ -2136,3 +2152,7 @@ def test_sparse_int64() -> None:
         convert_to_sparse=convert_to_sparse,
         verbose=True,
     )
+
+    conftest._spark.stop()
+    importlib.reload(conftest)
+    importlib.reload(sparksession)

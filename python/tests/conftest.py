@@ -59,12 +59,11 @@ def tmp_path() -> Generator[str, None, None]:
 
 
 _default_conf = {
-    # "spark.master": f"local[{_gpu_number}]",
-    "spark.master": "local[16]",
+    "spark.master": f"local[{_gpu_number}]",
     "spark.python.worker.reuse": "false",
     "spark.driver.host": "127.0.0.1",
     "spark.task.maxFailures": "1",
-    "spark.driver.memory": "128g",
+    "spark.driver.memory": "5g",
     "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
     "spark.sql.pyspark.jvmStacktrace.enabled": "true",
     "spark.sql.execution.arrow.pyspark.enabled": "true",
