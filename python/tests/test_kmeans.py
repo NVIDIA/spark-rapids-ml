@@ -66,7 +66,9 @@ def assert_centers_equal(
 def test_params() -> None:
     from cuml import KMeans as CumlKMeans
 
-    cuml_params = get_default_cuml_parameters([CumlKMeans], ["handle", "output_type"])
+    cuml_params = get_default_cuml_parameters(
+        [CumlKMeans], ["handle", "output_type", "convert_dtype"]
+    )
     spark_params = KMeans()._get_cuml_params_default()
     assert cuml_params == spark_params
 
