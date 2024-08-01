@@ -1432,18 +1432,6 @@ def compare_model(
     gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
     cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
 
-    numDiff = 0
-    numVals = len(gpu_prob) * len(gpu_prob[0])
-    for i in range(len(gpu_prob)):
-        for j in range(len(gpu_prob[i])):
-            gpu_val = gpu_prob[i][j]
-            cpu_val = cpu_prob[i][j]
-            diff = abs(gpu_val - cpu_val)
-            if diff > unit_tol:
-                print(f"[{i}][{j}], gpu {gpu_val}, cpu {cpu_val}, diff {diff}")
-                numDiff += 1
-    print(f"numDiff {numDiff}, numVals {numVals}, percent {numDiff / numVals}")
-
     assert array_equal(gpu_prob, cpu_prob, unit_tol, total_tol)
 
     if accuracy_and_probability_only:
@@ -2133,9 +2121,7 @@ def test_sparse_int64() -> None:
     builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
 
     spark_conf = {
-        "spark.master": "local[*]",  # avoid local[1] due to driver sending out large data that exceeds length limit 2^31 - 1 of java array
-        "spark.driver.host": "127.0.0.1",
-        "spark.driver.memory": "64g",
+        "spark.master": "local[16]",  # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
     }
 
     for key, value in spark_conf.items():
