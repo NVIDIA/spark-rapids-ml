@@ -1,3 +1,11 @@
+import math
+import os
+import sys
+
+file_path = os.path.abspath(__file__)
+file_dir_path = os.path.dirname(file_path)
+extra_python_path = file_dir_path + "/../benchmark"
+sys.path.append(extra_python_path)
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cuml
@@ -6,6 +14,7 @@ import numpy as np
 import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
+from gen_data_distributed import SparseRegressionDataGen
 from packaging import version
 from py4j.protocol import Py4JJavaError
 
@@ -28,8 +37,8 @@ from pyspark.ml.param import Param
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql import DataFrame, Row
-from pyspark.sql.functions import array, col
-from pyspark.sql.types import FloatType
+from pyspark.sql.functions import array, col, sum, udf
+from pyspark.sql.types import FloatType, LongType
 
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
     raise ValueError(
@@ -2103,14 +2112,48 @@ def test_quick_double_precision(
 
 @pytest.mark.slow
 def test_sparse_int64() -> None:
-
     gpu_number = 1
-    data_shape = (int(1e7), 30)
-    n_classes = 4
-    convert_to_sparse = True
-    tolerance = 0.005
-    reg_param = 1.0
-    elasticNet_param = 0.0
+    cpu_number = 32
+    data_shape = (int(1e7), 2200)
+    # data_shape = (int(1e5), 300)
+    fraction_sampled_for_test = (
+        1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
+    )
+    n_classes = 8
+    tolerance = 0.001
+    est_params: Dict[str, Any] = {
+        "regParam": 0.02,
+        "maxIter": 10,
+        "standardization": False,  # reduce GPU memory since standardization copies the value array
+    }
+    density = 0.1
+
+    data_gen_args = [
+        "--n_informative",
+        f"{math.ceil(data_shape[1] / 3)}",
+        "--num_rows",
+        str(data_shape[0]),
+        "--num_cols",
+        str(data_shape[1]),
+        "--output_num_files",
+        f"{cpu_number}",
+        "--dtype",
+        "float64",
+        "--feature_type",
+        "vector",
+        "--output_dir",
+        "./temp",
+        "--n_classes",
+        str(n_classes),
+        "--random_state",
+        "0",
+        "--logistic_regression",
+        "True",
+        "--density",
+        str(density),
+        "--use_gpu",
+        "True",
+    ]
 
     from . import conftest
 
@@ -2121,7 +2164,8 @@ def test_sparse_int64() -> None:
     builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
 
     spark_conf = {
-        "spark.master": "local[16]",  # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
+        "spark.master": f"local[{cpu_number}]",  # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
+        "spark.rapids.ml.uvm.enabled": True,
     }
 
     for key, value in spark_conf.items():
@@ -2135,20 +2179,39 @@ def test_sparse_int64() -> None:
 
     importlib.reload(sparksession)
 
-    lr = test_classifier(
-        fit_intercept=True,
-        feature_type="vector",
-        data_shape=data_shape,
-        data_type=np.float32,
-        max_record_batch=20000,
-        n_classes=n_classes,
-        gpu_number=gpu_number,
-        tolerance=tolerance,
-        reg_param=reg_param,
-        elasticNet_param=elasticNet_param,
-        convert_to_sparse=convert_to_sparse,
-        verbose=True,
-        spark_conf=spark_conf,
+    data_gen = SparseRegressionDataGen(data_gen_args)
+    df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
+    df = df.cache()
+
+    # check nnz > int32.max
+    def get_nnz(sparse_vec: SparseVector) -> int:
+        return len(sparse_vec.values)
+
+    udf_get_nnz = udf(get_nnz, LongType())
+    nnz_df = df.select(udf_get_nnz("features").alias("nnz"))
+    total_nnz = nnz_df.select(sum("nnz").alias("res")).first()["res"]  # type: ignore
+    assert total_nnz > np.iinfo(np.int32).max
+
+    # compare gpu with spark cpu
+    gpu_est = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params)
+    gpu_model = gpu_est.fit(df)
+    cpu_est = SparkLogisticRegression(**est_params)
+    cpu_model = cpu_est.fit(df)
+    cpu_objective = cpu_model.summary.objectiveHistory[-1]
+    assert (
+        gpu_model.objective < cpu_objective
+        or abs(gpu_model.objective - cpu_objective) < tolerance
+    )
+
+    df_test = df.sample(fraction=fraction_sampled_for_test, seed=0)
+    df_test = df_test.cache()
+    compare_model(
+        gpu_model,
+        cpu_model,
+        df_test,
+        unit_tol=tolerance,
+        total_tol=tolerance,
+        accuracy_and_probability_only=True,
     )
 
     conftest._spark.stop()
