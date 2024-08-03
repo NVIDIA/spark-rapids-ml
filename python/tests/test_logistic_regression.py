@@ -2203,7 +2203,6 @@ def test_sparse_int64() -> None:
     )
 
     df_test = df.sample(fraction=fraction_sampled_for_test, seed=0)
-    df_test = df_test.cache()
     compare_model(
         gpu_model,
         cpu_model,
