@@ -2115,7 +2115,6 @@ def test_sparse_int64() -> None:
     gpu_number = 1
     cpu_number = 32
     data_shape = (int(1e7), 2200)
-    # data_shape = (int(1e5), 300)
     fraction_sampled_for_test = (
         1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
     )
