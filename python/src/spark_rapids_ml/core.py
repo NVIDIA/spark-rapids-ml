@@ -16,6 +16,7 @@
 import json
 import os
 import threading
+import time
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import (
@@ -746,6 +747,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             logger.info("Loading data into python worker memory")
             inputs = []
             sizes = []
+            start_time = time.time()
 
             for pdf in pdf_iter:
                 sizes.append(pdf.shape[0])
@@ -778,6 +780,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     "A python worker received no data.  Please increase amount of data or use fewer workers."
                 )
 
+            logger.info(f"Data loaded into python worker memory in {time.time() - start_time} seconds")
+
             logger.info("Initializing cuml context")
             with CumlContext(
                 partition_id, num_workers, context, enable_nccl, require_ucx
@@ -788,12 +792,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 params[param_alias.loop] = cc._loop
 
                 logger.info("Invoking cuml fit")
+                start_time = time.time()
 
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free
                 # memory.  do not rely on inputs after this call.
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
+                logger.info(f"Cuml fit took {time.time() - start_time} seconds")
 
             if partially_collect == True:
                 if enable_nccl:
