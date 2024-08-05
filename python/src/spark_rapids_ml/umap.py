@@ -992,6 +992,18 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         if cuda_managed_mem_enabled:
             get_logger(cls).info("CUDA managed memory enabled.")
 
+        cuda_system_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
+            raise ValueError("Both CUDA managed memory and system allocated memory cannot be enabled at the same time.")
+        if cuda_system_mem_enabled:
+            get_logger(cls).info("CUDA system allocated memory enabled.")
+        cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
+        if cuda_system_mem_headroom is not None:
+            get_logger(cls).info(f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}.")
+
         # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
@@ -1021,6 +1033,16 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
                 rmm.reinitialize(managed_memory=True)
                 cp.cuda.set_allocator(rmm_cupy_allocator)
+            if cuda_system_mem_enabled:
+                import rmm
+                from rmm.allocators.cupy import rmm_cupy_allocator
+
+                if cuda_system_mem_headroom is None:
+                    mr = rmm.mr.SystemMemoryResource()
+                else:
+                    mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
+                rmm.mr.set_current_device_resource(mr)
+                cp.cuda.set_allocator(rmm_cupy_allocator)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
@@ -1042,7 +1064,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     features = np.array(list(pdf[alias.data]), order=array_order)
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
-                if cuda_managed_mem_enabled:
+                if cuda_managed_mem_enabled or cuda_system_mem_enabled:
                     features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None

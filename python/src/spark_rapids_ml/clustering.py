@@ -932,6 +932,13 @@ class DBSCANModel(
             _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
             == "true"
         )
+        cuda_system_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
+            raise ValueError("Both CUDA managed memory and system allocated memory cannot be enabled at the same time.")
+        cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
 
         idCol_bc = self.idCols_
         raw_data_bc = self.raw_data_
@@ -957,7 +964,7 @@ class DBSCANModel(
 
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
-                if cuda_managed_mem_enabled:
+                if cuda_managed_mem_enabled or cuda_system_mem_enabled:
                     features = cp.array(features)
 
                 inputs.append(features)

@@ -98,7 +98,10 @@ cat <<EOF
 --spark_confs spark.python.worker.reuse=true \
 --spark_confs spark.master=local[$local_threads] \
 --spark_confs spark.driver.memory=128g \
---spark_confs spark.rapids.ml.uvm.enabled=true
+--spark_confs spark.rapids.ml.uvm.enabled=false \
+--spark_confs spark.rapids.ml.sam.enabled=true \
+--spark_confs spark.rapids.ml.sam.headroom=8g \
+--spark_confs spark.executorEnv.CUPY_ENABLE_SAM=1
 EOF
 )
 
