@@ -1357,10 +1357,14 @@ class ApproximateNearestNeighborsModel(
 
             logger = get_logger(logging_class_name)
             logger.info(f"partition {pid} starts with {len(item)} item vectors")
+            import time
+            start_time = time.time()
 
             nn_object.fit(item)
 
-            logger.info(f"partition {pid} fit finished.")
+            logger.info(f"partition {pid} indexing finished in {time.time() - start_time} seconds.")
+
+            start_time = time.time()
             import cupy as cp
 
             distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
@@ -1382,7 +1386,7 @@ class ApproximateNearestNeighborsModel(
 
             indices_global = item_row_number[indices]
 
-            logger.info(f"partition {pid} search finished")
+            logger.info(f"partition {pid} search finished in {time.time() - start_time} seconds.")
 
             res = pd.DataFrame(
                 {
