@@ -39,6 +39,7 @@ from pyspark.sql.types import (
     StructField,
     StructType,
 )
+from pyspark.util import _parse_memory
 
 from .core import (
     CumlT,
@@ -939,6 +940,8 @@ class DBSCANModel(
         if cuda_managed_mem_enabled and cuda_system_mem_enabled:
             raise ValueError("Both CUDA managed memory and system allocated memory cannot be enabled at the same time.")
         cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
+        if cuda_system_mem_headroom is not None:
+            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom)
 
         idCol_bc = self.idCols_
         raw_data_bc = self.raw_data_
