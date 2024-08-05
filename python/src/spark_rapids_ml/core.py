@@ -676,7 +676,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             get_logger(cls).info("CUDA system allocated memory enabled.")
         cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
         if cuda_system_mem_headroom is not None:
-            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom)
+            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom) << 20
             get_logger(cls).info(f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}.")
 
         # parameters passed to subclass
@@ -1396,7 +1396,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             get_logger(self.__class__).info("CUDA system allocated memory enabled.")
         cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
         if cuda_system_mem_headroom is not None:
-            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom)
+            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom) << 20
             get_logger(self.__class__).info(f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}.")
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:

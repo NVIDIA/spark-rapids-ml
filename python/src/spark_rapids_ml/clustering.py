@@ -941,7 +941,7 @@ class DBSCANModel(
             raise ValueError("Both CUDA managed memory and system allocated memory cannot be enabled at the same time.")
         cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
         if cuda_system_mem_headroom is not None:
-            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom)
+            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom) << 20
 
         idCol_bc = self.idCols_
         raw_data_bc = self.raw_data_
