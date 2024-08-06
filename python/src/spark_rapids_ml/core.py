@@ -732,15 +732,16 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 )
                 cp.cuda.set_allocator(rmm_cupy_allocator)
             if cuda_system_mem_enabled:
+                from .common.rmm_cupy import rmm_cupy_system_allocator
                 import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
 
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
                 else:
                     mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
                 rmm.mr.set_current_device_resource(mr)
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+
+                cp.cuda.set_allocator(rmm_cupy_system_allocator)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
@@ -1419,16 +1420,16 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 )
                 cp.cuda.set_allocator(rmm_cupy_allocator)
             if cuda_system_mem_enabled:
+                from .common.rmm_cupy import rmm_cupy_system_allocator
                 import cupy as cp
                 import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
 
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
                 else:
                     mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
                 rmm.mr.set_current_device_resource(mr)
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+                cp.cuda.set_allocator(rmm_cupy_system_allocator)
 
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()
