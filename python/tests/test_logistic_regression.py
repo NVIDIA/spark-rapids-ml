@@ -6,11 +6,12 @@ file_path = os.path.abspath(__file__)
 file_dir_path = os.path.dirname(file_path)
 extra_python_path = file_dir_path + "/../benchmark"
 sys.path.append(extra_python_path)
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 import cuml
 import cupyx.scipy.sparse
 import numpy as np
+import pandas as pd
 import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
@@ -2182,12 +2183,12 @@ def test_sparse_int64() -> None:
     df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
     df = df.cache()
 
-    # check nnz > int32.max
-    def get_nnz(sparse_vec: SparseVector) -> int:
-        return len(sparse_vec.values)
+    def functor(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+        for pdf in pdf_iter:
+            pd_res = pdf["features"].apply(lambda sparse_vec: len(sparse_vec["values"]))
+            yield pd_res.rename("nnz").to_frame()
 
-    udf_get_nnz = udf(get_nnz, LongType())
-    nnz_df = df.select(udf_get_nnz("features").alias("nnz"))
+    nnz_df = df.mapInPandas(functor, schema="nnz long")
     total_nnz = nnz_df.select(sum("nnz").alias("res")).first()["res"]  # type: ignore
     assert total_nnz > np.iinfo(np.int32).max
 
