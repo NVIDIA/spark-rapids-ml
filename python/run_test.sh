@@ -10,5 +10,5 @@ then
 fi
 echo "use --runslow to run all tests"
 pytest "$@" benchmark/test_gen_data.py
-pytest -ra "$@" --durations=10 tests
-# pytest -ra --runslow --durations=10 tests
+PYTHONPATH=`pwd`/benchmark pytest -ra "$@" --durations=10 tests
+#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow --durations=10 tests

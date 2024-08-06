@@ -1,11 +1,4 @@
 import math
-import os
-import sys
-
-file_path = os.path.abspath(__file__)
-file_dir_path = os.path.dirname(file_path)
-extra_python_path = file_dir_path + "/../benchmark"
-sys.path.append(extra_python_path)
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 import cuml
