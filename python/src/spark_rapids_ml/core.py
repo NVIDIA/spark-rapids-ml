@@ -724,24 +724,19 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
             if cuda_managed_mem_enabled:
                 import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
-
                 rmm.reinitialize(
                     managed_memory=True,
                     devices=_CumlCommon._get_gpu_device(context, is_local),
                 )
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+                # cupy allocator is set to rmm in cudf
             if cuda_system_mem_enabled:
-                from .common.rmm_cupy import rmm_cupy_system_allocator
                 import rmm
-
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
                 else:
                     mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
                 rmm.mr.set_current_device_resource(mr)
-
-                cp.cuda.set_allocator(rmm_cupy_system_allocator)
+                # cupy allocator is set to rmm in cudf
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
@@ -791,7 +786,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     "A python worker received no data.  Please increase amount of data or use fewer workers."
                 )
 
-            logger.info(f"Data loaded into python worker memory in {time.time() - start_time} seconds")
+            logger.info(f"Data loaded into python worker memory in {time.time() - start_time:.3f} seconds")
 
             logger.info("Initializing cuml context")
             with CumlContext(
@@ -810,7 +805,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 # memory.  do not rely on inputs after this call.
                 result = cuml_fit_func(inputs, params)
                 logger.info("Cuml fit complete")
-                logger.info(f"Cuml fit took {time.time() - start_time} seconds")
+                logger.info(f"Cuml fit took {time.time() - start_time:.3f} seconds")
 
             if partially_collect == True:
                 if enable_nccl:
@@ -1416,28 +1411,22 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             _CumlCommon._set_gpu_device(context, is_local, True)
 
             if cuda_managed_mem_enabled:
-                import cupy as cp
                 import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
-
                 rmm.reinitialize(
                     managed_memory=True,
                     devices=_CumlCommon._get_gpu_device(
                         context, is_local, is_transform=True
                     ),
                 )
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+                # cupy allocator is set to rmm in cudf
             if cuda_system_mem_enabled:
-                from .common.rmm_cupy import rmm_cupy_system_allocator
-                import cupy as cp
                 import rmm
-
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
                 else:
                     mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
                 rmm.mr.set_current_device_resource(mr)
-                cp.cuda.set_allocator(rmm_cupy_system_allocator)
+                # cupy allocator is set to rmm in cudf
 
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()

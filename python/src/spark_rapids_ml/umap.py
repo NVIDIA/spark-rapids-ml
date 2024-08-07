@@ -1031,20 +1031,16 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
             if cuda_managed_mem_enabled:
                 import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
-
                 rmm.reinitialize(managed_memory=True)
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+                # cupy allocator is set to rmm in cudf
             if cuda_system_mem_enabled:
                 import rmm
-                from .common.rmm_cupy import rmm_cupy_system_allocator
-
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
                 else:
                     mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
                 rmm.mr.set_current_device_resource(mr)
-                cp.cuda.set_allocator(rmm_cupy_system_allocator)
+                # cupy allocator is set to rmm in cudf
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
