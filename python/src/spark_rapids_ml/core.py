@@ -765,18 +765,26 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
-                if cuda_managed_mem_enabled or cuda_system_mem_enabled:
-                    features = (
-                        cp.array(features)
-                        if use_sparse_array is False
-                        else cupyx.scipy.sparse.csr_matrix(features)
-                    )
+                if (cuda_managed_mem_enabled or cuda_system_mem_enabled) and use_sparse_array is False:
+                    features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
                     pdf[alias.row_number] if alias.row_number in pdf.columns else None
                 )
                 inputs.append((features, label, row_number))
+
+            if cuda_managed_mem_enabled and use_sparse_array is True:
+                concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
+                if concated_nnz > np.iinfo(np.int32).max:
+                    logger.warn(
+                        "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
+                    )
+                else:
+                    inputs = [
+                        (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
+                        for row in inputs
+                    ]
 
             if len(sizes) == 0 or all(sz == 0 for sz in sizes):
                 raise RuntimeError(
