@@ -675,7 +675,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         if cuda_system_mem_enabled:
             get_logger(cls).info("CUDA system allocated memory enabled.")
         cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
-        if cuda_system_mem_headroom is not None:
+        if cuda_system_mem_enabled and cuda_system_mem_headroom is not None:
             cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom) << 20
             get_logger(cls).info(f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}.")
 
@@ -769,7 +769,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 )
                 inputs.append((features, label, row_number))
 
-            if cuda_managed_mem_enabled and use_sparse_array is True:
+            if (cuda_managed_mem_enabled or cuda_system_mem_enabled) and use_sparse_array is True:
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
@@ -1399,7 +1399,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         if cuda_system_mem_enabled:
             get_logger(self.__class__).info("CUDA system allocated memory enabled.")
         cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
-        if cuda_system_mem_headroom is not None:
+        if cuda_system_mem_enabled and cuda_system_mem_headroom is not None:
             cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom) << 20
             get_logger(self.__class__).info(f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}.")
 
