@@ -892,8 +892,8 @@ class ApproximateNearestNeighbors(
     """
     ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-    The ApproximateNearestNeighbors is currently built on the IVFFLAT algorithm of cuML, and is expected to support
-    other algorithms such as IVFPQ.
+    The ApproximateNearestNeighbors is currently built on the IVFFLAT and IVFPQ algorithm of cuML, and is expected to support
+    more algorithms in the future.
 
     IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
     phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
@@ -910,8 +910,7 @@ class ApproximateNearestNeighbors(
         the default number of approximate nearest neighbors to retrieve for each query.
 
     algorithm: str (default = 'ivfflat')
-        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat'. Other algorithms such as
-        'ivfpq' are expected to be supported later.
+        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat' or 'ivfpq'. Other algorithms are expected to be supported later.
 
     algoParams: Optional[Dict[str, Any]] (default = None)
         if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
@@ -920,6 +919,13 @@ class ApproximateNearestNeighbors(
         When algorithm is 'ivfflat':
             * nlist: (int) number of kmeans clusters to partition the dataframe into.
             * nprobe: (int) number of closest clusters to probe for topk ANNs.
+
+        When algorithm is 'ivfpq':
+            * nlist: (int) number of kmeans clusters to partition the dataframe into.
+            * nprobe: (int) number of closest clusters to probe for topk ANNs.
+            * M: (int) number of subquantizers
+            * n_bits: (int) number of bits allocated per subquantizer
+            Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.
 
     metric: str (default = "euclidean")
         the distance metric to use. 'ivfflat' algorithm supports ['euclidean', 'sqeuclidean', 'l2', 'inner_product'].
@@ -1056,7 +1062,10 @@ class ApproximateNearestNeighbors(
         **kwargs: Any,
     ) -> None:
         super().__init__()
-        assert algorithm in {"ivfflat"}, "currently only ivfflat algorithm is supported"
+        assert algorithm in {
+            "ivfflat",
+            "ivfpq",
+        }, "currently only ivfflat and ivfpq are supported"
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
@@ -1358,11 +1367,14 @@ class ApproximateNearestNeighborsModel(
             logger = get_logger(logging_class_name)
             logger.info(f"partition {pid} starts with {len(item)} item vectors")
             import time
+
             start_time = time.time()
 
             nn_object.fit(item)
 
-            logger.info(f"partition {pid} indexing finished in {time.time() - start_time} seconds.")
+            logger.info(
+                f"partition {pid} indexing finished in {time.time() - start_time} seconds."
+            )
 
             start_time = time.time()
             import cupy as cp
@@ -1371,7 +1383,7 @@ class ApproximateNearestNeighborsModel(
 
             # Note cuML kneighbors applys an extra square root on the l2 distances.
             # Here applies square to obtain the actual l2 distances.
-            if cuml_alg_params["algorithm"] == "ivfflat":
+            if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
                 if (
                     cuml_alg_params["metric"] == "euclidean"
                     or cuml_alg_params["metric"] == "l2"
@@ -1386,7 +1398,9 @@ class ApproximateNearestNeighborsModel(
 
             indices_global = item_row_number[indices]
 
-            logger.info(f"partition {pid} search finished in {time.time() - start_time} seconds.")
+            logger.info(
+                f"partition {pid} search finished in {time.time() - start_time} seconds."
+            )
 
             res = pd.DataFrame(
                 {
