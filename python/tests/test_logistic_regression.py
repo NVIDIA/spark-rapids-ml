@@ -2106,6 +2106,7 @@ def test_quick_double_precision(
 
 @pytest.mark.slow
 def test_sparse_int64() -> None:
+    output_data_dir = "./temp"
     gpu_number = 1
     cpu_number = 32
     data_shape = (int(1e7), 2200)
@@ -2135,7 +2136,7 @@ def test_sparse_int64() -> None:
         "--feature_type",
         "vector",
         "--output_dir",
-        "./temp",
+        output_data_dir,
         "--n_classes",
         str(n_classes),
         "--random_state",
@@ -2156,8 +2157,9 @@ def test_sparse_int64() -> None:
 
     builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
 
+    # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
     spark_conf = {
-        "spark.master": f"local[{cpu_number}]",  # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
+        "spark.master": f"local[{cpu_number}]",
         "spark.rapids.ml.uvm.enabled": True,
     }
 
@@ -2174,7 +2176,10 @@ def test_sparse_int64() -> None:
 
     data_gen = SparseRegressionDataGen(data_gen_args)
     df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
-    df = df.cache()
+
+    # persist vectors
+    df.write.mode("overwrite").parquet(output_data_dir)
+    df = conftest._spark.read.parquet(output_data_dir)
 
     def functor(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
         for pdf in pdf_iter:
