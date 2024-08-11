@@ -2153,28 +2153,20 @@ def test_sparse_int64() -> None:
 
     from . import conftest
 
-    conftest._spark.stop()
-
-    from pyspark.sql import SparkSession
-
-    builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
-
-    # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
-    spark_conf = {
-        "spark.master": f"local[{cpu_number}]",
-        "spark.rapids.ml.uvm.enabled": True,
-    }
-
-    for key, value in spark_conf.items():
-        builder.config(key, value)
-
-    conftest._spark = builder.getOrCreate()
-
-    import importlib
-
-    from . import sparksession
-
-    importlib.reload(sparksession)
+    # conftest._spark.stop()
+    # from pyspark.sql import SparkSession
+    # builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
+    ## avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
+    # spark_conf = {
+    #    "spark.master": f"local[{cpu_number}]",
+    #    "spark.rapids.ml.uvm.enabled": True,
+    # }
+    # for key, value in spark_conf.items():
+    #    builder.config(key, value)
+    # conftest._spark = builder.getOrCreate()
+    # import importlib
+    # from . import sparksession
+    # importlib.reload(sparksession)
 
     data_gen = SparseRegressionDataGen(data_gen_args)
     df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
@@ -2214,6 +2206,6 @@ def test_sparse_int64() -> None:
         accuracy_and_probability_only=True,
     )
 
-    conftest._spark.stop()
-    importlib.reload(conftest)
-    importlib.reload(sparksession)
+    # conftest._spark.stop()
+    # importlib.reload(conftest)
+    # importlib.reload(sparksession)

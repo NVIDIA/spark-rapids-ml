@@ -59,7 +59,7 @@ def tmp_path() -> Generator[str, None, None]:
 
 
 _default_conf = {
-    "spark.master": f"local[{_gpu_number}]",
+    "spark.master": f"local[32]",
     "spark.python.worker.reuse": "false",
     "spark.driver.host": "127.0.0.1",
     "spark.task.maxFailures": "1",
