@@ -2179,9 +2179,10 @@ def test_sparse_int64() -> None:
     data_gen = SparseRegressionDataGen(data_gen_args)
     df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
 
+    df.cache()
     # persist vectors
-    df.write.mode("overwrite").parquet(output_data_dir)
-    df = conftest._spark.read.parquet(output_data_dir)
+    # df.write.mode("overwrite").parquet(output_data_dir)
+    # df = conftest._spark.read.parquet(output_data_dir)
 
     def functor(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
         for pdf in pdf_iter:
