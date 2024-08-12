@@ -1090,6 +1090,12 @@ class LogisticRegression(
 
                 n_cols = logistic_regression.n_cols
 
+                index_dtype = (
+                    str(logistic_regression.index_dtype)
+                    if hasattr(logistic_regression, "index_dtype")
+                    else "None"
+                )
+
                 model = {
                     "coef_": coef_[:, :n_cols].tolist(),
                     "intercept_": intercept_.tolist(),
@@ -1098,6 +1104,7 @@ class LogisticRegression(
                     "dtype": logistic_regression.dtype.name,
                     "num_iters": logistic_regression.solver_model.num_iters,
                     "objective": logistic_regression.solver_model.objective,
+                    "index_dtype": index_dtype,
                 }
 
                 # check if invalid label exists
@@ -1174,6 +1181,7 @@ class LogisticRegression(
                 StructField("dtype", StringType(), False),
                 StructField("num_iters", IntegerType(), False),
                 StructField("objective", DoubleType(), False),
+                StructField("index_dtype", StringType(), False),
             ]
         )
 
@@ -1267,6 +1275,7 @@ class LogisticRegressionModel(
         dtype: str,
         num_iters: int,
         objective: float,
+        index_dtype: str,
     ) -> None:
         super().__init__(
             dtype=dtype,
@@ -1284,6 +1293,7 @@ class LogisticRegressionModel(
         self._num_classes = len(self.classes_)
         self.num_iters = num_iters
         self.objective = objective
+        self.index_dtype = index_dtype
         self._this_model = self
 
     def cpu(self) -> SparkLogisticRegressionModel:

@@ -2010,6 +2010,7 @@ def test_standardization_sparse_example(
         cpu_lr = SparkLogisticRegression(**est_params)
 
         gpu_model = gpu_lr.fit(df)
+        assert gpu_model.index_dtype == "int32"
 
         cpu_model = cpu_lr.fit(df)
 
@@ -2110,8 +2111,7 @@ def test_sparse_int64() -> None:
 
     output_data_dir = f"/tmp/spark_rapids_ml_{col_name_unique_tag}"
     gpu_number = 1
-    cpu_number = 32
-    data_shape = (int(1e7), 2200)
+    data_shape = (int(1e5), 2200)
     fraction_sampled_for_test = (
         1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
     )
@@ -2131,8 +2131,6 @@ def test_sparse_int64() -> None:
         str(data_shape[0]),
         "--num_cols",
         str(data_shape[1]),
-        "--output_num_files",
-        f"{cpu_number}",
         "--dtype",
         "float64",
         "--feature_type",
@@ -2153,41 +2151,20 @@ def test_sparse_int64() -> None:
 
     from . import conftest
 
-    # conftest._spark.stop()
-    # from pyspark.sql import SparkSession
-    # builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
-    ## avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
-    # spark_conf = {
-    #    "spark.master": f"local[{cpu_number}]",
-    #    "spark.rapids.ml.uvm.enabled": True,
-    # }
-    # for key, value in spark_conf.items():
-    #    builder.config(key, value)
-    # conftest._spark = builder.getOrCreate()
-    # import importlib
-    # from . import sparksession
-    # importlib.reload(sparksession)
-
     data_gen = SparseRegressionDataGen(data_gen_args)
     df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
 
+    # ensure same dataset for comparing CPU and GPU
     df.cache()
-    # persist vectors
-    # df.write.mode("overwrite").parquet(output_data_dir)
-    # df = conftest._spark.read.parquet(output_data_dir)
 
-    def functor(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
-        for pdf in pdf_iter:
-            pd_res = pdf["features"].apply(lambda sparse_vec: len(sparse_vec["values"]))
-            yield pd_res.rename("nnz").to_frame()
+    # convert index dtype to int64 for testing purpose
+    gpu_est = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params)
+    gpu_est.cuml_params["_convert_index"] = "int64"
 
-    nnz_df = df.mapInPandas(functor, schema="nnz long")
-    total_nnz = nnz_df.select(sum("nnz").alias("res")).first()["res"]  # type: ignore
-    assert total_nnz > np.iinfo(np.int32).max
+    gpu_model = gpu_est.fit(df)
+    assert gpu_model.index_dtype == "int64"
 
     # compare gpu with spark cpu
-    gpu_est = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params)
-    gpu_model = gpu_est.fit(df)
     cpu_est = SparkLogisticRegression(**est_params)
     cpu_model = cpu_est.fit(df)
     cpu_objective = cpu_model.summary.objectiveHistory[-1]
@@ -2205,7 +2182,3 @@ def test_sparse_int64() -> None:
         total_tol=tolerance,
         accuracy_and_probability_only=True,
     )
-
-    # conftest._spark.stop()
-    # importlib.reload(conftest)
-    # importlib.reload(sparksession)
