@@ -1937,6 +1937,8 @@ def test_standardization_sparse_example(
     reg_factors: Tuple[float, float],
     float32_inputs: bool = False,
 ) -> None:
+    _convert_index = "int32" if random.choice([True, False]) is True else "int64"
+
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
         import logging
 
@@ -2009,8 +2011,9 @@ def test_standardization_sparse_example(
         gpu_lr = LogisticRegression(float32_inputs=float32_inputs, **est_params)
         cpu_lr = SparkLogisticRegression(**est_params)
 
+        gpu_lr.cuml_params["_convert_index"] = _convert_index
         gpu_model = gpu_lr.fit(df)
-        assert gpu_model.index_dtype == "int32"
+        assert gpu_model.index_dtype == _convert_index
 
         cpu_model = cpu_lr.fit(df)
 
