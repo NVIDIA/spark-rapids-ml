@@ -1285,6 +1285,7 @@ class LogisticRegressionModel(
             classes_=classes_,
             num_iters=num_iters,
             objective=objective,
+            index_dtype=index_dtype,
         )
         self.coef_ = coef_
         self.intercept_ = intercept_
