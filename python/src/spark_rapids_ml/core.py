@@ -730,6 +730,18 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 )
                 # cupy allocator is set to rmm in cudf
             if cuda_system_mem_enabled:
+                import cupy._core.numpy_allocator as ac
+                import numpy_allocator
+                import ctypes
+                lib = ctypes.CDLL(ac.__file__)
+
+                class my_allocator(metaclass=numpy_allocator.type):
+                    _calloc_ = ctypes.addressof(lib._calloc)
+                    _malloc_ = ctypes.addressof(lib._malloc)
+                    _realloc_ = ctypes.addressof(lib._realloc)
+                    _free_ = ctypes.addressof(lib._free)
+                my_allocator.__enter__()  # change the allocator globally
+
                 import rmm
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
@@ -1420,6 +1432,18 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 )
                 # cupy allocator is set to rmm in cudf
             if cuda_system_mem_enabled:
+                import cupy._core.numpy_allocator as ac
+                import numpy_allocator
+                import ctypes
+                lib = ctypes.CDLL(ac.__file__)
+
+                class my_allocator(metaclass=numpy_allocator.type):
+                    _calloc_ = ctypes.addressof(lib._calloc)
+                    _malloc_ = ctypes.addressof(lib._malloc)
+                    _realloc_ = ctypes.addressof(lib._realloc)
+                    _free_ = ctypes.addressof(lib._free)
+                my_allocator.__enter__()  # change the allocator globally
+
                 import rmm
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
