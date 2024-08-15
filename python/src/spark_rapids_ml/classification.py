@@ -1090,6 +1090,7 @@ class LogisticRegression(
 
                 n_cols = logistic_regression.n_cols
 
+                # index_dtype is only available in sparse logistic regression. It records the dtype of indices array and indptr array that were used in C++ computation layer. Its value can be 'int32' or 'int64'.
                 index_dtype = (
                     str(logistic_regression.index_dtype)
                     if hasattr(logistic_regression, "index_dtype")
