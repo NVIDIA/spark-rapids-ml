@@ -3,13 +3,14 @@ from typing import Any, Dict, Iterable
 
 import numpy as np
 import pandas as pd
-from conftest import _spark
 from gen_data_distributed import SparseRegressionDataGen
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.sql import functions as SparkF
 
 from spark_rapids_ml.classification import LogisticRegression
 from tests.test_logistic_regression import compare_model
+
+from .conftest import _spark
 
 
 def test_sparse_int64() -> None:
