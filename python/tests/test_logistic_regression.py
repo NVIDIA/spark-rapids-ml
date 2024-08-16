@@ -2015,7 +2015,9 @@ def test_standardization_sparse_example(
         # _convert_index is used for converting input csr sparse matrix to gpu SparseCumlArray for calling cuml C++ layer. If not None, cuml converts the dtype of indices array and indptr array to the value of _convert_index (e.g. 'int64').
         gpu_lr.cuml_params["_convert_index"] = _convert_index
         gpu_model = gpu_lr.fit(df)
-        assert gpu_model.index_dtype == _convert_index
+        assert hasattr(gpu_lr, "_index_dtype") and (
+            gpu_lr._index_dtype == _convert_index
+        )
 
         cpu_model = cpu_lr.fit(df)
 
@@ -2167,7 +2169,7 @@ def test_sparse_int64() -> None:
     gpu_est.cuml_params["_convert_index"] = "int64"
 
     gpu_model = gpu_est.fit(df)
-    assert gpu_model.index_dtype == "int64"
+    assert hasattr(gpu_est, "_index_dtype") and (gpu_est._index_dtype == "int64")
 
     # compare gpu with spark cpu
     cpu_est = SparkLogisticRegression(**est_params)

@@ -61,7 +61,7 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.linalg import DenseMatrix, Matrix, Vector, Vectors
 from pyspark.ml.param.shared import HasLabelCol, HasProbabilityCol, HasRawPredictionCol
-from pyspark.sql import Column, DataFrame
+from pyspark.sql import Column, DataFrame, Row
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
     ArrayType,
@@ -1198,7 +1198,10 @@ class LogisticRegression(
                     "All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
                 )
 
-        return LogisticRegressionModel._from_row(result)
+        d = result.asDict()
+        self._index_dtype = d.pop("index_dtype")
+
+        return LogisticRegressionModel._from_row(Row(**d))
 
     def _set_cuml_reg_params(self) -> "LogisticRegression":
         penalty, C, l1_ratio = self._reg_params_value_mapping(
@@ -1276,7 +1279,6 @@ class LogisticRegressionModel(
         dtype: str,
         num_iters: int,
         objective: float,
-        index_dtype: str,
     ) -> None:
         super().__init__(
             dtype=dtype,
@@ -1286,7 +1288,6 @@ class LogisticRegressionModel(
             classes_=classes_,
             num_iters=num_iters,
             objective=objective,
-            index_dtype=index_dtype,
         )
         self.coef_ = coef_
         self.intercept_ = intercept_
@@ -1295,7 +1296,6 @@ class LogisticRegressionModel(
         self._num_classes = len(self.classes_)
         self.num_iters = num_iters
         self.objective = objective
-        self.index_dtype = index_dtype
         self._this_model = self
 
     def cpu(self) -> SparkLogisticRegressionModel:
