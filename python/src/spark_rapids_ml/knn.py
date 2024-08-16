@@ -892,7 +892,7 @@ class ApproximateNearestNeighbors(
     """
     ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-    The ApproximateNearestNeighbors is currently built on the IVFFLAT and IVFPQ algorithm of cuML, and is expected to support
+    The ApproximateNearestNeighbors is currently built on the IVFFLAT and IVFPQ algorithms of cuML, and is expected to support
     more algorithms in the future.
 
     IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
