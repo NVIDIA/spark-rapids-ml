@@ -40,9 +40,9 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
     )
 
 import random
-import warnings
 
-import scipy
+random.seed(0)
+
 from scipy.sparse import csr_matrix
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
@@ -316,7 +316,6 @@ def test_classifier(
 
     float32_inputs = set_float32_inputs
     if float32_inputs is None:
-        random.seed(0)
         float32_inputs = random.choice([True, False])
 
     if convert_to_sparse is True:
@@ -1937,7 +1936,6 @@ def test_standardization_sparse_example(
     reg_factors: Tuple[float, float],
     float32_inputs: bool = False,
 ) -> None:
-    random.seed(0)
     _convert_index = "int32" if random.choice([True, False]) is True else "int64"
 
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
@@ -2049,7 +2047,6 @@ def test_double_precision(
     gpu_number: int,
 ) -> None:
 
-    random.seed(0)
     random_bool = random.choice([True, False])
     data_type = np.float32 if random_bool is True else np.float64
     float32_inputs = random.choice([True, False])
