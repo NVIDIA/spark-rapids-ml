@@ -65,12 +65,12 @@ def test_sparse_int64() -> None:
     df, _, _ = data_gen.gen_dataframe_and_meta(_spark)
     df = df.cache()
 
-    def functor(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+    def get_nnz_func(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
         for pdf in pdf_iter:
             pd_res = pdf["features"].apply(lambda sparse_vec: len(sparse_vec["values"]))
             yield pd_res.rename("nnz").to_frame()
 
-    nnz_df = df.mapInPandas(functor, schema="nnz long")
+    nnz_df = df.mapInPandas(get_nnz_func, schema="nnz long")
 
     total_nnz = nnz_df.select(SparkF.sum("nnz").alias("res")).first()["res"]  # type: ignore
     assert total_nnz > np.iinfo(np.int32).max
