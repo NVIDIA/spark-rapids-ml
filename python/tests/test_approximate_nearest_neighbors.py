@@ -152,18 +152,9 @@ class ANNEvaluator:
         tolerance: float,
     ) -> None:
         # compare with cuml sg ANN on avg_recall and avg_dist_gap
-        from cuml import NearestNeighbors as cuNN
-
-        cuml_ivfflat = cuNN(
-            algorithm=algorithm,
-            algo_params=algoParams,
-            n_neighbors=self.n_neighbors,
-            metric=self.metric,
+        cumlsg_distances, cumlsg_indices = self.get_cuml_sg_results(
+            algorithm, algoParams
         )
-        cuml_ivfflat.fit(self.X)
-        cumlsg_distances, cumlsg_indices = cuml_ivfflat.kneighbors(self.X)
-        if self.metric == "euclidean" or self.metric == "l2":
-            cumlsg_distances **= 2  # square up cuml distances to get l2 distances
 
         # compare cuml sg with given results
         avg_recall_cumlann = self.cal_avg_recall(cumlsg_indices)
@@ -177,6 +168,26 @@ class ANNEvaluator:
         assert (avg_dist_gap < avg_dist_gap_cumlann) or abs(
             avg_dist_gap - avg_dist_gap_cumlann
         ) < tolerance
+
+    def get_cuml_sg_results(
+        self,
+        algorithm: str,
+        algoParams: Optional[Dict[str, Any]],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        from cuml import NearestNeighbors as cuNN
+
+        cuml_ivfflat = cuNN(
+            algorithm=algorithm,
+            algo_params=algoParams,
+            n_neighbors=self.n_neighbors,
+            metric=self.metric,
+        )
+        cuml_ivfflat.fit(self.X)
+        cumlsg_distances, cumlsg_indices = cuml_ivfflat.kneighbors(self.X)
+
+        if self.metric == "euclidean" or self.metric == "l2":
+            cumlsg_distances **= 2  # square up cuml distances to get l2 distances
+        return (cumlsg_distances, cumlsg_indices)
 
 
 @pytest.mark.parametrize(
@@ -437,16 +448,16 @@ def test_ivfpq(
 @pytest.mark.parametrize(
     "combo",
     [
-        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
-        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
-        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
+        ("ivfflat", "array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
+        ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
+        ("ivfflat", "multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
     ],
 )
 @pytest.mark.parametrize("data_shape", [(4000, 3000)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 @pytest.mark.slow
 def test_ivfflat_wide_matrix(
-    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
+    combo: Tuple[str, str, int, Optional[Dict[str, Any]], str],
     data_shape: Tuple[int, int],
     data_type: np.dtype,
 ) -> None:
