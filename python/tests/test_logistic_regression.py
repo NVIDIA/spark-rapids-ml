@@ -40,9 +40,9 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
     )
 
 import random
-import warnings
 
-import scipy
+random.seed(0)
+
 from scipy.sparse import csr_matrix
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
@@ -316,7 +316,6 @@ def test_classifier(
 
     float32_inputs = set_float32_inputs
     if float32_inputs is None:
-        random.seed(0)
         float32_inputs = random.choice([True, False])
 
     if convert_to_sparse is True:
@@ -1937,6 +1936,8 @@ def test_standardization_sparse_example(
     reg_factors: Tuple[float, float],
     float32_inputs: bool = False,
 ) -> None:
+    _convert_index = "int32" if random.choice([True, False]) is True else "int64"
+
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
         import logging
 
@@ -2009,7 +2010,12 @@ def test_standardization_sparse_example(
         gpu_lr = LogisticRegression(float32_inputs=float32_inputs, **est_params)
         cpu_lr = SparkLogisticRegression(**est_params)
 
+        # _convert_index is used for converting input csr sparse matrix to gpu SparseCumlArray for calling cuml C++ layer. If not None, cuml converts the dtype of indices array and indptr array to the value of _convert_index (e.g. 'int64').
+        gpu_lr.cuml_params["_convert_index"] = _convert_index
         gpu_model = gpu_lr.fit(df)
+        assert hasattr(gpu_lr, "_index_dtype") and (
+            gpu_lr._index_dtype == _convert_index
+        )
 
         cpu_model = cpu_lr.fit(df)
 
@@ -2041,7 +2047,6 @@ def test_double_precision(
     gpu_number: int,
 ) -> None:
 
-    random.seed(0)
     random_bool = random.choice([True, False])
     data_type = np.float32 if random_bool is True else np.float64
     float32_inputs = random.choice([True, False])
@@ -2106,9 +2111,11 @@ def test_quick_double_precision(
 
 @pytest.mark.slow
 def test_sparse_int64() -> None:
+    from spark_rapids_ml.core import col_name_unique_tag
+
+    output_data_dir = f"/tmp/spark_rapids_ml_{col_name_unique_tag}"
     gpu_number = 1
-    cpu_number = 32
-    data_shape = (int(1e7), 2200)
+    data_shape = (int(1e5), 2200)
     fraction_sampled_for_test = (
         1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
     )
@@ -2128,14 +2135,12 @@ def test_sparse_int64() -> None:
         str(data_shape[0]),
         "--num_cols",
         str(data_shape[1]),
-        "--output_num_files",
-        f"{cpu_number}",
         "--dtype",
         "float64",
         "--feature_type",
         "vector",
         "--output_dir",
-        "./temp",
+        output_data_dir,
         "--n_classes",
         str(n_classes),
         "--random_state",
@@ -2150,44 +2155,20 @@ def test_sparse_int64() -> None:
 
     from . import conftest
 
-    conftest._spark.stop()
-
-    from pyspark.sql import SparkSession
-
-    builder = SparkSession.builder.appName(name="spark-rapids-ml with large dataset")
-
-    spark_conf = {
-        "spark.master": f"local[{cpu_number}]",  # avoid local[1] because driver will throw out a java.lang.OutOfMemoryError "Required array length is too large"
-        "spark.rapids.ml.uvm.enabled": True,
-    }
-
-    for key, value in spark_conf.items():
-        builder.config(key, value)
-
-    conftest._spark = builder.getOrCreate()
-
-    import importlib
-
-    from . import sparksession
-
-    importlib.reload(sparksession)
-
     data_gen = SparseRegressionDataGen(data_gen_args)
     df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
-    df = df.cache()
 
-    def functor(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
-        for pdf in pdf_iter:
-            pd_res = pdf["features"].apply(lambda sparse_vec: len(sparse_vec["values"]))
-            yield pd_res.rename("nnz").to_frame()
+    # ensure same dataset for comparing CPU and GPU
+    df.cache()
 
-    nnz_df = df.mapInPandas(functor, schema="nnz long")
-    total_nnz = nnz_df.select(sum("nnz").alias("res")).first()["res"]  # type: ignore
-    assert total_nnz > np.iinfo(np.int32).max
+    # convert index dtype to int64 for testing purpose
+    gpu_est = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params)
+    gpu_est.cuml_params["_convert_index"] = "int64"
+
+    gpu_model = gpu_est.fit(df)
+    assert hasattr(gpu_est, "_index_dtype") and (gpu_est._index_dtype == "int64")
 
     # compare gpu with spark cpu
-    gpu_est = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params)
-    gpu_model = gpu_est.fit(df)
     cpu_est = SparkLogisticRegression(**est_params)
     cpu_model = cpu_est.fit(df)
     cpu_objective = cpu_model.summary.objectiveHistory[-1]
@@ -2205,7 +2186,3 @@ def test_sparse_int64() -> None:
         total_tol=tolerance,
         accuracy_and_probability_only=True,
     )
-
-    conftest._spark.stop()
-    importlib.reload(conftest)
-    importlib.reload(sparksession)
