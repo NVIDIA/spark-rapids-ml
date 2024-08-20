@@ -341,7 +341,6 @@ def test_ann_algorithm(
         avg_dist_gap = ann_evaluator.cal_avg_dist_gap(distances)
 
         # test kneighbors: compare with sklearn brute NN on avg_recall and avg_dist_gap
-        print(f"avg_recall is {avg_recall}")
         assert avg_recall >= expected_avg_recall
         if distances_are_exact:
             assert np.all(np.abs(avg_dist_gap) < tolerance)
@@ -494,10 +493,9 @@ def test_ivfpq(
             "array",
             10000,
             {
-                # "intermediate_graph_degree": 128,
-                # "graph_degree": 64,
+                "intermediate_graph_degree": 128,
+                "graph_degree": 64,
                 "build_algo": "ivf_pq",
-                # "compression": False,
             },
             "sqeuclidean",
         ),
@@ -506,10 +504,9 @@ def test_ivfpq(
             "array",
             3000,
             {
-                # "intermediate_graph_degree": 128,
-                # "graph_degree": 64,
+                "intermediate_graph_degree": 256,
+                "graph_degree": 128,
                 "build_algo": "nn_descent",
-                # "compression": False,
             },
             "sqeuclidean",
         ),
