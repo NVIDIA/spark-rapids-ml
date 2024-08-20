@@ -363,8 +363,8 @@ document.write(`
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">ApproximateNearestNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ivfflat'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'euclidean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algoParams</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors" title="Permalink to this definition">#</a></dt>
 <dd><p>ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
 The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-The ApproximateNearestNeighbors is currently built on the IVFFLAT algorithm of cuML, and is expected to support
-other algorithms such as IVFPQ.</p>
+The ApproximateNearestNeighbors is currently built on the IVFFLAT and IVFPQ algorithms of cuML, and is expected to support
+more algorithms in the future.</p>
 <p>IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
 phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
 the end the top k closest items will be returned as the approximate nearest neighbors.</p>
@@ -376,16 +376,23 @@ global topk ANNs.</p>
 <dd class="field-odd"><dl>
 <dt><strong>k: int (default = 5)</strong></dt><dd><p>the default number of approximate nearest neighbors to retrieve for each query.</p>
 </dd>
-<dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’. Other algorithms such as
-‘ivfpq’ are expected to be supported later.</p>
+<dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’ or ‘ivfpq’. Other algorithms are expected to be supported later.</p>
 </dd>
 <dt><strong>algoParams: Optional[Dict[str, Any]] (default = None)</strong></dt><dd><p>if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
 Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).</p>
-<dl class="simple">
+<dl>
 <dt>When algorithm is ‘ivfflat’:</dt><dd><ul class="simple">
 <li><p>nlist: (int) number of kmeans clusters to partition the dataframe into.</p></li>
 <li><p>nprobe: (int) number of closest clusters to probe for topk ANNs.</p></li>
 </ul>
+</dd>
+<dt>When algorithm is ‘ivfpq’:</dt><dd><ul class="simple">
+<li><p>nlist: (int) number of kmeans clusters to partition the dataframe into.</p></li>
+<li><p>nprobe: (int) number of closest clusters to probe for topk ANNs.</p></li>
+<li><p>M: (int) number of subquantizers</p></li>
+<li><p>n_bits: (int) number of bits allocated per subquantizer</p></li>
+</ul>
+<p>Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.</p>
 </dd>
 </dl>
 </dd>
