@@ -65,6 +65,7 @@ from .utils import (
     _concat_and_free,
     _get_class_or_callable_name,
     _get_spark_session,
+    _get_default_params_from_func,
     get_logger,
 )
 
@@ -894,6 +895,9 @@ class ApproximateNearestNeighbors(
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
     The ApproximateNearestNeighbors is currently built on the CAGRA (graph-based) algorithm of cuVS, and the IVFFLAT and IVFPQ algorithms of cuML.
 
+    The current implementation build index independently on each data partition of item_df. Queries will be broadcast to all GPUs,
+    then every query probes closest centers on individual index. Local topk results will be aggregated to obtain global topk ANNs.
+
     CAGRA is a graph-based algorithm designed to construct a nearest neighbors graph index using either "ivf_pq" or "nn_descent" method.
     This index is then utilized to efficiently answer approximate nearest neighbor (ANN) queries. Graph-based algorithms have consistently
     demonstrated superior performance in ANN search, offering the fastest search speeds with minimal loss in search quality. Due to the high
@@ -907,11 +911,6 @@ class ApproximateNearestNeighbors(
     enabling rapid distance computation between vectors. While IVFPQ typically delivers faster search speeds compared to IVFFLAT,
     it does so with a tradeoff in search quality, such as reduced recall. It is important to note that the distances returned by IVFPQ
     are approximate and do not represent the exact distances in the original high-dimensional space.
-
-    The current implementation build kmeans index independently on each data partition (or maxRecordsPerBatch if Arrow is enabled) of item_df.
-    Queries will be broadcast to all GPUs, then every query probes closest centers on individual index. Local topk results will be aggregated to obtain
-    global topk ANNs.
-
 
     Parameters
     ----------
@@ -927,9 +926,17 @@ class ApproximateNearestNeighbors(
 
         When algorithm is 'cagra':
             parameters for index construction
-            * build_algo (default = 'ivf_pq'): algorithm to build graph index, can be either 'ivf_pq' or 'nn_descent'. nn_descent is expected to be generally faster than ivf_pq.
-            * intermediate_graph_degree (default = 128): an intermediate variable used during graph index construction
-            * graph_degree (default = 64): the degree of each node in the final graph index
+            * build_algo: (str, default = 'ivf_pq') algorithm to build graph index, can be either 'ivf_pq' or 'nn_descent'. nn_descent is expected to be generally faster than ivf_pq.
+            * intermediate_graph_degree: (int, default = 128) an intermediate variable used during graph index construction
+            * graph_degree: (int, default = 64) the degree of each node in the final graph index
+
+            parameters for search, full list in cuvs python API documentation.
+            * itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time.
+            * max_iterations (int, default = 0) maximum number of search iterations. 0 means auto select.
+            * min_iterations (int, default = 0) minimum number of search iterations. 0 means auto select.
+            * search_width: (int, default = 1) number of graph nodes as the initial set of search points in each iteration.
+            * num_random_samplings: (int, default = 1) number of iterations for selecting initial random seed nodes.
+
 
         When algorithm is 'ivfflat':
             * nlist: (int) number of kmeans clusters to partition the dataframe into.
@@ -1396,10 +1403,20 @@ class ApproximateNearestNeighborsModel(
             else:
                 from cuvs.neighbors import cagra
 
-                print(f"debug {cuml_alg_params['algo_params']}")
-                build_params = cagra.IndexParams(
-                    metric=cuml_alg_params["metric"], **cuml_alg_params["algo_params"]
+                print(f"debug algo_params: {cuml_alg_params['algo_params']}")
+
+                cagra_params_index = _get_default_params_from_func(
+                    cagra.IndexParams,
+                    ["compression"], # TODO support compression when it can be set to True and False
                 )
+
+                for p in cagra_params_index.keys():
+                    if p in cuml_alg_params['algo_params']:
+                        cagra_params_index[p] = cuml_alg_params['algo_params'][p]
+
+                print(f"debug cagra_params_index: {cagra_params_index}")
+
+                build_params = cagra.IndexParams(**cagra_params_index)
                 cagra_index_obj = cagra.build(build_params, item)
 
             logger.info(
@@ -1413,8 +1430,13 @@ class ApproximateNearestNeighborsModel(
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:
                 gpu_qfeatures = cp.array(bcast_qfeatures.value)
+                cagra_params_search = _get_default_params_from_func(cagra.SearchParams)
+                for p in cagra_params_search.keys():
+                    if p in cuml_alg_params['algo_params']:
+                        cagra_params_search[p] = cuml_alg_params['algo_params'][p]
+
                 distances, indices = cagra.search(
-                    cagra.SearchParams(),
+                    cagra.SearchParams(**cagra_params_search),
                     cagra_index_obj,
                     gpu_qfeatures,
                     cuml_alg_params["n_neighbors"],
