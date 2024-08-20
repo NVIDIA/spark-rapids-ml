@@ -894,15 +894,10 @@ class ApproximateNearestNeighbors(
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
     The ApproximateNearestNeighbors is currently built on the CAGRA (graph-based) algorithm of cuVS, and the IVFFLAT and IVFPQ algorithms of cuML.
 
-    CAGRA is a graph-based algorithm designed to construct a nearest neighbors graph index using either "CAGRA" or "nn_descent" method.
+    CAGRA is a graph-based algorithm designed to construct a nearest neighbors graph index using either "ivf_pq" or "nn_descent" method.
     This index is then utilized to efficiently answer approximate nearest neighbor (ANN) queries. Graph-based algorithms have consistently
     demonstrated superior performance in ANN search, offering the fastest search speeds with minimal loss in search quality. Due to the high
     computational complexity involved in graph construction, these algorithms are particularly well-suited for GPU acceleration.
-
-    CAGRA is a graph-based algorithm that supports both "cagra" and "nn_descent" to construct nearest neighbors graph index,
-    then use the index to answer ANN queries. Graph-based algorithms are widely shown to be the most effective in the field of ANN search,
-    as they provides the fastest search speed and lowest loss in search quality. Due to high time complexity of graph construction, these algorithms are
-    suitable for GPU acceleration.
 
     IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
     phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
@@ -929,6 +924,12 @@ class ApproximateNearestNeighbors(
     algoParams: Optional[Dict[str, Any]] (default = None)
         if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
         Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).
+
+        When algorithm is 'cagra':
+            parameters for index construction
+            * build_algo (default = 'ivf_pq'): algorithm to build graph index, can be either 'ivf_pq' or 'nn_descent'. nn_descent is expected to be generally faster than ivf_pq.
+            * intermediate_graph_degree (default = 128): an intermediate variable used during graph index construction
+            * graph_degree (default = 64): the degree of each node in the final graph index
 
         When algorithm is 'ivfflat':
             * nlist: (int) number of kmeans clusters to partition the dataframe into.
