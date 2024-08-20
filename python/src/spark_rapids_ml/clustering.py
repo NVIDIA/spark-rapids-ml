@@ -39,7 +39,6 @@ from pyspark.sql.types import (
     StructField,
     StructType,
 )
-from pyspark.util import _parse_memory
 
 from .core import (
     CumlT,
