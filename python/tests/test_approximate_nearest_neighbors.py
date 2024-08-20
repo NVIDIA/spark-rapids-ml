@@ -143,7 +143,7 @@ class ANNEvaluator:
         gaps = np.abs(distances_ann - self.distances_exact)
         return gaps.mean()
 
-    def compare_with_cuml_sg(
+    def compare_with_cuml_or_cuvs_sg(
         self,
         algorithm: str,
         algoParams: Optional[Dict[str, Any]],
@@ -152,9 +152,15 @@ class ANNEvaluator:
         tolerance: float,
     ) -> None:
         # compare with cuml sg ANN on avg_recall and avg_dist_gap
-        cumlsg_distances, cumlsg_indices = self.get_cuml_sg_results(
-            algorithm, algoParams
-        )
+        if algorithm in {"ivfflat", "ivfpq"}:
+            cumlsg_distances, cumlsg_indices = self.get_cuml_sg_results(
+                algorithm, algoParams
+            )
+        else:
+            assert algorithm == "cagra"
+            cumlsg_distances, cumlsg_indices = self.get_cuvs_sg_results(
+                algorithm, algoParams
+            )
 
         # compare cuml sg with given results
         avg_recall_cumlann = self.cal_avg_recall(cumlsg_indices)
@@ -189,6 +195,31 @@ class ANNEvaluator:
             cumlsg_distances **= 2  # square up cuml distances to get l2 distances
         return (cumlsg_distances, cumlsg_indices)
 
+    def get_cuvs_sg_results(
+        self,
+        algorithm: str,
+        algoParams: Optional[Dict[str, Any]],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        assert self.metric == "sqeuclidean"
+
+        import cupy as cp
+
+        gpu_X = cp.array(self.X, dtype="float32")
+        from cuvs.neighbors import cagra
+
+        build_params = cagra.IndexParams(metric=self.metric, **algoParams)
+        index = cagra.build(build_params, gpu_X)
+
+        sg_distances, sg_indices = cagra.search(
+            cagra.SearchParams(), index, gpu_X, self.n_neighbors
+        )
+
+        # convert results to cp array then to np array
+        sg_distances = cp.array(sg_distances).get()
+        sg_indices = cp.array(sg_indices).get()
+
+        return (sg_distances, sg_indices)
+
 
 @pytest.mark.parametrize(
     "combo",
@@ -213,7 +244,7 @@ def test_ann_algorithm(
 ) -> None:
 
     algorithm = combo[0]
-    assert algorithm in {"ivfflat", "ivfpq"}
+    assert algorithm in {"ivfflat", "ivfpq", "cagra"}
 
     feature_type = combo[1]
     max_record_batch = combo[2]
@@ -235,7 +266,7 @@ def test_ann_algorithm(
             "correlation",
         }
     else:
-        assert False, f"unknown algorithm: {algorithm}"
+        assert algorithm == "cagra", f"unknown algorithm: {algorithm}"
 
     X, _ = make_blobs(
         n_samples=data_shape[0],
@@ -303,13 +334,14 @@ def test_ann_algorithm(
             assert self_distance == [0.0] * len(X)
 
         # test kneighbors: compare with single-GPU cuml
-        ann_evaluator.compare_with_cuml_sg(
+        ann_evaluator.compare_with_cuml_or_cuvs_sg(
             algorithm, algoParams, indices, distances, tolerance
         )
         avg_recall = ann_evaluator.cal_avg_recall(indices)
         avg_dist_gap = ann_evaluator.cal_avg_dist_gap(distances)
 
         # test kneighbors: compare with sklearn brute NN on avg_recall and avg_dist_gap
+        print(f"avg_recall is {avg_recall}")
         assert avg_recall >= expected_avg_recall
         if distances_are_exact:
             assert np.all(np.abs(avg_dist_gap) < tolerance)
@@ -443,6 +475,72 @@ def test_ivfpq(
     expected_avg_recall = 0.1
     distances_are_exact = False
     tolerance = 5e-3  # tolerance increased to be more stable due to quantization and randomness in ivfpq
+
+    test_ann_algorithm(
+        combo=combo,
+        data_shape=data_shape,
+        data_type=data_type,
+        expected_avg_recall=expected_avg_recall,
+        distances_are_exact=distances_are_exact,
+        tolerance=tolerance,
+    )
+
+
+@pytest.mark.parametrize(
+    "algorithm,feature_type,max_records_per_batch,algo_params,metric",
+    [
+        (
+            "cagra",
+            "array",
+            10000,
+            {
+                # "intermediate_graph_degree": 128,
+                # "graph_degree": 64,
+                "build_algo": "ivf_pq",
+                # "compression": False,
+            },
+            "sqeuclidean",
+        ),
+        (
+            "cagra",
+            "array",
+            3000,
+            {
+                # "intermediate_graph_degree": 128,
+                # "graph_degree": 64,
+                "build_algo": "nn_descent",
+                # "compression": False,
+            },
+            "sqeuclidean",
+        ),
+    ],
+)
+@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_cagra(
+    algorithm: str,
+    feature_type: str,
+    max_records_per_batch: int,
+    algo_params: Dict[str, Any],
+    metric: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+) -> None:
+
+    VALID_METRIC = {"sqeuclidean"}
+    VALID_BUILD_ALGO = {"ivf_pq", "nn_descent"}
+    assert (
+        metric in VALID_METRIC
+    ), f"cagra currently supports metric only in {VALID_METRIC}."
+    assert algo_params["build_algo"] in {
+        "ivf_pq",
+        "nn_descent",
+    }, f"cagra currently supports build_algo only in {VALID_BUILD_ALGO}"
+
+    combo = (algorithm, feature_type, max_records_per_batch, algo_params, metric)
+    expected_avg_recall = 0.99
+    distances_are_exact = True
+    tolerance = 1e-3
 
     test_ann_algorithm(
         combo=combo,

@@ -1065,7 +1065,8 @@ class ApproximateNearestNeighbors(
         assert algorithm in {
             "ivfflat",
             "ivfpq",
-        }, "currently only ivfflat and ivfpq are supported"
+            "cagra",
+        }, "currently only ivfflat, ivfpq, and cagra are supported"
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
@@ -1322,11 +1323,16 @@ class ApproximateNearestNeighborsModel(
 
         def _construct_sgnn() -> CumlT:
 
-            from cuml.neighbors import NearestNeighbors as SGNN
+            if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
+                from cuml.neighbors import NearestNeighbors as SGNN
 
-            nn_object = SGNN(output_type="cupy", **cuml_alg_params)
+                nn_object = SGNN(output_type="cupy", **cuml_alg_params)
+                return nn_object
+            else:
+                assert cuml_alg_params["algorithm"] == "cagra"
+                from cuvs.neighbors import cagra
 
-            return nn_object
+                return "cagra"
 
         row_number_col = alias.row_number
         input_col, input_cols = self._get_input_columns()
@@ -1370,7 +1376,16 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            nn_object.fit(item)
+            if nn_object is not "cagra":
+                nn_object.fit(item)
+            else:
+                from cuvs.neighbors import cagra
+
+                print(f"debug {cuml_alg_params['algo_params']}")
+                build_params = cagra.IndexParams(
+                    metric=cuml_alg_params["metric"], **cuml_alg_params["algo_params"]
+                )
+                cagra_index_obj = cagra.build(build_params, item)
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
@@ -1379,7 +1394,18 @@ class ApproximateNearestNeighborsModel(
             start_time = time.time()
             import cupy as cp
 
-            distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
+            if nn_object is not "cagra":
+                distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
+            else:
+                gpu_qfeatures = cp.array(bcast_qfeatures.value)
+                distances, indices = cagra.search(
+                    cagra.SearchParams(),
+                    cagra_index_obj,
+                    gpu_qfeatures,
+                    cuml_alg_params["n_neighbors"],
+                )
+                distances = cp.asarray(distances)
+                indices = cp.asarray(indices)
 
             # Note cuML kneighbors applys an extra square root on the l2 distances.
             # Here applies square to obtain the actual l2 distances.
