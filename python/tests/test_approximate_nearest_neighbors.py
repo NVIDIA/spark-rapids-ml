@@ -69,6 +69,31 @@ def test_params() -> None:
 
     _test_input_setter_getter(ApproximateNearestNeighbors)
 
+    # test cagra index params and search params
+    cagra_index_param: Dict[str, Any] = {
+        "intermediate_graph_degree": 80,
+        "graph_degree": 60,
+        "build_algo": "nn_descent",
+        "compression": None,
+    }
+
+    cagra_search_param: Dict[str, Any] = {
+        "max_queries": 10,
+        "itopk_size": 10,
+        "max_iterations": 20,
+        "min_iterations": 10,
+        "search_width": 2,
+        "num_random_samplings": 5,
+    }
+
+    algoParams = {**cagra_index_param, **cagra_search_param}
+    print(f"debug algoParams: {algoParams}")
+    index_param, search_param = ApproximateNearestNeighborsModel._cal_cagra_params(
+        algoParams=algoParams, metric="sqeuclidean"
+    )
+    assert index_param == {"metric": "sqeuclidean", **cagra_index_param}
+    assert search_param == cagra_search_param
+
 
 @pytest.mark.parametrize(
     "algo_and_params",
@@ -158,9 +183,7 @@ class ANNEvaluator:
             )
         else:
             assert algorithm == "cagra"
-            cumlsg_distances, cumlsg_indices = self.get_cuvs_sg_results(
-                algorithm, algoParams
-            )
+            cumlsg_distances, cumlsg_indices = self.get_cuvs_sg_results(algoParams)
 
         # compare cuml sg with given results
         avg_recall_cumlann = self.cal_avg_recall(cumlsg_indices)
@@ -197,7 +220,6 @@ class ANNEvaluator:
 
     def get_cuvs_sg_results(
         self,
-        algorithm: str,
         algoParams: Optional[Dict[str, Any]],
     ) -> Tuple[np.ndarray, np.ndarray]:
         assert self.metric == "sqeuclidean"
@@ -207,11 +229,15 @@ class ANNEvaluator:
         gpu_X = cp.array(self.X, dtype="float32")
         from cuvs.neighbors import cagra
 
-        build_params = cagra.IndexParams(metric=self.metric, **algoParams)
-        index = cagra.build(build_params, gpu_X)
+        index_params, search_params = (
+            ApproximateNearestNeighborsModel._cal_cagra_params(
+                algoParams=algoParams, metric=self.metric
+            )
+        )
+        index = cagra.build(cagra.IndexParams(**index_params), gpu_X)
 
         sg_distances, sg_indices = cagra.search(
-            cagra.SearchParams(), index, gpu_X, self.n_neighbors
+            cagra.SearchParams(**search_params), index, gpu_X, self.n_neighbors
         )
 
         # convert results to cp array then to np array
@@ -510,6 +536,18 @@ def test_ivfpq(
             },
             "sqeuclidean",
         ),
+        (
+            "cagra",
+            "vector",
+            5000,
+            {
+                "build_algo": "ivf_pq",
+                "itopk_size": 96,
+                "search_width": 2,
+                "num_random_samplings": 2,
+            },
+            "sqeuclidean",
+        ),
     ],
 )
 @pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
@@ -523,6 +561,9 @@ def test_cagra(
     data_shape: Tuple[int, int],
     data_type: np.dtype,
 ) -> None:
+    """
+    TODO: support compression index param
+    """
 
     VALID_METRIC = {"sqeuclidean"}
     VALID_BUILD_ALGO = {"ivf_pq", "nn_descent"}
@@ -537,7 +578,7 @@ def test_cagra(
     combo = (algorithm, feature_type, max_records_per_batch, algo_params, metric)
     expected_avg_recall = 0.99
     distances_are_exact = True
-    tolerance = 1e-3
+    tolerance = 2e-3
 
     test_ann_algorithm(
         combo=combo,

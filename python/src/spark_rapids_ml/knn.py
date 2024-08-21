@@ -64,8 +64,8 @@ from .params import HasIDCol, P, _CumlClass, _CumlParams
 from .utils import (
     _concat_and_free,
     _get_class_or_callable_name,
-    _get_spark_session,
     _get_default_params_from_func,
+    _get_spark_session,
     get_logger,
 )
 
@@ -1257,6 +1257,31 @@ class ApproximateNearestNeighborsModel(
 
         return global_knn_df
 
+    @classmethod
+    def _cal_cagra_params(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        assert metric == "sqeuclidean"
+
+        cagra_index_params: Dict[str, Any] = {"metric": metric}
+        cagra_search_params: Dict[str, Any] = {}
+
+        if algoParams is None:
+            return (cagra_index_params, cagra_search_params)
+
+        for p in algoParams:
+            if p in {
+                "intermediate_graph_degree",
+                "graph_degree",
+                "build_algo",
+                "compression",
+            }:
+                cagra_index_params[p] = algoParams[p]
+            else:
+                cagra_search_params[p] = algoParams[p]
+
+        return (cagra_index_params, cagra_search_params)
+
     def kneighbors(
         self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
     ) -> Tuple[DataFrame, DataFrame, DataFrame]:
@@ -1343,6 +1368,12 @@ class ApproximateNearestNeighborsModel(
             "l2",
         }
 
+        if cuml_alg_params["algorithm"] == "cagra":
+            cagra_index_params, cagra_search_params = self._cal_cagra_params(
+                algoParams=self.cuml_params["algo_params"],
+                metric=self.cuml_params["metric"],
+            )
+
         def _construct_sgnn() -> CumlT:
 
             if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
@@ -1403,20 +1434,7 @@ class ApproximateNearestNeighborsModel(
             else:
                 from cuvs.neighbors import cagra
 
-                print(f"debug algo_params: {cuml_alg_params['algo_params']}")
-
-                cagra_params_index = _get_default_params_from_func(
-                    cagra.IndexParams,
-                    ["compression"], # TODO support compression when it can be set to True and False
-                )
-
-                for p in cagra_params_index.keys():
-                    if p in cuml_alg_params['algo_params']:
-                        cagra_params_index[p] = cuml_alg_params['algo_params'][p]
-
-                print(f"debug cagra_params_index: {cagra_params_index}")
-
-                build_params = cagra.IndexParams(**cagra_params_index)
+                build_params = cagra.IndexParams(**cagra_index_params)
                 cagra_index_obj = cagra.build(build_params, item)
 
             logger.info(
@@ -1430,13 +1448,9 @@ class ApproximateNearestNeighborsModel(
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:
                 gpu_qfeatures = cp.array(bcast_qfeatures.value)
-                cagra_params_search = _get_default_params_from_func(cagra.SearchParams)
-                for p in cagra_params_search.keys():
-                    if p in cuml_alg_params['algo_params']:
-                        cagra_params_search[p] = cuml_alg_params['algo_params'][p]
 
                 distances, indices = cagra.search(
-                    cagra.SearchParams(**cagra_params_search),
+                    cagra.SearchParams(**cagra_search_params),
                     cagra_index_obj,
                     gpu_qfeatures,
                     cuml_alg_params["n_neighbors"],
