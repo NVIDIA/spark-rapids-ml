@@ -9,13 +9,23 @@ cat <<EOF
         "spark.task.cpus": "1",
         "spark.databricks.delta.preview.enabled": "true",
         "spark.python.worker.reuse": "true",
-        "spark.executorEnv.PYTHONPATH": "/databricks/spark/python",
+        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-24.06.1.jar:/databricks/spark/python",
         "spark.sql.files.minPartitionNum": "2",
         "spark.sql.execution.arrow.maxRecordsPerBatch": "10000",
         "spark.executor.cores": "8",
         "spark.executor.memory": "5g",
+        "spark.rapids.memory.gpu.minAllocFraction": "0.0001",
+        "spark.plugins": "com.nvidia.spark.SQLPlugin",
         "spark.locality.wait": "0s",
+        "spark.sql.cache.serializer": "com.nvidia.spark.ParquetCachedBatchSerializer",
+        "spark.rapids.memory.gpu.pooling.enabled": "false",
+        "spark.rapids.sql.explain": "ALL",
         "spark.sql.execution.sortBeforeRepartition": "false",
+        "spark.rapids.sql.python.gpu.enabled": "true",
+        "spark.rapids.memory.pinnedPool.size": "2G",
+        "spark.python.daemon.module": "rapids.daemon_databricks",
+        "spark.rapids.sql.batchSizeBytes": "512m",
+        "spark.sql.adaptive.enabled": "false",
         "spark.sql.execution.arrow.pyspark.enabled": "true",
         "spark.sql.files.maxPartitionBytes": "2000000000000",
         "spark.databricks.delta.optimizeWrite.enabled": "false",
@@ -35,6 +45,10 @@ cat <<EOF
         "dbfs": {
             "destination": "dbfs:${BENCHMARK_HOME}/cluster_logs/${cluster_name}"
         }
+    },
+    "spark_env_vars": {
+        "LIBCUDF_CUFILE_POLICY": "OFF",
+        "NCCL_DEBUG": "INFO"
     },
     "autotermination_minutes": 30,
     "enable_elastic_disk": false,
