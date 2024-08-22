@@ -1395,7 +1395,16 @@ class ApproximateNearestNeighborsModel(
             if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
                 from cuml.neighbors import NearestNeighbors as SGNN
 
+                # Currently 'usePrecomputedTables' is required by cuml cython API, though the value is ignored in C++.
+                if (
+                    cuml_alg_params["algorithm"] == "ivfpq"
+                    and cuml_alg_params["algo_params"]
+                ):
+                    if "usePrecomputedTables" not in cuml_alg_params["algo_params"]:
+                        cuml_alg_params["algo_params"]["usePrecomputedTables"] = False
+
                 nn_object = SGNN(output_type="cupy", **cuml_alg_params)
+
                 return nn_object
             else:
                 assert cuml_alg_params["algorithm"] == "cagra"
