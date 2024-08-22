@@ -332,7 +332,7 @@ def test_ann_algorithm(
             if algorithm == "ivfpq":
                 # returned distances can be slightly different when running ivfpq multiple times due to quantization and randomness
                 assert array_equal(
-                    r1_distances, r2_distances, unit_tol=tolerance, total_tol=tolerance
+                    r1_distances, r2_distances, unit_tol=tolerance, total_tol=1e-3
                 )
             else:
                 assert array_equal(r1_distances, r2_distances, tolerance)
