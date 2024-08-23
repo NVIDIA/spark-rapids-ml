@@ -1,7 +1,7 @@
 #!/bin/bash
 
-cluster_type=$1
-db_version=${$2:-13.3}
+cluster_type=${1:-gpu_etl}
+db_version=${2:-13.3}
 
 if [[ $cluster_type == "gpu" || $cluster_type == "gpu_etl" ]]; then
     num_cpus=0
@@ -11,7 +11,7 @@ elif [[ $cluster_type == "cpu" ]]; then
     num_gpus=0
 else
     echo "unknown cluster type $cluster_type"
-    echo "usage: $0 cpu|gpu|gpu_etl"
+    echo "usage: $0 cpu|gpu|gpu_etl [12.2|13.3|14.3|15.4]" 
     exit 1
 fi
 
@@ -23,7 +23,6 @@ fi
 
 source benchmark_utils.sh
 
-#BENCHMARK_DATA_HOME=/spark-rapids-ml/benchmarking/datasets
 BENCHMARK_DATA_HOME=s3a://spark-rapids-ml-bm-datasets-public
 
 # creates cluster and sets CLUSTER_ID equal to created cluster's id

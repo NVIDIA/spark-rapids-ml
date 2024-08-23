@@ -46,7 +46,7 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
 
     The script creates a cpu or gpu cluster, respectively using the cluster specs in [cpu_cluster_spec](./cpu_cluster_spec.sh), [gpu_cluster_spec](./gpu_cluster_spec.sh), [gpu_etl_cluster_spec](./gpu_etl_cluster_spec.sh), depending on the supplied argument.  In gpu and gpu_etl mode each algorithm benchmark is run 3 times, and similarly in cpu mode, except for kmeans and random forest classifier and regressor which are each run 1 time due to their long running times.  gpu_etl mode also uses the [spark-rapids](https://github.com/NVIDIA/spark-rapids) gpu accelerated plugin.
 
-    An optional databricks runtime version can be supplied as second argument.  The default is 13.3 if not specified.   Runtime 14.3 can not be specified in gpu_etl mode as it is not yet compatible with the spark-rapids plugin.  
+    An optional databricks runtime version can be supplied as a second argument, with 13.3 being the default if not specified.   Runtimes higher than 13.3 are only compatible with cpu and gpu modes (i.e. not gpu_etl) as they are not yet supported by the spark-rapids plugin.  
 
 3. The file `benchmark_log` will have the fit/train/transform running times and accuracy scores.  A simple convenience script has been provided to extract timing information for each run:
     ```bash
@@ -58,6 +58,6 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
   databricks jobs cancel-run <runid> --profile $DB_PROFILE
   ```
 
-5. The created clusters are configured to terminate after 30 min, but can be manually terminated or deleted via the Databricks UI.
+1. The created clusters are configured to terminate after 30 min, but can be manually terminated or deleted via the Databricks UI.
 
-6. Monitor progress periodically in case of a possible hang, to avoid incurring cloud costs in such cases.
+2. Monitor progress periodically in case of a possible hang, to avoid incurring cloud costs in such cases.
