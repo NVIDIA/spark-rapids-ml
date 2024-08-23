@@ -18,8 +18,7 @@ cat <<EOF
         "spark.sql.execution.sortBeforeRepartition": "false",
         "spark.sql.execution.arrow.pyspark.enabled": "true",
         "spark.sql.files.maxPartitionBytes": "2000000000000",
-        "spark.databricks.delta.optimizeWrite.enabled": "false",
-        "spark.rapids.sql.concurrentGpuTasks": "2"
+        "spark.databricks.delta.optimizeWrite.enabled": "false"
     },
     "aws_attributes": {
         "first_on_demand": 1,

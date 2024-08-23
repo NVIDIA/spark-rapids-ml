@@ -58,6 +58,6 @@ This directory contains shell scripts for running larger scale benchmarks on Dat
   databricks jobs cancel-run <runid> --profile $DB_PROFILE
   ```
 
-1. The created clusters are configured to terminate after 30 min, but can be manually terminated or deleted via the Databricks UI.
+5. The created clusters are configured to terminate after 30 min, but can be manually terminated or deleted via the Databricks UI.
 
-2. Monitor progress periodically in case of a possible hang, to avoid incurring cloud costs in such cases.
+6. Monitor progress periodically in case of a possible hang, to avoid incurring cloud costs in such cases.
