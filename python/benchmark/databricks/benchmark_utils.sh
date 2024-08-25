@@ -31,6 +31,7 @@ create_cluster() {
     INIT_SCRIPT_DIR="${WS_BENCHMARK_HOME}/init_scripts"
 
     # sourcing allows variable substitution (e.g. cluster name) into cluster json specs
+    
     cluster_spec=`source ${cluster_type}_cluster_spec.sh`
     echo $cluster_spec
 

@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import time
 from typing import Any, Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+import pyspark.sql.functions as F
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.sql import DataFrame, SparkSession
@@ -185,10 +187,21 @@ class BenchmarkKMeans(BenchmarkBase):
                 )
             elif is_vector_col:
                 df_for_scoring = transformed_df.select(
-                    vector_to_array(col(feature_col)), output_col
+                    vector_to_array(col(feature_col)).alias(feature_col), output_col
                 )
 
             cluster_centers = gpu_model.cluster_centers_
+
+            # temporary patch for DB with spark-rapids plugin
+            # this part is not timed so overhead is not critical, but should be reverted
+            # once https://github.com/NVIDIA/spark-rapids/issues/10770 is fixed
+            db_version = os.environ.get("DATABRICKS_RUNTIME_VERSION")
+            if db_version:
+                dim = len(cluster_centers[0])
+                # inject unsupported expr (slice) that is essentially a noop
+                df_for_scoring = df_for_scoring.select(
+                    F.slice(feature_col, 1, dim).alias(feature_col), output_col
+                )
 
         if num_cpus > 0:
             from pyspark.ml.clustering import KMeans as SparkKMeans
