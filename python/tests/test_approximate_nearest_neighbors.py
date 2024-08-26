@@ -147,6 +147,9 @@ class ANNEvaluator:
             sk_knn.fit(X)
             self.distances_exact, self.indices_exact = sk_knn.kneighbors(X)
 
+        assert self.distances_exact.shape == (len(self.X), self.n_neighbors)
+        assert self.indices_exact.shape == (len(self.X), self.n_neighbors)
+
     def get_distances_exact(self) -> np.ndarray:
         return self.distances_exact
 
