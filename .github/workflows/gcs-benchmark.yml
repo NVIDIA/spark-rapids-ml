@@ -23,12 +23,11 @@ on:
         default: 'us-central1'
         description: 'COMPUTER REGION'
   schedule:
-    # - cron: "0 13 * * 1"  
-    - cron: "* * * * *"  
+    - cron: "0 13 * * 1"  
 
 jobs:
   Benchmark:
-    if: github.repository == 'YanxuanLiu/spark-rapids-ml'
+    if: github.repository == 'NVIDIA/spark-rapids-ml'
     runs-on: ubuntu-latest
     env:
       PROJECT: rapids-spark
