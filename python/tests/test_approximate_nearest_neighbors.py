@@ -545,7 +545,7 @@ def test_ivfpq(
             5000,
             {
                 "build_algo": "ivf_pq",
-                "itopk_size": 96,
+                "itopk_size": 96,  # cuVS increases this to multiple of 32 and requires it to be larger than or equal to k.
                 "search_width": 2,
                 "num_random_samplings": 2,
             },

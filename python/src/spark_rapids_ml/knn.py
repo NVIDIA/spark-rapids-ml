@@ -931,7 +931,7 @@ class ApproximateNearestNeighbors(
 
         When algorithm is 'cagra', parameters for search (full list in `cuvs python API documentation <https://docs.rapids.ai/api/cuvs/stable/python_api/neighbors_cagra/#cuvs.neighbors.cagra.SearchParams>`_):
 
-            - itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time.
+            - itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time. cuVS expects itopk_size to be larger than or equal to k.
             - max_iterations (int, default = 0) maximum number of search iterations. 0 means auto select.
             - min_iterations (int, default = 0) minimum number of search iterations. 0 means auto select.
             - search_width: (int, default = 1) number of graph nodes as the initial set of search points in each iteration.
