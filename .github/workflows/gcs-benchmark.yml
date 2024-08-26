@@ -28,7 +28,7 @@ on:
 
 jobs:
   Benchmark:
-    if: github.repository == 'NVIDIA/spark-rapids-ml'
+    if: github.repository == 'YanxuanLiu/spark-rapids-ml'
     runs-on: ubuntu-latest
     env:
       PROJECT: rapids-spark
