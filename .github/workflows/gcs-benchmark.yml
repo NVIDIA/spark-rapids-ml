@@ -23,7 +23,8 @@ on:
         default: 'us-central1'
         description: 'COMPUTER REGION'
   schedule:
-    - cron: "0 13 * * 1"    
+    # - cron: "0 13 * * 1"  
+    - cron: "*/10 * * * *"  
 
 jobs:
   Benchmark:
