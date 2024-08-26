@@ -923,30 +923,32 @@ class ApproximateNearestNeighbors(
     algoParams: Optional[Dict[str, Any]] (default = None)
         if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
         Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).
+        When algorithm is 'cagra', parameters for index construction:
 
-        When algorithm is 'cagra':
-            parameters for index construction
-            * build_algo: (str, default = 'ivf_pq') algorithm to build graph index, can be either 'ivf_pq' or 'nn_descent'. nn_descent is expected to be generally faster than ivf_pq.
-            * intermediate_graph_degree: (int, default = 128) an intermediate variable used during graph index construction
-            * graph_degree: (int, default = 64) the degree of each node in the final graph index
+            - build_algo: (str, default = 'ivf_pq') algorithm to build graph index, can be either 'ivf_pq' or 'nn_descent'. nn_descent is expected to be generally faster than ivf_pq.
+            - intermediate_graph_degree: (int, default = 128) an intermediate variable used during graph index construction.
+            - graph_degree: (int, default = 64) the degree of each node in the final graph index.
 
-            parameters for search, full list in cuvs python API documentation.
-            * itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time.
-            * max_iterations (int, default = 0) maximum number of search iterations. 0 means auto select.
-            * min_iterations (int, default = 0) minimum number of search iterations. 0 means auto select.
-            * search_width: (int, default = 1) number of graph nodes as the initial set of search points in each iteration.
-            * num_random_samplings: (int, default = 1) number of iterations for selecting initial random seed nodes.
+        When algorithm is 'cagra', parameters for search (full list in `cuvs python API documentation <https://docs.rapids.ai/api/cuvs/stable/python_api/neighbors_cagra/#cuvs.neighbors.cagra.SearchParams>`_):
 
+            - itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time.
+            - max_iterations (int, default = 0) maximum number of search iterations. 0 means auto select.
+            - min_iterations (int, default = 0) minimum number of search iterations. 0 means auto select.
+            - search_width: (int, default = 1) number of graph nodes as the initial set of search points in each iteration.
+            - num_random_samplings: (int, default = 1) number of iterations for selecting initial random seed nodes.
 
         When algorithm is 'ivfflat':
-            * nlist: (int) number of kmeans clusters to partition the dataframe into.
-            * nprobe: (int) number of closest clusters to probe for topk ANNs.
+
+            - nlist: (int) number of kmeans clusters to partition the dataframe into.
+            - nprobe: (int) number of closest clusters to probe for topk ANNs.
 
         When algorithm is 'ivfpq':
-            * nlist: (int) number of kmeans clusters to partition the dataframe into.
-            * nprobe: (int) number of closest clusters to probe for topk ANNs.
-            * M: (int) number of subquantizers
-            * n_bits: (int) number of bits allocated per subquantizer
+
+            - nlist: (int) number of kmeans clusters to partition the dataframe into.
+            - nprobe: (int) number of closest clusters to probe for topk ANNs.
+            - M: (int) number of subquantizers
+            - n_bits: (int) number of bits allocated per subquantizer
+
             Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.
 
     metric: str (default = "euclidean")
