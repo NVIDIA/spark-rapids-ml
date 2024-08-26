@@ -24,7 +24,7 @@ on:
         description: 'COMPUTER REGION'
   schedule:
     # - cron: "0 13 * * 1"  
-    - cron: "*/5 * * * *"  
+    - cron: "* * * * *"  
 
 jobs:
   Benchmark:
