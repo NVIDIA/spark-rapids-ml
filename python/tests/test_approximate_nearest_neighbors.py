@@ -530,7 +530,7 @@ def test_ivfpq(
         ),
         (
             "cagra",
-            "array",
+            "multi_cols",
             3000,
             {
                 "intermediate_graph_degree": 256,

@@ -1420,6 +1420,7 @@ class ApproximateNearestNeighborsModel(
                     }
                 )
 
+            import cupy as cp
             from pyspark import TaskContext
 
             ctx = TaskContext.get()
@@ -1437,6 +1438,10 @@ class ApproximateNearestNeighborsModel(
                 from cuvs.neighbors import cagra
 
                 build_params = cagra.IndexParams(**cagra_index_params)
+
+                # cuvs does not take pd.DataFrame as input
+                if isinstance(item, pd.DataFrame):
+                    item = cp.array(item.to_numpy(), order="C", dtype="float32")
                 cagra_index_obj = cagra.build(build_params, item)
 
             logger.info(
@@ -1444,12 +1449,13 @@ class ApproximateNearestNeighborsModel(
             )
 
             start_time = time.time()
-            import cupy as cp
 
             if nn_object is not "cagra":
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:
-                gpu_qfeatures = cp.array(bcast_qfeatures.value)
+                gpu_qfeatures = cp.array(
+                    bcast_qfeatures.value, order="C", dtype="float32"
+                )
 
                 distances, indices = cagra.search(
                     cagra.SearchParams(**cagra_search_params),
