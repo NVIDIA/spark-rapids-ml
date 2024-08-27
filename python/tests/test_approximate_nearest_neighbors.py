@@ -87,9 +87,12 @@ def test_params() -> None:
     }
 
     algoParams = {**cagra_index_param, **cagra_search_param}
-    print(f"debug algoParams: {algoParams}")
-    index_param, search_param = ApproximateNearestNeighborsModel._cal_cagra_params(
-        algoParams=algoParams, metric="sqeuclidean"
+    index_param, search_param = (
+        ApproximateNearestNeighborsModel._cal_cagra_params_and_check(
+            algoParams=algoParams,
+            metric="sqeuclidean",
+            topk=cagra_search_param["itopk_size"],
+        )
     )
     assert index_param == {"metric": "sqeuclidean", **cagra_index_param}
     assert search_param == cagra_search_param
@@ -233,8 +236,8 @@ class ANNEvaluator:
         from cuvs.neighbors import cagra
 
         index_params, search_params = (
-            ApproximateNearestNeighborsModel._cal_cagra_params(
-                algoParams=algoParams, metric=self.metric
+            ApproximateNearestNeighborsModel._cal_cagra_params_and_check(
+                algoParams=algoParams, metric=self.metric, topk=self.n_neighbors
             )
         )
         index = cagra.build(cagra.IndexParams(**index_params), gpu_X)
@@ -270,6 +273,7 @@ def test_ann_algorithm(
     expected_avg_recall: float = 0.95,
     distances_are_exact: bool = True,
     tolerance: float = 1e-4,
+    n_neighbors: int = 50,
 ) -> None:
 
     algorithm = combo[0]
@@ -280,7 +284,6 @@ def test_ann_algorithm(
     algoParams = combo[3]
     metric = combo[4]
 
-    n_neighbors = 50
     n_clusters = 10
 
     from cuml.neighbors import VALID_METRICS
@@ -563,6 +566,7 @@ def test_cagra(
     metric: str,
     data_shape: Tuple[int, int],
     data_type: np.dtype,
+    n_neighbors: int = 50,
 ) -> None:
     """
     TODO: support compression index param
@@ -590,7 +594,57 @@ def test_cagra(
         expected_avg_recall=expected_avg_recall,
         distances_are_exact=distances_are_exact,
         tolerance=tolerance,
+        n_neighbors=n_neighbors,
     )
+
+
+@pytest.mark.parametrize(
+    "algorithm,feature_type,max_records_per_batch,algo_params,metric",
+    [
+        (
+            "cagra",
+            "vector",
+            5000,
+            {
+                "build_algo": "ivf_pq",
+                "itopk_size": 32,
+            },
+            "sqeuclidean",
+        ),
+    ],
+)
+@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_cagra_params(
+    algorithm: str,
+    feature_type: str,
+    max_records_per_batch: int,
+    algo_params: Dict[str, Any],
+    metric: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+) -> None:
+
+    itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
+    import math
+
+    internal_topk_size = math.ceil(itopk_size / 32) * 32
+    n_neighbors = 50
+    error_msg = ""
+    if internal_topk_size < n_neighbors:
+        error_msg = f"cuVS increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {n_neighbors}."
+
+    with pytest.raises(ValueError, match=error_msg):
+        test_cagra(
+            algorithm,
+            feature_type,
+            max_records_per_batch,
+            algo_params,
+            metric,
+            data_shape,
+            data_type,
+            n_neighbors=n_neighbors,
+        )
 
 
 @pytest.mark.parametrize(

@@ -15,6 +15,7 @@
 #
 
 import asyncio
+import math
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
@@ -1260,8 +1261,8 @@ class ApproximateNearestNeighborsModel(
         return global_knn_df
 
     @classmethod
-    def _cal_cagra_params(
-        cls, algoParams: Optional[Dict[str, Any]], metric: str
+    def _cal_cagra_params_and_check(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         assert metric == "sqeuclidean"
 
@@ -1281,6 +1282,18 @@ class ApproximateNearestNeighborsModel(
                 cagra_index_params[p] = algoParams[p]
             else:
                 cagra_search_params[p] = algoParams[p]
+
+        # check cagra params
+        itopk_size = (
+            64
+            if "itopk_size" not in cagra_search_params
+            else cagra_search_params["itopk_size"]
+        )
+        internal_topk_size = math.ceil(itopk_size / 32) * 32
+        if internal_topk_size < topk:
+            raise ValueError(
+                f"cuVS increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {topk})."
+            )
 
         return (cagra_index_params, cagra_search_params)
 
@@ -1371,9 +1384,10 @@ class ApproximateNearestNeighborsModel(
         }
 
         if cuml_alg_params["algorithm"] == "cagra":
-            cagra_index_params, cagra_search_params = self._cal_cagra_params(
+            cagra_index_params, cagra_search_params = self._cal_cagra_params_and_check(
                 algoParams=self.cuml_params["algo_params"],
                 metric=self.cuml_params["metric"],
+                topk=cuml_alg_params["n_neighbors"],
             )
 
         def _construct_sgnn() -> CumlT:
