@@ -89,4 +89,3 @@ cvModelRead = CrossValidatorModel.read().load(model_path)
 print(f"cvModelRead.avgMetrics: {cvModelRead.avgMetrics}")
 print(f"evaluator.evaluate(cvModel.transform(dataset)): {evaluator.evaluate(cvModel.transform(dataset))}")
 print(f"evaluator.evaluate(cvModelRead.transform(dataset)): {evaluator.evaluate(cvModelRead.transform(dataset))}")
-
