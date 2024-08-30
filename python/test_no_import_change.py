@@ -17,7 +17,7 @@
 
 #
 # to run on cpu -> python test_no_import_change.py 0.2
-# to run on gpu -> pythom -m spark_rapids_ml test_no_import_change.py 0.2
+# to run on gpu -> python -m spark_rapids_ml test_no_import_change.py 0.2
 #
 # notice no imports from spark_rapids_ml
 #
