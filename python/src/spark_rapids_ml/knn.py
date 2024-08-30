@@ -1292,7 +1292,7 @@ class ApproximateNearestNeighborsModel(
         internal_topk_size = math.ceil(itopk_size / 32) * 32
         if internal_topk_size < topk:
             raise ValueError(
-                f"cuVS increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {topk})."
+                f"cagra increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {topk})."
             )
 
         return (cagra_index_params, cagra_search_params)

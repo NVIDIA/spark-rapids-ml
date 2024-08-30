@@ -632,7 +632,7 @@ def test_cagra_params(
     n_neighbors = 50
     error_msg = ""
     if internal_topk_size < n_neighbors:
-        error_msg = f"cuVS increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {n_neighbors}."
+        error_msg = f"cagra increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {n_neighbors}."
 
     with pytest.raises(ValueError, match=error_msg):
         test_cagra(
