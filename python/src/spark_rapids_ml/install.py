@@ -43,10 +43,12 @@ def set_pyspark_mod_getattr(mod_name: str):
             # return getattr(_pyspark_modules[mod_name], attr)
             print(f"{attr}, {mod_name}, {_pyspark_modules[mod_name].__name__}, {calling_path}")
 
-            if attr in dir(_pyspark_modules[mod_name]):
-                return getattr(_pyspark_modules[mod_name], attr)
-            else:
-                raise AttributeError(f"No attribute '{attr}'")
+            try:
+                attr_val=getattr(_pyspark_modules[mod_name], attr)
+            except:
+                raise AttributeError("No attribute '{attr}'")
+            
+            return attr_val
         else:
             print(f"{attr}, {mod_name}, {_pyspark_modules[mod_name].__name__}, {calling_path}")
             return getattr(_rapids_modules[mod_name], attr)
