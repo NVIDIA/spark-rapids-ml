@@ -15,12 +15,14 @@
 #
 
 import argparse
-import spark_rapids_ml.install
 import runpy
 import sys
 
+import spark_rapids_ml.install
+
+
 # borrowed from rapids cudf.pandas
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m spark_rapids_ml",
         description=(
