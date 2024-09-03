@@ -16,6 +16,7 @@ sudo /usr/local/bin/pip3.9 install scikit-learn
 # install cudf and cuml
 sudo /usr/local/bin/pip3.9 install --no-cache-dir cudf-cu11==${RAPIDS_VERSION} \
     cuml-cu11==${RAPIDS_VERSION} \
+    cuvs-cu11==${RAPIDS_VERSION} \
     pylibraft-cu11==${RAPIDS_VERSION} \
     rmm-cu11==${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com

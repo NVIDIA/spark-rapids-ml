@@ -40,6 +40,7 @@ RUN apt-get update -y \
 RUN pip install --no-cache-dir \
     cudf-cu11~=${RAPIDS_VERSION} \
     cuml-cu11~=${RAPIDS_VERSION} \
+    cuvs-cu11~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install python dependencies
