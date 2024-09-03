@@ -24,6 +24,7 @@ ln -s /usr/local/cuda-11.8 /usr/local/cuda
 # using ~= pulls in latest micro version patches
 /databricks/python/bin/pip install cudf-cu11~=${RAPIDS_VERSION} \
     cuml-cu11~=${RAPIDS_VERSION} \
+    cuvs-cu11~=${RAPIDS_VERSION} \
     pylibraft-cu11~=${RAPIDS_VERSION} \
     rmm-cu11~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com

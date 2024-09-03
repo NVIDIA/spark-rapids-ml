@@ -69,6 +69,34 @@ def test_params() -> None:
 
     _test_input_setter_getter(ApproximateNearestNeighbors)
 
+    # test cagra index params and search params
+    cagra_index_param: Dict[str, Any] = {
+        "intermediate_graph_degree": 80,
+        "graph_degree": 60,
+        "build_algo": "nn_descent",
+        "compression": None,
+    }
+
+    cagra_search_param: Dict[str, Any] = {
+        "max_queries": 10,
+        "itopk_size": 10,
+        "max_iterations": 20,
+        "min_iterations": 10,
+        "search_width": 2,
+        "num_random_samplings": 5,
+    }
+
+    algoParams = {**cagra_index_param, **cagra_search_param}
+    index_param, search_param = (
+        ApproximateNearestNeighborsModel._cal_cagra_params_and_check(
+            algoParams=algoParams,
+            metric="sqeuclidean",
+            topk=cagra_search_param["itopk_size"],
+        )
+    )
+    assert index_param == {"metric": "sqeuclidean", **cagra_index_param}
+    assert search_param == cagra_search_param
+
 
 @pytest.mark.parametrize(
     "algo_and_params",
@@ -122,6 +150,9 @@ class ANNEvaluator:
             sk_knn.fit(X)
             self.distances_exact, self.indices_exact = sk_knn.kneighbors(X)
 
+        assert self.distances_exact.shape == (len(self.X), self.n_neighbors)
+        assert self.indices_exact.shape == (len(self.X), self.n_neighbors)
+
     def get_distances_exact(self) -> np.ndarray:
         return self.distances_exact
 
@@ -143,7 +174,7 @@ class ANNEvaluator:
         gaps = np.abs(distances_ann - self.distances_exact)
         return gaps.mean()
 
-    def compare_with_cuml_sg(
+    def compare_with_cuml_or_cuvs_sg(
         self,
         algorithm: str,
         algoParams: Optional[Dict[str, Any]],
@@ -152,9 +183,13 @@ class ANNEvaluator:
         tolerance: float,
     ) -> None:
         # compare with cuml sg ANN on avg_recall and avg_dist_gap
-        cumlsg_distances, cumlsg_indices = self.get_cuml_sg_results(
-            algorithm, algoParams
-        )
+        if algorithm in {"ivfflat", "ivfpq"}:
+            cumlsg_distances, cumlsg_indices = self.get_cuml_sg_results(
+                algorithm, algoParams
+            )
+        else:
+            assert algorithm == "cagra"
+            cumlsg_distances, cumlsg_indices = self.get_cuvs_sg_results(algoParams)
 
         # compare cuml sg with given results
         avg_recall_cumlann = self.cal_avg_recall(cumlsg_indices)
@@ -189,6 +224,34 @@ class ANNEvaluator:
             cumlsg_distances **= 2  # square up cuml distances to get l2 distances
         return (cumlsg_distances, cumlsg_indices)
 
+    def get_cuvs_sg_results(
+        self,
+        algoParams: Optional[Dict[str, Any]],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        assert self.metric == "sqeuclidean"
+
+        import cupy as cp
+
+        gpu_X = cp.array(self.X, dtype="float32")
+        from cuvs.neighbors import cagra
+
+        index_params, search_params = (
+            ApproximateNearestNeighborsModel._cal_cagra_params_and_check(
+                algoParams=algoParams, metric=self.metric, topk=self.n_neighbors
+            )
+        )
+        index = cagra.build(cagra.IndexParams(**index_params), gpu_X)
+
+        sg_distances, sg_indices = cagra.search(
+            cagra.SearchParams(**search_params), index, gpu_X, self.n_neighbors
+        )
+
+        # convert results to cp array then to np array
+        sg_distances = cp.array(sg_distances).get()
+        sg_indices = cp.array(sg_indices).get()
+
+        return (sg_distances, sg_indices)
+
 
 @pytest.mark.parametrize(
     "combo",
@@ -210,17 +273,17 @@ def test_ann_algorithm(
     expected_avg_recall: float = 0.95,
     distances_are_exact: bool = True,
     tolerance: float = 1e-4,
+    n_neighbors: int = 50,
 ) -> None:
 
     algorithm = combo[0]
-    assert algorithm in {"ivfflat", "ivfpq"}
+    assert algorithm in {"ivfflat", "ivfpq", "cagra"}
 
     feature_type = combo[1]
     max_record_batch = combo[2]
     algoParams = combo[3]
     metric = combo[4]
 
-    n_neighbors = 50
     n_clusters = 10
 
     from cuml.neighbors import VALID_METRICS
@@ -235,7 +298,7 @@ def test_ann_algorithm(
             "correlation",
         }
     else:
-        assert False, f"unknown algorithm: {algorithm}"
+        assert algorithm == "cagra", f"unknown algorithm: {algorithm}"
 
     X, _ = make_blobs(
         n_samples=data_shape[0],
@@ -303,7 +366,7 @@ def test_ann_algorithm(
             assert self_distance == [0.0] * len(X)
 
         # test kneighbors: compare with single-GPU cuml
-        ann_evaluator.compare_with_cuml_sg(
+        ann_evaluator.compare_with_cuml_or_cuvs_sg(
             algorithm, algoParams, indices, distances, tolerance
         )
         avg_recall = ann_evaluator.cal_avg_recall(indices)
@@ -452,6 +515,136 @@ def test_ivfpq(
         distances_are_exact=distances_are_exact,
         tolerance=tolerance,
     )
+
+
+@pytest.mark.parametrize(
+    "algorithm,feature_type,max_records_per_batch,algo_params,metric",
+    [
+        (
+            "cagra",
+            "array",
+            10000,
+            {
+                "intermediate_graph_degree": 128,
+                "graph_degree": 64,
+                "build_algo": "ivf_pq",
+            },
+            "sqeuclidean",
+        ),
+        (
+            "cagra",
+            "multi_cols",
+            3000,
+            {
+                "intermediate_graph_degree": 256,
+                "graph_degree": 128,
+                "build_algo": "nn_descent",
+            },
+            "sqeuclidean",
+        ),
+        (
+            "cagra",
+            "vector",
+            5000,
+            {
+                "build_algo": "ivf_pq",
+                "itopk_size": 96,  # cuVS increases this to multiple of 32 and requires it to be larger than or equal to k.
+                "search_width": 2,
+                "num_random_samplings": 2,
+            },
+            "sqeuclidean",
+        ),
+    ],
+)
+@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_cagra(
+    algorithm: str,
+    feature_type: str,
+    max_records_per_batch: int,
+    algo_params: Dict[str, Any],
+    metric: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    n_neighbors: int = 50,
+) -> None:
+    """
+    TODO: support compression index param
+    """
+
+    VALID_METRIC = {"sqeuclidean"}
+    VALID_BUILD_ALGO = {"ivf_pq", "nn_descent"}
+    assert (
+        metric in VALID_METRIC
+    ), f"cagra currently supports metric only in {VALID_METRIC}."
+    assert algo_params["build_algo"] in {
+        "ivf_pq",
+        "nn_descent",
+    }, f"cagra currently supports build_algo only in {VALID_BUILD_ALGO}"
+
+    combo = (algorithm, feature_type, max_records_per_batch, algo_params, metric)
+    expected_avg_recall = 0.99
+    distances_are_exact = True
+    tolerance = 2e-3
+
+    test_ann_algorithm(
+        combo=combo,
+        data_shape=data_shape,
+        data_type=data_type,
+        expected_avg_recall=expected_avg_recall,
+        distances_are_exact=distances_are_exact,
+        tolerance=tolerance,
+        n_neighbors=n_neighbors,
+    )
+
+
+@pytest.mark.parametrize(
+    "algorithm,feature_type,max_records_per_batch,algo_params,metric",
+    [
+        (
+            "cagra",
+            "vector",
+            5000,
+            {
+                "build_algo": "ivf_pq",
+                "itopk_size": 32,
+            },
+            "sqeuclidean",
+        ),
+    ],
+)
+@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_cagra_params(
+    algorithm: str,
+    feature_type: str,
+    max_records_per_batch: int,
+    algo_params: Dict[str, Any],
+    metric: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+) -> None:
+
+    itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
+    import math
+
+    internal_topk_size = math.ceil(itopk_size / 32) * 32
+    n_neighbors = 50
+    error_msg = ""
+    if internal_topk_size < n_neighbors:
+        error_msg = f"cagra increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {n_neighbors}."
+
+    with pytest.raises(ValueError, match=error_msg):
+        test_cagra(
+            algorithm,
+            feature_type,
+            max_records_per_batch,
+            algo_params,
+            metric,
+            data_shape,
+            data_type,
+            n_neighbors=n_neighbors,
+        )
 
 
 @pytest.mark.parametrize(
