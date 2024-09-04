@@ -19,22 +19,31 @@ import sys
 import types
 from typing import Any
 
-_accelerated_estimators = {
-    "feature": ["PCA"],
-    "clustering": ["KMeans"],
-    "classification": ["LogisticRegression", "RandomForestClassifier"],
-    "regression": ["LinearRegression", "RandomForestRegressor"],
+_accelerated_attributes = {
+    "feature": ["PCA", "PCAModel"],
+    "clustering": ["KMeans", "KMeansModel"],
+    "classification": [
+        "LogisticRegression",
+        "LogisticRegressionModel",
+        "RandomForestClassifier",
+        "RandomForestClassificationModel",
+    ],
+    "regression": [
+        "LinearRegression",
+        "LinearRegressionModel" "RandomForestRegressor",
+        "RandomForestClassificationModel",
+    ],
     "tuning": ["CrossValidator"],
 }
 
 
 _rapids_modules = {
     module_name: importlib.import_module(f"spark_rapids_ml.{module_name}")
-    for module_name in _accelerated_estimators.keys()
+    for module_name in _accelerated_attributes.keys()
 }
 _pyspark_modules = {
     module_name: importlib.import_module(f"pyspark.ml.{module_name}")
-    for module_name in _accelerated_estimators.keys()
+    for module_name in _accelerated_attributes.keys()
 }
 
 
@@ -51,9 +60,9 @@ def set_pyspark_mod_getattr(mod_name: str) -> None:
                     f"pyspark/ml/{mod_name}" in calling_path
                     or f"spark_rapids_ml/{mod_name}" in calling_path
                 )
-                for mod_name in _accelerated_estimators.keys()
+                for mod_name in _accelerated_attributes.keys()
             ]
-        ) or (attr not in _accelerated_estimators[mod_name]):
+        ) or (attr not in _accelerated_attributes[mod_name]):
             # return getattr(_pyspark_modules[mod_name], attr)
             print(
                 f"{attr}, {mod_name}, {_pyspark_modules[mod_name].__name__}, {calling_path}"
@@ -75,5 +84,5 @@ def set_pyspark_mod_getattr(mod_name: str) -> None:
     sys.modules[f"pyspark.ml.{mod_name}"] = proxy_module
 
 
-for mod_name in _accelerated_estimators.keys():
+for mod_name in _accelerated_attributes.keys():
     set_pyspark_mod_getattr(mod_name)
