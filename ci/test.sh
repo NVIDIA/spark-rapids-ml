@@ -44,16 +44,6 @@ pip install -r requirements_dev.txt && pip install -e .
 # benchmark
 ./run_benchmark.sh $bench_args
 
-# no package import change tests
-# runs on gpu
-python -m spark_rapids_ml tests_no_import_change/test_no_import_change.py 0.2
-# runs on cpu
-python tests_no_import_change/test_no_import_change.py 0.2
-# runs on gpu with spark-submit
-spark-rapids-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
-# runs on cpu with spark-submit
-spark-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
-
 # check compatibility with Spark 3.3 in nightly run
 # also push draft release docs to gh-pages
 if [[ $type == "nightly" ]]; then

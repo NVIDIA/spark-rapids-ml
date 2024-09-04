@@ -47,7 +47,7 @@ _pyspark_modules = {
 }
 
 
-def set_pyspark_mod_getattr(mod_name: str) -> None:
+def _set_pyspark_mod_getattr(mod_name: str) -> None:
     proxy_module = types.ModuleType(f"pyspark.ml.${mod_name}")
 
     def _getattr(attr: str) -> Any:
@@ -63,11 +63,6 @@ def set_pyspark_mod_getattr(mod_name: str) -> None:
                 for mod_name in _accelerated_attributes.keys()
             ]
         ) or (attr not in _accelerated_attributes[mod_name]):
-            # return getattr(_pyspark_modules[mod_name], attr)
-            print(
-                f"{attr}, {mod_name}, {_pyspark_modules[mod_name].__name__}, {calling_path}"
-            )
-
             try:
                 attr_val = getattr(_pyspark_modules[mod_name], attr)
             except:
@@ -75,9 +70,6 @@ def set_pyspark_mod_getattr(mod_name: str) -> None:
 
             return attr_val
         else:
-            print(
-                f"{attr}, {mod_name}, {_pyspark_modules[mod_name].__name__}, {calling_path}"
-            )
             return getattr(_rapids_modules[mod_name], attr)
 
     setattr(proxy_module, "__getattr__", _getattr)
@@ -85,4 +77,4 @@ def set_pyspark_mod_getattr(mod_name: str) -> None:
 
 
 for mod_name in _accelerated_attributes.keys():
-    set_pyspark_mod_getattr(mod_name)
+    _set_pyspark_mod_getattr(mod_name)
