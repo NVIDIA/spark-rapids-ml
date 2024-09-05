@@ -27,7 +27,7 @@ from benchmark.utils import with_benchmark
 
 class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
     def _supported_class_params(self) -> Dict[str, Any]:
-        params = {"n_neighbors": 200}
+        params = {"k": 200}
         return params
 
     def _add_extra_arguments(self) -> None:
@@ -50,13 +50,23 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
             for pair in cmd_value.split(","):
                 key, value = pair.split("=")
                 assert key in {
-                    "algorithm",
-                    "nlist",
-                    "nprobe",
-                    "numHashTables",
-                    "bucketLength",
+                    "algorithm",  # gpu
+                    "nlist",  # gpu ivfflat, ivfpq
+                    "nprobe",  # gpu ivfflat, ivfpq
+                    "numHashTables",  # cpu lsh
+                    "bucketLength",  # cpu lsh
+                    "M",  # gpu ivfpq, ivfpq
+                    "n_bits",  # gpu, ivfpq
+                    "build_algo",  # gpu cagra build
+                    "intermediate_graph_degree",  # gpu cagra build
+                    "graph_degree",  # gpu cagra build
+                    "itopk_size",  # gpu cagra search
+                    "max_iterations",  # gpu cagra search
+                    "min_iterations",  # gpu cagra search
+                    "search_width",  # gpu cagra search
+                    "num_random_samplings",  # gpu cagra search
                 }
-                if key == "algorithm":
+                if key in {"algorithm", "build_algo"}:
                     res[key] = value
                 elif key == "bucketLength":
                     res[key] = float(value)
@@ -93,7 +103,6 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
         num_gpus = self.args.num_gpus
         num_cpus = self.args.num_cpus
         no_cache = self.args.no_cache
-        n_neighbors = self.args.n_neighbors
         cpu_algo_params = self.args.cpu_algo_params
         gpu_algo_params = self.args.gpu_algo_params
 
@@ -144,17 +153,22 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
                 )
 
             rt_algo = gpu_algo_params["algorithm"]
-            rt_algo_params = {
-                "nlist": gpu_algo_params["nlist"],
-                "nprobe": gpu_algo_params["nprobe"],
-            }
+
+            rt_algo_params = gpu_algo_params.copy()
+            rt_algo_params.pop("algorithm")
+
+            rt_algo_params = rt_algo_params if rt_algo_params else None
+
             params = self.class_params
             gpu_estimator = ApproximateNearestNeighbors(
                 verbose=self.args.verbose,
                 algorithm=rt_algo,
                 algoParams=rt_algo_params,
+                metric="sqeuclidean" if rt_algo == "cagra" else "euclidean",
                 **params,
             ).setIdCol("id")
+
+            print(f"Running algorithm '{rt_algo}' with algoParams {rt_algo_params}")
 
             if is_single_col:
                 gpu_estimator = gpu_estimator.setInputCol(first_col)
@@ -194,7 +208,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
                 first_col if is_single_col else input_cols
             )
             avg_recall = self.evaluate_avg_recall(
-                train_df, query_df, knn_df, n_neighbors, input_col_actual
+                train_df, query_df, knn_df, self.args.k, input_col_actual
             )
             print(f"evaluation took: {round(time.time() - eval_start_time, 2)} sec")
         else:
@@ -206,9 +220,12 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
             "transform": transform_time,
             "total_time": total_time,
             "avg_recall": avg_recall,
-            "n_neighbors": n_neighbors,
+            "k": self.args.k,
             "fraction_sampled_queries": fraction_sampled_queries,
-            "algo_params": gpu_algo_params if num_gpus > 0 else cpu_algo_params,
+            "algorithm": gpu_estimator.getAlgorithm() if num_gpus > 0 else "LSH",
+            "algoParams": (
+                gpu_estimator.getAlgoParams() if num_gpus > 0 else cpu_algo_params
+            ),
             "num_gpus": num_gpus,
             "num_cpus": num_cpus,
             "no_cache": no_cache,
@@ -239,9 +256,7 @@ class BenchmarkApproximateNearestNeighbors(BenchmarkBase):
 
         from spark_rapids_ml.knn import NearestNeighbors
 
-        gpu_nn = (
-            NearestNeighbors(n_neighbors=n_neighbors).setK(n_neighbors).setIdCol("id")
-        )
+        gpu_nn = NearestNeighbors().setK(n_neighbors).setIdCol("id")
 
         if isinstance(input_col, str):
             gpu_nn = gpu_nn.setInputCol(input_col)

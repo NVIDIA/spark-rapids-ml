@@ -6,6 +6,7 @@
 #     dbscan
 #     kmeans
 #     knn
+#     approximate_nearest_neighbors
 #     linear_regression
 #     pca
 #     random_forest_classifier
@@ -202,7 +203,8 @@ fi
 
 # ApproximateNearestNeighbors
 if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]]; then
-    centers=100
+    algorithm=${algorithm:-"ivfflat"}
+    centers=${centers:-100}
     data_path=${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_cts${centers}_float32.parquet
     if [[ ! -d ${data_path} ]]; then
         python $gen_data_script blobs \
@@ -226,10 +228,26 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
     nlist=$(echo "${nvecs_per_gpu}" | awk '{print int(sqrt($1))}')
     nprobe=$(echo "$nlist" | awk '{print int($1 * 0.01 + 0.9999)}')
 
+    algoParams_default="nlist=${nlist},nprobe=${nprobe}"
+    if [ $algorithm = "cagra" ]; then
+        algoParams_default="build_algo=nn_descent"
+    elif [ $algorithm = "ivfpq" ]; then
+        # In IVFPQ, larger M leads to higher recall yet slower runtime. When M is not set, benchmarking script will set its value to 10% of the dimension
+        ivfpq_M=$(echo "$num_cols" | awk '{print int($1 * 0.1 + 0.9999)}')
+        algoParams_default="${algoParams_default},M=${ivfpq_M},n_bits=8"
+    elif [ $algorithm != "ivfflat" ]; then
+        echo "algorithm ${algorithm} is not in the supported list"
+    fi
+    algoParams=${algoParams:-${algoParams_default}}
+
+    gpu_algo_params="algorithm=${algorithm},${algoParams}"
+    if [ -z "$algoParams" ]; then
+        gpu_algo_params="algorithm=${algorithm}"
+    fi
+
     cpu_algo_params='numHashTables=3,bucketLength=2.0' 
-    gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
     python ./benchmark/benchmark_runner.py approximate_nearest_neighbors \
-        --n_neighbors 20 \
+        --k 20 \
         --fraction_sampled_queries ${knn_fraction_sampled_queries} \
         --num_gpus $num_gpus \
         --gpu_algo_params $gpu_algo_params \
