@@ -211,6 +211,11 @@ class ANNEvaluator:
     ) -> Tuple[np.ndarray, np.ndarray]:
         from cuml import NearestNeighbors as cuNN
 
+        if algorithm == "ivfpq" and algoParams:
+            if "usePrecomputedTables" not in algoParams:
+                # the parameter is required in cython though ignored in C++.
+                algoParams["usePrecomputedTables"] = False
+
         cuml_ivfflat = cuNN(
             algorithm=algorithm,
             algo_params=algoParams,
@@ -482,7 +487,6 @@ def test_ann_algorithm(
                 "nprobe": 2,
                 "M": 2,
                 "n_bits": 4,
-                "usePrecomputedTables": True,
             },
             "inner_product",
         ),
@@ -500,7 +504,7 @@ def test_ivfpq(
     data_type: np.dtype,
 ) -> None:
     """
-    Currently the usePrecomputedTables seems not used in cuml.
+    Currently the usePrecomputedTables is not used in cuml C++.
     """
     combo = (algorithm, feature_type, max_records_per_batch, algo_params, metric)
     expected_avg_recall = 0.1
