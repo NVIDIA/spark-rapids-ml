@@ -232,6 +232,7 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
     if [ $algorithm = "cagra" ]; then
         algoParams_default="build_algo=nn_descent"
     elif [ $algorithm = "ivfpq" ]; then
+        # In IVFPQ, larger M leads to higher recall yet slower runtime. When M is not set, benchmarking script will set its value to 10% of the dimension
         ivfpq_M=$(echo "$num_cols" | awk '{print int($1 * 0.1 + 0.9999)}')
         algoParams_default="${algoParams_default},M=${ivfpq_M},n_bits=8"
     elif [ $algorithm != "ivfflat" ]; then
