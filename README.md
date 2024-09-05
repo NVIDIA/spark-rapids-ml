@@ -2,7 +2,7 @@
 
 Spark Rapids ML enables GPU accelerated distributed machine learning on [Apache Spark](https://spark.apache.org/).  It provides several PySpark ML compatible algorithms powered by the [RAPIDS cuML](https://docs.rapids.ai/api/cuml/stable/) library, along with a compatible Scala API for the PCA algorithm.
 
-These APIs seek to minimize any code changes to end user Spark code.  After your environment is configured to support GPUs (with drivers, CUDA toolkit, and RAPIDS dependencies), you should be able to just change an import statement or class name to take advantage of GPU acceleration.
+These APIs seek to minimize any code changes to end user Spark code.  After your environment is configured to support GPUs (with drivers, CUDA toolkit, and RAPIDS dependencies), you should be able to just change an import statement or class name to take advantage of GPU acceleration.   See [here](./python/README.md#clis-enabling-no-package-import-change) for experimental CLIs that enable GPU acceleration without the need for changing the `pyspark.ml` package names in an existing pyspark ml application.
 
 **Python**
 ```python

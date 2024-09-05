@@ -18,6 +18,7 @@ SRC_PATHS = [
     "tests",
     "tests_large",
     "benchmark",
+    "tests_no_import_change",
 ]
 
 
