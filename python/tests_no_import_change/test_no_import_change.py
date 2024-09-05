@@ -57,6 +57,8 @@ print(lr_estimator.setLabelCol("label"))
 
 print(lr_estimator.setRegParam(reg_param))
 
+print(lr_estimator.setStandardization(False))
+
 lr_model = lr_estimator.fit(df)
 
 from spark_rapids_ml.classification import (

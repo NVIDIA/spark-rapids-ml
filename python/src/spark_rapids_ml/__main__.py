@@ -54,6 +54,9 @@ def main() -> None:
         # Remove ourself from argv and continue
         sys.argv[:] = args.args
         runpy.run_path(args.args[0], run_name="__main__")
+    else:
+        parser.print_help()
+        exit(1)
 
 
 if __name__ == "__main__":

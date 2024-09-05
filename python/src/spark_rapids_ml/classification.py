@@ -1247,6 +1247,12 @@ class LogisticRegression(
         Sets the value of :py:attr:`fitIntercept`.
         """
         return self._set_params(fitIntercept=value)
+    
+    def setStandardization(self, value: bool) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`standardization`.
+        """
+        return self._set_params(standardization=value)
 
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True

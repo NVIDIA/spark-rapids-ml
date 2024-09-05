@@ -66,7 +66,7 @@ def _set_pyspark_mod_getattr(mod_name: str) -> None:
             try:
                 attr_val = getattr(_pyspark_modules[mod_name], attr)
             except:
-                raise AttributeError("No attribute '{attr}'")
+                raise AttributeError(f"No attribute '{attr}'")
 
             return attr_val
         else:
