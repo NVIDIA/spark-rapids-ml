@@ -182,6 +182,18 @@ print(centers)  # slightly different results
 # PySpark: [array([0.5, 0.5]), array([8.5, 8.5])]
 ```
 
+## CLIs Enabling No Package Import Change
+
+Using some experimental CLIs include in `spark_rapids_ml`, pyspark application scripts importing estimators and models from `pyspark.ml` and deployed either via direct invocation (in cases where the spark context and session are created and configured in the script) or via `spark-submit` can be accelerated without the need for changing the package import statements to `spark_rapids_ml` as in the above examples.  In the case of direct invocation of self-contained pyspark applications the following can be used:
+```bash
+python -m spark_rapids_ml spark_enabled_application.py < application options >
+```
+and if the app is deployed using `spark-submit` the following included CLI (installed with the original `pip install spark-rapids-ml`) can be used:
+```bash
+spark-rapids-submit --master < master > < other spark submit options > application.py < application options >
+```
+For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors.
+
 ## API Documentation
 
 - [Spark Rapids ML](https://nvidia.github.io/spark-rapids-ml/)

@@ -21,6 +21,9 @@ classifiers = [
     "Environment :: GPU :: NVIDIA CUDA :: 11.5",
 ]
 
+[project.scripts]
+spark-rapids-submit = "spark_rapids_ml.spark_rapids_submit:main_cli"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
