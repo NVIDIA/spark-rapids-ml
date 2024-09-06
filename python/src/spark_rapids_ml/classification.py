@@ -831,6 +831,8 @@ class LogisticRegression(
     And it will automatically map pyspark parameters
     to cuML parameters.
 
+    In the case of applying LogisticRegression on sparse vectors, Spark 3.4 or above is required.
+
     Parameters
     ----------
     featuresCol: str or List[str]

@@ -851,7 +851,11 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         """
         Sets the value of `algorithm`.
         """
-        assert value == "ivfflat", "Only IVFFLAT algorithm is currently supported"
+        assert value in {
+            "ivfflat",
+            "ivfpq",
+            "cagra",
+        }, "Only ivfflat, ivfpq, and cagra are currently supported"
         self._set_params(algorithm=value)
         return self
 
@@ -919,7 +923,7 @@ class ApproximateNearestNeighbors(
         the default number of approximate nearest neighbors to retrieve for each query.
 
     algorithm: str (default = 'ivfflat')
-        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat' or 'ivfpq'. Other algorithms are expected to be supported later.
+        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat', 'ivfpq' or 'cagra'. Other algorithms are expected to be supported later.
 
     algoParams: Optional[Dict[str, Any]] (default = None)
         if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
@@ -1455,7 +1459,7 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object is not "cagra":
+            if nn_object != "cagra":
                 nn_object.fit(item)
             else:
                 from cuvs.neighbors import cagra
@@ -1473,7 +1477,7 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object is not "cagra":
+            if nn_object != "cagra":
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:
                 gpu_qfeatures = cp.array(
