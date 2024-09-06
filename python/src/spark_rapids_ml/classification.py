@@ -61,7 +61,7 @@ from pyspark.ml.classification import (
 )
 from pyspark.ml.linalg import DenseMatrix, Matrix, Vector, Vectors
 from pyspark.ml.param.shared import HasLabelCol, HasProbabilityCol, HasRawPredictionCol
-from pyspark.sql import Column, DataFrame
+from pyspark.sql import Column, DataFrame, Row
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
     ArrayType,
@@ -831,6 +831,8 @@ class LogisticRegression(
     And it will automatically map pyspark parameters
     to cuML parameters.
 
+    In the case of applying LogisticRegression on sparse vectors, Spark 3.4 or above is required.
+
     Parameters
     ----------
     featuresCol: str or List[str]
@@ -1090,6 +1092,13 @@ class LogisticRegression(
 
                 n_cols = logistic_regression.n_cols
 
+                # index_dtype is only available in sparse logistic regression. It records the dtype of indices array and indptr array that were used in C++ computation layer. Its value can be 'int32' or 'int64'.
+                index_dtype = (
+                    str(logistic_regression.index_dtype)
+                    if hasattr(logistic_regression, "index_dtype")
+                    else "None"
+                )
+
                 model = {
                     "coef_": coef_[:, :n_cols].tolist(),
                     "intercept_": intercept_.tolist(),
@@ -1098,6 +1107,7 @@ class LogisticRegression(
                     "dtype": logistic_regression.dtype.name,
                     "num_iters": logistic_regression.solver_model.num_iters,
                     "objective": logistic_regression.solver_model.objective,
+                    "index_dtype": index_dtype,
                 }
 
                 # check if invalid label exists
@@ -1174,6 +1184,7 @@ class LogisticRegression(
                 StructField("dtype", StringType(), False),
                 StructField("num_iters", IntegerType(), False),
                 StructField("objective", DoubleType(), False),
+                StructField("index_dtype", StringType(), False),
             ]
         )
 
@@ -1189,7 +1200,10 @@ class LogisticRegression(
                     "All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
                 )
 
-        return LogisticRegressionModel._from_row(result)
+        d = result.asDict()
+        self._index_dtype = d.pop("index_dtype")
+
+        return LogisticRegressionModel._from_row(Row(**d))
 
     def _set_cuml_reg_params(self) -> "LogisticRegression":
         penalty, C, l1_ratio = self._reg_params_value_mapping(
@@ -1235,6 +1249,12 @@ class LogisticRegression(
         Sets the value of :py:attr:`fitIntercept`.
         """
         return self._set_params(fitIntercept=value)
+
+    def setStandardization(self, value: bool) -> "LogisticRegression":
+        """
+        Sets the value of :py:attr:`standardization`.
+        """
+        return self._set_params(standardization=value)
 
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         return True

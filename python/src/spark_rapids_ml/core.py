@@ -131,11 +131,15 @@ Alias = namedtuple(
         "row_number",
     ),
 )
+
+# Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
+col_name_unique_tag = "c3BhcmstcmFwaWRzLW1sCg=="
+
 alias = Alias(
-    "vector_type_c3BhcmstcmFwaWRzLW1sCg==",
-    "vector_size_c3BhcmstcmFwaWRzLW1sCg==",
-    "vector_indices_c3BhcmstcmFwaWRzLW1sCg==",
-    "cuml_values_c3BhcmstcmFwaWRzLW1sCg==",
+    f"vector_type_{col_name_unique_tag}",
+    f"vector_size_{col_name_unique_tag}",
+    f"vector_indices_{col_name_unique_tag}",
+    f"cuml_values_{col_name_unique_tag}",
     "cuml_label",
     "unique_id",
 )
@@ -734,18 +738,26 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
-                if cuda_managed_mem_enabled:
-                    features = (
-                        cp.array(features)
-                        if use_sparse_array is False
-                        else cupyx.scipy.sparse.csr_matrix(features)
-                    )
+                if cuda_managed_mem_enabled and use_sparse_array is False:
+                    features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
                     pdf[alias.row_number] if alias.row_number in pdf.columns else None
                 )
                 inputs.append((features, label, row_number))
+
+            if cuda_managed_mem_enabled and use_sparse_array is True:
+                concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
+                if concated_nnz > np.iinfo(np.int32).max:
+                    logger.warn(
+                        "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
+                    )
+                else:
+                    inputs = [
+                        (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
+                        for row in inputs
+                    ]
 
             if len(sizes) == 0 or all(sz == 0 for sz in sizes):
                 raise RuntimeError(
@@ -1250,7 +1262,6 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                         select_cols.append(col_name)
                         tmp_cols.append(col_name)
                 else:
-                    # Avoid same naming. `echo spark-rapids-ml | base64` = c3BhcmstcmFwaWRzLW1sCg==
                     dataset = dataset.withColumn(
                         alias.data,
                         vector_to_array(col(input_col), vector_element_type),
@@ -1286,6 +1297,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             feature_type: Union[Type[FloatType], Type[DoubleType]] = FloatType
             if not self._float32_inputs and any_double_types:
                 feature_type = DoubleType
+
             for c in input_cols:
                 col_type = dataset.schema[c].dataType
                 if (
@@ -1294,10 +1306,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     or isinstance(col_type, DoubleType)
                 ):
                     if not isinstance(col_type, feature_type):
-                        tmp_input_col = f"{c}_c3BhcmstcmFwaWRzLW1sCg=="
-                        dataset = dataset.withColumn(
-                            tmp_input_col, col(c).cast(feature_type())
-                        )
+                        tmp_input_col = f"{c}_{col_name_unique_tag}"
                         select_cols.append(tmp_input_col)
                         tmp_cols.append(tmp_input_col)
                     else:
@@ -1306,6 +1315,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                     raise ValueError(
                         "All columns must be integral types or float/double types."
                     )
+
+            taglen = len(col_name_unique_tag) + 1
+            added_tmp_cols = [
+                col(c[:-taglen]).cast(feature_type()).alias(c) for c in tmp_cols
+            ]
+            dataset = dataset.select("*", *added_tmp_cols)
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")
@@ -1577,8 +1592,7 @@ class _CumlModelWithColumns(_CumlModel):
 
             return dataset.withColumn(pred_name, pred_col).drop(*tmp_cols)
         else:
-            # Avoid same naming. `echo sparkcuml | base64` = c3BhcmtjdW1sCg==
-            pred_struct_col_name = "_prediction_struct_c3BhcmtjdW1sCg=="
+            pred_struct_col_name = f"_prediction_struct_{col_name_unique_tag}"
             dataset = dataset.withColumn(pred_struct_col_name, pred_col)
 
             # 1. Add prediction in the base class

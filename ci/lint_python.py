@@ -16,7 +16,9 @@ PROJECT_ROOT = os.path.normpath(os.path.join(CURDIR, os.path.pardir))
 SRC_PATHS = [
     "src/spark_rapids_ml",
     "tests",
+    "tests_large",
     "benchmark",
+    "tests_no_import_change",
 ]
 
 

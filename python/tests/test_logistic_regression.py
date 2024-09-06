@@ -1,10 +1,14 @@
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+import math
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 import cuml
+import cupyx.scipy.sparse
 import numpy as np
+import pandas as pd
 import pyspark
 import pytest
 from _pytest.logging import LogCaptureFixture
+from gen_data_distributed import SparseRegressionDataGen
 from packaging import version
 from py4j.protocol import Py4JJavaError
 
@@ -27,8 +31,8 @@ from pyspark.ml.param import Param
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql import DataFrame, Row
-from pyspark.sql.functions import array, col
-from pyspark.sql.types import FloatType
+from pyspark.sql.functions import array, col, sum, udf
+from pyspark.sql.types import FloatType, LongType
 
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
     raise ValueError(
@@ -36,9 +40,9 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
     )
 
 import random
-import warnings
 
-import scipy
+random.seed(0)
+
 from scipy.sparse import csr_matrix
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
@@ -305,12 +309,13 @@ def test_classifier(
     tolerance: float = 0.001,
     convert_to_sparse: bool = False,
     set_float32_inputs: Optional[bool] = None,
+    verbose: bool = False,
+    spark_conf: Dict[str, Any] = {},
 ) -> LogisticRegression:
     standardization: bool = False
 
     float32_inputs = set_float32_inputs
     if float32_inputs is None:
-        random.seed(0)
         float32_inputs = random.choice([True, False])
 
     if convert_to_sparse is True:
@@ -337,12 +342,14 @@ def test_classifier(
     cu_lr.solver_model.lbfgs_memory = 10
     cu_lr.fit(X_train, y_train)
 
-    conf = {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
-    with CleanSparkSession(conf) as spark:
+    spark_conf.update(
+        {"spark.sql.execution.arrow.maxRecordsPerBatch": str(max_record_batch)}
+    )
+
+    with CleanSparkSession(spark_conf) as spark:
         train_df, features_col, label_col = create_pyspark_dataframe(
             spark, feature_type, data_type, X_train, y_train
         )
-
         if convert_to_sparse:
             assert type(features_col) is str
 
@@ -366,6 +373,7 @@ def test_classifier(
             elasticNetParam=elasticNet_param,
             num_workers=gpu_number,
             float32_inputs=float32_inputs,
+            verbose=verbose,
         )
 
         assert spark_lr._cuml_params["penalty"] == cu_lr.penalty
@@ -419,7 +427,7 @@ def test_classifier(
 
         spark_preds = [row["prediction"] for row in result]
         cu_preds = cu_lr.predict(X_test)
-        assert array_equal(cu_preds, spark_preds)
+        assert array_equal(cu_preds, spark_preds, total_tol=tolerance)
 
         spark_probs = np.array([row["probability"].toArray() for row in result])
         cu_probs = cu_lr.predict_proba(X_test)
@@ -1425,6 +1433,7 @@ def compare_model(
     # compare probability column
     gpu_prob = [row["probability"].toArray().tolist() for row in gpu_res]
     cpu_prob = [row["probability"].toArray().tolist() for row in cpu_res]
+
     assert array_equal(gpu_prob, cpu_prob, unit_tol, total_tol)
 
     if accuracy_and_probability_only:
@@ -1927,6 +1936,8 @@ def test_standardization_sparse_example(
     reg_factors: Tuple[float, float],
     float32_inputs: bool = False,
 ) -> None:
+    _convert_index = "int32" if random.choice([True, False]) is True else "int64"
+
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
         import logging
 
@@ -1999,7 +2010,12 @@ def test_standardization_sparse_example(
         gpu_lr = LogisticRegression(float32_inputs=float32_inputs, **est_params)
         cpu_lr = SparkLogisticRegression(**est_params)
 
+        # _convert_index is used for converting input csr sparse matrix to gpu SparseCumlArray for calling cuml C++ layer. If not None, cuml converts the dtype of indices array and indptr array to the value of _convert_index (e.g. 'int64').
+        gpu_lr.cuml_params["_convert_index"] = _convert_index
         gpu_model = gpu_lr.fit(df)
+        assert hasattr(gpu_lr, "_index_dtype") and (
+            gpu_lr._index_dtype == _convert_index
+        )
 
         cpu_model = cpu_lr.fit(df)
 
@@ -2031,7 +2047,6 @@ def test_double_precision(
     gpu_number: int,
 ) -> None:
 
-    random.seed(0)
     random_bool = random.choice([True, False])
     data_type = np.float32 if random_bool is True else np.float64
     float32_inputs = random.choice([True, False])
@@ -2091,4 +2106,83 @@ def test_quick_double_precision(
         fit_intercept=fit_intercept,
         reg_factors=reg_factors,
         float32_inputs=float32_inputs,
+    )
+
+
+@pytest.mark.slow
+def test_sparse_int64() -> None:
+    from spark_rapids_ml.core import col_name_unique_tag
+
+    output_data_dir = f"/tmp/spark_rapids_ml_{col_name_unique_tag}"
+    gpu_number = 1
+    data_shape = (int(1e5), 2200)
+    fraction_sampled_for_test = (
+        1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
+    )
+    n_classes = 8
+    tolerance = 0.001
+    est_params: Dict[str, Any] = {
+        "regParam": 0.02,
+        "maxIter": 10,
+        "standardization": False,  # reduce GPU memory since standardization copies the value array
+    }
+    density = 0.1
+
+    data_gen_args = [
+        "--n_informative",
+        f"{math.ceil(data_shape[1] / 3)}",
+        "--num_rows",
+        str(data_shape[0]),
+        "--num_cols",
+        str(data_shape[1]),
+        "--dtype",
+        "float64",
+        "--feature_type",
+        "vector",
+        "--output_dir",
+        output_data_dir,
+        "--n_classes",
+        str(n_classes),
+        "--random_state",
+        "0",
+        "--logistic_regression",
+        "True",
+        "--density",
+        str(density),
+        "--use_gpu",
+        "True",
+    ]
+
+    from . import conftest
+
+    data_gen = SparseRegressionDataGen(data_gen_args)
+    df, _, _ = data_gen.gen_dataframe_and_meta(conftest._spark)
+
+    # ensure same dataset for comparing CPU and GPU
+    df.cache()
+
+    # convert index dtype to int64 for testing purpose
+    gpu_est = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params)
+    gpu_est.cuml_params["_convert_index"] = "int64"
+
+    gpu_model = gpu_est.fit(df)
+    assert hasattr(gpu_est, "_index_dtype") and (gpu_est._index_dtype == "int64")
+
+    # compare gpu with spark cpu
+    cpu_est = SparkLogisticRegression(**est_params)
+    cpu_model = cpu_est.fit(df)
+    cpu_objective = cpu_model.summary.objectiveHistory[-1]
+    assert (
+        gpu_model.objective < cpu_objective
+        or abs(gpu_model.objective - cpu_objective) < tolerance
+    )
+
+    df_test = df.sample(fraction=fraction_sampled_for_test, seed=0)
+    compare_model(
+        gpu_model,
+        cpu_model,
+        df_test,
+        unit_tol=tolerance,
+        total_tol=tolerance,
+        accuracy_and_probability_only=True,
     )
