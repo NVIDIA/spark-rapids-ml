@@ -382,7 +382,7 @@ are approximate and do not represent the exact distances in the original high-di
 <dd class="field-odd"><dl>
 <dt><strong>k: int (default = 5)</strong></dt><dd><p>the default number of approximate nearest neighbors to retrieve for each query.</p>
 </dd>
-<dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’ or ‘ivfpq’. Other algorithms are expected to be supported later.</p>
+<dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’, ‘ivfpq’ or ‘cagra’. Other algorithms are expected to be supported later.</p>
 </dd>
 <dt><strong>algoParams: Optional[Dict[str, Any]] (default = None)</strong></dt><dd><p>if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
 Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).

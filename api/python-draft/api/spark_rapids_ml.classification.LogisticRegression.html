@@ -380,6 +380,7 @@ PySpark Pipeline and PySpark ML meta algorithms like
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.LogisticRegression.html#pyspark.ml.classification.LogisticRegression" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LogisticRegression</span></code></a>.
 And it will automatically map pyspark parameters
 to cuML parameters.</p>
+<p>In the case of applying LogisticRegression on sparse vectors, Spark 3.4 or above is required.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
@@ -589,10 +590,13 @@ cuML workers (i.e. GPUs in cluster) from the Spark environment.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.setRegParam" title="spark_rapids_ml.classification.LogisticRegression.setRegParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRegParam</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.regParam" title="spark_rapids_ml.classification.LogisticRegression.regParam"><code class="xref py py-attr docutils literal notranslate"><span class="pre">regParam</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.setTol" title="spark_rapids_ml.classification.LogisticRegression.setTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setTol</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.setStandardization" title="spark_rapids_ml.classification.LogisticRegression.setStandardization"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setStandardization</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.standardization" title="spark_rapids_ml.classification.LogisticRegression.standardization"><code class="xref py py-attr docutils literal notranslate"><span class="pre">standardization</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.setTol" title="spark_rapids_ml.classification.LogisticRegression.setTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setTol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.tol" title="spark_rapids_ml.classification.LogisticRegression.tol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">tol</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.write" title="spark_rapids_ml.classification.LogisticRegression.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.write" title="spark_rapids_ml.classification.LogisticRegression.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -948,6 +952,12 @@ a default value.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.LogisticRegression.setStandardization">
+<span class="sig-name descname"><span class="pre">setStandardization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression" title="spark_rapids_ml.classification.LogisticRegression"><span class="pre">LogisticRegression</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.classification.LogisticRegression.setStandardization" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.standardization" title="spark_rapids_ml.classification.LogisticRegression.standardization"><code class="xref py py-attr docutils literal notranslate"><span class="pre">standardization</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.LogisticRegression.setTol">
 <span class="sig-name descname"><span class="pre">setTol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression" title="spark_rapids_ml.classification.LogisticRegression"><span class="pre">LogisticRegression</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.classification.LogisticRegression.setTol" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.classification.LogisticRegression.tol" title="spark_rapids_ml.classification.LogisticRegression.tol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">tol</span></code></a>.</p>
@@ -1135,6 +1145,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.setProbabilityCol"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.setProbabilityCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.setRawPredictionCol"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.setRawPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.setRegParam"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.setRegParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.setStandardization"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.setStandardization()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.setTol"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.setTol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.write"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.write()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.LogisticRegression.cuml_params"><code class="docutils literal notranslate"><span class="pre">LogisticRegression.cuml_params</span></code></a></li>
