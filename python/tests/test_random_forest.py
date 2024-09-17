@@ -413,12 +413,21 @@ def test_random_forest_classifier(
                 labelCol=spark_rf_model.getLabelCol(),
             )
 
-            spark_cuml_f1_score = spark_rf_model._transformEvaluate(test_df, evaluator)
+            y_test_fewer_classes = np.maximum(y_test - 1, 0)
 
-            transformed_df = spark_rf_model.transform(test_df)
-            pyspark_f1_score = evaluator.evaluate(transformed_df)
+            test_df_fewer_classes, _, _ = create_pyspark_dataframe(
+                spark, feature_type, data_type, X_test, y_test_fewer_classes
+            )
 
-            assert math.fabs(pyspark_f1_score - spark_cuml_f1_score[0]) < 1e-6
+            for _test_df in [test_df, test_df_fewer_classes]:
+                spark_cuml_f1_score = spark_rf_model._transformEvaluate(
+                    _test_df, evaluator
+                )
+
+                transformed_df = spark_rf_model.transform(_test_df)
+                pyspark_f1_score = evaluator.evaluate(transformed_df)
+
+                assert math.fabs(pyspark_f1_score - spark_cuml_f1_score[0]) < 1e-6
 
 
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
