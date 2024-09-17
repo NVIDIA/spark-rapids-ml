@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 from abc import ABCMeta
+from collections import Counter
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -226,18 +227,14 @@ class _ClassificationModelEvaluationMixIn:
         num_models = self._this_model._get_num_models()
 
         if eval_metric_info.eval_metric == transform_evaluate_metric.accuracy_like:
-            tp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-            fp_by_class: List[Dict[float, float]] = [{} for _ in range(num_models)]
-            label_count_by_class: List[Dict[float, float]] = [
-                {} for _ in range(num_models)
+            # if we ever implement weights, Counter supports float values, but
+            # type checking might fail https://github.com/python/typeshed/issues/3438
+            tp_by_class: List[Counter[float]] = [Counter() for _ in range(num_models)]
+            fp_by_class: List[Counter[float]] = [Counter() for _ in range(num_models)]
+            label_count_by_class: List[Counter[float]] = [
+                Counter() for _ in range(num_models)
             ]
             label_count = [0 for _ in range(num_models)]
-
-            for i in range(num_models):
-                for j in range(self._this_model._num_classes):
-                    tp_by_class[i][float(j)] = 0.0
-                    label_count_by_class[i][float(j)] = 0.0
-                    fp_by_class[i][float(j)] = 0.0
 
             for row in rows:
                 label_count[row.model_index] += row.total
@@ -250,10 +247,16 @@ class _ClassificationModelEvaluationMixIn:
 
             scores = []
             for i in range(num_models):
+                # match spark mllib behavior in the below cases
+                for l in label_count_by_class[i]:
+                    if l not in tp_by_class[i]:
+                        tp_by_class[i][l] = 0
+                    if l not in fp_by_class[i]:
+                        fp_by_class[i][l] = 0
                 metrics = MulticlassMetrics(
-                    tp=tp_by_class[i],
-                    fp=fp_by_class[i],
-                    label=label_count_by_class[i],
+                    tp=dict(tp_by_class[i]),
+                    fp=dict(fp_by_class[i]),
+                    label=dict(label_count_by_class[i]),
                     label_count=label_count[i],
                 )
                 scores.append(metrics.evaluate(evaluator))
