@@ -1301,6 +1301,21 @@ class ApproximateNearestNeighborsModel(
 
         return (cagra_index_params, cagra_search_params)
 
+    @classmethod
+    def _cal_ivfflat_params_and_check(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        ivfflat_index_params: Dict[str, Any] = {"metric": metric}
+        ivfflat_search_params: Dict[str, Any] = {}
+
+        if algoParams is not None:
+            for p in algoParams:
+                if p in {"n_probes"}:
+                    ivfflat_search_params[p] = algoParams[p]
+                else:
+                    ivfflat_index_params[p] = algoParams[p]
+        return (ivfflat_index_params, ivfflat_search_params)
+
     def kneighbors(
         self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
     ) -> Tuple[DataFrame, DataFrame, DataFrame]:

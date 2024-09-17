@@ -1,3 +1,4 @@
+import math
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
@@ -189,7 +190,9 @@ class ANNEvaluator:
             )
         else:
             assert algorithm == "cagra"
-            cumlsg_distances, cumlsg_indices = self.get_cuvs_sg_results(algoParams)
+            cumlsg_distances, cumlsg_indices = self.get_cuvs_sg_results(
+                algorithm=algorithm, algoParams=algoParams
+            )
 
         # compare cuml sg with given results
         avg_recall_cumlann = self.cal_avg_recall(cumlsg_indices)
@@ -231,24 +234,35 @@ class ANNEvaluator:
 
     def get_cuvs_sg_results(
         self,
-        algoParams: Optional[Dict[str, Any]],
+        algorithm: str = "cagra",
+        algoParams: Optional[Dict[str, Any]] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        assert self.metric == "sqeuclidean"
+        if algorithm == "cagra":
+            assert self.metric == "sqeuclidean"
+            index_params, search_params = (
+                ApproximateNearestNeighborsModel._cal_cagra_params_and_check(
+                    algoParams=algoParams, metric=self.metric, topk=self.n_neighbors
+                )
+            )
+
+            from cuvs.neighbors import cagra as cuvs_algo
+        elif algorithm == "ivf_flat":
+            index_params, search_params = (
+                ApproximateNearestNeighborsModel._cal_ivfflat_params_and_check(
+                    algoParams=algoParams, metric=self.metric, topk=self.n_neighbors
+                )
+            )
+            from cuvs.neighbors import ivf_flat as cuvs_algo
+        else:
+            assert False, f"unrecognized algorithm {algorithm}"
 
         import cupy as cp
 
         gpu_X = cp.array(self.X, dtype="float32")
-        from cuvs.neighbors import cagra
 
-        index_params, search_params = (
-            ApproximateNearestNeighborsModel._cal_cagra_params_and_check(
-                algoParams=algoParams, metric=self.metric, topk=self.n_neighbors
-            )
-        )
-        index = cagra.build(cagra.IndexParams(**index_params), gpu_X)
-
-        sg_distances, sg_indices = cagra.search(
-            cagra.SearchParams(**search_params), index, gpu_X, self.n_neighbors
+        index = cuvs_algo.build(cuvs_algo.IndexParams(**index_params), gpu_X)
+        sg_distances, sg_indices = cuvs_algo.search(
+            cuvs_algo.SearchParams(**search_params), index, gpu_X, self.n_neighbors
         )
 
         # convert results to cp array then to np array
@@ -633,7 +647,6 @@ def test_cagra_params(
 ) -> None:
 
     itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
-    import math
 
     internal_topk_size = math.ceil(itopk_size / 32) * 32
     n_neighbors = 50
@@ -676,3 +689,53 @@ def test_ivfflat_wide_matrix(
     test_ann_algorithm(combo=combo, data_shape=data_shape, data_type=data_type)
     duration_sec = time.time() - start
     assert duration_sec < 10 * 60
+
+
+def test_cosine_ivfflat() -> None:
+    n_neighbors = 2
+    metric = "cosine"
+    algorithm = "ivf_flat"
+    algoParams = {
+        "n_lists": 1,
+        "n_probes": 1,
+    }
+
+    data_shape = (10000, 50)
+    tolerance = 1e-6
+    n_clusters = 10
+    X, _ = make_blobs(
+        n_samples=data_shape[0],
+        n_features=data_shape[1],
+        centers=n_clusters,
+        random_state=0,
+    )  # make_blobs creates a random dataset of isotropic gaussian blobs.
+
+    # brute
+    from sklearn.neighbors import NearestNeighbors as CPUNN
+
+    cpu_est = CPUNN(n_neighbors=n_neighbors, metric=metric, algorithm="brute")
+    cpu_est.fit(X)
+    gnd_dists, gnd_indices = cpu_est.kneighbors(X)
+
+    # ivfflat
+    evaluator = ANNEvaluator(X, n_neighbors, metric)
+    gnd_dists == evaluator.get_distances_exact()
+    gnd_indices == evaluator.get_indices_exact()
+    cuvs_dists, cuvs_indices = evaluator.get_cuvs_sg_results(
+        algorithm=algorithm, algoParams=algoParams
+    )
+
+    restored_dists = cuvs_dists + 2
+    assert array_equal(restored_dists, gnd_dists)
+    cuvs_dists = restored_dists
+
+    assert len(cuvs_indices) == len(X)
+    for i in range(len(cuvs_indices)):
+        cuvs_i2d = dict(zip(cuvs_indices[i], cuvs_dists[i]))
+        gnd_i2d = dict(zip(gnd_indices[i], gnd_dists[i]))
+        for j in range(len(cuvs_indices[i])):
+            cuvs_idx = cuvs_indices[i][j]
+            gnd_idx = gnd_indices[i][j]
+            assert cuvs_idx == gnd_idx or cuvs_i2d[cuvs_idx] == pytest.approx(
+                gnd_i2d[gnd_idx], abs=tolerance
+            )
