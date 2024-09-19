@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>ApproximateNearestNeighbors &#8212; spark-rapids-ml 24.06.0 documentation</title>
+    <title>ApproximateNearestNeighbors &#8212; spark-rapids-ml 24.08.0 documentation</title>
   
   
   
@@ -124,7 +124,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 24.06.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 24.08.0 documentation</p>
   
 </a></div>
     
@@ -363,31 +363,64 @@ document.write(`
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">spark_rapids_ml.knn.</span></span><span class="sig-name descname"><span class="pre">ApproximateNearestNeighbors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ivfflat'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'euclidean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algoParams</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idCol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors" title="Permalink to this definition">#</a></dt>
 <dd><p>ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
 The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-The ApproximateNearestNeighbors is currently built on the IVFFLAT algorithm of cuML, and is expected to support
-other algorithms such as IVFPQ.</p>
+The ApproximateNearestNeighbors is currently built on the CAGRA (graph-based) algorithm of cuVS, and the IVFFLAT and IVFPQ algorithms of cuML.</p>
+<p>The current implementation build index independently on each data partition of item_df. Queries will be broadcast to all GPUs,
+then every query probes closest centers on individual index. Local topk results will be aggregated to obtain global topk ANNs.</p>
+<p>CAGRA is a graph-based algorithm designed to construct a nearest neighbors graph index using either “ivf_pq” or “nn_descent” method.
+This index is then utilized to efficiently answer approximate nearest neighbor (ANN) queries. Graph-based algorithms have consistently
+demonstrated superior performance in ANN search, offering the fastest search speeds with minimal loss in search quality. Due to the high
+computational complexity involved in graph construction, these algorithms are particularly well-suited for GPU acceleration.</p>
 <p>IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
 phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
 the end the top k closest items will be returned as the approximate nearest neighbors.</p>
-<p>The current implementation build kmeans index independently on  each data partition (or maxRecordsPerBatch if Arrow is enabled) of item_df.
-Queries will be broadcast to all GPUs, then every query probes closest centers on individual index. Local topk results will be aggregated to obtain
-global topk ANNs.</p>
+<p>The IVFPQ algorithm employs product quantization to compress high-dimensional vectors into compact bit representations,
+enabling rapid distance computation between vectors. While IVFPQ typically delivers faster search speeds compared to IVFFLAT,
+it does so with a tradeoff in search quality, such as reduced recall. It is important to note that the distances returned by IVFPQ
+are approximate and do not represent the exact distances in the original high-dimensional space.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
 <dt><strong>k: int (default = 5)</strong></dt><dd><p>the default number of approximate nearest neighbors to retrieve for each query.</p>
 </dd>
-<dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’. Other algorithms such as
-‘ivfpq’ are expected to be supported later.</p>
+<dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’, ‘ivfpq’ or ‘cagra’. Other algorithms are expected to be supported later.</p>
 </dd>
 <dt><strong>algoParams: Optional[Dict[str, Any]] (default = None)</strong></dt><dd><p>if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
-Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).</p>
-<dl class="simple">
-<dt>When algorithm is ‘ivfflat’:</dt><dd><ul class="simple">
+Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).
+When algorithm is ‘cagra’, parameters for index construction:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>build_algo: (str, default = ‘ivf_pq’) algorithm to build graph index, can be either ‘ivf_pq’ or ‘nn_descent’. nn_descent is expected to be generally faster than ivf_pq.</p></li>
+<li><p>intermediate_graph_degree: (int, default = 128) an intermediate variable used during graph index construction.</p></li>
+<li><p>graph_degree: (int, default = 64) the degree of each node in the final graph index.</p></li>
+</ul>
+</div></blockquote>
+<p>When algorithm is ‘cagra’, parameters for search (full list in <a class="reference external" href="https://docs.rapids.ai/api/cuvs/stable/python_api/neighbors_cagra/#cuvs.neighbors.cagra.SearchParams">cuvs python API documentation</a>):</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time. cuVS internally increases the value to be multiple of 32 and expects the internal value to be larger than or equal to k.</p></li>
+<li><p>max_iterations (int, default = 0) maximum number of search iterations. 0 means auto select.</p></li>
+<li><p>min_iterations (int, default = 0) minimum number of search iterations. 0 means auto select.</p></li>
+<li><p>search_width: (int, default = 1) number of graph nodes as the initial set of search points in each iteration.</p></li>
+<li><p>num_random_samplings: (int, default = 1) number of iterations for selecting initial random seed nodes.</p></li>
+</ul>
+</div></blockquote>
+<p>When algorithm is ‘ivfflat’:</p>
+<blockquote>
+<div><ul class="simple">
 <li><p>nlist: (int) number of kmeans clusters to partition the dataframe into.</p></li>
 <li><p>nprobe: (int) number of closest clusters to probe for topk ANNs.</p></li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
+<p>When algorithm is ‘ivfpq’:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>nlist: (int) number of kmeans clusters to partition the dataframe into.</p></li>
+<li><p>nprobe: (int) number of closest clusters to probe for topk ANNs.</p></li>
+<li><p>M: (int) number of subquantizers</p></li>
+<li><p>n_bits: (int) number of bits allocated per subquantizer</p></li>
+</ul>
+<p>Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.</p>
+</div></blockquote>
 </dd>
 <dt><strong>metric: str (default = “euclidean”)</strong></dt><dd><p>the distance metric to use. ‘ivfflat’ algorithm supports [‘euclidean’, ‘sqeuclidean’, ‘l2’, ‘inner_product’].</p>
 </dd>

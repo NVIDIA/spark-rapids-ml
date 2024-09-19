@@ -74,6 +74,7 @@ LogisticRegression
        ~LogisticRegression.setProbabilityCol
        ~LogisticRegression.setRawPredictionCol
        ~LogisticRegression.setRegParam
+       ~LogisticRegression.setStandardization
        ~LogisticRegression.setTol
        ~LogisticRegression.write
 
@@ -152,6 +153,7 @@ LogisticRegression
     .. automethod:: setProbabilityCol
     .. automethod:: setRawPredictionCol
     .. automethod:: setRegParam
+    .. automethod:: setStandardization
     .. automethod:: setTol
     .. automethod:: write
 
