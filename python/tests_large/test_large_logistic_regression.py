@@ -119,3 +119,84 @@ def test_sparse_int64(multi_gpus: bool = False) -> None:
 
 def test_sparse_int64_mg() -> None:
     test_sparse_int64(multi_gpus=True)
+
+
+def test_log_reg_sparsevector_int64_sparkrapidsml() -> None:
+    elasticNetParam=1.0
+    gpu_number = 2
+    """
+    This test requires minimum 128G CPU memory, 32 GB GPU memory
+    Only pass in x2 GPU, each one has >=32GB and CPU memory >=256GB environment
+    """
+    # Configuration for the 2.2GB dataset
+    output_num_files = 100  # large value smaller CPU memory for each spark task
+    data_shape = (int(1e7), 2200)
+    #data_shape = (int(1e5), 2200)
+
+    fraction_sampled_for_test = (
+        1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
+    )
+    n_classes = 8
+    tolerance = 0.001
+    est_params: Dict[str, Any] = {
+        "regParam": 0.02,
+        "maxIter": 10,
+        "standardization": False,  # reduce GPU memory since standardization copies the value array
+    }
+    density = 0.1
+
+    data_gen_args = [
+        "--n_informative",
+        f"{math.ceil(data_shape[1] / 3)}",
+        "--num_rows",
+        str(data_shape[0]),
+        "--num_cols",
+        str(data_shape[1]),
+        "--output_num_files",
+        str(output_num_files),
+        "--dtype",
+        "float32",
+        "--feature_type",
+        "vector",
+        "--output_dir",
+        "./temp",
+        "--n_classes",
+        str(n_classes),
+        "--random_state",
+        "0",
+        "--logistic_regression",
+        "True",
+        "--density",
+        str(density),
+        "--use_gpu",
+        "True",
+    ]
+
+    data_gen = SparseRegressionDataGen(data_gen_args)
+    df, _, _ = data_gen.gen_dataframe_and_meta(_spark)
+
+    df = df.cache()
+    df_gpu = df
+
+    if gpu_number > 1:
+        main_pid = 0
+        pid_col = "pid"
+        delta_ratio = 0.1
+
+        delta_df = df.sample(fraction=delta_ratio, seed=0)
+
+        df = df.withColumn(pid_col, SparkF.lit(main_pid))
+        delta_df = delta_df.withColumn(
+            pid_col, SparkF.monotonically_increasing_id() % (gpu_number * 4)
+        )
+
+        df = df.union(delta_df)
+        df_gpu = df.repartition(gpu_number, pid_col)
+
+    df_test = df.sample(fraction=fraction_sampled_for_test, seed=0)
+    numrows = df_test.count()
+    print(f"finished with numrows {numrows}")
+
+    # Train the Logistic Regression model
+    lr = LogisticRegression(num_workers=gpu_number, verbose=True, **est_params, elasticNetParam=elasticNetParam)
+    # lr_model = lr.fit(df)

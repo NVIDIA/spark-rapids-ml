@@ -21,15 +21,20 @@ from pyspark.sql import SparkSession
 
 _cpu_number = 32
 _default_conf = {
-    "spark.master": f"local[{_cpu_number}]",
-    "spark.python.worker.reuse": "false",
-    "spark.driver.host": "127.0.0.1",
-    "spark.task.maxFailures": "1",
-    "spark.driver.memory": "128g",
-    "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
+    #"spark.master": f"local[{_cpu_number}]",
+    #"spark.python.worker.reuse": "false",
+    #"spark.driver.host": "127.0.0.1",
+    #"spark.task.maxFailures": "1",
+    #"spark.driver.memory": "128g",
+    #"spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
+    #"spark.sql.pyspark.jvmStacktrace.enabled": "true",
+    #"spark.sql.execution.arrow.pyspark.enabled": "true",
+    #"spark.rapids.ml.uvm.enabled": True,
+    "spark.master": f"spark://dgx2h0195.spark.sjc4.nvmetal.net:7077",
+    "spark.executor.memory": "256g",
     "spark.sql.pyspark.jvmStacktrace.enabled": "true",
-    "spark.sql.execution.arrow.pyspark.enabled": "true",
-    "spark.rapids.ml.uvm.enabled": True,
+    "spark.rapids.ml.uvm.enabled": "true",
+    "spark.rpc.message.maxSize": "256",
 }
 
 
