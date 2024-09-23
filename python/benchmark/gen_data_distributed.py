@@ -479,13 +479,14 @@ class RegressionDataGen(DataGenBaseMeta):
                     logging.warning("cupy import failed; falling back to numpy.")
 
             partition_index = pyspark.TaskContext().partitionId()
+            my_seed = partition_seeds[partition_index % len(partition_seeds)]
             if use_cupy:
-                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                generator_p = cp.random.RandomState(my_seed)
                 ground_truth_cp = cp.asarray(ground_truth)
                 col_indices_cp = cp.asarray(col_indices)
                 bias_p = cp.asarray(bias)
             else:
-                generator_p = np.random.RandomState(partition_seeds[partition_index])
+                generator_p = np.random.RandomState(my_seed)
                 bias_p = np.array(bias)
 
             for pdf in iter:
@@ -835,10 +836,11 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             sparse_matrix.sum_duplicates()
 
             # Support parameters and library adaptation
+            my_seed = partition_seeds[partition_index % len(partition_seeds)]
             if use_cupy:
-                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                generator_p = cp.random.RandomState(my_seed)
             else:
-                generator_p = np.random.RandomState(partition_seeds[partition_index])
+                generator_p = np.random.RandomState(my_seed)
 
             # Label Calculation
             y = sparse_matrix.dot(ground_truth) + bias
