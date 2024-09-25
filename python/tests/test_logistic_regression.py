@@ -2186,3 +2186,42 @@ def test_sparse_int64() -> None:
         total_tol=tolerance,
         accuracy_and_probability_only=True,
     )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("standardization", [True, False])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_sparse_all_zeroes(
+    standardization: bool,
+    fit_intercept: bool,
+) -> None:
+    tolerance = 0.001
+
+    with CleanSparkSession() as spark:
+        data = [
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": standardization,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            return
+
+        gpu_lr = LogisticRegression(enable_sparse_data_optim=True, **params)
+        gpu_model = gpu_lr.fit(bdf)
+        check_sparse_model_preprocess(gpu_model, bdf)
+
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)
