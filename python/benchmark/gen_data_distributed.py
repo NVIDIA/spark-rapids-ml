@@ -464,9 +464,7 @@ class RegressionDataGen(DataGenBaseMeta):
                 ground_truth = ground_truth[col_indices]
 
         # Create different partition seeds for sample generation.
-        random.seed(params["random_state"])
-        seed_maxval = 100 * num_partitions
-        partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
+        global_random_state = params["random_state"]
 
         # UDF for distributed generation of X and y.
         def make_regression_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
@@ -479,13 +477,14 @@ class RegressionDataGen(DataGenBaseMeta):
                     logging.warning("cupy import failed; falling back to numpy.")
 
             partition_index = pyspark.TaskContext().partitionId()
+            my_seed = global_random_state + 100 * partition_index
             if use_cupy:
-                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                generator_p = cp.random.RandomState(my_seed)
                 ground_truth_cp = cp.asarray(ground_truth)
                 col_indices_cp = cp.asarray(col_indices)
                 bias_p = cp.asarray(bias)
             else:
-                generator_p = np.random.RandomState(partition_seeds[partition_index])
+                generator_p = np.random.RandomState(my_seed)
                 bias_p = np.array(bias)
 
             for pdf in iter:
@@ -741,9 +740,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             ground_truth = ground_truth[col_indices]
 
         # Create different partition seeds for sample generation.
-        random.seed(params["random_state"])
-        seed_maxval = 100 * num_partitions
-        partition_seeds = random.sample(range(1, seed_maxval), num_partitions)
+        global_random_seed = params["random_state"]
 
         # UDF for distributed generation of X and y.
         def make_sparse_regression_udf(
@@ -835,10 +832,11 @@ class SparseRegressionDataGen(DataGenBaseMeta):
             sparse_matrix.sum_duplicates()
 
             # Support parameters and library adaptation
+            my_seed = global_random_seed + 100 * partition_index
             if use_cupy:
-                generator_p = cp.random.RandomState(partition_seeds[partition_index])
+                generator_p = cp.random.RandomState(my_seed)
             else:
-                generator_p = np.random.RandomState(partition_seeds[partition_index])
+                generator_p = np.random.RandomState(my_seed)
 
             # Label Calculation
             y = sparse_matrix.dot(ground_truth) + bias
