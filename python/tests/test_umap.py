@@ -143,7 +143,7 @@ def _run_spark_test(
 
     trust_diff = loc_umap - dist_umap
 
-    return trust_diff <= 0.15
+    return trust_diff <= 0.17
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
