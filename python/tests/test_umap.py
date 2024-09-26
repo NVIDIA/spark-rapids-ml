@@ -78,7 +78,6 @@ def _spark_umap_trustworthiness(
     supervised: bool,
     n_parts: int,
     gpu_number: int,
-    sampling_ratio: float,
     dtype: np.dtype,
     feature_type: str,
 ) -> float:
@@ -102,7 +101,7 @@ def _spark_umap_trustworthiness(
             )
 
         data_df = data_df.repartition(n_parts)
-        umap_estimator.setFeaturesCol(features_col).setSampleFraction(sampling_ratio)
+        umap_estimator.setFeaturesCol(features_col)
         umap_model = umap_estimator.fit(data_df)
         pdf = umap_model.transform(data_df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
@@ -115,7 +114,6 @@ def _run_spark_test(
     n_parts: int,
     gpu_number: int,
     n_rows: int,
-    sampling_ratio: float,
     supervised: bool,
     dataset: str,
     n_neighbors: int,
@@ -131,24 +129,22 @@ def _run_spark_test(
         supervised,
         n_parts,
         gpu_number,
-        sampling_ratio,
         dtype,
         feature_type,
     )
 
     loc_umap = _local_umap_trustworthiness(local_X, local_y, n_neighbors, supervised)
 
-    print("Local UMAP trustworthiness score : {:.2f}".format(loc_umap))
-    print("Spark UMAP trustworthiness score : {:.2f}".format(dist_umap))
+    print("Local UMAP trustworthiness score : {:.4f}".format(loc_umap))
+    print("Spark UMAP trustworthiness score : {:.4f}".format(dist_umap))
 
     trust_diff = loc_umap - dist_umap
 
-    return trust_diff <= 0.17
+    return trust_diff <= 0.15
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
 @pytest.mark.parametrize("n_rows", [100, 500])
-@pytest.mark.parametrize("sampling_ratio", [0.55, 0.9])
 @pytest.mark.parametrize("supervised", [True, False])
 @pytest.mark.parametrize("dataset", ["digits", "iris"])
 @pytest.mark.parametrize("n_neighbors", [10])
@@ -159,7 +155,6 @@ def test_spark_umap(
     n_parts: int,
     gpu_number: int,
     n_rows: int,
-    sampling_ratio: float,
     supervised: bool,
     dataset: str,
     n_neighbors: int,
@@ -170,7 +165,6 @@ def test_spark_umap(
         n_parts,
         gpu_number,
         n_rows,
-        sampling_ratio,
         supervised,
         dataset,
         n_neighbors,
@@ -183,7 +177,6 @@ def test_spark_umap(
             n_parts,
             gpu_number,
             n_rows,
-            sampling_ratio,
             supervised,
             dataset,
             n_neighbors,
@@ -196,7 +189,6 @@ def test_spark_umap(
 
 @pytest.mark.parametrize("n_parts", [5])
 @pytest.mark.parametrize("n_rows", [500])
-@pytest.mark.parametrize("sampling_ratio", [0.7])
 @pytest.mark.parametrize("supervised", [True])
 @pytest.mark.parametrize("dataset", ["digits"])
 @pytest.mark.parametrize("n_neighbors", [10])
@@ -206,7 +198,6 @@ def test_spark_umap_fast(
     n_parts: int,
     gpu_number: int,
     n_rows: int,
-    sampling_ratio: float,
     supervised: bool,
     dataset: str,
     n_neighbors: int,
@@ -218,7 +209,6 @@ def test_spark_umap_fast(
         n_parts,
         gpu_number,
         n_rows,
-        sampling_ratio,
         supervised,
         dataset,
         n_neighbors,
@@ -231,7 +221,6 @@ def test_spark_umap_fast(
             n_parts,
             gpu_number,
             n_rows,
-            sampling_ratio,
             supervised,
             dataset,
             n_neighbors,
