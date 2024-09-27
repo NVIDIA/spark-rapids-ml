@@ -399,7 +399,9 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
             embedding = np.array(model.embedding)
             raw_data = np.array(model.raw_data)
 
-            threshold = 3 * np.sqrt(5000 * 0.5 * (1 - 0.5))  # 3 std devs, ~99.7% confidence.
+            threshold = 3 * np.sqrt(
+                5000 * 0.5 * (1 - 0.5)
+            )  # 3 std devs, ~99.7% confidence.
             assert np.abs(2500 - embedding.shape[0]) <= threshold
             assert np.abs(2500 - raw_data.shape[0]) <= threshold
             assert model.dtype == "float32"
