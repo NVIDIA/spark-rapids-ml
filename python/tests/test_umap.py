@@ -369,9 +369,11 @@ def test_umap_broadcast_chunks(gpu_number: int, BROADCAST_LIMIT: int) -> None:
 def test_umap_sample_fraction(gpu_number: int) -> None:
     from cuml.datasets import make_blobs
 
+    n_rows = 5000
+
     X, _ = make_blobs(
-        5000,
-        3000,
+        n_rows,
+        10,
         centers=42,
         cluster_std=0.1,
         dtype=np.float32,
@@ -399,9 +401,9 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
             embedding = np.array(model.embedding)
             raw_data = np.array(model.raw_data)
 
-            threshold = 2 * np.sqrt(5000 * 0.5 * (1 - 0.5))  # 2 std devs
-            assert np.abs(2500 - embedding.shape[0]) <= threshold
-            assert np.abs(2500 - raw_data.shape[0]) <= threshold
+            threshold = 2 * np.sqrt(n_rows * sample_fraction * (1 - sample_fraction))  # 2 std devs
+            assert np.abs(n_rows * sample_fraction - embedding.shape[0]) <= threshold
+            assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
             assert model.dtype == "float32"
             assert model.n_cols == X.shape[1]
 
