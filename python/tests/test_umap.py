@@ -364,3 +364,45 @@ def test_umap_broadcast_chunks(gpu_number: int, BROADCAST_LIMIT: int) -> None:
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.15
+
+
+def test_umap_sample_fraction(gpu_number: int) -> None:
+    from cuml.datasets import make_blobs
+
+    X, _ = make_blobs(
+        5000,
+        3000,
+        centers=42,
+        cluster_std=0.1,
+        dtype=np.float32,
+        random_state=10,
+    )
+
+    with CleanSparkSession() as spark:
+        pyspark_type = "float"
+        feature_cols = [f"c{i}" for i in range(X.shape[1])]
+        schema = [f"{c} {pyspark_type}" for c in feature_cols]
+        df = spark.createDataFrame(X.tolist(), ",".join(schema))
+        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        sample_fraction = 0.5
+        umap = (
+            UMAP(num_workers=gpu_number)
+            .setFeaturesCol("features")
+            .setSampleFraction(sample_fraction)
+        )
+        assert umap.getSampleFraction() == sample_fraction
+
+        umap_model = umap.fit(df)
+
+        def assert_umap_model(model: UMAPModel) -> None:
+            embedding = np.array(model.embedding)
+            raw_data = np.array(model.raw_data)
+
+            threshold = 2 * np.sqrt(5000 * 0.5 * (1 - 0.5))  # 2 std devs
+            assert np.abs(2500 - embedding.shape[0]) <= threshold
+            assert np.abs(2500 - raw_data.shape[0]) <= threshold
+            assert model.dtype == "float32"
+            assert model.n_cols == X.shape[1]
+
+        assert_umap_model(model=umap_model)
