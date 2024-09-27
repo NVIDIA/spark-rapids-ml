@@ -370,6 +370,7 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
     from cuml.datasets import make_blobs
 
     n_rows = 5000
+    sample_fraction = 0.5
 
     X, _ = make_blobs(
         n_rows,
@@ -387,7 +388,6 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
         df = spark.createDataFrame(X.tolist(), ",".join(schema))
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
 
-        sample_fraction = 0.5
         umap = (
             UMAP(num_workers=gpu_number, random_state=42)
             .setFeaturesCol("features")
