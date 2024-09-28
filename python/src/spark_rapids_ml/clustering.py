@@ -483,7 +483,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
-            kmeans.n_cols = n_cols
+            kmeans.n_features_in_ = n_cols
             kmeans.dtype = np.dtype(dtype)
             kmeans.cluster_centers_ = cudf_to_cuml_array(
                 np.array(cluster_centers_).astype(dtype), order=array_order
