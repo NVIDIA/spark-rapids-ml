@@ -1302,7 +1302,7 @@ class ApproximateNearestNeighborsModel(
         return (cagra_index_params, cagra_search_params)
 
     @classmethod
-    def _cal_ivfflat_params_and_check(
+    def _cal_cuvs_ivf_flat_params_and_check(
         cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         ivfflat_index_params: Dict[str, Any] = {"metric": metric}
@@ -1310,10 +1310,13 @@ class ApproximateNearestNeighborsModel(
 
         if algoParams is not None:
             for p in algoParams:
-                if p in {"n_probes"}:
-                    ivfflat_search_params[p] = algoParams[p]
+                if p in {"n_probes", "nprobe"}:
+                    ivfflat_search_params["n_probes"] = algoParams[p]
+                elif p in {"n_lists", "nlist"}:
+                    ivfflat_index_params["n_lists"] = algoParams[p]
                 else:
                     ivfflat_index_params[p] = algoParams[p]
+
         return (ivfflat_index_params, ivfflat_search_params)
 
     def kneighbors(
@@ -1400,10 +1403,17 @@ class ApproximateNearestNeighborsModel(
             "sqeuclidean",
             "inner_product",
             "l2",
+            "cosine",
         }
 
         if cuml_alg_params["algorithm"] == "cagra":
-            cagra_index_params, cagra_search_params = self._cal_cagra_params_and_check(
+            index_params, search_params = self._cal_cagra_params_and_check(
+                algoParams=self.cuml_params["algo_params"],
+                metric=self.cuml_params["metric"],
+                topk=cuml_alg_params["n_neighbors"],
+            )
+        elif cuml_alg_params["algorithm"] in {"ivfflat", "ivf_flat"}:
+            index_params, search_params = self._cal_cuvs_ivf_flat_params_and_check(
                 algoParams=self.cuml_params["algo_params"],
                 metric=self.cuml_params["metric"],
                 topk=cuml_alg_params["n_neighbors"],
@@ -1425,6 +1435,8 @@ class ApproximateNearestNeighborsModel(
                 nn_object = SGNN(output_type="cupy", **cuml_alg_params)
 
                 return nn_object
+            elif cuml_alg_params["algorithm"] in {"ivfflat" or "ivf_flat"}:
+                return "ivf_flat"
             else:
                 assert cuml_alg_params["algorithm"] == "cagra"
                 from cuvs.neighbors import cagra
@@ -1474,17 +1486,26 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object != "cagra":
+            from cuml.neighbors import NearestNeighbors as cumlSGNN
+
+            if isinstance(nn_object, cumlSGNN):  # ivfpq
                 nn_object.fit(item)
             else:
-                from cuvs.neighbors import cagra
+                if nn_object == "ivf_flat":
+                    from cuvs.neighbors import ivf_flat as cuvs_algo
+                else:
+                    assert nn_object == "cagra"
+                    from cuvs.neighbors import cagra as cuvs_algo
 
-                build_params = cagra.IndexParams(**cagra_index_params)
+                build_params = cuvs_algo.IndexParams(**index_params)
 
                 # cuvs does not take pd.DataFrame as input
                 if isinstance(item, pd.DataFrame):
                     item = cp.array(item.to_numpy(), order="C", dtype="float32")
-                cagra_index_obj = cagra.build(build_params, item)
+                if isinstance(item, np.ndarray):
+                    item = cp.array(item, dtype="float32")
+
+                index_obj = cuvs_algo.build(build_params, item)
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
@@ -1492,16 +1513,16 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object != "cagra":
+            if isinstance(nn_object, cumlSGNN):  # ivfpq
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:
                 gpu_qfeatures = cp.array(
                     bcast_qfeatures.value, order="C", dtype="float32"
                 )
 
-                distances, indices = cagra.search(
-                    cagra.SearchParams(**cagra_search_params),
-                    cagra_index_obj,
+                distances, indices = cuvs_algo.search(
+                    cuvs_algo.SearchParams(**search_params),
+                    index_obj,
                     gpu_qfeatures,
                     cuml_alg_params["n_neighbors"],
                 )
