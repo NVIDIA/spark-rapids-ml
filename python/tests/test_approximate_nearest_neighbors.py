@@ -124,6 +124,47 @@ def test_example(
         assert obj._cuml_params["algo_params"] == algoParams
 
 
+def test_example_cosine() -> None:
+    gpu_number = 1
+    X = [
+        (0, (1.0, 0.0)),
+        (1, (1.0, 1.0)),
+        (2, (-1.0, 1.0)),
+    ]
+
+    topk = 2
+    metric = "cosine"
+    algoParams = {"nlist": 1, "nprobe": 1}
+
+    with CleanSparkSession() as spark:
+        schema = f"id int, features array<float>"
+        df = spark.createDataFrame(X, schema)
+        gpu_knn = ApproximateNearestNeighbors(
+            algorithm="ivfflat",
+            algoParams=algoParams,
+            k=topk,
+            metric=metric,
+            idCol="id",
+            inputCol="features",
+            num_workers=gpu_number,
+        )
+        gpu_model = gpu_knn.fit(df)
+        _, _, knn_df = gpu_model.kneighbors(df)
+        knn_collect = knn_df.collect()
+
+        from sklearn.neighbors import NearestNeighbors
+
+        X_features = np.array([row[1] for row in X])
+        exact_nn = NearestNeighbors(
+            algorithm="brute", metric="cosine", n_neighbors=topk
+        )
+        exact_nn.fit(X_features)
+        distances, indices = exact_nn.kneighbors(X_features)
+
+        assert array_equal([row["distances"] for row in knn_collect], distances)
+        assert array_equal([row["indices"] for row in knn_collect], indices)
+
+
 class ANNEvaluator:
     """
     obtain exact knn distances and indices
@@ -275,12 +316,12 @@ class ANNEvaluator:
 @pytest.mark.parametrize(
     "combo",
     [
-        # ("ivfflat", "array", 10000, None, "euclidean"),
-        # ("ivfflat", "vector", 2000, {"nlist": 10, "nprobe": 2}, "euclidean"),
-        # ("ivfflat", "multi_cols", 5000, {"nlist": 20, "nprobe": 4}, "euclidean"),
-        # ("ivfflat", "array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
-        # ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
-        # ("ivfflat", "multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
+        ("ivfflat", "array", 10000, None, "euclidean"),
+        ("ivfflat", "vector", 2000, {"nlist": 10, "nprobe": 2}, "euclidean"),
+        ("ivfflat", "multi_cols", 5000, {"nlist": 20, "nprobe": 4}, "euclidean"),
+        ("ivfflat", "array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
+        ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
+        ("ivfflat", "multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
         ("ivfflat", "array", 2000, {"nlist": 10, "nprobe": 2}, "cosine"),
     ],
 )  # vector feature type will be converted to float32 to be compatible with cuml single-GPU NearestNeighbors Class
@@ -379,15 +420,11 @@ def test_ann_algorithm(
         # test kneighbors: compare top-1 nn indices(self) and distances(self)
 
         if metric != "inner_product" and distances_are_exact:
-            top_one_nn = [knn[0] for knn in indices]
-            # for i in range(len(top_one_nn)):
-            #    assert top_one_nn[i] == y[i] or distances[i][0] == 0.
+            self_index = [knn[0] for knn in indices]
+            assert np.all(self_index == y)
 
             self_distance = [dist[0] for dist in distances]
-
-            print(f"debug top_one_nn: {top_one_nn}")
-            print(f"debug self_distance: {self_distance}")
-            assert self_distance == [0.0] * len(X)
+            assert array_equal(self_distance, [0.0] * len(X))
 
         # test kneighbors: compare with single-GPU cuml
         ann_evaluator.compare_with_cuml_or_cuvs_sg(
@@ -694,55 +731,3 @@ def test_ivfflat_wide_matrix(
     test_ann_algorithm(combo=combo, data_shape=data_shape, data_type=data_type)
     duration_sec = time.time() - start
     assert duration_sec < 10 * 60
-
-
-"""
-def test_cosine_ivfflat() -> None:
-    n_neighbors = 2
-    metric = "cosine"
-    algorithm = "ivf_flat"
-    algoParams = {
-        "n_lists": 1,
-        "n_probes": 1,
-    }
-
-    data_shape = (10000, 50)
-    tolerance = 1e-6
-    n_clusters = 10
-    X, _ = make_blobs(
-        n_samples=data_shape[0],
-        n_features=data_shape[1],
-        centers=n_clusters,
-        random_state=0,
-    )  # make_blobs creates a random dataset of isotropic gaussian blobs.
-
-    # brute
-    from sklearn.neighbors import NearestNeighbors as CPUNN
-
-    cpu_est = CPUNN(n_neighbors=n_neighbors, metric=metric, algorithm="brute")
-    cpu_est.fit(X)
-    gnd_dists, gnd_indices = cpu_est.kneighbors(X)
-
-    # ivfflat
-    evaluator = ANNEvaluator(X, n_neighbors, metric)
-    gnd_dists == evaluator.get_distances_exact()
-    gnd_indices == evaluator.get_indices_exact()
-    cuvs_dists, cuvs_indices = evaluator.get_cuvs_sg_results(
-        algorithm=algorithm, algoParams=algoParams
-    )
-
-    restored_dists = cuvs_dists
-    assert array_equal(restored_dists, gnd_dists)
-    cuvs_dists = restored_dists
-
-    assert len(cuvs_indices) == len(X)
-    for i in range(len(cuvs_indices)):
-        cuvs_i2d = dict(zip(cuvs_indices[i], cuvs_dists[i]))
-        gnd_i2d = dict(zip(gnd_indices[i], gnd_dists[i]))
-        for j in range(len(cuvs_indices[i])):
-            cuvs_idx = cuvs_indices[i][j]
-            gnd_idx = gnd_indices[i][j]
-            assert cuvs_idx == gnd_idx or cuvs_i2d[cuvs_idx] == pytest.approx(
-                gnd_i2d[gnd_idx], abs=tolerance
-            )
-"""
