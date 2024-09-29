@@ -1531,7 +1531,7 @@ class ApproximateNearestNeighborsModel(
 
             # Note cuML kneighbors applys an extra square root on the l2 distances.
             # Here applies square to obtain the actual l2 distances.
-            if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
+            if isinstance(nn_object, cumlSGNN):
                 if (
                     cuml_alg_params["metric"] == "euclidean"
                     or cuml_alg_params["metric"] == "l2"
