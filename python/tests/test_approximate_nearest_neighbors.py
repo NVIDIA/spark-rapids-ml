@@ -313,25 +313,12 @@ class ANNEvaluator:
         return (sg_distances, sg_indices)
 
 
-@pytest.mark.parametrize(
-    "combo",
-    [
-        ("ivfflat", "array", 10000, None, "euclidean"),
-        ("ivfflat", "vector", 2000, {"nlist": 10, "nprobe": 2}, "euclidean"),
-        ("ivfflat", "multi_cols", 5000, {"nlist": 20, "nprobe": 4}, "euclidean"),
-        ("ivfflat", "array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
-        ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
-        ("ivfflat", "multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
-        ("ivfflat", "array", 2000, {"nlist": 10, "nprobe": 2}, "cosine"),
-    ],
-)  # vector feature type will be converted to float32 to be compatible with cuml single-GPU NearestNeighbors Class
-@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32])
-def test_ann_algorithm(
+def ann_algorithm_test_func(
     combo: Tuple[str, str, int, Optional[Dict[str, Any]], str],
     data_shape: Tuple[int, int],
     data_type: np.dtype,
     expected_avg_recall: float = 0.95,
+    expected_avg_dist_gap: float = 1e-4,
     distances_are_exact: bool = True,
     tolerance: float = 1e-4,
     n_neighbors: int = 50,
@@ -436,7 +423,7 @@ def test_ann_algorithm(
         # test kneighbors: compare with sklearn brute NN on avg_recall and avg_dist_gap
         assert avg_recall >= expected_avg_recall
         if distances_are_exact:
-            assert np.all(np.abs(avg_dist_gap) < tolerance)
+            assert np.all(np.abs(avg_dist_gap) < expected_avg_dist_gap)
 
         # test exactNearestNeighborsJoin
         knnjoin_df = knn_model.approxSimilarityJoin(query_df_withid)
@@ -480,8 +467,9 @@ def test_ann_algorithm(
                         )
 
         assert len(reconstructed_collect) == len(knn_df_collect)
-        if algorithm != "ivfpq":
+        if algorithm != "ivfpq" and not (algorithm == "ivfflat" and algoParams == None):
             # it is fine to skip ivfpq as long as other algorithms assert the same results of approxSimilarityJoin and kneighbors.
+            # Also skip ivfflat when algoParams == None. Ivfflat probes only 1/50 of the clusters, leading to unstable results.
             # ivfpq shows non-deterministic distances due to kmeans initialization uses GPU memory runtime values.
             for i in range(len(reconstructed_collect)):
                 r1 = reconstructed_collect[i]
@@ -490,6 +478,72 @@ def test_ann_algorithm(
 
         assert knn_est._cuml_params["metric"] == metric
         assert knn_model._cuml_params["metric"] == metric
+
+
+@pytest.mark.parametrize(
+    "combo",
+    [
+        (
+            "ivfflat",
+            "array",
+            10000,
+            None,
+            "euclidean",
+        ),  # default cuvs ivf_flat sets nlist to 1000 and nprobe to 20, leading to unstable recall when run multiple times
+        (
+            "ivfflat",
+            "vector",
+            2000,
+            {"nlist": 10, "nprobe": 2},
+            "euclidean",
+        ),
+        (
+            "ivfflat",
+            "multi_cols",
+            5000,
+            {"nlist": 20, "nprobe": 4},
+            "euclidean",
+        ),
+        (
+            "ivfflat",
+            "array",
+            2000,
+            {"nlist": 10, "nprobe": 2},
+            "sqeuclidean",
+        ),
+        ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2", 0.95, 1e-4),
+        (
+            "ivfflat",
+            "multi_cols",
+            2000,
+            {"nlist": 10, "nprobe": 2},
+            "inner_product",
+        ),
+        (
+            "ivfflat",
+            "array",
+            2000,
+            {"nlist": 10, "nprobe": 2},
+            "cosine",
+        ),
+    ],
+)  # vector feature type will be converted to float32 to be compatible with cuml single-GPU NearestNeighbors Class
+@pytest.mark.parametrize("data_type", [np.float32])
+def test_ivfflat(
+    combo: Tuple[str, str, int, Optional[Dict[str, Any]], str],
+    data_type: np.dtype,
+) -> None:
+    algoParams = combo[3]
+    expected_avg_recall: float = 0.95 if algoParams != None else 0.5
+    expected_avg_dist_gap: float = 1e-4 if algoParams != None else 1e-2
+    data_shape: Tuple[int, int] = (10000, 50)
+    ann_algorithm_test_func(
+        combo=combo,
+        data_shape=data_shape,
+        data_type=data_type,
+        expected_avg_recall=expected_avg_recall,
+        expected_avg_dist_gap=expected_avg_dist_gap,
+    )
 
 
 @pytest.mark.parametrize(
@@ -570,7 +624,7 @@ def test_ivfpq(
     distances_are_exact = False
     tolerance = 5e-3  # tolerance increased to be more stable due to quantization and randomness in ivfpq
 
-    test_ann_algorithm(
+    ann_algorithm_test_func(
         combo=combo,
         data_shape=data_shape,
         data_type=data_type,
@@ -650,7 +704,7 @@ def test_cagra(
     distances_are_exact = True
     tolerance = 2e-3
 
-    test_ann_algorithm(
+    ann_algorithm_test_func(
         combo=combo,
         data_shape=data_shape,
         data_type=data_type,
@@ -728,6 +782,6 @@ def test_ivfflat_wide_matrix(
     import time
 
     start = time.time()
-    test_ann_algorithm(combo=combo, data_shape=data_shape, data_type=data_type)
+    ann_algorithm_test_func(combo=combo, data_shape=data_shape, data_type=data_type)
     duration_sec = time.time() - start
     assert duration_sec < 10 * 60
