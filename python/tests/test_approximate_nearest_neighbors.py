@@ -42,6 +42,12 @@ def cal_dist(v1: np.ndarray, v2: np.ndarray, metric: str) -> float:
             return dist * dist
         else:
             return dist
+    elif metric == "cosine":
+        v1_l2norm = np.linalg.norm(v1)
+        v2_l2norm = np.linalg.norm(v2)
+        if v1_l2norm == 0 or v2_l2norm == 0:
+            return 0.0
+        return 1 - np.dot(v1, v2) / (v1_l2norm * v2_l2norm)
     else:
         assert False, f"Does not recognize metric '{metric}'"
 
