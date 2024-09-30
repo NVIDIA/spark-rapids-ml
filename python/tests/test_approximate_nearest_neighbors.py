@@ -489,7 +489,7 @@ def ann_algorithm_test_func(
             10000,
             None,
             "euclidean",
-        ),  # default cuvs ivf_flat sets nlist to 1000 and nprobe to 20, leading to unstable recall when run multiple times
+        ),
         (
             "ivfflat",
             "vector",
@@ -534,8 +534,11 @@ def test_ivfflat(
     data_type: np.dtype,
 ) -> None:
     algoParams = combo[3]
+
+    # cuvs ivf_flat None sets nlist to 1000 and nprobe to 20, leading to unstable results when run multiple times
     expected_avg_recall: float = 0.95 if algoParams != None else 0.5
     expected_avg_dist_gap: float = 1e-4 if algoParams != None else 1e-2
+    tolerance: float = 1e-4 if algoParams != None else 1e-2
     data_shape: Tuple[int, int] = (10000, 50)
     ann_algorithm_test_func(
         combo=combo,
@@ -543,6 +546,7 @@ def test_ivfflat(
         data_type=data_type,
         expected_avg_recall=expected_avg_recall,
         expected_avg_dist_gap=expected_avg_dist_gap,
+        tolerance=tolerance,
     )
 
 
