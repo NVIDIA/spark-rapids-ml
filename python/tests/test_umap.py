@@ -31,8 +31,8 @@ from .sparksession import CleanSparkSession
 from .utils import (
     assert_params,
     create_pyspark_dataframe,
-    get_default_cuml_parameters,
     cuml_supported_data_types,
+    get_default_cuml_parameters,
     pyspark_supported_feature_types,
 )
 
@@ -257,7 +257,7 @@ def test_params(tmp_path: str, default_params: bool) -> None:
             "target_metric",
             "target_n_neighbors",
             "target_weight",
-        ]
+        ],
     )
 
     if default_params:

@@ -573,7 +573,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(sample_fraction=value)
 
-    def getFeaturesCol(self: P) -> Union[str, List[str]]:  # type: ignore
+    def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
         """
         Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
         """

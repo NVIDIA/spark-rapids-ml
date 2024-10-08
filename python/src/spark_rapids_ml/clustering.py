@@ -836,7 +836,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
         model._num_workers = self.num_workers
         self._copyValues(model)
-        self._copy_cuml_params(model)
+        self._copy_cuml_params(model)  # type: ignore
 
         return model
 

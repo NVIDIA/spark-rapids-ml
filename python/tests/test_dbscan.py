@@ -56,15 +56,17 @@ def test_default_cuml_params() -> None:
 
 
 @pytest.mark.parametrize("default_params", [True, False])
-def test_params(gpu_number: int, default_params: bool, tmp_path: str, caplog: LogCaptureFixture) -> None:
+def test_params(
+    gpu_number: int, default_params: bool, tmp_path: str, caplog: LogCaptureFixture
+) -> None:
     from cuml import DBSCAN as cumlDBSCAN
-    
+
     cuml_params = get_default_cuml_parameters(
         [cumlDBSCAN],
         [
             "handle",
             "output_type",
-        ]
+        ],
     )
 
     if default_params:
