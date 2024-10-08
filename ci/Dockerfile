@@ -37,6 +37,6 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     && conda config --set solver libmamba
 
 # install cuML
-ARG CUML_VER=24.08
-RUN conda install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER cuvs=$CUML_VER python=3.9 cuda-version=11.8 \
+ARG CUML_VER=24.10
+RUN conda install -y -c rapidsai-nightly -c conda-forge -c nvidia cuml=$CUML_VER cuvs=$CUML_VER python=3.10 cuda-version=11.8 numpy~=1.0 \
     && conda clean --all -f -y
