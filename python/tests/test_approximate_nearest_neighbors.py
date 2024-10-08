@@ -614,9 +614,9 @@ def test_ivfflat(
 )
 @pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
-@pytest.mark.skip(
-    reason="ivfpq has become unstable in 24.10.  need to address in future pr"
-)
+# @pytest.mark.skip(
+#    reason="ivfpq has become unstable in 24.10.  need to address in future pr"
+# )
 def test_ivfpq(
     algorithm: str,
     feature_type: str,
