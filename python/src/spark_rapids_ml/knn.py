@@ -1516,7 +1516,10 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if isinstance(nn_object, cumlSGNN):  # ivfpq
+            if nn_object not in {
+                "ivf_flat",
+                "cagra",
+            }:  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:
                 gpu_qfeatures = cp.array(
