@@ -90,7 +90,25 @@ if TYPE_CHECKING:
 class UMAPClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {}
+        return {
+            "n_neighbors": "n_neighbors",
+            "n_components": "n_components",
+            "metric": "metric",
+            "n_epochs": "n_epochs",
+            "learning_rate": "learning_rate",
+            "init": "init",
+            "min_dist": "min_dist",
+            "spread": "spread",
+            "set_op_mix_ratio": "set_op_mix_ratio",
+            "local_connectivity": "local_connectivity",
+            "repulsion_strength": "repulsion_strength",
+            "negative_sample_rate": "negative_sample_rate",
+            "transform_queue_size": "transform_queue_size",
+            "a": "a",
+            "b": "b",
+            "precomputed_knn": "precomputed_knn",
+            "random_state": "random_state",
+        }
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -171,9 +189,8 @@ class _UMAPCumlParams(
         "metric",
         (
             f"Distance metric to use. Supported distances are ['l1', 'cityblock', 'taxicab', 'manhattan', 'euclidean', 'l2',"
-            f" 'sqeuclidean', 'canberra', 'minkowski', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger', 'hamming',"
-            f" 'jaccard']. Metrics that take arguments (such as minkowski) can have arguments passed via the metric_kwds"
-            f" dictionary."
+            f" 'sqeuclidean', 'canberra', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger', 'hamming', 'jaccard']."
+            f" Metrics that take arguments via the metric_kwds dictionary are not supported."
         ),
         typeConverter=TypeConverters.toString,
     )
@@ -340,7 +357,7 @@ class _UMAPCumlParams(
         typeConverter=TypeConverters.toFloat,
     )
 
-    def getNNeighbors(self) -> float:
+    def getNNeighbors(self: P) -> float:
         """
         Gets the value of `n_neighbors`.
         """
@@ -352,7 +369,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(n_neighbors=value)
 
-    def getNComponents(self) -> int:
+    def getNComponents(self: P) -> int:
         """
         Gets the value of `n_components`.
         """
@@ -364,7 +381,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(n_components=value)
 
-    def getMetric(self) -> str:
+    def getMetric(self: P) -> str:
         """
         Gets the value of `metric`.
         """
@@ -376,7 +393,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(metric=value)
 
-    def getNEpochs(self) -> int:
+    def getNEpochs(self: P) -> int:
         """
         Gets the value of `n_epochs`.
         """
@@ -388,7 +405,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(n_epochs=value)
 
-    def getLearningRate(self) -> float:
+    def getLearningRate(self: P) -> float:
         """
         Gets the value of `learning_rate`.
         """
@@ -400,7 +417,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(learning_rate=value)
 
-    def getInit(self) -> str:
+    def getInit(self: P) -> str:
         """
         Gets the value of `init`.
         """
@@ -412,7 +429,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(init=value)
 
-    def getMinDist(self) -> float:
+    def getMinDist(self: P) -> float:
         """
         Gets the value of `min_dist`.
         """
@@ -424,7 +441,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(min_dist=value)
 
-    def getSpread(self) -> float:
+    def getSpread(self: P) -> float:
         """
         Gets the value of `spread`.
         """
@@ -436,7 +453,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(spread=value)
 
-    def getSetOpMixRatio(self) -> float:
+    def getSetOpMixRatio(self: P) -> float:
         """
         Gets the value of `set_op_mix_ratio`.
         """
@@ -448,7 +465,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(set_op_mix_ratio=value)
 
-    def getLocalConnectivity(self) -> float:
+    def getLocalConnectivity(self: P) -> float:
         """
         Gets the value of `local_connectivity`.
         """
@@ -460,7 +477,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(local_connectivity=value)
 
-    def getRepulsionStrength(self) -> float:
+    def getRepulsionStrength(self: P) -> float:
         """
         Gets the value of `repulsion_strength`.
         """
@@ -472,7 +489,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(repulsion_strength=value)
 
-    def getNegativeSampleRate(self) -> int:
+    def getNegativeSampleRate(self: P) -> int:
         """
         Gets the value of `negative_sample_rate`.
         """
@@ -484,7 +501,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(negative_sample_rate=value)
 
-    def getTransformQueueSize(self) -> float:
+    def getTransformQueueSize(self: P) -> float:
         """
         Gets the value of `transform_queue_size`.
         """
@@ -496,7 +513,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(transform_queue_size=value)
 
-    def getA(self) -> float:
+    def getA(self: P) -> float:
         """
         Gets the value of `a`.
         """
@@ -508,7 +525,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(a=value)
 
-    def getB(self) -> float:
+    def getB(self: P) -> float:
         """
         Gets the value of `b`.
         """
@@ -520,7 +537,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(b=value)
 
-    def getPrecomputedKNN(self) -> List[List[float]]:
+    def getPrecomputedKNN(self: P) -> List[List[float]]:
         """
         Gets the value of `precomputed_knn`.
         """
@@ -532,7 +549,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(precomputed_knn=value)
 
-    def getRandomState(self) -> int:
+    def getRandomState(self: P) -> int:
         """
         Gets the value of `random_state`.
         """
@@ -544,7 +561,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(random_state=value)
 
-    def getSampleFraction(self) -> float:
+    def getSampleFraction(self: P) -> float:
         """
         Gets the value of `sample_fraction`.
         """
@@ -556,7 +573,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(sample_fraction=value)
 
-    def getFeaturesCol(self) -> Union[str, List[str]]:  # type: ignore
+    def getFeaturesCol(self: P) -> Union[str, List[str]]:  # type: ignore
         """
         Gets the value of :py:attr:`featuresCol` or :py:attr:`featuresCols`
         """
@@ -590,7 +607,7 @@ class _UMAPCumlParams(
         """
         return self._set_params(labelCol=value)
 
-    def getOutputCol(self) -> str:
+    def getOutputCol(self: P) -> str:
         """
         Gets the value of :py:attr:`outputCol`. Contains the embeddings of the input data.
         """

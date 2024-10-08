@@ -55,26 +55,38 @@ def test_default_cuml_params() -> None:
     assert cuml_params == spark_params
 
 
-def test_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -> None:
-    # Default constructor
-    default_spark_params: Dict[str, Any] = {}
-    default_cuml_params = {
-        "eps": 0.5,
-        "min_samples": 5,
-        "metric": "euclidean",
-        "verbose": False,
-        "max_mbytes_per_batch": None,
-        "calc_core_sample_indices": False,
-    }
-    default_dbscan = DBSCAN()
-    assert_params(default_dbscan, default_spark_params, default_cuml_params)
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(gpu_number: int, default_params: bool, tmp_path: str, caplog: LogCaptureFixture) -> None:
+    from cuml import DBSCAN as cumlDBSCAN
+    
+    cuml_params = get_default_cuml_parameters(
+        [cumlDBSCAN],
+        [
+            "handle",
+            "output_type",
+        ]
+    )
+
+    if default_params:
+        dbscan = DBSCAN()
+    else:
+        cuml_params["eps"] = 0.4
+        cuml_params["min_samples"] = 4
+        dbscan = DBSCAN(
+            eps=0.4,
+            min_samples=4,
+        )
+
+    assert_params(dbscan, {}, cuml_params)
+    assert dbscan.cuml_params == cuml_params
 
     # Estimator persistence
     path = tmp_path + "/dbscan_tests"
     estimator_path = f"{path}/dbscan"
-    default_dbscan.write().overwrite().save(estimator_path)
+    dbscan.write().overwrite().save(estimator_path)
     loaded_dbscan = DBSCAN.load(estimator_path)
-    assert_params(loaded_dbscan, default_spark_params, default_cuml_params)
+    assert_params(loaded_dbscan, {}, cuml_params)
+    assert loaded_dbscan.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter
