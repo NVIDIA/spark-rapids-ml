@@ -1488,7 +1488,10 @@ class ApproximateNearestNeighborsModel(
 
             from cuml.neighbors import NearestNeighbors as cumlSGNN
 
-            if isinstance(nn_object, cumlSGNN):  # ivfpq
+            if nn_object not in {
+                "ivf_flat",
+                "cagra",
+            }:  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 nn_object.fit(item)
             else:
                 if nn_object == "ivf_flat":

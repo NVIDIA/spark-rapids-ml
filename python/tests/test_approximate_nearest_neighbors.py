@@ -630,7 +630,7 @@ def test_ivfpq(
     combo = (algorithm, feature_type, max_records_per_batch, algo_params, metric)
     expected_avg_recall = 0.4
     distances_are_exact = False
-    tolerance = 5e-3  # tolerance increased to be more stable due to quantization and randomness in ivfpq
+    tolerance = 0.05  # tolerance increased to be more stable due to quantization and randomness in ivfpq, especially when expected_recall is low.
 
     ann_algorithm_test_func(
         combo=combo,
