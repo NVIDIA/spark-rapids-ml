@@ -80,6 +80,7 @@ def create_pyspark_dataframe(
     dtype: np.dtype,
     data: np.ndarray,
     label: Optional[np.ndarray] = None,
+    label_dtype: Optional[np.dtype] = None,  # type: ignore
 ) -> Tuple[pyspark.sql.DataFrame, Union[str, List[str]], Optional[str]]:
     """Construct a dataframe based on features and label data."""
     assert feature_type in pyspark_supported_feature_types
@@ -92,10 +93,17 @@ def create_pyspark_dataframe(
     label_col = None
 
     if label is not None:
+        label_dtype = dtype if label_dtype is None else label_dtype
+        label = label.astype(label_dtype)
+        label_pyspark_type = dtype_to_pyspark_type(label_dtype)
+
         label_col = "label_col"
-        schema.append(f"{label_col} {pyspark_type}")
+        schema.append(f"{label_col} {label_pyspark_type}")
+        data_pytype = [
+            ra + rb for ra, rb in zip(data.tolist(), label.reshape(m, 1).tolist())
+        ]
         df = spark.createDataFrame(
-            np.concatenate((data, label.reshape(m, 1)), axis=1).tolist(),
+            data_pytype,
             ",".join(schema),
         )
     else:
