@@ -24,17 +24,12 @@ ln -s /usr/local/cuda-11.8 /usr/local/cuda
 
 # install cudf and cuml
 # using ~= pulls in micro version patches
-# /databricks/python/bin/pip install cudf-cu11~=${RAPIDS_VERSION} \
-#     cuml-cu11~=${RAPIDS_VERSION} \
-#     cuvs-cu11~=${RAPIDS_VERSION} \
-#     pylibraft-cu11~=${RAPIDS_VERSION} \
-#     rmm-cu11~=${RAPIDS_VERSION} \
-#     --extra-index-url=https://pypi.nvidia.com
-
-/databricks/python/bin/pip install \
-    --extra-index-url=https://pypi.anaconda.org/rapidsai-wheels-nightly/simple \
-    "cudf-cu11>=24.10.0a0,<=24.10" "dask-cudf-cu11>=24.10.0a0,<=24.10" \
-    "cuml-cu11>=24.10.0a0,<=24.10" "dask-cuda>=24.10.0a0,<=24.10"
+/databricks/python/bin/pip install cudf-cu11~=${RAPIDS_VERSION} \
+    cuml-cu11~=${RAPIDS_VERSION} \
+    cuvs-cu11~=${RAPIDS_VERSION} \
+    pylibraft-cu11~=${RAPIDS_VERSION} \
+    rmm-cu11~=${RAPIDS_VERSION} \
+    --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml
 python_ver=`python --version | grep -oP '3\.[0-9]+'`
