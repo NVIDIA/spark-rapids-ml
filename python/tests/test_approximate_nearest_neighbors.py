@@ -564,9 +564,9 @@ def test_ivfflat(
             "array",
             10000,
             {
-                "nlist": 10,
-                "nprobe": 2,
-                "M": 2,
+                "nlist": 100,
+                "nprobe": 20,
+                "M": 20,
                 "n_bits": 4,
                 "usePrecomputedTables": False,
             },
@@ -577,9 +577,9 @@ def test_ivfflat(
             "vector",
             200,
             {
-                "nlist": 10,
-                "nprobe": 2,
-                "M": 4,
+                "nlist": 100,
+                "nprobe": 20,
+                "M": 40,
                 "n_bits": 4,
                 "usePrecomputedTables": True,
             },
@@ -590,9 +590,9 @@ def test_ivfflat(
             "multi_cols",
             5000,
             {
-                "nlist": 10,
-                "nprobe": 2,
-                "M": 1,
+                "nlist": 100,
+                "nprobe": 20,
+                "M": 10,
                 "n_bits": 8,
                 "usePrecomputedTables": False,
             },
@@ -603,9 +603,9 @@ def test_ivfflat(
             "array",
             2000,
             {
-                "nlist": 10,
-                "nprobe": 2,
-                "M": 2,
+                "nlist": 100,
+                "nprobe": 20,
+                "M": 20,
                 "n_bits": 4,
             },
             "inner_product",
@@ -614,9 +614,6 @@ def test_ivfflat(
 )
 @pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
-# @pytest.mark.skip(
-#    reason="ivfpq has become unstable in 24.10.  need to address in future pr"
-# )
 def test_ivfpq(
     algorithm: str,
     feature_type: str,
@@ -627,10 +624,11 @@ def test_ivfpq(
     data_type: np.dtype,
 ) -> None:
     """
-    Currently the usePrecomputedTables is not used in cuml C++.
+    (1) Currently the usePrecomputedTables is not used in cuml C++.
+    (2) ivfpq has become unstable in 24.10. It does not get passed with algoParam {"nlist" : 10, "nprobe" : 2, "M": 2, "n_bits": 4} in ci where test_ivfflat is run beforehand. avg_recall shows large variance, depending on the quantization accuracy. This can be fixed by increasing nlist, nprobe, M, and n_bits.
     """
     combo = (algorithm, feature_type, max_records_per_batch, algo_params, metric)
-    expected_avg_recall = 0.1
+    expected_avg_recall = 0.4
     distances_are_exact = False
     tolerance = 5e-3  # tolerance increased to be more stable due to quantization and randomness in ivfpq
 
