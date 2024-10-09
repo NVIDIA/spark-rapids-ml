@@ -145,6 +145,9 @@ class _CumlClass(object):
         - empty string, if a defined Spark Param should just be silently ignored, or
         - None, if a defined Spark Param should raise an error.
 
+        If the class has no Spark ML equivalent, the cuML parameter names should be mapped to themselves,
+        i.e., `{"cuml_param": "cuml_param"}`.
+
         Note: standard Spark column Params, e.g. inputCol, featureCol, etc, should not be listed
         in this mapping, since they are handled differently.
 
