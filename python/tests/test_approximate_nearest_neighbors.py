@@ -517,7 +517,7 @@ def ann_algorithm_test_func(
             {"nlist": 10, "nprobe": 2},
             "sqeuclidean",
         ),
-        ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2", 0.95, 1e-4),
+        ("ivfflat", "vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
         (
             "ivfflat",
             "multi_cols",
