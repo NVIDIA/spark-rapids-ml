@@ -15,6 +15,7 @@
 #
 
 import asyncio
+import inspect
 import math
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
@@ -1436,12 +1437,14 @@ class ApproximateNearestNeighborsModel(
 
                 return nn_object
             elif cuml_alg_params["algorithm"] in {"ivfflat" or "ivf_flat"}:
-                return "ivf_flat"
+                from cuvs.neighbors import ivf_flat
+
+                return ivf_flat
             else:
                 assert cuml_alg_params["algorithm"] == "cagra"
                 from cuvs.neighbors import cagra
 
-                return "cagra"
+                return cagra
 
         row_number_col = alias.row_number
         input_col, input_cols = self._get_input_columns()
@@ -1487,20 +1490,14 @@ class ApproximateNearestNeighborsModel(
             start_time = time.time()
 
             from cuml.neighbors import NearestNeighbors as cumlSGNN
+            from cuvs.neighbors import cagra, ivf_flat
 
-            if nn_object not in {
-                "ivf_flat",
-                "cagra",
-            }:  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+            if not inspect.ismodule(
+                nn_object
+            ):  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 nn_object.fit(item)
-            else:
-                if nn_object == "ivf_flat":
-                    from cuvs.neighbors import ivf_flat as cuvs_algo
-                else:
-                    assert nn_object == "cagra"
-                    from cuvs.neighbors import cagra as cuvs_algo
-
-                build_params = cuvs_algo.IndexParams(**index_params)
+            else:  # cuvs ivf_flat or cagra
+                build_params = nn_object.IndexParams(**index_params)
 
                 # cuvs does not take pd.DataFrame as input
                 if isinstance(item, pd.DataFrame):
@@ -1508,7 +1505,7 @@ class ApproximateNearestNeighborsModel(
                 if isinstance(item, np.ndarray):
                     item = cp.array(item, dtype="float32")
 
-                index_obj = cuvs_algo.build(build_params, item)
+                index_obj = nn_object.build(build_params, item)
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
@@ -1516,18 +1513,17 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object not in {
-                "ivf_flat",
-                "cagra",
-            }:  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+            if not inspect.ismodule(
+                nn_object
+            ):  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
-            else:
+            else:  # cuvs ivf_flat cagra
                 gpu_qfeatures = cp.array(
                     bcast_qfeatures.value, order="C", dtype="float32"
                 )
 
-                distances, indices = cuvs_algo.search(
-                    cuvs_algo.SearchParams(**search_params),
+                distances, indices = nn_object.search(
+                    nn_object.SearchParams(**search_params),
                     index_obj,
                     gpu_qfeatures,
                     cuml_alg_params["n_neighbors"],
