@@ -1309,6 +1309,7 @@ class ApproximateNearestNeighborsModel(
         ivfflat_index_params: Dict[str, Any] = {"metric": metric}
         ivfflat_search_params: Dict[str, Any] = {}
 
+        # support both cuml names (nlist, nprobe) and cuvs names (n_lists, n_probes)
         if algoParams is not None:
             for p in algoParams:
                 if p in {"n_probes", "nprobe"}:
@@ -1408,21 +1409,15 @@ class ApproximateNearestNeighborsModel(
         }
 
         if cuml_alg_params["algorithm"] == "cagra":
-           if cuml_alg_params["algorithm"] == "cagra":
-              check_fn = self._cal_cagra_params_and_check
-           else:
-              check_fn = self._cal_cagra_params_and_check
-           index_params, search_params = check_fn(...)
-                algoParams=self.cuml_params["algo_params"],
-                metric=self.cuml_params["metric"],
-                topk=cuml_alg_params["n_neighbors"],
-            )
+            check_fn = self._cal_cagra_params_and_check
         elif cuml_alg_params["algorithm"] in {"ivfflat", "ivf_flat"}:
-            index_params, search_params = self._cal_cuvs_ivf_flat_params_and_check(
-                algoParams=self.cuml_params["algo_params"],
-                metric=self.cuml_params["metric"],
-                topk=cuml_alg_params["n_neighbors"],
-            )
+            check_fn = self._cal_cuvs_ivf_flat_params_and_check
+
+        index_params, search_params = check_fn(
+            algoParams=self.cuml_params["algo_params"],
+            metric=self.cuml_params["metric"],
+            topk=cuml_alg_params["n_neighbors"],
+        )
 
         def _construct_sgnn() -> CumlT:
 
