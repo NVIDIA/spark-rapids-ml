@@ -15,6 +15,7 @@
 #
 
 import asyncio
+import inspect
 import math
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
@@ -1301,6 +1302,25 @@ class ApproximateNearestNeighborsModel(
 
         return (cagra_index_params, cagra_search_params)
 
+    @classmethod
+    def _cal_cuvs_ivf_flat_params_and_check(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        ivfflat_index_params: Dict[str, Any] = {"metric": metric}
+        ivfflat_search_params: Dict[str, Any] = {}
+
+        # support both cuml names (nlist, nprobe) and cuvs names (n_lists, n_probes)
+        if algoParams is not None:
+            for p in algoParams:
+                if p in {"n_probes", "nprobe"}:
+                    ivfflat_search_params["n_probes"] = algoParams[p]
+                elif p in {"n_lists", "nlist"}:
+                    ivfflat_index_params["n_lists"] = algoParams[p]
+                else:
+                    ivfflat_index_params[p] = algoParams[p]
+
+        return (ivfflat_index_params, ivfflat_search_params)
+
     def kneighbors(
         self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
     ) -> Tuple[DataFrame, DataFrame, DataFrame]:
@@ -1385,10 +1405,16 @@ class ApproximateNearestNeighborsModel(
             "sqeuclidean",
             "inner_product",
             "l2",
+            "cosine",
         }
 
-        if cuml_alg_params["algorithm"] == "cagra":
-            cagra_index_params, cagra_search_params = self._cal_cagra_params_and_check(
+        if cuml_alg_params["algorithm"] != "ivfpq":
+            check_fn = (
+                self._cal_cagra_params_and_check
+                if cuml_alg_params["algorithm"] == "cagra"
+                else self._cal_cuvs_ivf_flat_params_and_check
+            )
+            index_params, search_params = check_fn(
                 algoParams=self.cuml_params["algo_params"],
                 metric=self.cuml_params["metric"],
                 topk=cuml_alg_params["n_neighbors"],
@@ -1396,7 +1422,7 @@ class ApproximateNearestNeighborsModel(
 
         def _construct_sgnn() -> CumlT:
 
-            if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
+            if cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}:
                 from cuml.neighbors import NearestNeighbors as SGNN
 
                 # Currently 'usePrecomputedTables' is required by cuml cython API, though the value is ignored in C++.
@@ -1410,11 +1436,15 @@ class ApproximateNearestNeighborsModel(
                 nn_object = SGNN(output_type="cupy", **cuml_alg_params)
 
                 return nn_object
+            elif cuml_alg_params["algorithm"] in {"ivfflat" or "ivf_flat"}:
+                from cuvs.neighbors import ivf_flat
+
+                return ivf_flat
             else:
                 assert cuml_alg_params["algorithm"] == "cagra"
                 from cuvs.neighbors import cagra
 
-                return "cagra"
+                return cagra
 
         row_number_col = alias.row_number
         input_col, input_cols = self._get_input_columns()
@@ -1459,17 +1489,23 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object != "cagra":
-                nn_object.fit(item)
-            else:
-                from cuvs.neighbors import cagra
+            from cuml.neighbors import NearestNeighbors as cumlSGNN
+            from cuvs.neighbors import cagra, ivf_flat
 
-                build_params = cagra.IndexParams(**cagra_index_params)
+            if not inspect.ismodule(
+                nn_object
+            ):  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+                nn_object.fit(item)
+            else:  # cuvs ivf_flat or cagra
+                build_params = nn_object.IndexParams(**index_params)
 
                 # cuvs does not take pd.DataFrame as input
                 if isinstance(item, pd.DataFrame):
                     item = cp.array(item.to_numpy(), order="C", dtype="float32")
-                cagra_index_obj = cagra.build(build_params, item)
+                if isinstance(item, np.ndarray):
+                    item = cp.array(item, dtype="float32")
+
+                index_obj = nn_object.build(build_params, item)
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
@@ -1477,16 +1513,18 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            if nn_object != "cagra":
+            if not inspect.ismodule(
+                nn_object
+            ):  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
-            else:
+            else:  # cuvs ivf_flat cagra
                 gpu_qfeatures = cp.array(
                     bcast_qfeatures.value, order="C", dtype="float32"
                 )
 
-                distances, indices = cagra.search(
-                    cagra.SearchParams(**cagra_search_params),
-                    cagra_index_obj,
+                distances, indices = nn_object.search(
+                    nn_object.SearchParams(**search_params),
+                    index_obj,
                     gpu_qfeatures,
                     cuml_alg_params["n_neighbors"],
                 )
@@ -1495,7 +1533,7 @@ class ApproximateNearestNeighborsModel(
 
             # Note cuML kneighbors applys an extra square root on the l2 distances.
             # Here applies square to obtain the actual l2 distances.
-            if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
+            if isinstance(nn_object, cumlSGNN):
                 if (
                     cuml_alg_params["metric"] == "euclidean"
                     or cuml_alg_params["metric"] == "l2"
