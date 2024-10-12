@@ -32,6 +32,7 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     cuml_supported_data_types,
+    get_default_cuml_parameters,
     pyspark_supported_feature_types,
 )
 
@@ -239,37 +240,44 @@ def test_spark_umap_fast(
     assert umap_float32._float32_inputs
 
 
-def test_params(tmp_path: str) -> None:
-    # Default constructor
-    default_cuml_params = {
-        "n_neighbors": 15,
-        "n_components": 2,
-        "metric": "euclidean",
-        "n_epochs": None,
-        "learning_rate": 1.0,
-        "init": "spectral",
-        "min_dist": 0.1,
-        "spread": 1.0,
-        "set_op_mix_ratio": 1.0,
-        "local_connectivity": 1.0,
-        "repulsion_strength": 1.0,
-        "negative_sample_rate": 5,
-        "transform_queue_size": 4.0,
-        "a": None,
-        "b": None,
-        "precomputed_knn": None,
-        "random_state": None,
-        "verbose": False,
-    }
-    default_umap = UMAP()
-    assert_params(default_umap, {}, default_cuml_params)
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(tmp_path: str, default_params: bool) -> None:
+    from cuml import UMAP as cumlUMAP
+
+    cuml_params = get_default_cuml_parameters(
+        [cumlUMAP],
+        [
+            "build_algo",
+            "build_kwds",
+            "callback",
+            "handle",
+            "hash_input",
+            "metric_kwds",
+            "output_type",
+            "target_metric",
+            "target_n_neighbors",
+            "target_weight",
+        ],
+    )
+
+    if default_params:
+        umap = UMAP()
+    else:
+        cuml_params["n_neighbors"] = 12
+        cuml_params["learning_rate"] = 0.9
+        cuml_params["random_state"] = 42
+        umap = UMAP(n_neighbors=12, learning_rate=0.9, random_state=42)
+
+    assert_params(umap, {}, cuml_params)
+    assert umap.cuml_params == cuml_params
 
     # Estimator persistence
     path = tmp_path + "/umap_tests"
     estimator_path = f"{path}/umap"
-    default_umap.write().overwrite().save(estimator_path)
+    umap.write().overwrite().save(estimator_path)
     loaded_umap = UMAP.load(estimator_path)
-    assert_params(loaded_umap, {}, default_cuml_params)
+    assert_params(loaded_umap, {}, cuml_params)
+    assert umap.cuml_params == cuml_params
     assert loaded_umap._float32_inputs
 
     # setter/getter
@@ -371,6 +379,7 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 
     n_rows = 5000
     sample_fraction = 0.5
+    random_state = 42
 
     X, _ = make_blobs(
         n_rows,
@@ -385,15 +394,16 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
         pyspark_type = "float"
         feature_cols = [f"c{i}" for i in range(X.shape[1])]
         schema = [f"{c} {pyspark_type}" for c in feature_cols]
-        df = spark.createDataFrame(X.tolist(), ",".join(schema))
+        df = spark.createDataFrame(X.tolist(), ",".join(schema)).coalesce(1)
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
 
         umap = (
-            UMAP(num_workers=gpu_number, random_state=42)
+            UMAP(num_workers=gpu_number, random_state=random_state)
             .setFeaturesCol("features")
             .setSampleFraction(sample_fraction)
         )
         assert umap.getSampleFraction() == sample_fraction
+        assert umap.getRandomState() == random_state
 
         umap_model = umap.fit(df)
 
@@ -404,6 +414,7 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
             threshold = 2 * np.sqrt(
                 n_rows * sample_fraction * (1 - sample_fraction)
             )  # 2 std devs
+
             assert np.abs(n_rows * sample_fraction - embedding.shape[0]) <= threshold
             assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
             assert model.dtype == "float32"
