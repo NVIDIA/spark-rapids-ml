@@ -502,7 +502,14 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
 class DBSCANClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {}
+        return {
+            "eps": "eps",
+            "min_samples": "min_samples",
+            "metric": "metric",
+            "algorithm": "algorithm",
+            "max_mbytes_per_batch": "max_mbytes_per_batch",
+            "calc_core_sample_indices": "calc_core_sample_indices",
+        }
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -829,6 +836,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
         model._num_workers = self.num_workers
         self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
 
         return model
 
@@ -970,13 +978,7 @@ class DBSCANModel(
             dbscan = CumlDBSCANMG(
                 handle=params[param_alias.handle],
                 output_type="cudf",
-                eps=self.getOrDefault("eps"),
-                min_samples=self.getOrDefault("min_samples"),
-                metric=self.getOrDefault("metric"),
-                algorithm=self.getOrDefault("algorithm"),
-                max_mbytes_per_batch=self.getOrDefault("max_mbytes_per_batch"),
-                calc_core_sample_indices=self.getOrDefault("calc_core_sample_indices"),
-                verbose=self.verbose,
+                **params[param_alias.cuml_init],
             )
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)
