@@ -1454,7 +1454,9 @@ class ApproximateNearestNeighborsModel(
         def _construct_sgnn() -> CumlT:
 
             if cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}:
-                return "ivf_pq"
+                from cuvs.neighbors import ivf_pq
+
+                return ivf_pq
             elif cuml_alg_params["algorithm"] in {"ivfflat" or "ivf_flat"}:
                 from cuvs.neighbors import ivf_flat
 
@@ -1524,7 +1526,7 @@ class ApproximateNearestNeighborsModel(
             if isinstance(item, np.ndarray):
                 item = cp.array(item, dtype="float32")
 
-                index_obj = nn_object.build(build_params, item)
+            index_obj = nn_object.build(build_params, item)
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
