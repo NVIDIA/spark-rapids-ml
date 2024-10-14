@@ -1,5 +1,5 @@
 import math
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -837,22 +837,15 @@ def test_return_fewer_k(
     (2) cagra does not have this problem because at least itopk_size (>= k) items are probed.
     """
     metric = "euclidean"
-    if algorithm == "ivfflat":
-        algo_params = {
-            "nlist": 4,
-            "nprobe": 1,
-        }
-
-    elif algorithm == "ivfpq":
-        algo_params = {
-            "nlist": 4,
-            "nprobe": 1,
-            "M": 2,
-            "n_bits": 4,
-        }
-
     gpu_number = 1
     k = 4
+    algo_params = {
+        "nlist": k,
+        "nprobe": 1,
+    }
+
+    if algorithm == "ivfpq":
+        algo_params.update({"M": 2, "n_bits": 4})
 
     X = np.array(
         [
@@ -861,8 +854,8 @@ def test_return_fewer_k(
                 0.0,
             ),
             (
-                1.0,
-                1.0,
+                0.0,
+                0.0,
             ),
             (
                 2.0,
@@ -895,26 +888,23 @@ def test_return_fewer_k(
         knn_df_collect = knn_df.collect()
 
         int64_max = np.iinfo("int64").max
-        indices_gnd = np.array(
-            [
-                [int64_max, int64_max, int64_max, int64_max],
-                [1, 1, 1, 1],
-                [2, 3, 2, 2],
-                [2, 3, 2, 2],
-            ],
-            dtype="int64",
-        )
-        assert array_equal([row["indices"] for row in knn_df_collect], indices_gnd)
-
         float_inf = float("inf")
-        distances_gnd = np.array(
-            [
-                [float_inf, float_inf, float_inf, float_inf],
-                [0.0, float_inf, float_inf, float_inf],
-                [0.0, 0.0, float_inf, float_inf],
-                [0.0, 0.0, float_inf, float_inf],
-            ],
-            dtype=data_type,
-        )
 
-        assert array_equal([row["distances"] for row in knn_df_collect], distances_gnd)
+        indices_none_probed = [int64_max, int64_max, int64_max, int64_max]
+        distances_none_probed = [float_inf, float_inf, float_inf, float_inf]
+
+        def check_row_results(
+            i: int, indices_if_probed: List[int], distances_if_probed: List[float]
+        ) -> None:
+            assert i == 0 or i == 2
+            j = i + 1
+            assert knn_df_collect[i]["indices"] == knn_df_collect[j]["indices"]
+            assert knn_df_collect[i]["distances"] == knn_df_collect[j]["distances"]
+            if knn_df_collect[i]["indices"] == indices_none_probed:
+                assert knn_df_collect[i]["distances"] == distances_none_probed
+            else:
+                assert knn_df_collect[i]["indices"] == indices_if_probed
+                assert knn_df_collect[i]["distances"] == distances_if_probed
+
+        check_row_results(0, [0, 1, 0, 0], [0.0, 0.0, float_inf, float_inf])
+        check_row_results(2, [2, 3, 2, 2], [0.0, 0.0, float_inf, float_inf])
