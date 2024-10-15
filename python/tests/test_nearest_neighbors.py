@@ -39,8 +39,8 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     spark_params = {}
 
     cuml_params = get_default_cuml_parameters(
-        [CumlNearestNeighbors, NearestNeighborsMG],
-        [
+        cuml_classes=[CumlNearestNeighbors, NearestNeighborsMG],
+        excludes=[
             "handle",
             "algorithm",
             "metric",

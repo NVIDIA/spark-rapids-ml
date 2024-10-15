@@ -75,17 +75,22 @@ def test_params(default_params: bool) -> None:
     }
 
     cuml_params = get_default_cuml_parameters(
-        [CumlKMeans], ["handle", "output_type", "convert_dtype"]
+        cuml_classes=[CumlKMeans], excludes=["handle", "output_type", "convert_dtype"]
     )
 
     # Ensure internal cuml defaults match actual cuml defaults
     assert KMeans()._get_cuml_params_default() == cuml_params
 
-    cuml_params["n_clusters"] = 2  # cuml default gets overriden by spark default = 2
-    cuml_params["max_iter"] = 20  # cuml default gets overriden by spark default = 20
-    cuml_params["init"] = (
-        "k-means||"  # cuml default gets overriden by spark default = 'k-means||'
-    )
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "n_clusters": 2,
+        "max_iter": 20,
+        "init": "k-means||",
+    }
+
+    for param, value in spark_default_overrides.items():
+        if param in cuml_params:
+            cuml_params[param] = value
 
     if default_params:
         kmeans = KMeans()

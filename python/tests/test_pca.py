@@ -59,8 +59,8 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     spark_params = {}
 
     cuml_params = get_default_cuml_parameters(
-        [CumlPCA],
-        [
+        cuml_classes=[CumlPCA],
+        excludes=[
             "copy",
             "handle",
             "iterated_power",

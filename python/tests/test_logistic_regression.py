@@ -186,8 +186,14 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     }
 
     default_cuml_params = get_default_cuml_parameters(
-        [CumlLogisticRegression],
-        ["class_weight", "linesearch_max_iter", "solver", "handle", "output_type"],
+        cuml_classes=[CumlLogisticRegression],
+        excludes=[
+            "class_weight",
+            "linesearch_max_iter",
+            "solver",
+            "handle",
+            "output_type",
+        ],
     )
 
     default_cuml_params["standardization"] = (
@@ -197,21 +203,19 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     # Ensure internal cuml defaults match actual cuml defaults
     assert default_cuml_params == LogisticRegression()._get_cuml_params_default()
 
-    default_cuml_params["tol"] = (
-        1e-6  # cuml default gets overriden by spark default = 1e-6
-    )
-    default_cuml_params["max_iter"] = (
-        100  # cuml default gets overriden by spark default = 100
-    )
-    default_cuml_params["standardization"] = (
-        True  # cuml default gets overriden by spark default = True
-    )
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "tol": 1e-6,
+        "max_iter": 100,
+        "standardization": True,
+        "penalty": None,  # set to None when reg_param == 0.0
+        "C": 0.0,  # set to 0.0 when reg_param == 0.0
+        "l1_ratio": 0.0,  # set to elasticNetParam (default = 0.0) when reg_param == 0.0
+    }
 
-    default_cuml_params["penalty"] = None  # set to None when reg_param == 0.0
-    default_cuml_params["C"] = 0.0  # set to 0.0 when reg_param == 0.0
-    default_cuml_params["l1_ratio"] = (
-        0.0  # set to elasticNetParam (default = 0.0) when reg_param == 0.0
-    )
+    for param, value in spark_default_overrides.items():
+        if param in default_cuml_params:
+            default_cuml_params[param] = value
 
     default_lr = LogisticRegression()
 

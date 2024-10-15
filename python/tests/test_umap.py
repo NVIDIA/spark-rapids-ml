@@ -245,8 +245,8 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     from cuml import UMAP as cumlUMAP
 
     cuml_params = get_default_cuml_parameters(
-        [cumlUMAP],
-        [
+        cuml_classes=[cumlUMAP],
+        excludes=[
             "build_algo",
             "build_kwds",
             "callback",

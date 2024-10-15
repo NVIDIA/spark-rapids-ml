@@ -112,7 +112,7 @@ def test_params(default_params: bool, Estimator: RandomForest) -> None:
         "maxDepth": 5,
         "maxBins": 32,
         "minInstancesPerNode": 1,
-        "impurity": "gini",
+        "impurity": "gini" if Estimator == RandomForestClassifier else "variance",
         "numTrees": 20,
         "featureSubsetStrategy": "auto",
         "bootstrap": True,
@@ -124,8 +124,8 @@ def test_params(default_params: bool, Estimator: RandomForest) -> None:
     }
 
     cuml_params = get_default_cuml_parameters(
-        [BaseRandomForestModel],
-        [
+        cuml_classes=[BaseRandomForestModel],
+        excludes=[
             "handle",
             "output_type",
             "accuracy_metric",
@@ -141,30 +141,26 @@ def test_params(default_params: bool, Estimator: RandomForest) -> None:
         ],
     )
 
-    if Estimator == RandomForestRegressor:
-        spark_params["impurity"] = "variance"
-
     # Ensure internal cuml defaults match actual cuml defaults
     assert cuml_params == Estimator()._get_cuml_params_default()
 
-    cuml_params["n_streams"] = (
-        1  # change cuml default 'n_streams' which is overridden by spark default 1
-    )
-    cuml_params["n_estimators"] = (
-        20  # change cuml default 'n_estimators' which is overridden by spark default 20
-    )
-    cuml_params["max_depth"] = (
-        5  # change cuml default 'max_depth' which is overridden by spark default 5
-    )
-    cuml_params["n_bins"] = (
-        32  # change cuml default 'n_bins' which is overridden by spark default 32
-    )
-    cuml_params["max_features"] = (
-        "auto"  # change cuml default 'max_features' which is overridden by spark default 'auto'
-    )
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "n_streams": 1,
+        "n_estimators": 20,
+        "max_depth": 5,
+        "n_bins": 32,
+        "max_features": "auto",
+    }
+
+    for param, value in spark_default_overrides.items():
+        if param in cuml_params:
+            cuml_params[param] = value
+
+    # split_criterion is handled specially: the default value is set manually by cuML, so it isn't retrieved when inspected with get_default_cuml_parameters. add it manually.
     cuml_params["split_criterion"] = (
         "gini" if Estimator == RandomForestClassifier else "mse"
-    )  # change cuml default 'split_criterion' which is overridden by spark default 'gini' or 'mse'
+    )
 
     if default_params:
         est = Estimator()

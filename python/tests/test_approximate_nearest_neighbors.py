@@ -64,8 +64,8 @@ def test_params(default_params: bool) -> None:
 
     # obtain n_neighbors, verbose, algorithm, algo_params, metric
     cuml_params = get_default_cuml_parameters(
-        [CumlNearestNeighbors],
-        [
+        cuml_classes=[CumlNearestNeighbors],
+        excludes=[
             "handle",
             "p",
             "metric_expanded",

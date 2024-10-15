@@ -117,19 +117,25 @@ def test_params(default_params: bool) -> None:
     }
 
     cuml_params = get_default_cuml_parameters(
-        [CumlLinearRegression, Ridge, CD], ["handle", "output_type"]
+        cuml_classes=[CumlLinearRegression, Ridge, CD],
+        excludes=["handle", "output_type"],
     )
 
     # Ensure internal cuml defaults match actual cuml defaults
     assert cuml_params == LinearRegression()._get_cuml_params_default()
 
-    cuml_params["alpha"] = 0.0  # cuml default gets overriden by spark default = 0.0
-    cuml_params["l1_ratio"] = 0.0  # cuml default gets overriden by spark default = 0.0
-    cuml_params["max_iter"] = 100  # cuml default gets overriden by spark default = 100
-    cuml_params["normalize"] = (
-        True  # cuml default gets overriden by spark default = True
-    )
-    cuml_params["tol"] = 1e-06  # cuml default gets overriden by spark default = 1e-06
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "alpha": 0.0,
+        "l1_ratio": 0.0,
+        "max_iter": 100,
+        "normalize": True,
+        "tol": 1e-06,
+    }
+
+    for param, value in spark_default_overrides.items():
+        if param in cuml_params:
+            cuml_params[param] = value
 
     if default_params:
         lr = LinearRegression()

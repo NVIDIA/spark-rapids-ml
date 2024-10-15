@@ -63,8 +63,8 @@ def test_params(
     from cuml import DBSCAN as cumlDBSCAN
 
     cuml_params = get_default_cuml_parameters(
-        [cumlDBSCAN],
-        [
+        cuml_classes=[cumlDBSCAN],
+        excludes=[
             "handle",
             "output_type",
         ],
