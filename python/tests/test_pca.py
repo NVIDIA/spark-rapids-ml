@@ -52,8 +52,11 @@ PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
 PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 
 
-def test_params(caplog: LogCaptureFixture) -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     from cuml import PCA as CumlPCA
+
+    spark_params = {}
 
     cuml_params = get_default_cuml_parameters(
         [CumlPCA],
@@ -66,8 +69,24 @@ def test_params(caplog: LogCaptureFixture) -> None:
             "tol",
         ],
     )
-    spark_params = PCA()._get_cuml_params_default()
-    assert cuml_params == spark_params
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert cuml_params == PCA()._get_cuml_params_default()
+
+    if default_params:
+        pca = PCA()
+    else:
+        pca = PCA(
+            n_components=4,
+            whiten=True,
+        )
+        cuml_params["n_components"] = 4
+        cuml_params["whiten"] = True
+        spark_params["k"] = 4
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(pca, spark_params, cuml_params)
+    assert cuml_params == pca.cuml_params
 
     # make sure no warning when enabling float64 inputs
     pca_float32 = PCA(float32_inputs=False)

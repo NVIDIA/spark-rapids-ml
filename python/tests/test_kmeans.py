@@ -63,14 +63,47 @@ def assert_centers_equal(
         assert a_center == pytest.approx(b_center, tolerance)
 
 
-def test_params() -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool) -> None:
     from cuml import KMeans as CumlKMeans
+
+    spark_params = {
+        "k": 2,
+        "initMode": "k-means||",
+        "tol": 0.0001,
+        "maxIter": 20,
+    }
 
     cuml_params = get_default_cuml_parameters(
         [CumlKMeans], ["handle", "output_type", "convert_dtype"]
     )
-    spark_params = KMeans()._get_cuml_params_default()
-    assert cuml_params == spark_params
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert KMeans()._get_cuml_params_default() == cuml_params
+
+    cuml_params["n_clusters"] = 2  # cuml default gets overriden by spark default = 2
+    cuml_params["max_iter"] = 20  # cuml default gets overriden by spark default = 20
+    cuml_params["init"] = (
+        "k-means||"  # cuml default gets overriden by spark default = 'k-means||'
+    )
+
+    if default_params:
+        kmeans = KMeans()
+        seed = kmeans.getSeed()  # get the random seed that Spark generates
+        cuml_params["random_state"] = seed
+    else:
+        kmeans = KMeans(
+            n_clusters=10,
+            random_state=42,
+        )
+        cuml_params["n_clusters"] = 10
+        cuml_params["random_state"] = 42
+        spark_params["k"] = 10
+        spark_params["seed"] = 42
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(kmeans, spark_params, cuml_params)
+    assert kmeans.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter

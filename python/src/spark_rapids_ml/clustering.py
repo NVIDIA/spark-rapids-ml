@@ -179,17 +179,17 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
 
     Parameters
     ----------
-    k: int (default = 8)
+    k: int (default = 2)
         the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.
 
     initMode: str (default = "k-means||")
         the algorithm to select initial centroids. It can be "k-means||" or "random".
 
-    maxIter: int (default = 300)
+    maxIter: int (default = 20)
         the maximum iterations the algorithm will run to learn the k centers.
         More iterations help generate more accurate centers.
 
-    seed: int (default = 1)
+    seed: int (default = None)
         the random seed used by the algorithm to initialize a set of k random centers to start with.
 
     tol: float (default = 1e-4)
@@ -502,14 +502,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
 class DBSCANClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
-            "eps": "eps",
-            "min_samples": "min_samples",
-            "metric": "metric",
-            "algorithm": "algorithm",
-            "max_mbytes_per_batch": "max_mbytes_per_batch",
-            "calc_core_sample_indices": "calc_core_sample_indices",
-        }
+        return {}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -519,7 +512,7 @@ class DBSCANClass(_CumlClass):
             "algorithm": "brute",
             "verbose": False,
             "max_mbytes_per_batch": None,
-            "calc_core_sample_indices": False,
+            "calc_core_sample_indices": True,
         }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
@@ -652,12 +645,12 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
     Parameters
     ----------
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
 
-    predictionCol: str
+    predictionCol: str (default = "prediction")
         the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
 
     num_workers:

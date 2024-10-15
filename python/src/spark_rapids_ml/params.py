@@ -291,7 +291,6 @@ class _CumlParams(_CumlClass, Params):
         """
         Set the default values of cuML parameters to match their Spark equivalents.
         """
-        print("_initialize_cuml_params called !!!")
         # initialize cuml_params with defaults from cuML
         self._cuml_params = self._get_cuml_params_default()
 
@@ -300,7 +299,6 @@ class _CumlParams(_CumlClass, Params):
 
         for spark_param in param_map.keys():
             if self.hasDefault(spark_param):
-                print(f"_initialize_cuml_params: calling _set_cuml_param({spark_param}, {self.getOrDefault(spark_param)})")
                 self._set_cuml_param(spark_param, self.getOrDefault(spark_param))
 
     def _set_params(self: P, **kwargs: Any) -> P:
@@ -308,7 +306,6 @@ class _CumlParams(_CumlClass, Params):
         Set the kwargs as Spark ML Params and/or cuML parameters, while maintaining parameter
         and value mappings defined by the _CumlClass.
         """
-        print("_set_params called with param_map: ", self._param_mapping())
         param_map = self._param_mapping()
 
         # raise error if setting both sides of a param mapping
@@ -334,18 +331,10 @@ class _CumlParams(_CumlClass, Params):
                 elif isinstance(v, List):
                     self._set(**{"featuresCols": v})
             elif self.hasParam(k):
-                # Param is declared as a Spark Param
+                # Param is declared as a Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
-                if k in self.cuml_params:
-                    # cuML param codeclared as Spark param (i.e., for algos w/out Spark equivalents)
-                    print(f"_set_params: hasParams({k}) and {k} in self.cuml_params both True. Setting self._cuml_params[{k}] = {v}")
-                    self._cuml_params[k] = v
-                else:
-                    # Standard Spark ML param; update corresponding cuML param if mapped
-                    print(f"_set_params: hasParams({k}) is True, but {k} not in self.cuml_params. Calling _set_cuml_param({k}, {v})")
-                    self._set_cuml_param(k, v, silent=False)
+                self._set_cuml_param(k, v, silent=False)
             elif k in self.cuml_params:
-                print(f"_set_params: {k} in self.cuml_params is True. Setting self._cuml_params[{k}] = {v}")
                 # cuml param
                 self._cuml_params[k] = v
                 for spark_param, cuml_param in param_map.items():
@@ -473,11 +462,9 @@ class _CumlParams(_CumlClass, Params):
         return num_workers
 
     def _get_cuml_param(self, spark_param: str, silent: bool = True) -> Optional[str]:
-        print(f"_get_cuml_param: param_map is {self._param_mapping()}")
         param_map = self._param_mapping()
 
         if spark_param in param_map:
-            print(f"_get_cuml_param: param_map contains {spark_param}")
             cuml_param = param_map[spark_param]
             if cuml_param is None:
                 if not silent:
@@ -499,6 +486,8 @@ class _CumlParams(_CumlClass, Params):
         self, spark_param: str, spark_value: Any, silent: bool = True
     ) -> None:
         """Set a cuml_params parameter for a given Spark Param and value.
+        The Spark Param may be a cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents),
+        in which case we recover the cuML param and set it.
 
         Parameters
         ----------
@@ -514,16 +503,15 @@ class _CumlParams(_CumlClass, Params):
         ValueError
             If the Spark Param is explictly not supported.
         """
-        print(f"_set_cuml_param: calling _get_cuml_param({spark_param}, silent={silent})")
 
         cuml_param = self._get_cuml_param(spark_param, silent)
-
-        print(f"_set_cuml_param: _get_cuml_param returned {cuml_param}")
+        if cuml_param is None and spark_param in self.cuml_params:
+            # cuML param is codeclared as Spark param (e.g., for algos w/out Spark equivalents); recover it.
+            cuml_param = spark_param
 
         if cuml_param is not None:
             # if Spark Param is mapped to cuML parameter, set cuml_params
             try:
-                print(f"_set_cuml_param: calling _set_cuml_value({cuml_param}, {spark_value})\n")
                 self._set_cuml_value(cuml_param, spark_value)
             except ValueError:
                 # create more informative message

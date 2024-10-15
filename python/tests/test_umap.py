@@ -260,6 +260,9 @@ def test_params(tmp_path: str, default_params: bool) -> None:
         ],
     )
 
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert UMAP()._get_cuml_params_default() == cuml_params
+
     if default_params:
         umap = UMAP()
     else:
@@ -268,7 +271,8 @@ def test_params(tmp_path: str, default_params: bool) -> None:
         cuml_params["random_state"] = 42
         umap = UMAP(n_neighbors=12, learning_rate=0.9, random_state=42)
 
-    assert_params(umap, {}, cuml_params)
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(instance=umap, spark_params={}, cuml_params=cuml_params)
     assert umap.cuml_params == cuml_params
 
     # Estimator persistence

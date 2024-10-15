@@ -57,7 +57,8 @@ def test_default_cuml_params() -> None:
 
 @pytest.mark.parametrize("default_params", [True, False])
 def test_params(
-    gpu_number: int, default_params: bool, tmp_path: str, caplog: LogCaptureFixture
+    default_params: bool,
+    tmp_path: str,
 ) -> None:
     from cuml import DBSCAN as cumlDBSCAN
 
@@ -69,6 +70,9 @@ def test_params(
         ],
     )
 
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert DBSCAN()._get_cuml_params_default() == cuml_params
+
     if default_params:
         dbscan = DBSCAN()
     else:
@@ -79,7 +83,8 @@ def test_params(
             min_samples=4,
         )
 
-    assert_params(dbscan, {}, cuml_params)
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(instance=dbscan, spark_params={}, cuml_params=cuml_params)
     assert dbscan.cuml_params == cuml_params
 
     # Estimator persistence

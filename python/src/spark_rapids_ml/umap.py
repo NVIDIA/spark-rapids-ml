@@ -90,25 +90,7 @@ if TYPE_CHECKING:
 class UMAPClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
-            "n_neighbors": "n_neighbors",
-            "n_components": "n_components",
-            "metric": "metric",
-            "n_epochs": "n_epochs",
-            "learning_rate": "learning_rate",
-            "init": "init",
-            "min_dist": "min_dist",
-            "spread": "spread",
-            "set_op_mix_ratio": "set_op_mix_ratio",
-            "local_connectivity": "local_connectivity",
-            "repulsion_strength": "repulsion_strength",
-            "negative_sample_rate": "negative_sample_rate",
-            "transform_queue_size": "transform_queue_size",
-            "a": "a",
-            "b": "b",
-            "precomputed_knn": "precomputed_knn",
-            "random_state": "random_state",
-        }
+        return {}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {

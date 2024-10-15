@@ -55,6 +55,7 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     make_classification_dataset,
 )
@@ -172,6 +173,8 @@ def test_toy_example(gpu_number: int) -> None:
 
 
 def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
+    from cuml import LogisticRegression as CumlLogisticRegression
+
     # Default params: no regularization
     default_spark_params = {
         "maxIter": 100,
@@ -182,19 +185,38 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "standardization": True,
     }
 
-    default_cuml_params: Dict[str, Any] = {
-        "max_iter": 100,
-        "penalty": None,
-        "C": 0.0,
-        "l1_ratio": 0.0,
-        "tol": 1e-6,
-        "fit_intercept": True,
-        "standardization": True,
-    }
+    default_cuml_params = get_default_cuml_parameters(
+        [CumlLogisticRegression],
+        ["class_weight", "linesearch_max_iter", "solver", "handle", "output_type"],
+    )
+
+    default_cuml_params["standardization"] = (
+        False  # Standardization param exists in LogisticRegressionMG (default = False) but not in SG, and we support it. Add it in manually for this check.
+    )
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert default_cuml_params == LogisticRegression()._get_cuml_params_default()
+
+    default_cuml_params["tol"] = (
+        1e-6  # cuml default gets overriden by spark default = 1e-6
+    )
+    default_cuml_params["max_iter"] = (
+        100  # cuml default gets overriden by spark default = 100
+    )
+    default_cuml_params["standardization"] = (
+        True  # cuml default gets overriden by spark default = True
+    )
+
+    default_cuml_params["penalty"] = None  # set to None when reg_param == 0.0
+    default_cuml_params["C"] = 0.0  # set to 0.0 when reg_param == 0.0
+    default_cuml_params["l1_ratio"] = (
+        0.0  # set to elasticNetParam (default = 0.0) when reg_param == 0.0
+    )
 
     default_lr = LogisticRegression()
 
     assert_params(default_lr, default_spark_params, default_cuml_params)
+    assert default_lr.cuml_params == default_cuml_params
 
     # L2 regularization
     spark_params: Dict[str, Any] = {
@@ -222,6 +244,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+    assert spark_lr.cuml_params == expected_cuml_params
 
     # L1 regularization
     spark_params = {
@@ -249,6 +272,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+    assert spark_lr.cuml_params == expected_cuml_params
 
     # elasticnet(L1 + L2) regularization
     spark_params = {
