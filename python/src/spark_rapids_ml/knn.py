@@ -1520,13 +1520,13 @@ class ApproximateNearestNeighborsModel(
             else:  # cuvs ivf_flat or cagra
                 build_params = nn_object.IndexParams(**index_params)
 
-            # cuvs does not take pd.DataFrame as input
-            if isinstance(item, pd.DataFrame):
-                item = cp.array(item.to_numpy(), order="C", dtype="float32")
-            if isinstance(item, np.ndarray):
-                item = cp.array(item, dtype="float32")
+                # cuvs does not take pd.DataFrame as input
+                if isinstance(item, pd.DataFrame):
+                    item = cp.array(item.to_numpy(), order="C", dtype="float32")
+                if isinstance(item, np.ndarray):
+                    item = cp.array(item, dtype="float32")
 
-            index_obj = nn_object.build(build_params, item)
+                index_obj = nn_object.build(build_params, item)
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
