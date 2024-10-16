@@ -89,7 +89,7 @@ def create_pyspark_dataframe(
     # in case cp.ndarray get passed in
     if not isinstance(data, np.ndarray):
         data = data.get()
-    if label and not isinstance(label, np.ndarray):
+    if label is not None and not isinstance(label, np.ndarray):
         label = label.get()
 
     m, n = data.shape
