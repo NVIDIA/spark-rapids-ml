@@ -86,6 +86,12 @@ def create_pyspark_dataframe(
     """Construct a dataframe based on features and label data."""
     assert feature_type in pyspark_supported_feature_types
 
+    # in case cp.ndarray get passed in
+    if not isinstance(data, np.ndarray):
+        data = data.get()
+    if label and not isinstance(label, np.ndarray):
+        label = label.get()
+
     m, n = data.shape
 
     pyspark_type = dtype_to_pyspark_type(dtype)
