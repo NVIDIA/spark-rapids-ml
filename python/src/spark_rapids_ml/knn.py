@@ -923,6 +923,12 @@ class ApproximateNearestNeighbors(
     k: int (default = 5)
         the default number of approximate nearest neighbors to retrieve for each query.
 
+        If fewer than k neighbors are found for a query (for example, due to a small nprobe value):
+        (1)In ivfflat and ivfpq:
+            (a) If no item vector is probed, the indices are filled with long_max (9,223,372,036,854,775,807) and distances are set to infinity.
+            (b) If at least one item vector is probed, the indices are filled with the top-1 neighbor's ID, and distances are filled with infinity.
+        (2) cagra does not have this problem, as at least itopk_size (where itopk_size ≥ k) items are always probed.
+
     algorithm: str (default = 'ivfflat')
         the algorithm parameter to be passed into cuML. It currently must be 'ivfflat', 'ivfpq' or 'cagra'. Other algorithms are expected to be supported later.
 
@@ -1432,24 +1438,19 @@ class ApproximateNearestNeighborsModel(
             "cosine",
         }
 
-        if cuml_alg_params["algorithm"] != "ivfpq":
-            check_fn = (
-                self._cal_cagra_params_and_check
-                if cuml_alg_params["algorithm"] == "cagra"
-                else self._cal_cuvs_ivf_flat_params_and_check
-            )
-            index_params, search_params = check_fn(
-                algoParams=self.cuml_params["algo_params"],
-                metric=self.cuml_params["metric"],
-                topk=cuml_alg_params["n_neighbors"],
-            )
+        if cuml_alg_params["algorithm"] == "cagra":
+            check_fn = self._cal_cagra_params_and_check
+        elif cuml_alg_params["algorithm"] in {"ivf_flat", "ivfflat"}:
+            check_fn = self._cal_cuvs_ivf_flat_params_and_check
         else:
-            assert cuml_alg_params["algorithm"] in {"ivfpq", "ivf_pq"}
-            index_params, search_params = self._cal_cuvs_ivf_pq_params_and_check(
-                algoParams=self.cuml_params["algo_params"],
-                metric=self.cuml_params["metric"],
-                topk=cuml_alg_params["n_neighbors"],
-            )
+            assert cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}
+            check_fn = self._cal_cuvs_ivf_pq_params_and_check
+
+        index_params, search_params = check_fn(
+            algoParams=self.cuml_params["algo_params"],
+            metric=self.cuml_params["metric"],
+            topk=cuml_alg_params["n_neighbors"],
+        )
 
         def _construct_sgnn() -> CumlT:
 

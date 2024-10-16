@@ -831,10 +831,7 @@ def test_return_fewer_k(
 ) -> None:
     """
     This tests the corner case where there are less than k neighbors found due to nprobe too small.
-    (1) In ivf_flat and ivf_pq:
-        (a) if no nn is probed, indices are filled with long_max and distances are filled infs.
-        (b) if at least one nn is probed, indices are filled with the top-1 nn id and distances are filled with infs.
-    (2) cagra does not have this problem because at least itopk_size (>= k) items are probed.
+    More details can be found at the docstring of class ApproximateNearestNeighbors.
     """
     metric = "euclidean"
     gpu_number = 1

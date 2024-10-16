@@ -19,6 +19,7 @@ from functools import lru_cache
 from typing import Any, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
+import pandas as pd
 import pyspark
 from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import SparkSession
@@ -99,11 +100,11 @@ def create_pyspark_dataframe(
 
         label_col = "label_col"
         schema.append(f"{label_col} {label_pyspark_type}")
-        data_pytype = [
-            ra + rb for ra, rb in zip(data.tolist(), label.reshape(m, 1).tolist())
-        ]
+
+        pdf = pd.DataFrame(data, dtype=dtype, columns=feature_cols)
+        pdf[label_col] = label.astype(label_dtype)
         df = spark.createDataFrame(
-            data_pytype,
+            pdf,
             ",".join(schema),
         )
     else:
