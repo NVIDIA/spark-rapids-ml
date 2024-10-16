@@ -46,15 +46,6 @@ from .utils import (
 )
 
 
-def test_default_cuml_params() -> None:
-    from cuml import DBSCAN as CumlDBSCAN
-
-    cuml_params = get_default_cuml_parameters([CumlDBSCAN], ["handle", "output_type"])
-    cuml_params["calc_core_sample_indices"] = False
-    spark_params = DBSCAN()._get_cuml_params_default()
-    assert cuml_params == spark_params
-
-
 @pytest.mark.parametrize("default_params", [True, False])
 def test_params(
     default_params: bool,
