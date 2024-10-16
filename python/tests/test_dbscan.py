@@ -84,7 +84,7 @@ def test_params(
             "min_samples": 4,
             "calc_core_sample_indices": True,
         }
-        dbscan = DBSCAN(**nondefault_params)
+        dbscan = DBSCAN(**nondefault_params)  # type: ignore
         cuml_params.update(nondefault_params)
         spark_params.update(nondefault_params)
 

@@ -15,7 +15,7 @@
 #
 
 import math
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import cupy as cp
 import numpy as np
@@ -292,7 +292,7 @@ def test_params(tmp_path: str, default_params: bool) -> None:
             "learning_rate": 0.9,
             "random_state": 42,
         }
-        umap = UMAP(**nondefault_params)
+        umap = UMAP(**nondefault_params)  # type: ignore
         cuml_params.update(nondefault_params)
         spark_params.update(nondefault_params)
 
