@@ -59,7 +59,6 @@ def test_params(
         "metric": "euclidean",
         "algorithm": "brute",
         "max_mbytes_per_batch": None,
-        "calc_core_sample_indices": False,
     }
 
     cuml_params = get_default_cuml_parameters(
@@ -67,26 +66,29 @@ def test_params(
         excludes=[
             "handle",
             "output_type",
+            "calc_core_sample_indices",
         ],
     )
 
     # Ensure internal cuml defaults match actual cuml defaults
     assert DBSCAN()._get_cuml_params_default() == cuml_params
 
-    # Override the calc_core_sample_indices default to False
-    cuml_params["calc_core_sample_indices"] = False
+    with pytest.raises(ValueError, match="Unsupported param 'calc_core_sample_indices'"):
+        dbscan_dummy = DBSCAN(calc_core_sample_indices=True)
 
     if default_params:
         dbscan = DBSCAN()
     else:
         nondefault_params = {
             "eps": 0.4,
+            "metric": "cosine",
             "min_samples": 4,
-            "calc_core_sample_indices": True,
         }
         dbscan = DBSCAN(**nondefault_params)  # type: ignore
         cuml_params.update(nondefault_params)
         spark_params.update(nondefault_params)
+    
+    cuml_params["calc_core_sample_indices"] = False # we override this param to False internally
 
     # Ensure both Spark API params and internal cuml_params are set correctly
     assert_params(dbscan, spark_params, cuml_params)

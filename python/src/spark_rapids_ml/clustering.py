@@ -502,9 +502,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
 class DBSCANClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
-            "calc_core_sample_indices": "calc_core_sample_indices",  # we override default to False
-        }
+        return {}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -514,7 +512,6 @@ class DBSCANClass(_CumlClass):
             "algorithm": "brute",
             "verbose": False,
             "max_mbytes_per_batch": None,
-            "calc_core_sample_indices": True,
         }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
@@ -530,7 +527,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             metric="euclidean",
             algorithm="brute",
             max_mbytes_per_batch=None,
-            calc_core_sample_indices=False,
             idCol=alias.row_number,
         )
 
@@ -578,16 +574,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             f"If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device."
         ),
         typeConverter=TypeConverters.toInt,
-    )
-
-    calc_core_sample_indices = Param(
-        Params._dummy(),
-        "calc_core_sample_indices",
-        (
-            f"Indicates whether the indices of the core samples should be calculated."
-            f"Setting this to False will avoid unnecessary kernel launches"
-        ),
-        typeConverter=TypeConverters.toBoolean,
     )
 
     idCol = Param(
@@ -689,13 +675,11 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         This enables the trade-off between runtime and memory usage for making the N^2 pairwise distance computations more tractable for large numbers of samples.
         If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device.
 
-    calc_core_sample_indices(optional): boolean (default = True)
-        Indicates whether the indices of the core samples should be calculated.
-        Setting this to False will avoid unnecessary kernel launches
-
     idCol: str (default = 'unique_id')
         The internal unique id column name for label matching, will not reveal in the output.
         Need to be set to a name that does not conflict with an existing column name in the original input data.
+
+    Note: We currently do not support calculating and storing the indices of the core samples via the parameter calc_core_sample_indices=True. 
 
     Examples
     ----------
@@ -767,7 +751,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         metric: str = "euclidean",
         algorithm: str = "brute",
         max_mbytes_per_batch: Optional[int] = None,
-        calc_core_sample_indices: bool = False,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
@@ -780,8 +763,8 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         assert max_records_per_batch_str is not None
         self.max_records_per_batch = int(max_records_per_batch_str)
         self.BROADCAST_LIMIT = 8 << 30
-
         self.verbose = verbose
+        self.cuml_params["calc_core_sample_indices"] = False # currently not supported
 
     def setEps(self: P, value: float) -> P:
         return self._set_params(eps=value)
@@ -812,12 +795,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
     def getMaxMbytesPerBatch(self) -> Optional[int]:
         return self.getOrDefault("max_mbytes_per_batch")
-
-    def setCalcCoreSampleIndices(self: P, value: bool) -> P:
-        return self._set_params(calc_core_sample_indices=value)
-
-    def getCalcCoreSampleIndices(self) -> bool:
-        return self.getOrDefault("calc_core_sample_indices")
 
     def _fit(self, dataset: DataFrame) -> _CumlModel:
         if self.getMetric() == "precomputed":
