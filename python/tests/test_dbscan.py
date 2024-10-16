@@ -73,7 +73,9 @@ def test_params(
     # Ensure internal cuml defaults match actual cuml defaults
     assert DBSCAN()._get_cuml_params_default() == cuml_params
 
-    with pytest.raises(ValueError, match="Unsupported param 'calc_core_sample_indices'"):
+    with pytest.raises(
+        ValueError, match="Unsupported param 'calc_core_sample_indices'"
+    ):
         dbscan_dummy = DBSCAN(calc_core_sample_indices=True)
 
     if default_params:
@@ -87,8 +89,10 @@ def test_params(
         dbscan = DBSCAN(**nondefault_params)  # type: ignore
         cuml_params.update(nondefault_params)
         spark_params.update(nondefault_params)
-    
-    cuml_params["calc_core_sample_indices"] = False # we override this param to False internally
+
+    cuml_params["calc_core_sample_indices"] = (
+        False  # we override this param to False internally
+    )
 
     # Ensure both Spark API params and internal cuml_params are set correctly
     assert_params(dbscan, spark_params, cuml_params)

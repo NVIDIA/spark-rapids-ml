@@ -679,7 +679,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         The internal unique id column name for label matching, will not reveal in the output.
         Need to be set to a name that does not conflict with an existing column name in the original input data.
 
-    Note: We currently do not support calculating and storing the indices of the core samples via the parameter calc_core_sample_indices=True. 
+    Note: We currently do not support calculating and storing the indices of the core samples via the parameter calc_core_sample_indices=True.
 
     Examples
     ----------
@@ -764,7 +764,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         self.max_records_per_batch = int(max_records_per_batch_str)
         self.BROADCAST_LIMIT = 8 << 30
         self.verbose = verbose
-        self.cuml_params["calc_core_sample_indices"] = False # currently not supported
+        self.cuml_params["calc_core_sample_indices"] = False  # currently not supported
 
     def setEps(self: P, value: float) -> P:
         return self._set_params(eps=value)
