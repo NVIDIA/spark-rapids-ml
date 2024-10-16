@@ -502,7 +502,9 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
 class DBSCANClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {}
+        return {
+            "calc_core_sample_indices": "calc_core_sample_indices",  # we override default to False
+        }
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
@@ -528,7 +530,7 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             metric="euclidean",
             algorithm="brute",
             max_mbytes_per_batch=None,
-            calc_core_sample_indices=True,
+            calc_core_sample_indices=False,
             idCol=alias.row_number,
         )
 
@@ -765,7 +767,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         metric: str = "euclidean",
         algorithm: str = "brute",
         max_mbytes_per_batch: Optional[int] = None,
-        calc_core_sample_indices: bool = True,
+        calc_core_sample_indices: bool = False,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:

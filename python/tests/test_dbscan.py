@@ -53,6 +53,15 @@ def test_params(
 ) -> None:
     from cuml import DBSCAN as cumlDBSCAN
 
+    spark_params = {
+        "eps": 0.5,
+        "min_samples": 5,
+        "metric": "euclidean",
+        "algorithm": "brute",
+        "max_mbytes_per_batch": None,
+        "calc_core_sample_indices": False,
+    }
+
     cuml_params = get_default_cuml_parameters(
         cuml_classes=[cumlDBSCAN],
         excludes=[
@@ -64,18 +73,23 @@ def test_params(
     # Ensure internal cuml defaults match actual cuml defaults
     assert DBSCAN()._get_cuml_params_default() == cuml_params
 
+    # Override the calc_core_sample_indices default to False
+    cuml_params["calc_core_sample_indices"] = False
+
     if default_params:
         dbscan = DBSCAN()
     else:
-        cuml_params["eps"] = 0.4
-        cuml_params["min_samples"] = 4
-        dbscan = DBSCAN(
-            eps=0.4,
-            min_samples=4,
-        )
+        nondefault_params = {
+            "eps": 0.4,
+            "min_samples": 4,
+            "calc_core_sample_indices": True,
+        }
+        dbscan = DBSCAN(**nondefault_params)
+        cuml_params.update(nondefault_params)
+        spark_params.update(nondefault_params)
 
     # Ensure both Spark API params and internal cuml_params are set correctly
-    assert_params(instance=dbscan, spark_params={}, cuml_params=cuml_params)
+    assert_params(dbscan, spark_params, cuml_params)
     assert dbscan.cuml_params == cuml_params
 
     # Estimator persistence
@@ -83,7 +97,7 @@ def test_params(
     estimator_path = f"{path}/dbscan"
     dbscan.write().overwrite().save(estimator_path)
     loaded_dbscan = DBSCAN.load(estimator_path)
-    assert_params(loaded_dbscan, {}, cuml_params)
+    assert_params(loaded_dbscan, spark_params, cuml_params)
     assert loaded_dbscan.cuml_params == cuml_params
 
     # setter/getter

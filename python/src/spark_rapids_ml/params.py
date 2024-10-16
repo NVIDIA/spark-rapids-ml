@@ -145,6 +145,9 @@ class _CumlClass(object):
         - empty string, if a defined Spark Param should just be silently ignored, or
         - None, if a defined Spark Param should raise an error.
 
+        For algorithms without a Spark equivalent, the mapping can be left empty, with the exception
+        of parameters for which we override the cuML default value with our own (e.g. see DBSCAN).
+
         Note: standard Spark column Params, e.g. inputCol, featureCol, etc, should not be listed
         in this mapping, since they are handled differently.
 

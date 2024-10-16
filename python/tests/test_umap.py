@@ -244,6 +244,27 @@ def test_spark_umap_fast(
 def test_params(tmp_path: str, default_params: bool) -> None:
     from cuml import UMAP as cumlUMAP
 
+    spark_params = {
+        "n_neighbors": 15,
+        "n_components": 2,
+        "metric": "euclidean",
+        "n_epochs": None,
+        "learning_rate": 1.0,
+        "init": "spectral",
+        "min_dist": 0.1,
+        "spread": 1.0,
+        "set_op_mix_ratio": 1.0,
+        "local_connectivity": 1.0,
+        "repulsion_strength": 1.0,
+        "negative_sample_rate": 5,
+        "transform_queue_size": 4.0,
+        "a": None,
+        "b": None,
+        "precomputed_knn": None,
+        "random_state": None,
+        "verbose": False,
+    }
+
     cuml_params = get_default_cuml_parameters(
         cuml_classes=[cumlUMAP],
         excludes=[
@@ -266,13 +287,17 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     if default_params:
         umap = UMAP()
     else:
-        cuml_params["n_neighbors"] = 12
-        cuml_params["learning_rate"] = 0.9
-        cuml_params["random_state"] = 42
-        umap = UMAP(n_neighbors=12, learning_rate=0.9, random_state=42)
+        nondefault_params = {
+            "n_neighbors": 12,
+            "learning_rate": 0.9,
+            "random_state": 42,
+        }
+        umap = UMAP(**nondefault_params)
+        cuml_params.update(nondefault_params)
+        spark_params.update(nondefault_params)
 
     # Ensure both Spark API params and internal cuml_params are set correctly
-    assert_params(instance=umap, spark_params={}, cuml_params=cuml_params)
+    assert_params(umap, spark_params, cuml_params)
     assert umap.cuml_params == cuml_params
 
     # Estimator persistence
@@ -280,7 +305,7 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     estimator_path = f"{path}/umap"
     umap.write().overwrite().save(estimator_path)
     loaded_umap = UMAP.load(estimator_path)
-    assert_params(loaded_umap, {}, cuml_params)
+    assert_params(loaded_umap, spark_params, cuml_params)
     assert umap.cuml_params == cuml_params
     assert loaded_umap._float32_inputs
 
