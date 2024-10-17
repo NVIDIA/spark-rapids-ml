@@ -560,3 +560,15 @@ class _CumlParams(_CumlClass, Params):
         """
         value_map = self._get_cuml_mapping_value(k, v)
         self._cuml_params[k] = value_map
+
+
+class DictTypeConverters(TypeConverters):
+    @staticmethod
+    def _toDict(value: Any) -> Dict[str, Any]:
+        """
+        Convert a value to a Dict type for Param typeConverter, if possible.
+        Used to support Dict types with the Spark ML Param API.
+        """
+        if isinstance(value, Dict):
+            return {TypeConverters.toString(k): v for k, v in value.items()}
+        raise TypeError("Could not convert %s to Dict[str, Any]" % value)

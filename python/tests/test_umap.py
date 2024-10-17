@@ -251,12 +251,9 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     cuml_params = get_default_cuml_parameters(
         cuml_classes=[cumlUMAP],
         excludes=[
-            "build_algo",
-            "build_kwds",
             "callback",
             "handle",
             "hash_input",
-            "metric_kwds",
             "output_type",
             "target_metric",
             "target_n_neighbors",
