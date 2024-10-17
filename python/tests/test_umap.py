@@ -430,3 +430,66 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
             assert model.n_cols == X.shape[1]
 
         assert_umap_model(model=umap_model)
+
+
+def test_umap_build_algo(gpu_number: int) -> None:
+    from cuml.datasets import make_blobs
+
+    n_rows = 10000
+    random_state = 42
+
+    X, _ = make_blobs(
+        n_rows,
+        10,
+        centers=5,
+        cluster_std=0.1,
+        dtype=np.float32,
+        random_state=10,
+    )
+
+    with CleanSparkSession() as spark:
+        pyspark_type = "float"
+        feature_cols = [f"c{i}" for i in range(X.shape[1])]
+        schema = [f"{c} {pyspark_type}" for c in feature_cols]
+        df = spark.createDataFrame(X.tolist(), ",".join(schema)).coalesce(1)
+        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        build_algo = "nn_descent"
+        build_kwds = {
+            "nnd_graph_degree": 64,
+            "nnd_intermediate_graph_degree": 128,
+            "nnd_max_iterations": 40,
+            "nnd_termination_threshold": 0.0001,
+            "nnd_return_distances": True,
+            "nnd_n_clusters": 5,
+        }
+
+        umap = UMAP(
+            num_workers=gpu_number,
+            random_state=random_state,
+            build_algo=build_algo,
+            build_kwds=build_kwds,
+        ).setFeaturesCol("features")
+
+        umap_model = umap.fit(df)
+
+        def assert_umap_model(model: UMAPModel) -> None:
+            embedding = np.array(model.embedding)
+            raw_data = np.array(model.raw_data)
+            assert embedding.shape == (10000, 2)
+            assert raw_data.shape == (10000, 10)
+            assert np.array_equal(raw_data, X.get())
+            assert model.dtype == "float32"
+            assert model.n_cols == X.shape[1]
+
+        assert_umap_model(model=umap_model)
+
+        pdf = umap_model.transform(df).toPandas()
+        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+
+        dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=10000)
+        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        trust_diff = loc_umap - dist_umap
+
+        assert trust_diff <= 0.15
