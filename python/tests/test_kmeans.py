@@ -66,12 +66,10 @@ def assert_centers_equal(
 @pytest.mark.parametrize("default_params", [True, False])
 def test_params(default_params: bool) -> None:
     from cuml import KMeans as CumlKMeans
+    from pyspark.ml.clustering import KMeans as SparkKMeans
 
     spark_params = {
-        "k": 2,
-        "initMode": "k-means||",
-        "tol": 0.0001,
-        "maxIter": 20,
+        param.name: value for param, value in SparkKMeans().extractParamMap().items()
     }
 
     cuml_params = get_default_cuml_parameters(
@@ -83,23 +81,22 @@ def test_params(default_params: bool) -> None:
 
     # Our algorithm overrides the following cuml parameters with their spark defaults:
     spark_default_overrides = {
-        "n_clusters": 2,
-        "max_iter": 20,
-        "init": "k-means||",
+        "n_clusters": spark_params["k"],
+        "max_iter": spark_params["maxIter"],
+        "init": spark_params["initMode"],
     }
 
-    for param, value in spark_default_overrides.items():
-        if param in cuml_params:
-            cuml_params[param] = value
+    cuml_params.update(spark_default_overrides)
 
     if default_params:
         kmeans = KMeans()
         seed = kmeans.getSeed()  # get the random seed that Spark generates
+        spark_params["seed"] = seed
         cuml_params["random_state"] = seed
     else:
         kmeans = KMeans(
-            n_clusters=10,
-            random_state=42,
+            k=10,
+            seed=42,
         )
         cuml_params["n_clusters"] = 10
         cuml_params["random_state"] = 42

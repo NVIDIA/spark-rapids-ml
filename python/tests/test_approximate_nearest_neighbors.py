@@ -57,9 +57,9 @@ def cal_dist(v1: np.ndarray, v2: np.ndarray, metric: str) -> float:
 def test_params(default_params: bool) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
 
-    spark_params: Dict[str, Any] = {
-        "algorithm": "ivfflat",
-        "metric": "euclidean",
+    spark_params = {
+        param.name: value
+        for param, value in ApproximateNearestNeighbors().extractParamMap().items()
     }
 
     # obtain n_neighbors, verbose, algorithm, algo_params, metric
@@ -82,7 +82,7 @@ def test_params(default_params: bool) -> None:
     if default_params:
         knn = ApproximateNearestNeighbors()
     else:
-        knn = ApproximateNearestNeighbors(n_neighbors=7)
+        knn = ApproximateNearestNeighbors(k=7)
         cuml_params["n_neighbors"] = 7
         spark_params["k"] = 7
 

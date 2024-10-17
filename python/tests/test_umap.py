@@ -245,24 +245,7 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     from cuml import UMAP as cumlUMAP
 
     spark_params = {
-        "n_neighbors": 15,
-        "n_components": 2,
-        "metric": "euclidean",
-        "n_epochs": None,
-        "learning_rate": 1.0,
-        "init": "spectral",
-        "min_dist": 0.1,
-        "spread": 1.0,
-        "set_op_mix_ratio": 1.0,
-        "local_connectivity": 1.0,
-        "repulsion_strength": 1.0,
-        "negative_sample_rate": 5,
-        "transform_queue_size": 4.0,
-        "a": None,
-        "b": None,
-        "precomputed_knn": None,
-        "random_state": None,
-        "verbose": False,
+        param.name: value for param, value in UMAP().extractParamMap().items()
     }
 
     cuml_params = get_default_cuml_parameters(

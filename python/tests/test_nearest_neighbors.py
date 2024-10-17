@@ -36,7 +36,10 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
         NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
     )
 
-    spark_params = {}
+    spark_params = {
+        param.name: value
+        for param, value in NearestNeighbors().extractParamMap().items()
+    }
 
     cuml_params = get_default_cuml_parameters(
         cuml_classes=[CumlNearestNeighbors, NearestNeighborsMG],
@@ -56,12 +59,12 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     if default_params:
         knn = NearestNeighbors()
     else:
-        knn = NearestNeighbors(n_neighbors=7)
+        knn = NearestNeighbors(k=7)
         cuml_params["n_neighbors"] = 7
         spark_params["k"] = 7
 
     # Ensure both Spark API params and internal cuml_params are set correctly
-    assert_params(knn, cuml_params, spark_params)
+    assert_params(knn, spark_params, cuml_params)
     assert knn.cuml_params == cuml_params
 
     # float32_inputs warn, NearestNeighbors only accepts float32

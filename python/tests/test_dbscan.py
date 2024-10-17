@@ -54,11 +54,7 @@ def test_params(
     from cuml import DBSCAN as cumlDBSCAN
 
     spark_params = {
-        "eps": 0.5,
-        "min_samples": 5,
-        "metric": "euclidean",
-        "algorithm": "brute",
-        "max_mbytes_per_batch": None,
+        param.name: value for param, value in DBSCAN().extractParamMap().items()
     }
 
     cuml_params = get_default_cuml_parameters(

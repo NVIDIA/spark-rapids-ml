@@ -55,8 +55,13 @@ PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 @pytest.mark.parametrize("default_params", [True, False])
 def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     from cuml import PCA as CumlPCA
+    from pyspark.ml.feature import PCA as SparkPCA
 
-    spark_params = {}
+    spark_params = {
+        param.name: value for param, value in SparkPCA().extractParamMap().items()
+    }
+    # Ignore output col, as it is linked to the object id by default (e.g., 'PCA_ac9c581af6b3__output')
+    spark_params.pop("outputCol", None)
 
     cuml_params = get_default_cuml_parameters(
         cuml_classes=[CumlPCA],
@@ -76,12 +81,8 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     if default_params:
         pca = PCA()
     else:
-        pca = PCA(
-            n_components=4,
-            whiten=True,
-        )
+        pca = PCA(k=4)
         cuml_params["n_components"] = 4
-        cuml_params["whiten"] = True
         spark_params["k"] = 4
 
     # Ensure both Spark API params and internal cuml_params are set correctly

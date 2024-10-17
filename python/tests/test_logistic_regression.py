@@ -174,15 +174,12 @@ def test_toy_example(gpu_number: int) -> None:
 
 def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     from cuml import LogisticRegression as CumlLogisticRegression
+    from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 
     # Default params: no regularization
     default_spark_params = {
-        "maxIter": 100,
-        "regParam": 0.0,
-        "elasticNetParam": 0.0,
-        "tol": 1e-06,
-        "fitIntercept": True,
-        "standardization": True,
+        param.name: value
+        for param, value in SparkLogisticRegression().extractParamMap().items()
     }
 
     default_cuml_params = get_default_cuml_parameters(
@@ -205,17 +202,17 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
 
     # Our algorithm overrides the following cuml parameters with their spark defaults:
     spark_default_overrides = {
-        "tol": 1e-6,
-        "max_iter": 100,
-        "standardization": True,
+        "tol": default_spark_params["tol"],
+        "max_iter": default_spark_params["maxIter"],
+        "standardization": default_spark_params["standardization"],
+        "C": default_spark_params["regParam"],
+        "l1_ratio": default_spark_params[
+            "elasticNetParam"
+        ],  # set to 0.0 when reg_param == 0.0
         "penalty": None,  # set to None when reg_param == 0.0
-        "C": 0.0,  # set to 0.0 when reg_param == 0.0
-        "l1_ratio": 0.0,  # set to elasticNetParam (default = 0.0) when reg_param == 0.0
     }
 
-    for param, value in spark_default_overrides.items():
-        if param in default_cuml_params:
-            default_cuml_params[param] = value
+    default_cuml_params.update(spark_default_overrides)
 
     default_lr = LogisticRegression()
 

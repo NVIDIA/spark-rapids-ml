@@ -104,16 +104,11 @@ def test_params(default_params: bool) -> None:
     )
     from cuml.linear_model.ridge import Ridge
     from cuml.solvers import CD
+    from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 
     spark_params = {
-        "maxIter": 100,
-        "regParam": 0.0,
-        "elasticNetParam": 0.0,
-        "tol": 1e-06,
-        "fitIntercept": True,
-        "standardization": True,
-        "solver": "auto",
-        "loss": "squaredError",
+        param.name: value
+        for param, value in SparkLinearRegression().extractParamMap().items()
     }
 
     cuml_params = get_default_cuml_parameters(
@@ -126,23 +121,21 @@ def test_params(default_params: bool) -> None:
 
     # Our algorithm overrides the following cuml parameters with their spark defaults:
     spark_default_overrides = {
-        "alpha": 0.0,
-        "l1_ratio": 0.0,
-        "max_iter": 100,
-        "normalize": True,
-        "tol": 1e-06,
+        "alpha": spark_params["regParam"],
+        "l1_ratio": spark_params["elasticNetParam"],
+        "max_iter": spark_params["maxIter"],
+        "normalize": spark_params["standardization"],
+        "tol": spark_params["tol"],
     }
 
-    for param, value in spark_default_overrides.items():
-        if param in cuml_params:
-            cuml_params[param] = value
+    cuml_params.update(spark_default_overrides)
 
     if default_params:
         lr = LinearRegression()
     else:
         lr = LinearRegression(
-            alpha=0.001,
-            max_iter=500,
+            regParam=0.001,
+            maxIter=500,
         )
         cuml_params["alpha"] = 0.001
         cuml_params["max_iter"] = 500
