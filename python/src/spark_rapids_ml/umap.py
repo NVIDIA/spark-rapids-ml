@@ -55,8 +55,6 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from spark_rapids_ml.core import FitInputType, _CumlModel
-
 from .core import (
     CumlT,
     FitInputType,
@@ -73,7 +71,7 @@ from .core import (
     param_alias,
 )
 from .metrics import EvalMetricInfo
-from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
+from .params import DictTypeConverters, HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
     _ArrayOrder,
     _concat_and_free,
@@ -90,31 +88,14 @@ if TYPE_CHECKING:
 class UMAPClass(_CumlClass):
     @classmethod
     def _param_mapping(cls) -> Dict[str, Optional[str]]:
-        return {
-            "n_neighbors": "n_neighbors",
-            "n_components": "n_components",
-            "metric": "metric",
-            "n_epochs": "n_epochs",
-            "learning_rate": "learning_rate",
-            "init": "init",
-            "min_dist": "min_dist",
-            "spread": "spread",
-            "set_op_mix_ratio": "set_op_mix_ratio",
-            "local_connectivity": "local_connectivity",
-            "repulsion_strength": "repulsion_strength",
-            "negative_sample_rate": "negative_sample_rate",
-            "transform_queue_size": "transform_queue_size",
-            "a": "a",
-            "b": "b",
-            "precomputed_knn": "precomputed_knn",
-            "random_state": "random_state",
-        }
+        return {}
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
             "n_neighbors": 15,
             "n_components": 2,
             "metric": "euclidean",
+            "metric_kwds": None,
             "n_epochs": None,
             "learning_rate": 1.0,
             "init": "spectral",
@@ -130,6 +111,8 @@ class UMAPClass(_CumlClass):
             "precomputed_knn": None,
             "random_state": None,
             "verbose": False,
+            "build_algo": "auto",
+            "build_kwds": None,
         }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
@@ -145,6 +128,7 @@ class _UMAPCumlParams(
             n_neighbors=15,
             n_components=2,
             metric="euclidean",
+            metric_kwds=None,
             n_epochs=None,
             learning_rate=1.0,
             init="spectral",
@@ -159,6 +143,8 @@ class _UMAPCumlParams(
             b=None,
             precomputed_knn=None,
             random_state=None,
+            build_algo="auto",
+            build_kwds=None,
             sample_fraction=1.0,
             outputCol="embedding",
         )
@@ -189,10 +175,21 @@ class _UMAPCumlParams(
         "metric",
         (
             f"Distance metric to use. Supported distances are ['l1', 'cityblock', 'taxicab', 'manhattan', 'euclidean', 'l2',"
-            f" 'sqeuclidean', 'canberra', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger', 'hamming', 'jaccard']."
-            f" Metrics that take arguments via the metric_kwds dictionary are not supported."
+            f" 'sqeuclidean', 'canberra', 'minkowski', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger', 'hamming',"
+            f" 'jaccard'] Metrics that take arguments (such as minkowski) can have arguments passed via the metric_kwds dictionary."
+            f" Note: The 'jaccard' distance metric is only supported for sparse inputs."
         ),
         typeConverter=TypeConverters.toString,
+    )
+
+    metric_kwds = Param(
+        Params._dummy(),
+        "metric_kwds",
+        (
+            f"Additional keyword arguments for the metric function. If the metric function takes additional arguments, they"
+            f" should be passed in this dictionary."
+        ),
+        typeConverter=DictTypeConverters._toDict,
     )
 
     n_epochs = Param(
@@ -346,6 +343,27 @@ class _UMAPCumlParams(
         typeConverter=TypeConverters.toInt,
     )
 
+    build_algo = Param(
+        Params._dummy(),
+        "build_algo",
+        (
+            f"How to build the knn graph. Supported build algorithms are ['auto', 'brute_force_knn', 'nn_descent']. 'auto' chooses"
+            f" to run with brute force knn if number of data rows is smaller than or equal to 50K. Otherwise, runs with nn descent."
+        ),
+        typeConverter=TypeConverters.toString,
+    )
+
+    build_kwds = Param(
+        Params._dummy(),
+        "build_kwds",
+        (
+            f"Build algorithm argument {{'nnd_graph_degree': 64, 'nnd_intermediate_graph_degree': 128, 'nnd_max_iterations': 20,"
+            f" 'nnd_termination_threshold': 0.0001, 'nnd_return_distances': True, 'nnd_n_clusters': 1}} Note that nnd_n_clusters > 1"
+            f" will result in batch-building with NN Descent."
+        ),
+        typeConverter=DictTypeConverters._toDict,
+    )
+
     sample_fraction = Param(
         Params._dummy(),
         "sample_fraction",
@@ -392,6 +410,18 @@ class _UMAPCumlParams(
         Sets the value of `metric`.
         """
         return self._set_params(metric=value)
+
+    def getMetricKwds(self: P) -> Optional[Dict[str, Any]]:
+        """
+        Gets the value of `metric_kwds`.
+        """
+        return self.getOrDefault("metric_kwds")
+
+    def setMetricKwds(self: P, value: Dict[str, Any]) -> P:
+        """
+        Sets the value of `metric_kwds`.
+        """
+        return self._set_params(metric_kwds=value)
 
     def getNEpochs(self: P) -> int:
         """
@@ -561,6 +591,30 @@ class _UMAPCumlParams(
         """
         return self._set_params(random_state=value)
 
+    def getBuildAlgo(self: P) -> str:
+        """
+        Gets the value of `build_algo`.
+        """
+        return self.getOrDefault("build_algo")
+
+    def setBuildAlgo(self: P, value: str) -> P:
+        """
+        Sets the value of `build_algo`.
+        """
+        return self._set_params(build_algo=value)
+
+    def getBuildKwds(self: P) -> Optional[Dict[str, Any]]:
+        """
+        Gets the value of `build_kwds`.
+        """
+        return self.getOrDefault("build_kwds")
+
+    def setBuildKwds(self: P, value: Dict[str, Any]) -> P:
+        """
+        Sets the value of `build_kwds`.
+        """
+        return self._set_params(build_kwds=value)
+
     def getSampleFraction(self: P) -> float:
         """
         Gets the value of `sample_fraction`.
@@ -646,6 +700,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         'hamming', 'jaccard']. Metrics that take arguments (such as minkowski) can have arguments passed via the
         metric_kwds dictionary.
 
+    metric_kwds : dict (optional, default=None)
+        Additional keyword arguments for the metric function. If the metric function takes additional arguments,
+        they should be passed in this dictionary.
+
     n_epochs : int (optional, default=None)
         The number of training epochs to be used in optimizing the low dimensional embedding. Larger values result
         in more accurate embeddings. If None is specified a value will be selected based on the size of the input dataset
@@ -724,6 +782,15 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             * ``4 or False`` - Enables all messages up to and including information messages.
             * ``5 or True`` - Enables all messages up to and including debug messages.
             * ``6`` - Enables all messages up to and including trace messages.
+
+    build_algo : str (optional, default='auto')
+        How to build the knn graph. Supported build algorithms are ['auto', 'brute_force_knn', 'nn_descent']. 'auto' chooses
+        to run with brute force knn if number of data rows is smaller than or equal to 50K. Otherwise, runs with nn descent.
+
+    build_kwds : dict (optional, default=None)
+        Build algorithm argument {'nnd_graph_degree': 64, 'nnd_intermediate_graph_degree': 128, 'nnd_max_iterations': 20,
+        'nnd_termination_threshold': 0.0001, 'nnd_return_distances': True, 'nnd_n_clusters': 1} Note that nnd_n_clusters > 1
+        will result in batch-building with NN Descent.
 
     sample_fraction : float (optional, default=1.0)
         The fraction of the dataset to be used for fitting the model. Since fitting is done on a single node, very large
@@ -805,6 +872,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         n_neighbors: Optional[float] = 15,
         n_components: Optional[int] = 15,
         metric: str = "euclidean",
+        metric_kwds: Optional[Dict[str, Any]] = None,
         n_epochs: Optional[int] = None,
         learning_rate: Optional[float] = 1.0,
         init: Optional[str] = "spectral",
@@ -819,12 +887,13 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         b: Optional[float] = None,
         precomputed_knn: Optional[List[List[float]]] = None,
         random_state: Optional[int] = None,
+        build_algo: Optional[str] = "auto",
+        build_kwds: Optional[Dict[str, Any]] = None,
         sample_fraction: Optional[float] = 1.0,
         featuresCol: Optional[Union[str, List[str]]] = None,
         labelCol: Optional[str] = None,
         outputCol: Optional[str] = None,
         num_workers: Optional[int] = None,
-        verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
         super().__init__()

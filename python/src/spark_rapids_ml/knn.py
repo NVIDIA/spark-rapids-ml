@@ -62,7 +62,7 @@ from .core import (
     param_alias,
 )
 from .metrics import EvalMetricInfo
-from .params import HasIDCol, P, _CumlClass, _CumlParams
+from .params import DictTypeConverters, HasIDCol, P, _CumlClass, _CumlParams
 from .utils import (
     _concat_and_free,
     _get_class_or_callable_name,
@@ -807,17 +807,6 @@ class ApproximateNearestNeighborsClass(_CumlClass):
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
         return None
-
-
-class DictTypeConverters(TypeConverters):
-    @staticmethod
-    def _toDict(value: Any) -> Dict[str, Any]:
-        """
-        Convert a value to a Dict type for Param typeConverter, if possible.
-        """
-        if isinstance(value, Dict):
-            return {TypeConverters.toString(k): v for k, v in value.items()}
-        raise TypeError("Could not convert %s to Dict[str, Any]" % value)
 
 
 class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):

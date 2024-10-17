@@ -342,31 +342,31 @@ class RandomForestClassifier(
     Parameters
     ----------
 
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
-    labelCol:
+    labelCol: str (default = "label")
         The label column name.
-    predictionCol:
+    predictionCol: str (default = "prediction")
         The prediction column name.
-    probabilityCol:
+    probabilityCol: str (default = "probability")
         The column name for predicted class conditional probabilities.
-    rawPredictionCol:
+    rawPredictionCol: str (default = "rawPrediction")
         The column name for class raw predictions - this is currently set equal to probabilityCol values.
-    maxDepth:
+    maxDepth: int (default = 5)
         Maximum tree depth. Must be greater than 0.
-    maxBins:
+    maxBins: int (default = 32)
         Maximum number of bins used by the split algorithm per feature.
-    minInstancesPerNode:
+    minInstancesPerNode: int (default = 1)
         The minimum number of samples (rows) in each leaf node.
-    impurity: str = "gini",
+    impurity: str (default = "gini")
         The criterion used to split nodes.\n
             * ``'gini'`` for gini impurity
             * ``'entropy'`` for information gain (entropy)
-    numTrees:
+    numTrees: int (default = 20)
         Total number of trees in the forest.
-    featureSubsetStrategy:
+    featureSubsetStrategy: str (default = "auto")
         Ratio of number of features (columns) to consider per node split.\n
         The supported options:\n
             ``'auto'``:  If numTrees == 1, set to 'all', If numTrees > 1 (forest), set to 'sqrt'\n
@@ -376,9 +376,9 @@ class RandomForestClassifier(
             ``'log2'``: log2(number of features)\n
             ``'n'``: when n is in the range (0, 1.0], use n * number of features. When n
             is in the range (1, number of features), use n features.
-    seed:
+    seed: int (default = None)
         Seed for the random number generator.
-    bootstrap:
+    bootstrap: bool (default = True)
         Control bootstrapping.\n
             * If ``True``, each tree in the forest is built on a bootstrapped
               sample with replacement.
@@ -396,11 +396,11 @@ class RandomForestClassifier(
             * ``4 or False`` - Enables all messages up to and including information messages.
             * ``5 or True`` - Enables all messages up to and including debug messages.
             * ``6`` - Enables all messages up to and including trace messages.
-    n_streams:
+    n_streams: int (default = 1)
         Number of parallel streams used for forest building.
         Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
         when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
-    min_samples_split:
+    min_samples_split: int or float (default = 2)
         The minimum number of samples required to split an internal node.\n
          * If type ``int``, then ``min_samples_split`` represents the minimum
            number.
@@ -408,11 +408,11 @@ class RandomForestClassifier(
            and ``ceil(min_samples_split * n_rows)`` is the minimum number of
            samples for each split.    max_samples:
         Ratio of dataset rows used while fitting each tree.
-    max_leaves:
+    max_leaves: int (default = -1)
         Maximum leaf nodes per tree. Soft constraint. Unlimited, if -1.
-    min_impurity_decrease:
+    min_impurity_decrease: float (default = 0.0)
         Minimum decrease in impurity required for node to be split.
-    max_batch_size:
+    max_batch_size: int (default = 4096)
         Maximum number of nodes that can be processed in a given batch.
 
     Examples
@@ -838,26 +838,26 @@ class LogisticRegression(
 
     Parameters
     ----------
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
-    labelCol:
+    labelCol: (default = "label")
         The label column name.
-    predictionCol:
+    predictionCol: (default = "prediction")
         The class prediction column name.
-    probabilityCol:
+    probabilityCol: (default = "probability")
         The probability prediction column name.
-    rawPredictionCol:
+    rawPredictionCol: (default = "rawPrediction")
         The column name for class raw predictions - this is currently set equal to probabilityCol values.
-    maxIter:
+    maxIter: (default = 100)
         The maximum number of iterations of the underlying L-BFGS algorithm.
-    regParam:
+    regParam: (default = 0.0)
         The regularization parameter.
-    elasticNetParam:
+    elasticNetParam: (default = 0.0)
         The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
         the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
-    tol:
+    tol: (default = 1e-6)
         The convergence tolerance.
     enable_sparse_data_optim: None or boolean, optional (default=None)
         If features column is VectorUDT type, Spark rapids ml relies on this parameter to decide whether to use dense array or sparse array in cuml.
@@ -865,9 +865,9 @@ class LogisticRegression(
         If False, always uses dense array. This is favorable if the majority of VectorUDT vectors are DenseVector.
         If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
         Note this is only supported in spark >= 3.4.
-    fitIntercept:
+    fitIntercept: (default = True)
         Whether to fit an intercept term.
-    standardization:
+    standardization: (default = True)
         Whether to standardize the training data before fit.
     num_workers:
         Number of cuML workers, where each cuML worker corresponds to one Spark task

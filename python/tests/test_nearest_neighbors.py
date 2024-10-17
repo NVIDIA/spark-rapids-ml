@@ -18,6 +18,7 @@ from spark_rapids_ml.knn import (
 from .sparksession import CleanSparkSession
 from .utils import (
     array_equal,
+    assert_params,
     create_pyspark_dataframe,
     get_default_cuml_parameters,
     idfn,
@@ -28,15 +29,21 @@ NNEstimator = Union[NearestNeighbors, ApproximateNearestNeighbors]
 NNModel = Union[NearestNeighborsModel, ApproximateNearestNeighborsModel]
 
 
-def test_params(caplog: LogCaptureFixture) -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
     from cuml.neighbors.nearest_neighbors_mg import (
         NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
     )
 
+    spark_params = {
+        param.name: value
+        for param, value in NearestNeighbors().extractParamMap().items()
+    }
+
     cuml_params = get_default_cuml_parameters(
-        [CumlNearestNeighbors, NearestNeighborsMG],
-        [
+        cuml_classes=[CumlNearestNeighbors, NearestNeighborsMG],
+        excludes=[
             "handle",
             "algorithm",
             "metric",
@@ -47,8 +54,18 @@ def test_params(caplog: LogCaptureFixture) -> None:
             "output_type",
         ],
     )
-    spark_params = NearestNeighbors()._get_cuml_params_default()
-    assert cuml_params == spark_params
+    assert cuml_params == NearestNeighbors()._get_cuml_params_default()
+
+    if default_params:
+        knn = NearestNeighbors()
+    else:
+        knn = NearestNeighbors(k=7)
+        cuml_params["n_neighbors"] = 7
+        spark_params["k"] = 7
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(knn, spark_params, cuml_params)
+    assert knn.cuml_params == cuml_params
 
     # float32_inputs warn, NearestNeighbors only accepts float32
     nn_float32 = NearestNeighbors(float32_inputs=False)

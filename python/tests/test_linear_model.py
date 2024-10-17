@@ -97,24 +97,54 @@ def train_with_cuml_linear_regression(
     return lr
 
 
-def test_params() -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool) -> None:
     from cuml.linear_model.linear_regression import (
         LinearRegression as CumlLinearRegression,
     )
     from cuml.linear_model.ridge import Ridge
     from cuml.solvers import CD
+    from pyspark.ml.regression import LinearRegression as SparkLinearRegression
+
+    spark_params = {
+        param.name: value
+        for param, value in SparkLinearRegression().extractParamMap().items()
+    }
 
     cuml_params = get_default_cuml_parameters(
-        [CumlLinearRegression, Ridge, CD], ["handle", "output_type"]
+        cuml_classes=[CumlLinearRegression, Ridge, CD],
+        excludes=["handle", "output_type"],
     )
-    spark_params = LinearRegression()._get_cuml_params_default()
 
-    import cuml
-    from packaging import version
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert cuml_params == LinearRegression()._get_cuml_params_default()
 
-    if version.parse(cuml.__version__) < version.parse("23.08.00"):
-        spark_params.pop("copy_X")
-    assert cuml_params == spark_params
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "alpha": spark_params["regParam"],
+        "l1_ratio": spark_params["elasticNetParam"],
+        "max_iter": spark_params["maxIter"],
+        "normalize": spark_params["standardization"],
+        "tol": spark_params["tol"],
+    }
+
+    cuml_params.update(spark_default_overrides)
+
+    if default_params:
+        lr = LinearRegression()
+    else:
+        lr = LinearRegression(
+            regParam=0.001,
+            maxIter=500,
+        )
+        cuml_params["alpha"] = 0.001
+        cuml_params["max_iter"] = 500
+        spark_params["regParam"] = 0.001
+        spark_params["maxIter"] = 500
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(lr, spark_params, cuml_params)
+    assert cuml_params == lr.cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter

@@ -311,31 +311,31 @@ class LinearRegression(
     Parameters
     ----------
 
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
-    labelCol:
+    labelCol: str (default = "label")
         The label column name.
-    predictionCol:
+    predictionCol: str (default = "prediction")
         The prediction column name.
-    maxIter:
+    maxIter: int (default = 100)
         Max number of iterations (>= 0).
-    regParam:
-        Regularization parameter (>= 0)
-    elasticNetParam:
+    regParam: float (default = 0.0)
+        Regularization parameter (>= 0).
+    elasticNetParam: float (default = 0.0)
         The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
         the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.
-    tol:
+    tol: float (default = 1e-6)
         The convergence tolerance for iterative algorithms (>= 0).
-    fitIntercept:
-        whether to fit an intercept term.
-    standardization:
+    fitIntercept: bool (default = True)
+        Whether to fit an intercept term.
+    standardization: bool (default = True)
         Whether to standardize the training features before fitting the model.
-    solver:
+    solver: str (default = "auto")
         The solver algorithm for optimization. If this is not set or empty, default value is 'auto'.\n
         The supported options: 'auto', 'normal' and 'eig', all of them will be mapped to 'eig' in cuML.
-    loss:
+    loss: str (default = "squaredError")
         The loss function to be optimized.
         The supported options: 'squaredError'
     num_workers:
@@ -840,25 +840,25 @@ class RandomForestRegressor(
     Parameters
     ----------
 
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
-    labelCol:
+    labelCol: str (default = "label")
         The label column name.
-    predictionCol:
+    predictionCol: str (default = "prediction")
         The prediction column name.
-    maxDepth:
+    maxDepth: int (default = 5)
         Maximum tree depth. Must be greater than 0.
-    maxBins:
+    maxBins: int (default = 32)
         Maximum number of bins used by the split algorithm per feature.
-    minInstancesPerNode:
+    minInstancesPerNode: int (default = 1)
         The minimum number of samples (rows) in each leaf node.
-    impurity: str = "variance",
+    impurity: str (default = "variance")
         The criterion used to split nodes.
-    numTrees:
+    numTrees: int (default = 20)
         Total number of trees in the forest.
-    featureSubsetStrategy:
+    featureSubsetStrategy: str (default = "auto")
         Ratio of number of features (columns) to consider per node split.\n
         The supported options:\n
             ``'auto'``:  If numTrees == 1, set to 'all', If numTrees > 1 (forest), set to 'onethird'\n
@@ -868,9 +868,9 @@ class RandomForestRegressor(
             ``'log2'``: log2(number of features)\n
             ``'n'``: when n is in the range (0, 1.0], use n * number of features. When n
             is in the range (1, number of features), use n features.
-    seed:
+    seed: int (default = None)
         Seed for the random number generator.
-    bootstrap:
+    bootstrap: bool (default = True)
         Control bootstrapping.\n
             * If ``True``, each tree in the forest is built on a bootstrapped
               sample with replacement.
@@ -888,11 +888,11 @@ class RandomForestRegressor(
             * ``4 or False`` - Enables all messages up to and including information messages.
             * ``5 or True`` - Enables all messages up to and including debug messages.
             * ``6`` - Enables all messages up to and including trace messages.
-    n_streams:
+    n_streams: int (default = 1)
         Number of parallel streams used for forest building.
         Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
         when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
-    min_samples_split:
+    min_samples_split: int or float (default = 2)
         The minimum number of samples required to split an internal node.\n
          * If type ``int``, then ``min_samples_split`` represents the minimum
            number.
@@ -900,11 +900,11 @@ class RandomForestRegressor(
            and ``ceil(min_samples_split * n_rows)`` is the minimum number of
            samples for each split.    max_samples:
         Ratio of dataset rows used while fitting each tree.
-    max_leaves:
+    max_leaves: int (default = -1)
         Maximum leaf nodes per tree. Soft constraint. Unlimited, if -1.
-    min_impurity_decrease:
+    min_impurity_decrease: float (default = 0.0)
         Minimum decrease in impurity required for node to be split.
-    max_batch_size:
+    max_batch_size: int (default = 4096)
         Maximum number of nodes that can be processed in a given batch.
 
 

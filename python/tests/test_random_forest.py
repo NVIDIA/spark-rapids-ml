@@ -104,12 +104,28 @@ RandomForestModelType = TypeVar(
 
 
 @pytest.mark.parametrize("Estimator", [RandomForestClassifier, RandomForestRegressor])
-def test_params(Estimator: RandomForest) -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool, Estimator: RandomForest) -> None:
     from cuml.ensemble.randomforest_common import BaseRandomForestModel
+    from pyspark.ml.classification import (
+        RandomForestClassificationModel as SparkRandomForestClassifier,
+    )
+    from pyspark.ml.regression import (
+        RandomForestRegressionModel as SparkRandomForestRegressor,
+    )
+
+    SparkEstimator = (
+        SparkRandomForestClassifier
+        if Estimator == RandomForestClassifier
+        else SparkRandomForestRegressor
+    )
+    spark_params = {
+        param.name: value for param, value in SparkEstimator().extractParamMap().items()
+    }
 
     cuml_params = get_default_cuml_parameters(
-        [BaseRandomForestModel],
-        [
+        cuml_classes=[BaseRandomForestModel],
+        excludes=[
             "handle",
             "output_type",
             "accuracy_metric",
@@ -124,8 +140,42 @@ def test_params(Estimator: RandomForest) -> None:
             "class_weight",
         ],
     )
-    spark_params = Estimator()._get_cuml_params_default()
-    assert cuml_params == spark_params
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert cuml_params == Estimator()._get_cuml_params_default()
+
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "n_streams": 1,
+        "n_estimators": spark_params["numTrees"],
+        "max_depth": spark_params["maxDepth"],
+        "n_bins": spark_params["maxBins"],
+        "max_features": spark_params["featureSubsetStrategy"],
+        "split_criterion": {"gini": "gini", "variance": "mse"}.get(
+            spark_params["impurity"]
+        ),
+    }
+
+    cuml_params.update(spark_default_overrides)
+
+    if default_params:
+        est = Estimator()
+        seed = est.getSeed()
+        cuml_params["random_state"] = seed
+        spark_params["seed"] = seed
+    else:
+        est = Estimator(
+            maxDepth=7,
+            seed=42,
+        )
+        cuml_params["max_depth"] = 7
+        cuml_params["random_state"] = 42
+        spark_params["maxDepth"] = 7
+        spark_params["seed"] = 42
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(est, spark_params, cuml_params)
+    assert est.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter
