@@ -482,6 +482,9 @@ class _CumlParams(_CumlClass, Params):
                 cuml_param = None
 
             return cuml_param
+        elif spark_param in self.cuml_params:
+            # cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents)
+            return spark_param
         else:
             return None
 
@@ -490,7 +493,7 @@ class _CumlParams(_CumlClass, Params):
     ) -> None:
         """Set a cuml_params parameter for a given Spark Param and value.
         The Spark Param may be a cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents),
-        in which case we recover the cuML param and set it.
+        in which case the cuML param will be returned from _get_cuml_param.
 
         Parameters
         ----------
@@ -508,9 +511,6 @@ class _CumlParams(_CumlClass, Params):
         """
 
         cuml_param = self._get_cuml_param(spark_param, silent)
-        if cuml_param is None and spark_param in self.cuml_params:
-            # cuML param is codeclared as Spark param (e.g., for algos w/out Spark equivalents); recover it.
-            cuml_param = spark_param
 
         if cuml_param is not None:
             # if Spark Param is mapped to cuML parameter, set cuml_params
