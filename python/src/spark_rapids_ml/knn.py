@@ -1438,19 +1438,22 @@ class ApproximateNearestNeighborsModel(
             "cosine",
         }
 
-        if cuml_alg_params["algorithm"] == "cagra":
-            check_fn = self._cal_cagra_params_and_check
-        elif cuml_alg_params["algorithm"] in {"ivf_flat", "ivfflat"}:
-            check_fn = self._cal_cuvs_ivf_flat_params_and_check
-        else:
-            assert cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}
-            check_fn = self._cal_cuvs_ivf_pq_params_and_check
+        if (
+            cuml_alg_params["algorithm"] != "brute"
+        ):  # brute links to CPUNearestNeighborsModel of benchmark.bench_nearest_neighbors
+            if cuml_alg_params["algorithm"] == "cagra":
+                check_fn = self._cal_cagra_params_and_check
+            elif cuml_alg_params["algorithm"] in {"ivf_flat", "ivfflat"}:
+                check_fn = self._cal_cuvs_ivf_flat_params_and_check
+            else:
+                assert cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}
+                check_fn = self._cal_cuvs_ivf_pq_params_and_check
 
-        index_params, search_params = check_fn(
-            algoParams=self.cuml_params["algo_params"],
-            metric=self.cuml_params["metric"],
-            topk=cuml_alg_params["n_neighbors"],
-        )
+            index_params, search_params = check_fn(
+                algoParams=self.cuml_params["algo_params"],
+                metric=self.cuml_params["metric"],
+                topk=cuml_alg_params["n_neighbors"],
+            )
 
         def _construct_sgnn() -> CumlT:
 
@@ -1511,12 +1514,9 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            from cuml.neighbors import NearestNeighbors as cumlSGNN
-            from cuvs.neighbors import cagra, ivf_flat
-
             if not inspect.ismodule(
                 nn_object
-            ):  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+            ):  # derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 nn_object.fit(item)
             else:  # cuvs ivf_flat or cagra
                 build_params = nn_object.IndexParams(**index_params)
@@ -1537,7 +1537,7 @@ class ApproximateNearestNeighborsModel(
 
             if not inspect.ismodule(
                 nn_object
-            ):  # ivfpq and derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+            ):  # derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
                 distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
             else:  # cuvs ivf_flat cagra
                 gpu_qfeatures = cp.array(
