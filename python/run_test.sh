@@ -20,7 +20,7 @@ spark-rapids-submit --master local[1] tests_no_import_change/test_no_import_chan
 spark-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
 
 echo "use --runslow to run all tests"
-pytest "$@" -n 3 benchmark/test_gen_data.py
-PYTHONPATH=`pwd`/benchmark pytest -ra "$@" -n 3 --durations=10 tests
-#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow -n 3 --durations=10 tests
+pytest "$@" -n 2 benchmark/test_gen_data.py
+PYTHONPATH=`pwd`/benchmark pytest -ra "$@" -n 2 --durations=10 tests
+#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow -n 2 --durations=10 tests
 #PYTHONPATH=`pwd`/benchmark pytest -ra "$@" --durations=10 tests_large
