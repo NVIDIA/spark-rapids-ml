@@ -19,6 +19,7 @@ from functools import lru_cache
 from typing import Any, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
+import pandas as pd
 import pyspark
 from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import SparkSession
@@ -80,9 +81,16 @@ def create_pyspark_dataframe(
     dtype: np.dtype,
     data: np.ndarray,
     label: Optional[np.ndarray] = None,
+    label_dtype: Optional[np.dtype] = None,  # type: ignore
 ) -> Tuple[pyspark.sql.DataFrame, Union[str, List[str]], Optional[str]]:
     """Construct a dataframe based on features and label data."""
     assert feature_type in pyspark_supported_feature_types
+
+    # in case cp.ndarray get passed in
+    if not isinstance(data, np.ndarray):
+        data = data.get()
+    if label is not None and not isinstance(label, np.ndarray):
+        label = label.get()
 
     m, n = data.shape
 
@@ -92,10 +100,17 @@ def create_pyspark_dataframe(
     label_col = None
 
     if label is not None:
+        label_dtype = dtype if label_dtype is None else label_dtype
+        label = label.astype(label_dtype)
+        label_pyspark_type = dtype_to_pyspark_type(label_dtype)
+
         label_col = "label_col"
-        schema.append(f"{label_col} {pyspark_type}")
+        schema.append(f"{label_col} {label_pyspark_type}")
+
+        pdf = pd.DataFrame(data, dtype=dtype, columns=feature_cols)
+        pdf[label_col] = label.astype(label_dtype)
         df = spark.createDataFrame(
-            np.concatenate((data, label.reshape(m, 1)), axis=1).tolist(),
+            pdf,
             ",".join(schema),
         )
     else:
