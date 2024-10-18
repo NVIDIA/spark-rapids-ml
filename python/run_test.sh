@@ -38,7 +38,7 @@ fi
 echo "Test functions in benchmark/test_gen_data.py and tests/ directory will be executed in parallel with ${TEST_PARALLEL} pytest workers" 
 
 echo "use --runslow to run all tests"
-pytest "$@" -n ${MAX_PARALLEL} benchmark/test_gen_data.py
-PYTHONPATH=`pwd`/benchmark pytest -ra "$@" -n ${MAX_PARALLEL} --durations=10 tests
-#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow -n ${MAX_PARALLEL} --durations=10 tests
+pytest "$@" -n ${TEST_PARALLEL} benchmark/test_gen_data.py
+PYTHONPATH=`pwd`/benchmark pytest -ra "$@" -n ${TEST_PARALLEL} --durations=10 tests
+#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow -n ${TEST_PARALLEL} --durations=10 tests
 #PYTHONPATH=`pwd`/benchmark pytest -ra "$@" --durations=10 tests_large
