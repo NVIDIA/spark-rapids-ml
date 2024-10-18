@@ -145,8 +145,8 @@ class _CumlClass(object):
         - empty string, if a defined Spark Param should just be silently ignored, or
         - None, if a defined Spark Param should raise an error.
 
-        If the class has no Spark ML equivalent, the cuML parameter names should be mapped to themselves,
-        i.e., `{"cuml_param": "cuml_param"}`.
+        For algorithms without a Spark equivalent, the mapping can be left empty, with the exception
+        of parameters for which we override the cuML default value with our own: these should include an identity mapping, e.g. {"param": "param"}.
 
         Note: standard Spark column Params, e.g. inputCol, featureCol, etc, should not be listed
         in this mapping, since they are handled differently.
@@ -334,7 +334,7 @@ class _CumlParams(_CumlClass, Params):
                 elif isinstance(v, List):
                     self._set(**{"featuresCols": v})
             elif self.hasParam(k):
-                # standard Spark ML Param
+                # Param is declared as a Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
                 self._set_cuml_param(k, v, silent=False)
             elif k in self.cuml_params:
@@ -482,6 +482,9 @@ class _CumlParams(_CumlClass, Params):
                 cuml_param = None
 
             return cuml_param
+        elif spark_param in self.cuml_params:
+            # cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents)
+            return spark_param
         else:
             return None
 
@@ -489,6 +492,8 @@ class _CumlParams(_CumlClass, Params):
         self, spark_param: str, spark_value: Any, silent: bool = True
     ) -> None:
         """Set a cuml_params parameter for a given Spark Param and value.
+        The Spark Param may be a cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents),
+        in which case the cuML param will be returned from _get_cuml_param.
 
         Parameters
         ----------
@@ -555,3 +560,15 @@ class _CumlParams(_CumlClass, Params):
         """
         value_map = self._get_cuml_mapping_value(k, v)
         self._cuml_params[k] = value_map
+
+
+class DictTypeConverters(TypeConverters):
+    @staticmethod
+    def _toDict(value: Any) -> Dict[str, Any]:
+        """
+        Convert a value to a Dict type for Param typeConverter, if possible.
+        Used to support Dict types with the Spark ML Param API.
+        """
+        if isinstance(value, Dict):
+            return {TypeConverters.toString(k): v for k, v in value.items()}
+        raise TypeError("Could not convert %s to Dict[str, Any]" % value)
