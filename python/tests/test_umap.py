@@ -15,7 +15,7 @@
 #
 
 import math
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import cupy as cp
 import numpy as np
@@ -244,15 +244,16 @@ def test_spark_umap_fast(
 def test_params(tmp_path: str, default_params: bool) -> None:
     from cuml import UMAP as cumlUMAP
 
+    spark_params = {
+        param.name: value for param, value in UMAP().extractParamMap().items()
+    }
+
     cuml_params = get_default_cuml_parameters(
-        [cumlUMAP],
-        [
-            "build_algo",
-            "build_kwds",
+        cuml_classes=[cumlUMAP],
+        excludes=[
             "callback",
             "handle",
             "hash_input",
-            "metric_kwds",
             "output_type",
             "target_metric",
             "target_n_neighbors",
@@ -260,15 +261,23 @@ def test_params(tmp_path: str, default_params: bool) -> None:
         ],
     )
 
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert UMAP()._get_cuml_params_default() == cuml_params
+
     if default_params:
         umap = UMAP()
     else:
-        cuml_params["n_neighbors"] = 12
-        cuml_params["learning_rate"] = 0.9
-        cuml_params["random_state"] = 42
-        umap = UMAP(n_neighbors=12, learning_rate=0.9, random_state=42)
+        nondefault_params = {
+            "n_neighbors": 12,
+            "learning_rate": 0.9,
+            "random_state": 42,
+        }
+        umap = UMAP(**nondefault_params)  # type: ignore
+        cuml_params.update(nondefault_params)
+        spark_params.update(nondefault_params)
 
-    assert_params(umap, {}, cuml_params)
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(umap, spark_params, cuml_params)
     assert umap.cuml_params == cuml_params
 
     # Estimator persistence
@@ -276,7 +285,7 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     estimator_path = f"{path}/umap"
     umap.write().overwrite().save(estimator_path)
     loaded_umap = UMAP.load(estimator_path)
-    assert_params(loaded_umap, {}, cuml_params)
+    assert_params(loaded_umap, spark_params, cuml_params)
     assert umap.cuml_params == cuml_params
     assert loaded_umap._float32_inputs
 
@@ -421,3 +430,66 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
             assert model.n_cols == X.shape[1]
 
         assert_umap_model(model=umap_model)
+
+
+def test_umap_build_algo(gpu_number: int) -> None:
+    from cuml.datasets import make_blobs
+
+    n_rows = 10000
+    random_state = 42
+
+    X, _ = make_blobs(
+        n_rows,
+        10,
+        centers=5,
+        cluster_std=0.1,
+        dtype=np.float32,
+        random_state=10,
+    )
+
+    with CleanSparkSession() as spark:
+        pyspark_type = "float"
+        feature_cols = [f"c{i}" for i in range(X.shape[1])]
+        schema = [f"{c} {pyspark_type}" for c in feature_cols]
+        df = spark.createDataFrame(X.tolist(), ",".join(schema)).coalesce(1)
+        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        build_algo = "nn_descent"
+        build_kwds = {
+            "nnd_graph_degree": 64,
+            "nnd_intermediate_graph_degree": 128,
+            "nnd_max_iterations": 40,
+            "nnd_termination_threshold": 0.0001,
+            "nnd_return_distances": True,
+            "nnd_n_clusters": 5,
+        }
+
+        umap = UMAP(
+            num_workers=gpu_number,
+            random_state=random_state,
+            build_algo=build_algo,
+            build_kwds=build_kwds,
+        ).setFeaturesCol("features")
+
+        umap_model = umap.fit(df)
+
+        def assert_umap_model(model: UMAPModel) -> None:
+            embedding = np.array(model.embedding)
+            raw_data = np.array(model.raw_data)
+            assert embedding.shape == (10000, 2)
+            assert raw_data.shape == (10000, 10)
+            assert np.array_equal(raw_data, X.get())
+            assert model.dtype == "float32"
+            assert model.n_cols == X.shape[1]
+
+        assert_umap_model(model=umap_model)
+
+        pdf = umap_model.transform(df).toPandas()
+        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+
+        dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=10000)
+        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        trust_diff = loc_umap - dist_umap
+
+        assert trust_diff <= 0.15

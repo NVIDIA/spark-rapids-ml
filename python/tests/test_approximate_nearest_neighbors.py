@@ -26,6 +26,7 @@ from .test_nearest_neighbors import (
 )
 from .utils import (
     array_equal,
+    assert_params,
     create_pyspark_dataframe,
     get_default_cuml_parameters,
     idfn,
@@ -52,13 +53,19 @@ def cal_dist(v1: np.ndarray, v2: np.ndarray, metric: str) -> float:
         assert False, f"Does not recognize metric '{metric}'"
 
 
-def test_params() -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
+
+    spark_params = {
+        param.name: value
+        for param, value in ApproximateNearestNeighbors().extractParamMap().items()
+    }
 
     # obtain n_neighbors, verbose, algorithm, algo_params, metric
     cuml_params = get_default_cuml_parameters(
-        [CumlNearestNeighbors],
-        [
+        cuml_classes=[CumlNearestNeighbors],
+        excludes=[
             "handle",
             "p",
             "metric_expanded",
@@ -67,15 +74,29 @@ def test_params() -> None:
         ],
     )
 
-    spark_params = ApproximateNearestNeighbors()._get_cuml_params_default()
     cuml_params["algorithm"] = "ivfflat"  # change cuml default 'auto' to 'ivfflat'
-    assert cuml_params == spark_params
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert ApproximateNearestNeighbors()._get_cuml_params_default() == cuml_params
+
+    if default_params:
+        knn = ApproximateNearestNeighbors()
+    else:
+        knn = ApproximateNearestNeighbors(k=7)
+        cuml_params["n_neighbors"] = 7
+        spark_params["k"] = 7
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(knn, spark_params, cuml_params)
+    assert knn.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(ApproximateNearestNeighbors)
 
+
+def test_search_index_params() -> None:
     # test cagra index params and search params
     cagra_index_param: Dict[str, Any] = {
         "intermediate_graph_degree": 80,
