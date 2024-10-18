@@ -7,5 +7,6 @@ numpydoc
 pydata-sphinx-theme
 pylint
 pytest
+pytest-xdist
 sphinx<6.0
 twine>=4.0.0
