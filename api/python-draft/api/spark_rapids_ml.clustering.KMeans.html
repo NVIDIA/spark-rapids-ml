@@ -369,14 +369,14 @@ This class provides GPU acceleration for pyspark distributed KMeans.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>k: int (default = 8)</strong></dt><dd><p>the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.</p>
+<dt><strong>k: int (default = 2)</strong></dt><dd><p>the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.</p>
 </dd>
 <dt><strong>initMode: str (default = “k-means||”)</strong></dt><dd><p>the algorithm to select initial centroids. It can be “k-means||” or “random”.</p>
 </dd>
-<dt><strong>maxIter: int (default = 300)</strong></dt><dd><p>the maximum iterations the algorithm will run to learn the k centers.
+<dt><strong>maxIter: int (default = 20)</strong></dt><dd><p>the maximum iterations the algorithm will run to learn the k centers.
 More iterations help generate more accurate centers.</p>
 </dd>
-<dt><strong>seed: int (default = 1)</strong></dt><dd><p>the random seed used by the algorithm to initialize a set of k random centers to start with.</p>
+<dt><strong>seed: int (default = None)</strong></dt><dd><p>the random seed used by the algorithm to initialize a set of k random centers to start with.</p>
 </dd>
 <dt><strong>tol: float (default = 1e-4)</strong></dt><dd><p>early stopping criterion if centers do not change much after an iteration.</p>
 </dd>

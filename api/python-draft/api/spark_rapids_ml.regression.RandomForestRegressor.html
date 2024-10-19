@@ -380,7 +380,7 @@ pyspark parameters to cuML parameters.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<dt><strong>featuresCol: str or List[str] (default = “features”)</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
@@ -388,21 +388,21 @@ pyspark parameters to cuML parameters.</p>
 </ul>
 </div></blockquote>
 </dd>
-<dt><strong>labelCol:</strong></dt><dd><p>The label column name.</p>
+<dt><strong>labelCol: str (default = “label”)</strong></dt><dd><p>The label column name.</p>
 </dd>
-<dt><strong>predictionCol:</strong></dt><dd><p>The prediction column name.</p>
+<dt><strong>predictionCol: str (default = “prediction”)</strong></dt><dd><p>The prediction column name.</p>
 </dd>
-<dt><strong>maxDepth:</strong></dt><dd><p>Maximum tree depth. Must be greater than 0.</p>
+<dt><strong>maxDepth: int (default = 5)</strong></dt><dd><p>Maximum tree depth. Must be greater than 0.</p>
 </dd>
-<dt><strong>maxBins:</strong></dt><dd><p>Maximum number of bins used by the split algorithm per feature.</p>
+<dt><strong>maxBins: int (default = 32)</strong></dt><dd><p>Maximum number of bins used by the split algorithm per feature.</p>
 </dd>
-<dt><strong>minInstancesPerNode:</strong></dt><dd><p>The minimum number of samples (rows) in each leaf node.</p>
+<dt><strong>minInstancesPerNode: int (default = 1)</strong></dt><dd><p>The minimum number of samples (rows) in each leaf node.</p>
 </dd>
-<dt><strong>impurity: str = “variance”,</strong></dt><dd><p>The criterion used to split nodes.</p>
+<dt><strong>impurity: str (default = “variance”)</strong></dt><dd><p>The criterion used to split nodes.</p>
 </dd>
-<dt><strong>numTrees:</strong></dt><dd><p>Total number of trees in the forest.</p>
+<dt><strong>numTrees: int (default = 20)</strong></dt><dd><p>Total number of trees in the forest.</p>
 </dd>
-<dt><strong>featureSubsetStrategy:</strong></dt><dd><p>Ratio of number of features (columns) to consider per node split.</p>
+<dt><strong>featureSubsetStrategy: str (default = “auto”)</strong></dt><dd><p>Ratio of number of features (columns) to consider per node split.</p>
 <p>The supported options:</p>
 <blockquote>
 <div><p><code class="docutils literal notranslate"><span class="pre">'auto'</span></code>:  If numTrees == 1, set to ‘all’, If numTrees &gt; 1 (forest), set to ‘onethird’</p>
@@ -414,9 +414,9 @@ pyspark parameters to cuML parameters.</p>
 is in the range (1, number of features), use n features.</p>
 </div></blockquote>
 </dd>
-<dt><strong>seed:</strong></dt><dd><p>Seed for the random number generator.</p>
+<dt><strong>seed: int (default = None)</strong></dt><dd><p>Seed for the random number generator.</p>
 </dd>
-<dt><strong>bootstrap:</strong></dt><dd><p>Control bootstrapping.</p>
+<dt><strong>bootstrap: bool (default = True)</strong></dt><dd><p>Control bootstrapping.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, each tree in the forest is built on a bootstrapped
@@ -442,11 +442,11 @@ cuML workers (i.e. GPUs in cluster) from the Spark environment.</p>
 </dd>
 </dl>
 </dd>
-<dt><strong>n_streams:</strong></dt><dd><p>Number of parallel streams used for forest building.
+<dt><strong>n_streams: int (default = 1)</strong></dt><dd><p>Number of parallel streams used for forest building.
 Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
 when n_streams &gt; 1. See <a class="github reference external" href="https://github.com/rapidsai/cuml/issues/5402">rapidsai/cuml#5402</a>.</p>
 </dd>
-<dt><strong>min_samples_split:</strong></dt><dd><p>The minimum number of samples required to split an internal node.</p>
+<dt><strong>min_samples_split: int or float (default = 2)</strong></dt><dd><p>The minimum number of samples required to split an internal node.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>If type <code class="docutils literal notranslate"><span class="pre">int</span></code>, then <code class="docutils literal notranslate"><span class="pre">min_samples_split</span></code> represents the minimum
@@ -458,11 +458,11 @@ samples for each split.    max_samples:</p></li>
 </div></blockquote>
 <p>Ratio of dataset rows used while fitting each tree.</p>
 </dd>
-<dt><strong>max_leaves:</strong></dt><dd><p>Maximum leaf nodes per tree. Soft constraint. Unlimited, if -1.</p>
+<dt><strong>max_leaves: int (default = -1)</strong></dt><dd><p>Maximum leaf nodes per tree. Soft constraint. Unlimited, if -1.</p>
 </dd>
-<dt><strong>min_impurity_decrease:</strong></dt><dd><p>Minimum decrease in impurity required for node to be split.</p>
+<dt><strong>min_impurity_decrease: float (default = 0.0)</strong></dt><dd><p>Minimum decrease in impurity required for node to be split.</p>
 </dd>
-<dt><strong>max_batch_size:</strong></dt><dd><p>Maximum number of nodes that can be processed in a given batch.</p>
+<dt><strong>max_batch_size: int (default = 4096)</strong></dt><dd><p>Maximum number of nodes that can be processed in a given batch.</p>
 </dd>
 </dl>
 </dd>
