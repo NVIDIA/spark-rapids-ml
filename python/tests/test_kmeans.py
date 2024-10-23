@@ -403,6 +403,7 @@ def test_kmeans_spark_compat(
 
         kmeans.setSeed(1)
         kmeans.setMaxIter(10)
+        kmeans.setInitMode("k-means||")
         if isinstance(kmeans, SparkKMeans):
             kmeans.setWeightCol("weighCol")
         else:
@@ -412,6 +413,7 @@ def test_kmeans_spark_compat(
         assert kmeans.getMaxIter() == 10
         assert kmeans.getK() == 2
         assert kmeans.getSeed() == 1
+        assert kmeans.getInitMode() == "k-means||"
 
         kmeans.clear(kmeans.maxIter)
         assert kmeans.getMaxIter() == 20

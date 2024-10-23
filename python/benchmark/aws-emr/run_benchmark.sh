@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 cluster_type=${1:-gpu}
 BENCHMARK_DATA_HOME="s3://spark-rapids-ml-bm-datasets-public"
 
@@ -89,19 +89,66 @@ if [[ $? != 0 ]]; then
     exit 1
 fi
 
+ssh_command () {
+    aws emr wait cluster-running --cluster-id $CLUSTER_ID
+    if [[ $? != 0 ]]; then
+        echo "cluster terminated, exiting"
+        exit 1
+    fi
+    ssh -i $KEYPAIR -o StrictHostKeyChecking=no ec2-user@$masternode $1
+}
+
+get_masternode () {
+    aws emr list-instances --cluster-id $CLUSTER_ID --instance-group-type MASTER | grep PublicDnsName | grep -oP 'ec2[^"]*'
+}
+
+get_appid () {
+    ssh_command "hdfs dfs -text $stderr_path" | grep -oP "application_[0-9]*_[0-9]*" | head -n 1
+}
+
+get_appstatus () {
+    ssh_command "yarn application -status $app_id" | grep -P "\tState :" | grep -oP FINISHED
+}
+
 poll_stdout () {
     stdout_path=s3://${BENCHMARK_HOME}/logs/$1/steps/$2/stdout.gz
-    res="PENDING"
-    while [[ ${res} != *"COMPLETED"* ]]
+    stderr_path=s3://${BENCHMARK_HOME}/logs/$1/steps/$2/stderr.gz
+    masternode=$( get_masternode )
+
+    while [[ -z $masternode ]]; do
+    sleep 30
+    masternode=$( get_masternode )
+    done
+
+    echo masternode: $masternode
+    app_id=""
+
+    app_id=$( get_appid )
+    echo app_id: $app_id
+    while [[ -z $app_id ]]
     do
         sleep 30
-        res=$(aws emr describe-step --cluster-id $1 --step-id $2 | grep "State")
-        echo ${res}
-        if [[ ${res} == *"FAILED"* ]]; then
-            echo "Failed to finish step $2."
-            exit 1
-        fi
+        app_id=$( get_appid )
+        echo app_id: $app_id
     done
+
+    res=$( get_appstatus )
+    echo res: $res
+    while [[ ${res} != FINISHED ]]
+    do
+        sleep 30
+        res=$( get_appstatus )
+        echo res: ${res}
+    done
+
+    aws emr cancel-steps --cluster-id $1 --step-ids $2 --step-cancellation-option SEND_INTERRUPT
+
+    res=$( ssh_command "yarn application -status $app_id" | grep -P "\tFinal-State :" | sed -e 's/.*: *//g' )
+
+    if [[ $res != SUCCEEDED ]]; then
+        echo "benchmark step failed"
+        exit 1
+    fi
 
     # check if EMR stdout.gz is complete
     res=""

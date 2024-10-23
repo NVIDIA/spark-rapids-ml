@@ -13,7 +13,7 @@
             "yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices":"auto",
             "yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables":"/usr/bin",
             "yarn.nodemanager.linux-container-executor.cgroups.mount":"true",
-            "yarn.nodemanager.linux-container-executor.cgroups.mount-path":"/sys/fs/cgroup",
+            "yarn.nodemanager.linux-container-executor.cgroups.mount-path":"/spark-rapids-cgroup",
             "yarn.nodemanager.linux-container-executor.cgroups.hierarchy":"yarn",
             "yarn.nodemanager.container-executor.class":"org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor"
         }
@@ -33,7 +33,7 @@
             {
                 "Classification":"cgroups",
                 "Properties":{
-                    "root":"/sys/fs/cgroup",
+                    "root":"/spark-rapids-cgroup",
                     "yarn-hierarchy":"yarn"
                 }
             }
@@ -68,14 +68,14 @@
             "spark.sql.execution.arrow.pyspark.enabled":"true",
             "spark.sql.execution.arrow.maxRecordsPerBatch":"100000",
             "spark.sql.cache.serializer":"com.nvidia.spark.ParquetCachedBatchSerializer",
-            "spark.pyspark.python":"python3.9",
-            "spark.pyspark.driver.python":"python3.9",
+            "spark.pyspark.python":"/usr/local/bin/python3.10",
+            "spark.pyspark.driver.python":"/usr/local/bin/python3.10",
             "spark.dynamicAllocation.enabled":"false",
             "spark.driver.memory":"20g",
             "spark.rpc.message.maxSize":"512",
             "spark.executorEnv.CUPY_CACHE_DIR":"/tmp/.cupy",
             "spark.executorEnv.NCCL_DEBUG":"INFO",
-            "spark.executorEnv.NCCL_SOCKET_IFNAME":"eth"
+            "spark.executorEnv.NCCL_SOCKET_IFNAME":"ens"
         }
     },
     {

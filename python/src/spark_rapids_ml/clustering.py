@@ -298,6 +298,12 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         super().__init__()
         self._set_params(**self._input_kwargs)
 
+    def setInitMode(self, value: str) -> "KMeans":
+        """
+        Sets the value of :py:attr:`initMode`.
+        """
+        return self._set_params(initMode=value)
+
     def setK(self, value: int) -> "KMeans":
         """
         Sets the value of :py:attr:`k`.

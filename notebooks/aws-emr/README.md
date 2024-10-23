@@ -41,7 +41,8 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
 
   aws emr create-cluster \
   --name ${CLUSTER_NAME} \
-  --release-label emr-6.10.0 \
+  --release-label emr-7.3.0 \
+  --ebs-root-volume-size=32 \
   --applications Name=Hadoop Name=Livy Name=Spark Name=JupyterEnterpriseGateway \
   --service-role EMR_DefaultRole \
   --log-uri s3://${S3_BUCKET}/logs \
