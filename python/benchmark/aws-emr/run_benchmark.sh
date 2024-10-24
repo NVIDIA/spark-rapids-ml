@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 cluster_type=${1:-gpu}
 BENCHMARK_DATA_HOME="s3://spark-rapids-ml-bm-datasets-public"
 
