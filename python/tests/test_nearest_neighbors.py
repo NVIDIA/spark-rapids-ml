@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.ml.linalg import VectorUDT
 from pyspark.sql import DataFrame
+from pyspark.sql.types import LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
@@ -267,6 +269,11 @@ def func_test_example_no_id(
         (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
         assert knn_df_v2.collect() == knn_df.collect()
 
+        # test kneighbors on empty dataframe
+        df_empty = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
         return gpu_knn, gpu_model
 
 
@@ -361,6 +368,11 @@ def func_test_example_with_id(
         assert_indices_equal(reconstructed_knn_indices)
         reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
         assert reconstructed_query_ids == [201, 202, 203, 204, 205]
+
+        # test kneighbors on empty dataframe without id column
+        df_empty = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
 
         return (gpu_knn, gpu_model)
 
