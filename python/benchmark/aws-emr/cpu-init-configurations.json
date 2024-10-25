@@ -2,8 +2,8 @@
     {
         "Classification":"spark-defaults",
         "Properties":{
-            "spark.pyspark.python":"python3.9",
-            "spark.pyspark.driver.python":"python3.9"
+            "spark.pyspark.python":"/usr/local/bin/python3.10",
+            "spark.pyspark.driver.python":"/usr/local/bin/python3.10"
         }
     }
 ]
