@@ -555,22 +555,25 @@ cuML workers (i.e. GPUs in cluster) from the Spark environment.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setFeaturesCols" title="spark_rapids_ml.clustering.KMeans.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.featuresCols" title="spark_rapids_ml.clustering.KMeans.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setK" title="spark_rapids_ml.clustering.KMeans.setK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setK</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setInitMode" title="spark_rapids_ml.clustering.KMeans.setInitMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setInitMode</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.initMode" title="spark_rapids_ml.clustering.KMeans.initMode"><code class="xref py py-attr docutils literal notranslate"><span class="pre">initMode</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setK" title="spark_rapids_ml.clustering.KMeans.setK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setK</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.k" title="spark_rapids_ml.clustering.KMeans.k"><code class="xref py py-attr docutils literal notranslate"><span class="pre">k</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setMaxIter" title="spark_rapids_ml.clustering.KMeans.setMaxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMaxIter</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setMaxIter" title="spark_rapids_ml.clustering.KMeans.setMaxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMaxIter</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.maxIter" title="spark_rapids_ml.clustering.KMeans.maxIter"><code class="xref py py-attr docutils literal notranslate"><span class="pre">maxIter</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setPredictionCol" title="spark_rapids_ml.clustering.KMeans.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setPredictionCol" title="spark_rapids_ml.clustering.KMeans.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.predictionCol" title="spark_rapids_ml.clustering.KMeans.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setSeed" title="spark_rapids_ml.clustering.KMeans.setSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSeed</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setSeed" title="spark_rapids_ml.clustering.KMeans.setSeed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSeed</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.seed" title="spark_rapids_ml.clustering.KMeans.seed"><code class="xref py py-attr docutils literal notranslate"><span class="pre">seed</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setTol" title="spark_rapids_ml.clustering.KMeans.setTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setTol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.setTol" title="spark_rapids_ml.clustering.KMeans.setTol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setTol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.tol" title="spark_rapids_ml.clustering.KMeans.tol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">tol</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.write" title="spark_rapids_ml.clustering.KMeans.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.write" title="spark_rapids_ml.clustering.KMeans.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -845,6 +848,12 @@ a default value.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeans.setInitMode">
+<span class="sig-name descname"><span class="pre">setInitMode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans" title="spark_rapids_ml.clustering.KMeans"><span class="pre">KMeans</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeans.setInitMode" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.initMode" title="spark_rapids_ml.clustering.KMeans.initMode"><code class="xref py py-attr docutils literal notranslate"><span class="pre">initMode</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.clustering.KMeans.setK">
 <span class="sig-name descname"><span class="pre">setK</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.clustering.KMeans" title="spark_rapids_ml.clustering.KMeans"><span class="pre">KMeans</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.clustering.KMeans.setK" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.clustering.KMeans.k" title="spark_rapids_ml.clustering.KMeans.k"><code class="xref py py-attr docutils literal notranslate"><span class="pre">k</span></code></a>.</p>
@@ -1019,6 +1028,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.set"><code class="docutils literal notranslate"><span class="pre">KMeans.set()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.setFeaturesCol"><code class="docutils literal notranslate"><span class="pre">KMeans.setFeaturesCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.setFeaturesCols"><code class="docutils literal notranslate"><span class="pre">KMeans.setFeaturesCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.setInitMode"><code class="docutils literal notranslate"><span class="pre">KMeans.setInitMode()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.setK"><code class="docutils literal notranslate"><span class="pre">KMeans.setK()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.setMaxIter"><code class="docutils literal notranslate"><span class="pre">KMeans.setMaxIter()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.clustering.KMeans.setPredictionCol"><code class="docutils literal notranslate"><span class="pre">KMeans.setPredictionCol()</span></code></a></li>
