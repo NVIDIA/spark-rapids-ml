@@ -129,6 +129,7 @@ def func_test_example_no_id(
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+        knn_df = knn_df.cache()
         knn_df.show()
 
         # check knn results
@@ -180,6 +181,7 @@ def func_test_example_no_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -274,6 +276,9 @@ def func_test_example_no_id(
         (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
         knn_df_empty.show()
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
+
         return gpu_knn, gpu_model
 
 
@@ -323,6 +328,8 @@ def func_test_example_with_id(
         item_df_withid, query_df_withid, knn_df = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+
+        knn_df = knn_df.cache()
         knn_df.show()
 
         distances_df = knn_df.select("distances")
@@ -346,6 +353,7 @@ def func_test_example_with_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -374,6 +382,8 @@ def func_test_example_with_id(
         (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
         knn_df_empty.show()
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
         return (gpu_knn, gpu_model)
 
 
