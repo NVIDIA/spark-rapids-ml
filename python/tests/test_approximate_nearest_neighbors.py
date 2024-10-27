@@ -151,6 +151,20 @@ def test_example(
         assert obj._cuml_params["algo_params"] == algoParams
 
 
+@pytest.mark.slow
+def test_empty_dataframe() -> None:
+    gpu_knn = ApproximateNearestNeighbors()
+    gpu_knn = gpu_knn.setInputCol("features").setK(1)
+    with CleanSparkSession() as spark:
+        schema = f"features array<float>, metadata string"
+        item_df = spark.createDataFrame([], schema)
+        gpu_model = gpu_knn.fit(item_df)
+
+        query_df = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(query_df)
+        knn_df_empty.show()
+
+
 def test_example_cosine() -> None:
     gpu_number = 1
     X = [
