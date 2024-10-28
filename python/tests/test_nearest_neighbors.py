@@ -126,6 +126,12 @@ def func_test_example_no_id(
         with pytest.raises(NotImplementedError):
             gpu_model.save(tmp_path + "/knn_model")
 
+        # test kneighbors on empty query dataframe
+        df_empty = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
@@ -271,11 +277,6 @@ def func_test_example_no_id(
         (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
         assert knn_df_v2.collect() == knn_df.collect()
 
-        # test kneighbors on empty dataframe
-        df_empty = spark.createDataFrame([], schema="features array<float>")
-        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
-        knn_df_empty.show()
-
         knn_df.unpersist()
         knnjoin_df.unpersist()
 
@@ -325,6 +326,13 @@ def func_test_example_with_id(
         gpu_knn = gpu_knn.setK(topk)
 
         gpu_model = gpu_knn.fit(data_df)
+
+        # test kneighbors on empty query dataframe with id column
+        df_empty = spark.createDataFrame([], schema="id long, features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         item_df_withid, query_df_withid, knn_df = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
@@ -376,11 +384,6 @@ def func_test_example_with_id(
         assert_indices_equal(reconstructed_knn_indices)
         reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
         assert reconstructed_query_ids == [201, 202, 203, 204, 205]
-
-        # test kneighbors on empty dataframe without id column
-        df_empty = spark.createDataFrame([], schema="features array<float>")
-        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
-        knn_df_empty.show()
 
         knn_df.unpersist()
         knnjoin_df.unpersist()

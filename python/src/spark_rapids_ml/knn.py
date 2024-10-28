@@ -1470,14 +1470,15 @@ class ApproximateNearestNeighborsModel(
                 assert len(item.columns) == 1
                 item = np.array(list(item[item.columns[0]]), order="C")
 
-            if len(item) == 0:
-                return pd.DataFrame(
+            if len(item) == 0 or len(bcast_qfeatures.value) == 0:
+                res = pd.DataFrame(
                     {
-                        f"query_{id_col_name}": [],
-                        "indices": [],
-                        "distances": [],
+                        f"query_{id_col_name}": pd.Series(dtype="int64"),
+                        "indices": pd.Series(dtype="object"),
+                        "distances": pd.Series(dtype="object"),
                     }
                 )
+                return res
 
             import cupy as cp
             from pyspark import TaskContext
