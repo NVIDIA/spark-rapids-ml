@@ -365,6 +365,11 @@ def ann_algorithm_test_func(
     n_neighbors: int = 50,
 ) -> None:
 
+    assert data_type in {
+        np.float32,
+        np.float64,
+    }, "the test function applies to float dataset dtype only, as it scales the dataset by the average norm of rows"
+
     algorithm = combo[0]
     assert algorithm in {"ivfflat", "ivfpq", "cagra"}
 
@@ -756,6 +761,62 @@ def test_cagra(
         tolerance=tolerance,
         n_neighbors=n_neighbors,
     )
+
+
+@pytest.mark.parametrize(
+    "feature_type,data_type",
+    [
+        ("vector", np.float64),
+        ("multi_cols", np.float64),
+        ("multi_cols", np.int16),
+        ("array", np.int64),
+    ],
+)
+@pytest.mark.slow
+def test_cagra_dtype(
+    feature_type: str,
+    data_type: np.dtype,
+) -> None:
+
+    algorithm = "cagra"
+    algo_params = {
+        "intermediate_graph_degree": 128,
+        "graph_degree": 64,
+        "build_algo": "ivf_pq",
+    }
+
+    gpu_number = 1
+    n_neighbors = 2
+    metric = "sqeuclidean"
+    X = np.array(
+        [
+            [10.0, 10.0],
+            [20.0, 20.0],
+            [40.0, 40.0],
+            [50.0, 50.0],
+        ],
+        dtype="int32",
+    )
+    X = X.astype(data_type)
+    y = np.array(range(len(X)))
+    with CleanSparkSession() as spark:
+        data_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X, y
+        )
+
+        gpu_knn = ApproximateNearestNeighbors(
+            num_workers=gpu_number,
+            inputCol=features_col,
+            idCol=label_col,
+            k=n_neighbors,
+            metric=metric,
+            algorithm=algorithm,
+            algoParams=algo_params,
+        )
+
+        gpu_model = gpu_knn.fit(data_df)
+        (_, _, knn_df) = gpu_model.kneighbors(data_df)
+        knn_df.show()
 
 
 @pytest.mark.parametrize(

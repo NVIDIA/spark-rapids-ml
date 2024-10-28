@@ -1099,6 +1099,12 @@ class ApproximateNearestNeighbors(
             "ivfpq",
             "cagra",
         }, "currently only ivfflat, ivfpq, and cagra are supported"
+        if not self._input_kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator supports only float32 inputs on GPU and will convert all other data types to float32. Setting float32_inputs to False will be ignored."
+            )
+            self._input_kwargs.pop("float32_inputs")
+
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
