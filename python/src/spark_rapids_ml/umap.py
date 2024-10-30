@@ -34,6 +34,8 @@ from typing import (
 import numpy as np
 import pandas as pd
 import pyspark
+import scipy
+from cuml.common.sparse_utils import is_sparse
 from pandas import DataFrame as PandasDataFrame
 from pyspark.ml.param.shared import (
     HasFeaturesCol,
@@ -66,12 +68,21 @@ from .core import (
     _CumlModelReader,
     _CumlModelWriter,
     _EvaluateFunc,
+    _read_csr_matrix_from_unwrapped_spark_vec,
     _TransformFunc,
+    _use_sparse_in_cuml,
     alias,
     param_alias,
 )
 from .metrics import EvalMetricInfo
-from .params import DictTypeConverters, HasFeaturesCols, P, _CumlClass, _CumlParams
+from .params import (
+    DictTypeConverters,
+    HasEnableSparseDataOptim,
+    HasFeaturesCols,
+    P,
+    _CumlClass,
+    _CumlParams,
+)
 from .utils import (
     _ArrayOrder,
     _concat_and_free,
@@ -120,7 +131,12 @@ class UMAPClass(_CumlClass):
 
 
 class _UMAPCumlParams(
-    _CumlParams, HasFeaturesCol, HasFeaturesCols, HasLabelCol, HasOutputCol
+    _CumlParams,
+    HasFeaturesCol,
+    HasFeaturesCols,
+    HasLabelCol,
+    HasOutputCol,
+    HasEnableSparseDataOptim,
 ):
     def __init__(self) -> None:
         super().__init__()
@@ -894,6 +910,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         labelCol: Optional[str] = None,
         outputCol: Optional[str] = None,
         num_workers: Optional[int] = None,
+        enable_sparse_data_optim: Optional[
+            bool
+        ] = None,  # TODO: reuses 'vector -> sparse csr' conversion code, but will enable sparse data if first row is sparse. maybe have logic specific to UMAP?
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -983,7 +1002,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         model = UMAPModel(
             embedding_=broadcast_embeddings,
             raw_data_=broadcast_raw_data,
-            n_cols=len(raw_data[0]),
+            sparse_fit=self._sparse_fit,
+            n_cols=self._n_cols,
             dtype=type(raw_data[0][0]).__name__,
         )
 
@@ -1065,7 +1085,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         cls = self.__class__
 
-        select_cols, multi_col_names, _, _ = self._pre_process_data(dataset)
+        select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
+        self._n_cols = dimension  # for sparse data, this info may be lost after converting to COO format; store beforehand.
 
         dataset = dataset.select(*select_cols)
 
@@ -1091,6 +1112,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         cuml_verbose = self.cuml_params.get("verbose", False)
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
+        self._sparse_fit = use_sparse_array  # param stored internally by cuml model
+
         chunk_size = self.max_records_per_batch
 
         def _train_udf(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
@@ -1100,6 +1124,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             logger.info("Initializing cuml context")
 
             import cupy as cp
+            import cupyx
 
             if cuda_managed_mem_enabled:
                 import rmm
@@ -1118,18 +1143,31 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
             logger.info("Loading data into python worker memory")
-            inputs = []
-            sizes = []
+            inputs: List[Any] = []
+            sizes: List[int] = []
             for pdf in pdf_iter:
                 sizes.append(pdf.shape[0])
                 if multi_col_names:
                     features = np.array(pdf[multi_col_names], order=array_order)
+                elif use_sparse_array:
+                    # sparse vector input
+                    features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
                 else:
                     features = np.array(list(pdf[alias.data]), order=array_order)
-                # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
-                # invoking cupy array on the list
                 if cuda_managed_mem_enabled:
-                    features = cp.array(features)
+                    if use_sparse_array:
+                        concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
+                        if concated_nnz > np.iinfo(np.int32).max:
+                            logger.warn(
+                                "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
+                            )
+                        else:
+                            inputs = [
+                                (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
+                                for row in inputs
+                            ]
+                    else:
+                        features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
@@ -1141,6 +1179,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             # *note*: cuml_fit_func may delete components of inputs to free
             # memory.  do not rely on inputs after this call.
             embedding, raw_data = cuml_fit_func(inputs, params).values()
+
             logger.info("Cuml fit complete")
 
             num_sections = (len(embedding) + chunk_size - 1) // chunk_size
@@ -1148,12 +1187,18 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             for i in range(num_sections):
                 start = i * chunk_size
                 end = min((i + 1) * chunk_size, len(embedding))
+                if self._sparse_fit:
+                    # return sparse array as a list in COO format
+                    coo = raw_data[start:end].tocoo()
+                    raw_data = list(zip(coo.row, coo.col, coo.data))
+                else:
+                    raw_data = raw_data[start:end].tolist()
 
                 yield pd.DataFrame(
                     data=[
                         {
                             "embedding_": embedding[start:end].tolist(),
-                            "raw_data_": raw_data[start:end].tolist(),
+                            "raw_data_": raw_data,
                         }
                     ]
                 )
@@ -1206,17 +1251,22 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         self,
         embedding_: List[pyspark.broadcast.Broadcast],
         raw_data_: List[pyspark.broadcast.Broadcast],
+        sparse_fit: bool,
         n_cols: int,
         dtype: str,
     ) -> None:
         super(UMAPModel, self).__init__(
             embedding_=embedding_,
             raw_data_=raw_data_,
+            sparse_fit=sparse_fit,
             n_cols=n_cols,
             dtype=dtype,
         )
         self.embedding_ = embedding_
         self.raw_data_ = raw_data_
+        self.sparse_fit = (
+            sparse_fit  # If true, raw_data_ is a sparse array in COO format
+        )
 
     @property
     def embedding(self) -> List[List[float]]:
@@ -1247,7 +1297,6 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         def _construct_umap() -> CumlT:
             import cupy as cp
             from cuml.common import SparseCumlArray
-            from cuml.common.sparse_utils import is_sparse
             from cuml.manifold import UMAP as CumlUMAP
 
             from .utils import cudf_to_cuml_array
@@ -1259,11 +1308,31 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                 if len(driver_embedding) == 1
                 else np.concatenate([chunk.value for chunk in driver_embedding])
             )
-            raw_data = (
-                driver_raw_data[0].value
-                if len(driver_raw_data) == 1
-                else np.concatenate([chunk.value for chunk in driver_raw_data])
-            )
+
+            if self.sparse_fit:
+                if len(driver_raw_data) == 1:
+                    coo_list = driver_raw_data[0].value.tolist()
+                else:
+                    coo_list = np.concatenate(
+                        [chunk.value for chunk in driver_raw_data]
+                    ).tolist()
+                # Convert from COO format to CSR Matrix
+                rows, cols, values = zip(*coo_list)
+                rows_indices = np.array(rows, dtype=int)
+                cols_indices = np.array(cols, dtype=int)
+
+                from scipy.sparse import coo_matrix
+
+                csr_shape = (np.max(rows_indices) + 1, self.n_cols)
+                raw_data = coo_matrix(
+                    (values, (rows_indices, cols_indices)), shape=csr_shape
+                ).tocsr()
+            else:
+                raw_data = (
+                    driver_raw_data[0].value
+                    if len(driver_raw_data) == 1
+                    else np.concatenate([chunk.value for chunk in driver_raw_data])
+                )
 
             del driver_embedding
             del driver_raw_data
@@ -1273,7 +1342,9 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                 raw_data = raw_data.astype(np.float32)
 
             if is_sparse(raw_data):
-                raw_data_cuml = SparseCumlArray(raw_data, convert_format=False)
+                raw_data_cuml = SparseCumlArray(
+                    raw_data,
+                )
             else:
                 raw_data_cuml = cudf_to_cuml_array(
                     raw_data,
@@ -1283,14 +1354,27 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             internal_model = CumlUMAP(**cuml_alg_params)
             internal_model.embedding_ = cp.array(embedding).data
             internal_model._raw_data = raw_data_cuml
+            internal_model.sparse_fit = self.sparse_fit
 
             return internal_model
 
         def _transform_internal(
             umap: CumlT,
-            df: Union[pd.DataFrame, np.ndarray],
+            df: Union[pd.DataFrame, np.ndarray, scipy.sparse._csr.csr_matrix],
         ) -> pd.Series:
+
             embedding = umap.transform(df)
+
+            if is_sparse(df):
+                # scipy csr matrix to dense numpy array
+                df = df.toarray()  # type: ignore
+                """
+                TODO: or, we can convert this back to pyspark SparseVector so it matches the user input? e.g.,
+                vector_udt_rows = [
+                    SparseVector(df.shape[1], row.indices, row.data) for row in df
+                ]
+                ...and edit schema accordingly. 
+                """
 
             is_df_np = isinstance(df, np.ndarray)
             is_emb_np = isinstance(embedding, np.ndarray)
