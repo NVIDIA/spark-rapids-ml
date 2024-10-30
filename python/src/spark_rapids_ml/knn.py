@@ -602,7 +602,20 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
             alias.label, lit(self._label_isquery)
         )
 
-        union_df = self._processed_item_df.union(processed_query_df)
+        def select_cols_for_cuml_fit(df_origin: DataFrame) -> DataFrame:
+            cols_for_nns = [self._getIdColOrDefault(), alias.label]
+            input_col, input_cols = self._get_input_columns()
+            if input_col is not None:
+                cols_for_nns.append(input_col)
+            else:
+                assert input_cols is not None
+                cols_for_nns += input_cols
+
+            return df_origin.select(cols_for_nns)
+
+        df_item_for_nns = select_cols_for_cuml_fit(self._processed_item_df)
+        df_query_for_nns = select_cols_for_cuml_fit(processed_query_df)
+        union_df = df_item_for_nns.union(df_query_for_nns)
 
         pipelinedrdd = self._call_cuml_fit_func(union_df, partially_collect=False)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
@@ -1457,14 +1470,15 @@ class ApproximateNearestNeighborsModel(
                 assert len(item.columns) == 1
                 item = np.array(list(item[item.columns[0]]), order="C")
 
-            if len(item) == 0:
-                return pd.DataFrame(
+            if len(item) == 0 or len(bcast_qfeatures.value) == 0:
+                res = pd.DataFrame(
                     {
-                        f"query_{id_col_name}": [],
-                        "indices": [],
-                        "distances": [],
+                        f"query_{id_col_name}": pd.Series(dtype="int64"),
+                        "indices": pd.Series(dtype="object"),
+                        "distances": pd.Series(dtype="object"),
                     }
                 )
+                return res
 
             import cupy as cp
             from pyspark import TaskContext

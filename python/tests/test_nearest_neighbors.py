@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.ml.linalg import VectorUDT
 from pyspark.sql import DataFrame
+from pyspark.sql.types import LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
@@ -124,9 +126,16 @@ def func_test_example_no_id(
         with pytest.raises(NotImplementedError):
             gpu_model.save(tmp_path + "/knn_model")
 
+        # test kneighbors on empty query dataframe
+        df_empty = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+        knn_df = knn_df.cache()
         knn_df.show()
 
         # check knn results
@@ -178,6 +187,7 @@ def func_test_example_no_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -267,6 +277,9 @@ def func_test_example_no_id(
         (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
         assert knn_df_v2.collect() == knn_df.collect()
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
+
         return gpu_knn, gpu_model
 
 
@@ -313,9 +326,18 @@ def func_test_example_with_id(
         gpu_knn = gpu_knn.setK(topk)
 
         gpu_model = gpu_knn.fit(data_df)
+
+        # test kneighbors on empty query dataframe with id column
+        df_empty = spark.createDataFrame([], schema="id long, features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         item_df_withid, query_df_withid, knn_df = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+
+        knn_df = knn_df.cache()
         knn_df.show()
 
         distances_df = knn_df.select("distances")
@@ -339,6 +361,7 @@ def func_test_example_with_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -362,6 +385,8 @@ def func_test_example_with_id(
         reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
         assert reconstructed_query_ids == [201, 202, 203, 204, 205]
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
         return (gpu_knn, gpu_model)
 
 
