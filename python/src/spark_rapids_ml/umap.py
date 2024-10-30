@@ -912,7 +912,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         num_workers: Optional[int] = None,
         enable_sparse_data_optim: Optional[
             bool
-        ] = None,  # TODO: reuses 'vector -> sparse csr' conversion code, but will enable sparse data if first row is sparse. maybe have logic specific to UMAP?
+        ] = None,  # TBD: reuses 'vector -> sparse csr' conversion code, but will enable sparse data if first row is sparse for any metric. maybe set False by default, and None for 'jaccard'?
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -1369,7 +1369,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                 # scipy csr matrix to dense numpy array
                 df = df.toarray()  # type: ignore
                 """
-                TODO: or, we can convert this back to pyspark SparseVector so it matches the user input? e.g.,
+                TBD: we may want to convert this back to pyspark SparseVector so it matches the user input, e.g.,
                 vector_udt_rows = [
                     SparseVector(df.shape[1], row.indices, row.data) for row in df
                 ]
