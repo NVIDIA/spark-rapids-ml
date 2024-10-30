@@ -1398,7 +1398,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                         yield pdf
                 else:
                     pdfs = [pdf for pdf in pdf_iter]
-                    yield pd.concat(pdfs, ignore_index=True)
+                    if (len(pdfs)) > 0:
+                        yield pd.concat(pdfs, ignore_index=True)
 
             processed_pdf_iter = process_pdf_iter(pdf_iter)
             has_row_number = None
