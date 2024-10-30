@@ -834,7 +834,6 @@ def test_cagra_dtype(
         ),
     ],
 )
-@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 def test_cagra_params(
     algorithm: str,
@@ -842,10 +841,11 @@ def test_cagra_params(
     max_records_per_batch: int,
     algo_params: Dict[str, Any],
     metric: str,
-    data_shape: Tuple[int, int],
     data_type: np.dtype,
+    caplog: LogCaptureFixture,
 ) -> None:
 
+    data_shape = (1000, 20)
     itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
 
     internal_topk_size = math.ceil(itopk_size / 32) * 32
@@ -865,6 +865,23 @@ def test_cagra_params(
             data_type,
             n_neighbors=n_neighbors,
         )
+
+    # test intermediate_graph_degree restriction on ivf_pq
+    algo_params["itopk_size"] = 64
+    algo_params["intermediate_graph_degree"] = 257
+    error_msg = f"cagra with ivf_pq build_algo expects intermediate_graph_degree (257) to be smaller than 256."
+    with pytest.raises(Exception):
+        test_cagra(
+            algorithm,
+            feature_type,
+            max_records_per_batch,
+            algo_params,
+            metric,
+            data_shape,
+            data_type,
+            n_neighbors=n_neighbors,
+        )
+        assert error_msg in caplog.text
 
 
 @pytest.mark.parametrize(
