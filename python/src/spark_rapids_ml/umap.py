@@ -35,7 +35,6 @@ import numpy as np
 import pandas as pd
 import pyspark
 import scipy
-from cuml.common.sparse_utils import is_sparse
 from pandas import DataFrame as PandasDataFrame
 from pyspark.ml.param.shared import (
     HasFeaturesCol,
@@ -912,7 +911,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         num_workers: Optional[int] = None,
         enable_sparse_data_optim: Optional[
             bool
-        ] = None,  # TBD: reuses 'vector -> sparse csr' conversion code, but will enable sparse data if first row is sparse for any metric. maybe set False by default, and None for 'jaccard'?
+        ] = None,  # will enable SparseVector inputs if first row is sparse (for any metric).
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -1187,7 +1186,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             for i in range(num_sections):
                 start = i * chunk_size
                 end = min((i + 1) * chunk_size, len(embedding))
-                if self._sparse_fit:
+                if use_sparse_array:
                     # return sparse array as a list in COO format
                     coo = raw_data[start:end].tocoo()
                     raw_data = list(zip(coo.row, coo.col, coo.data))
@@ -1297,6 +1296,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         def _construct_umap() -> CumlT:
             import cupy as cp
             from cuml.common import SparseCumlArray
+            from cuml.common.sparse_utils import is_sparse
             from cuml.manifold import UMAP as CumlUMAP
 
             from .utils import cudf_to_cuml_array
@@ -1362,6 +1362,7 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             umap: CumlT,
             df: Union[pd.DataFrame, np.ndarray, scipy.sparse._csr.csr_matrix],
         ) -> pd.Series:
+            from cuml.common.sparse_utils import is_sparse
 
             embedding = umap.transform(df)
 

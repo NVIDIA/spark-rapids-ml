@@ -501,7 +501,17 @@ def test_umap_build_algo(gpu_number: int) -> None:
 def test_umap_sparse_vector(
     n_rows: int, n_cols: int, nnz: int, gpu_number: int
 ) -> None:
+    import pyspark
+    from packaging import version
     from pyspark.ml.linalg import SparseVector
+
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function for SparseVector. "
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
 
     with CleanSparkSession() as spark:
         data = []
