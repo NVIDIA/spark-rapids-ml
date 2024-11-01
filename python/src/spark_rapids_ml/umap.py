@@ -967,16 +967,18 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         )
 
         if self._sparse_fit:
-            # Sparse data is returned in COO format as separate lists. Reconstruct to LIL format.
-            coo_format_list = list(
+            # Sparse data is returned in COO format as separate lists. Reconstruct to array of tuples (row, col, data).
+            coo_list = list(
                 zip(
                     pdf_output["row_indices"].explode(),
                     pdf_output["col_indices"].explode(),
-                    pdf_output["values"].explode(),
+                    pdf_output["data"].explode(),
                 )
             )
-            dtype = np.dtype([("row", "int32"), ("col", "int32"), ("value", "float32")])
-            raw_data = np.array(coo_format_list, dtype=dtype)
+            raw_data = np.array(
+                coo_list,
+                dtype=[("row", "int32"), ("col", "int32"), ("data", "float32")],
+            )
         else:
             raw_data = np.array(
                 list(
@@ -1161,6 +1163,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             logger.info("Loading data into python worker memory")
             inputs: List[Any] = []
             sizes: List[int] = []
+
             for pdf in pdf_iter:
                 sizes.append(pdf.shape[0])
                 if multi_col_names:
@@ -1169,27 +1172,29 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     # sparse vector input
                     features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
                 else:
+                    # dense input
                     features = np.array(list(pdf[alias.data]), order=array_order)
-                if cuda_managed_mem_enabled:
-                    if use_sparse_array:
-                        concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
-                        if concated_nnz > np.iinfo(np.int32).max:
-                            logger.warn(
-                                "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
-                            )
-                        else:
-                            inputs = [
-                                (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
-                                for row in inputs
-                            ]
-                    else:
-                        features = cp.array(features)
+                if cuda_managed_mem_enabled and not use_sparse_array:
+                    features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
                     pdf[alias.row_number] if alias.row_number in pdf.columns else None
                 )
                 inputs.append((features, label, row_number))
+
+            if cuda_managed_mem_enabled and use_sparse_array:
+                concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
+                if concated_nnz > np.iinfo(np.int32).max:
+                    logger.warn(
+                        f"The number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix. \
+                        Using dense array to prevent overflow."
+                    )
+                else:
+                    inputs = [
+                        (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
+                        for row in inputs
+                    ]
 
             # call the cuml fit function
             # *note*: cuml_fit_func may delete components of inputs to free
@@ -1204,28 +1209,23 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 start = i * chunk_size
                 end = min((i + 1) * chunk_size, len(embedding))
                 if use_sparse_array:
-                    # return sparse array as separate lists in COO format
                     coo = raw_data[start:end].tocoo()
-                    row_indices = coo.row
-                    col_indices = coo.col
-                    values = coo.data
                     yield pd.DataFrame(
                         data=[
                             {
                                 "embedding_": embedding[start:end].tolist(),
-                                "row_indices": row_indices.tolist(),
-                                "col_indices": col_indices.tolist(),
-                                "values": values.tolist(),
+                                "row_indices": coo.row.tolist(),
+                                "col_indices": coo.col.tolist(),
+                                "data": coo.data.tolist(),
                             }
                         ]
                     )
                 else:
-                    raw_data = raw_data[start:end].tolist()
                     yield pd.DataFrame(
                         data=[
                             {
                                 "embedding_": embedding[start:end].tolist(),
-                                "raw_data_": raw_data,
+                                "raw_data_": raw_data[start:end].tolist(),
                             }
                         ]
                     )
@@ -1238,7 +1238,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         return (False, False)
 
     def _out_schema(self) -> Union[StructType, str]:
-
         if self._sparse_fit:
             return StructType(
                 [
@@ -1249,7 +1248,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     ),
                     StructField("row_indices", ArrayType(IntegerType(), False), False),
                     StructField("col_indices", ArrayType(IntegerType(), False), False),
-                    StructField("values", ArrayType(FloatType(), False), False),
+                    StructField("data", ArrayType(FloatType(), False), False),
                 ]
             )
         else:

@@ -495,9 +495,9 @@ def test_umap_build_algo(gpu_number: int) -> None:
         assert trust_diff <= 0.15
 
 
-@pytest.mark.parametrize("n_rows", [1000])
-@pytest.mark.parametrize("n_cols", [8, 64])
-@pytest.mark.parametrize("nnz", [3, 5])
+@pytest.mark.parametrize("n_rows", [3000])
+@pytest.mark.parametrize("n_cols", [64, 128])
+@pytest.mark.parametrize("nnz", [7, 12])
 def test_umap_sparse_vector(
     n_rows: int, n_cols: int, nnz: int, gpu_number: int, tmp_path: str
 ) -> None:
