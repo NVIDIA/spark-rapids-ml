@@ -499,7 +499,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
 @pytest.mark.parametrize("n_cols", [8, 64])
 @pytest.mark.parametrize("nnz", [3, 5])
 def test_umap_sparse_vector(
-    n_rows: int, n_cols: int, nnz: int, gpu_number: int
+    n_rows: int, n_cols: int, nnz: int, gpu_number: int, tmp_path: str
 ) -> None:
     import pyspark
     from packaging import version
@@ -555,6 +555,19 @@ def test_umap_sparse_vector(
         ).tocsr()
         # Ensure CSR arrays match
         assert (internal_raw_data != input_raw_data).nnz == 0
+
+        # Model persistence
+        path = tmp_path + "/umap_tests"
+        model_path = f"{path}/umap_model"
+        umap_model.write().overwrite().save(model_path)
+        umap_model_loaded = UMAPModel.load(model_path)
+        assert umap_model_loaded.n_cols == umap_model.n_cols == n_cols
+        assert np.array_equal(
+            np.array(umap_model_loaded.embedding), np.array(umap_model.embedding)
+        )
+        assert np.array_equal(
+            np.array(umap_model_loaded.raw_data), np.array(umap_model.raw_data)
+        )
 
         # Local vs dist trustworthiness check
         output = umap_model.transform(df).toPandas()

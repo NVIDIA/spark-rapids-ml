@@ -51,6 +51,7 @@ from pyspark.sql.types import (
     ArrayType,
     DoubleType,
     FloatType,
+    IntegerType,
     Row,
     StructField,
     StructType,
@@ -964,14 +965,28 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             ),
             dtype=np.float32,
         )
-        raw_data = np.array(
-            list(
-                pd.concat(
-                    [pd.Series(x) for x in pdf_output["raw_data_"]], ignore_index=True
+
+        if self._sparse_fit:
+            # Sparse data is returned in COO format as separate lists. Reconstruct to LIL format.
+            coo_format_list = list(
+                zip(
+                    pdf_output["row_indices"].explode(),
+                    pdf_output["col_indices"].explode(),
+                    pdf_output["values"].explode(),
                 )
-            ),
-            dtype=np.float32,
-        )
+            )
+            dtype = np.dtype([("row", "int32"), ("col", "int32"), ("value", "float32")])
+            raw_data = np.array(coo_format_list, dtype=dtype)
+        else:
+            raw_data = np.array(
+                list(
+                    pd.concat(
+                        [pd.Series(x) for x in pdf_output["raw_data_"]],
+                        ignore_index=True,
+                    )
+                ),
+                dtype=np.float32,
+            )
         del pdf_output
 
         def _chunk_arr(
@@ -1113,6 +1128,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         use_sparse_array = _use_sparse_in_cuml(dataset)
         self._sparse_fit = use_sparse_array  # param stored internally by cuml model
+        if self.cuml_params.get("metric") == "jaccard" and not use_sparse_array:
+            raise ValueError("Metric 'jaccard' not supported for dense inputs.")
 
         chunk_size = self.max_records_per_batch
 
@@ -1187,20 +1204,31 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 start = i * chunk_size
                 end = min((i + 1) * chunk_size, len(embedding))
                 if use_sparse_array:
-                    # return sparse array as a list in COO format
+                    # return sparse array as separate lists in COO format
                     coo = raw_data[start:end].tocoo()
-                    raw_data = list(zip(coo.row, coo.col, coo.data))
+                    row_indices = coo.row
+                    col_indices = coo.col
+                    values = coo.data
+                    yield pd.DataFrame(
+                        data=[
+                            {
+                                "embedding_": embedding[start:end].tolist(),
+                                "row_indices": row_indices.tolist(),
+                                "col_indices": col_indices.tolist(),
+                                "values": values.tolist(),
+                            }
+                        ]
+                    )
                 else:
                     raw_data = raw_data[start:end].tolist()
-
-                yield pd.DataFrame(
-                    data=[
-                        {
-                            "embedding_": embedding[start:end].tolist(),
-                            "raw_data_": raw_data,
-                        }
-                    ]
-                )
+                    yield pd.DataFrame(
+                        data=[
+                            {
+                                "embedding_": embedding[start:end].tolist(),
+                                "raw_data_": raw_data,
+                            }
+                        ]
+                    )
 
         output_df = dataset.mapInPandas(_train_udf, schema=self._out_schema())
 
@@ -1210,20 +1238,35 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         return (False, False)
 
     def _out_schema(self) -> Union[StructType, str]:
-        return StructType(
-            [
-                StructField(
-                    "embedding_",
-                    ArrayType(ArrayType(FloatType(), False), False),
-                    False,
-                ),
-                StructField(
-                    "raw_data_",
-                    ArrayType(ArrayType(FloatType(), False), False),
-                    False,
-                ),
-            ]
-        )
+
+        if self._sparse_fit:
+            return StructType(
+                [
+                    StructField(
+                        "embedding_",
+                        ArrayType(ArrayType(FloatType(), False), False),
+                        False,
+                    ),
+                    StructField("row_indices", ArrayType(IntegerType(), False), False),
+                    StructField("col_indices", ArrayType(IntegerType(), False), False),
+                    StructField("values", ArrayType(FloatType(), False), False),
+                ]
+            )
+        else:
+            return StructType(
+                [
+                    StructField(
+                        "embedding_",
+                        ArrayType(ArrayType(FloatType(), False), False),
+                        False,
+                    ),
+                    StructField(
+                        "raw_data_",
+                        ArrayType(ArrayType(FloatType(), False), False),
+                        False,
+                    ),
+                ]
+            )
 
     def _pre_process_data(
         self, dataset: DataFrame
@@ -1318,14 +1361,14 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                     ).tolist()
                 # Convert from COO format to CSR Matrix
                 rows, cols, values = zip(*coo_list)
-                rows_indices = np.array(rows, dtype=int)
-                cols_indices = np.array(cols, dtype=int)
+                row_indices = np.array(rows, dtype=int)
+                col_indices = np.array(cols, dtype=int)
 
                 from scipy.sparse import coo_matrix
 
-                csr_shape = (np.max(rows_indices) + 1, self.n_cols)
+                csr_shape = (np.max(row_indices) + 1, self.n_cols)
                 raw_data = coo_matrix(
-                    (values, (rows_indices, cols_indices)), shape=csr_shape
+                    (values, (row_indices, col_indices)), shape=csr_shape
                 ).tocsr()
             else:
                 raw_data = (
