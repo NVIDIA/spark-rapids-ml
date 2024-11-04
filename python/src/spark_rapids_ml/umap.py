@@ -1049,7 +1049,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                         )
                         for i in range(num_chunks)
                     ],
-                }  # NOTE: CSR chunks are not inherently meaningful; do not use until recombined
+                }  # NOTE: CSR chunks are not independently meaningful; do not use until recombined
 
             else:
                 # should never get here
@@ -1063,8 +1063,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             spark.sparkContext, raw_data, self.BROADCAST_LIMIT
         )
 
+        assert isinstance(broadcast_embeddings, list)
         model = UMAPModel(
-            embedding_=broadcast_embeddings,  # type: ignore
+            embedding_=broadcast_embeddings,
             raw_data_=broadcast_raw_data,
             sparse_fit=self._sparse_fit,
             n_cols=self._n_cols,
