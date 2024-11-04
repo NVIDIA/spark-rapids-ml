@@ -117,27 +117,31 @@ def _spark_umap_trustworthiness(
 
     with CleanSparkSession() as spark:
         if supervised:
-            data_df, features_col, label_col = create_pyspark_dataframe(
+            data_df, feature_cols, label_col = create_pyspark_dataframe(
                 spark, feature_type, dtype, local_X, local_y
             )
             assert label_col is not None
             umap_estimator.setLabelCol(label_col)
         else:
-            data_df, features_col, _ = create_pyspark_dataframe(
+            data_df, feature_cols, _ = create_pyspark_dataframe(
                 spark, feature_type, dtype, local_X, None
             )
 
         data_df = data_df.repartition(n_parts)
-        umap_estimator.setFeaturesCol(features_col)
+        if isinstance(feature_cols, list):
+            umap_estimator.setFeaturesCols(feature_cols)
+        else:
+            umap_estimator.setFeaturesCol(feature_cols)
 
         umap_model = umap_estimator.fit(data_df)
         pdf = umap_model.transform(data_df).toPandas()
 
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
-        if isinstance(features_col, list):
-            input = np.hstack([np.vstack(pdf[col].to_numpy()) for col in features_col])
+        if isinstance(feature_cols, list):
+            input = pdf[feature_cols].to_numpy()
         else:
-            input = np.vstack(pdf[features_col].to_numpy())
+            input = pdf[feature_cols].to_list()
+
         input = cp.asarray(input).astype(cp.float32)
 
     return trustworthiness(input, embedding, n_neighbors=n_neighbors, batch_size=5000)

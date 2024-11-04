@@ -1599,7 +1599,7 @@ class _CumlModelReaderNumpy(_CumlModelReader):
             if isinstance(value, str) and value.endswith(".npz"):
                 npz_data = np.load(value)
                 if value.endswith("csr_.npz"):
-
+                    # Handle sparse raw data - npz file contains separate arrays for CSR attributes
                     def _get_sorted_data_keys(
                         npz_data: np.lib.npyio.NpzFile, csr_key: str
                     ) -> List[str]:
@@ -1613,7 +1613,6 @@ class _CumlModelReaderNumpy(_CumlModelReader):
                     indices_keys = _get_sorted_data_keys(npz_data, "indices")
                     indptr_keys = _get_sorted_data_keys(npz_data, "indptr")
                     data_keys = _get_sorted_data_keys(npz_data, "data")
-
                     raw_data_dict = {
                         "indices": [
                             spark.sparkContext.broadcast(npz_data[key])
@@ -1628,7 +1627,6 @@ class _CumlModelReaderNumpy(_CumlModelReader):
                             for key in data_keys
                         ],
                     }
-
                     model_attr_dict[key] = raw_data_dict
                 else:
                     chunks = [npz_data[f"{key}_{i}"] for i in range(len(npz_data))]
