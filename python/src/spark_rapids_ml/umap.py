@@ -66,6 +66,7 @@ from .core import (
     _CumlEstimatorSupervised,
     _CumlModel,
     _CumlModelReader,
+    _CumlModelWithColumns,
     _CumlModelWriter,
     _EvaluateFunc,
     _read_csr_matrix_from_unwrapped_spark_vec,
@@ -88,6 +89,7 @@ from .utils import (
     _concat_and_free,
     _get_spark_session,
     _is_local,
+    dtype_to_pyspark_type,
     get_logger,
 )
 
@@ -956,7 +958,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         pdf_output: PandasDataFrame = df_output.toPandas()
 
-        # Collect and concatenate row-by-row fit results
         embeddings = np.array(
             list(
                 pd.concat(
@@ -967,18 +968,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         )
 
         if self._sparse_fit:
-            # Sparse data is returned in COO format as separate lists. Reconstruct to array of tuples (row, col, data).
-            coo_list = list(
-                zip(
-                    pdf_output["row_indices"].explode(),
-                    pdf_output["col_indices"].explode(),
-                    pdf_output["data"].explode(),
-                )
-            )
-            raw_data = np.array(
-                coo_list,
-                dtype=[("row", "int32"), ("col", "int32"), ("data", "float32")],
-            )
+            # Sparse data is returned in a dict of CSR format.
+            indices = pdf_output["indices"].explode().to_numpy(dtype=np.int32)
+            indptr = pdf_output["indptr"].explode().to_numpy(dtype=np.int32)
+            data = pdf_output["data"].explode().to_numpy(dtype=np.float32)
+            raw_data = {"indices": indices, "indptr": indptr, "data": data}
         else:
             raw_data = np.array(
                 list(
@@ -988,39 +982,93 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     )
                 ),
                 dtype=np.float32,
-            )
+            )  # type: ignore
         del pdf_output
 
-        def _chunk_arr(
-            arr: np.ndarray, BROADCAST_LIMIT: int = self.BROADCAST_LIMIT
-        ) -> List[np.ndarray]:
-            """Chunk an array, if oversized, into smaller arrays that can be broadcasted."""
-            if arr.nbytes <= BROADCAST_LIMIT:
-                return [arr]
+        def _chunk_and_broadcast(
+            sc: pyspark.SparkContext,
+            input: Union[np.ndarray, Dict[str, np.ndarray]],
+            BROADCAST_LIMIT: int,
+        ) -> Union[
+            List[pyspark.broadcast.Broadcast],
+            Dict[str, List[pyspark.broadcast.Broadcast]],
+        ]:
+            """
+            Broadcast the input array, chunking it into smaller arrays if it exceeds the broadcast limit.
+            If the input is a dictionary of arrays (i.e. CSR), chunk and broadcast each array in the dictionary.
+            """
+            if isinstance(input, np.ndarray):
+                total_bytes = input.nbytes
+                if total_bytes <= BROADCAST_LIMIT:
+                    return [sc.broadcast(input)]
 
-            rows_per_chunk = BROADCAST_LIMIT // (arr.nbytes // arr.shape[0])
-            num_chunks = (arr.shape[0] + rows_per_chunk - 1) // rows_per_chunk
-            chunks = [
-                arr[i * rows_per_chunk : (i + 1) * rows_per_chunk]
-                for i in range(num_chunks)
-            ]
+                rows_per_chunk = BROADCAST_LIMIT // (total_bytes // input.shape[0])
+                num_chunks = (input.shape[0] + rows_per_chunk - 1) // rows_per_chunk
+                return [
+                    sc.broadcast(input[i * rows_per_chunk : (i + 1) * rows_per_chunk])
+                    for i in range(num_chunks)
+                ]
 
-            return chunks
+            elif isinstance(input, dict):
+                total_bytes = sum(map(lambda arr: arr.nbytes, input.values()))
+                if total_bytes <= BROADCAST_LIMIT:
+                    return {k: [sc.broadcast(arr)] for k, arr in input.items()}
+
+                rows_per_chunk = BROADCAST_LIMIT // (
+                    total_bytes // input["data"].shape[0]
+                )
+                num_chunks = (
+                    input["data"].shape[0] + rows_per_chunk - 1
+                ) // rows_per_chunk
+                # indptr is chunked differently because it has less rows; split to match num_chunks
+                indptr_rows_per_chunk = (
+                    input["indptr"].shape[0] + (num_chunks - 1)
+                ) // num_chunks
+                return {
+                    "indices": [
+                        sc.broadcast(
+                            input["indices"][
+                                i * rows_per_chunk : (i + 1) * rows_per_chunk
+                            ]
+                        )
+                        for i in range(num_chunks)
+                    ],
+                    "indptr": [
+                        sc.broadcast(
+                            input["indptr"][
+                                i
+                                * indptr_rows_per_chunk : (i + 1)
+                                * indptr_rows_per_chunk
+                            ]
+                        )
+                        for i in range(num_chunks)
+                    ],
+                    "data": [
+                        sc.broadcast(
+                            input["data"][i * rows_per_chunk : (i + 1) * rows_per_chunk]
+                        )
+                        for i in range(num_chunks)
+                    ],
+                }  # NOTE: CSR chunks are not inherently meaningful; do not use until recombined
+
+            else:
+                # should never get here
+                raise ValueError(f"Unsupported input type: {type(input)}")
 
         spark = _get_spark_session()
-        broadcast_embeddings = [
-            spark.sparkContext.broadcast(chunk) for chunk in _chunk_arr(embeddings)
-        ]
-        broadcast_raw_data = [
-            spark.sparkContext.broadcast(chunk) for chunk in _chunk_arr(raw_data)
-        ]
+        broadcast_embeddings = _chunk_and_broadcast(
+            spark.sparkContext, embeddings, self.BROADCAST_LIMIT
+        )
+        broadcast_raw_data = _chunk_and_broadcast(
+            spark.sparkContext, raw_data, self.BROADCAST_LIMIT
+        )
 
         model = UMAPModel(
-            embedding_=broadcast_embeddings,
+            embedding_=broadcast_embeddings,  # type: ignore
             raw_data_=broadcast_raw_data,
             sparse_fit=self._sparse_fit,
             n_cols=self._n_cols,
-            dtype=type(raw_data[0][0]).__name__,
+            dtype="float32",  # UMAP only supports float32
         )
 
         model._num_workers = input_num_workers
@@ -1102,7 +1150,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         cls = self.__class__
 
         select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
-        self._n_cols = dimension  # for sparse data, this info may be lost after converting to COO format; store beforehand.
+        self._n_cols = dimension
 
         dataset = dataset.select(*select_cols)
 
@@ -1187,8 +1235,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
-                        f"The number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix. \
-                        Using dense array to prevent overflow."
+                        "The number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix."
                     )
                 else:
                     inputs = [
@@ -1209,14 +1256,17 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 start = i * chunk_size
                 end = min((i + 1) * chunk_size, len(embedding))
                 if use_sparse_array:
-                    coo = raw_data[start:end].tocoo()
+                    csr = raw_data[start:end]
+                    indices = csr.indices
+                    indptr = csr.indptr
+                    data = csr.data
                     yield pd.DataFrame(
                         data=[
                             {
                                 "embedding_": embedding[start:end].tolist(),
-                                "row_indices": coo.row.tolist(),
-                                "col_indices": coo.col.tolist(),
-                                "data": coo.data.tolist(),
+                                "indices": indices.tolist(),
+                                "indptr": indptr.tolist(),
+                                "data": data.tolist(),
                             }
                         ]
                     )
@@ -1246,8 +1296,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                         ArrayType(ArrayType(FloatType(), False), False),
                         False,
                     ),
-                    StructField("row_indices", ArrayType(IntegerType(), False), False),
-                    StructField("col_indices", ArrayType(IntegerType(), False), False),
+                    StructField("indices", ArrayType(IntegerType(), False), False),
+                    StructField("indptr", ArrayType(IntegerType(), False), False),
                     StructField("data", ArrayType(FloatType(), False), False),
                 ]
             )
@@ -1287,11 +1337,14 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         return select_cols, multi_col_names, dimension, feature_type
 
 
-class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
+class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
     def __init__(
         self,
         embedding_: List[pyspark.broadcast.Broadcast],
-        raw_data_: List[pyspark.broadcast.Broadcast],
+        raw_data_: Union[
+            List[pyspark.broadcast.Broadcast],
+            Dict[str, List[pyspark.broadcast.Broadcast]],
+        ],
         sparse_fit: bool,
         n_cols: int,
         dtype: str,
@@ -1305,23 +1358,41 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         )
         self.embedding_ = embedding_
         self.raw_data_ = raw_data_
-        self.sparse_fit = (
-            sparse_fit  # If true, raw_data_ is a sparse array in COO format
-        )
+        self._sparse_fit = sparse_fit  # If true, raw_data_ is a dict in CSR format
 
     @property
-    def embedding(self) -> List[List[float]]:
+    def embedding(self) -> np.ndarray:
+        """
+        Returns the model embeddings.
+        """
         res = []
         for chunk in self.embedding_:
-            res.extend(chunk.value.tolist())
-        return res
+            res.extend(chunk.value)
+        return np.array(res)  # TBD: return a more Spark-like object, e.g. DenseMatrix?
 
     @property
-    def raw_data(self) -> List[List[float]]:
-        res = []
-        for chunk in self.raw_data_:
-            res.extend(chunk.value.tolist())
-        return res
+    def rawData(self) -> Union[np.ndarray, scipy.sparse.csr_matrix]:
+        """
+        Returns the raw data used to fit the model. If the input data was sparse, this will be a scipy csr matrix.
+        """
+        if isinstance(self.raw_data_, dict):
+            indices = []
+            indptr = []
+            data = []
+            for i, chunk in enumerate(self.raw_data_["indices"]):
+                indices.extend(chunk.value)
+                indptr.extend(self.raw_data_["indptr"][i].value)
+                data.extend(self.raw_data_["data"][i].value)
+            return scipy.sparse.csr_matrix(
+                (data, indices, indptr), shape=(len(indptr) - 1, self.n_cols)
+            )  # TBD: convert to csc and return SparseMatrix?
+        else:
+            res = []
+            for chunk in self.raw_data_:
+                res.extend(chunk.value)
+            return np.array(
+                res
+            )  # TBD: return a more Spark-like object, e.g. DenseMatrix?
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
@@ -1333,7 +1404,8 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         cuml_alg_params = self.cuml_params
         driver_embedding = self.embedding_
         driver_raw_data = self.raw_data_
-        outputCol = self.getOutputCol()
+        sparse_fit = self._sparse_fit
+        n_cols = self.n_cols
 
         def _construct_umap() -> CumlT:
             import cupy as cp
@@ -1351,25 +1423,26 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
                 else np.concatenate([chunk.value for chunk in driver_embedding])
             )
 
-            if self.sparse_fit:
-                if len(driver_raw_data) == 1:
-                    coo_list = driver_raw_data[0].value.tolist()
-                else:
-                    coo_list = np.concatenate(
-                        [chunk.value for chunk in driver_raw_data]
-                    ).tolist()
-                # Convert from COO format to CSR Matrix
-                rows, cols, values = zip(*coo_list)
-                row_indices = np.array(rows, dtype=int)
-                col_indices = np.array(cols, dtype=int)
-
-                from scipy.sparse import coo_matrix
-
-                csr_shape = (np.max(row_indices) + 1, self.n_cols)
-                raw_data = coo_matrix(
-                    (values, (row_indices, col_indices)), shape=csr_shape
-                ).tocsr()
+            if sparse_fit:
+                if not isinstance(driver_raw_data, dict):
+                    raise ValueError("Expected raw data as a CSR dict for sparse fit.")
+                indices = np.concatenate(
+                    [chunk.value for chunk in driver_raw_data["indices"]]
+                )
+                indptr = np.concatenate(
+                    [chunk.value for chunk in driver_raw_data["indptr"]]
+                )
+                data = np.concatenate(
+                    [chunk.value for chunk in driver_raw_data["data"]]
+                )
+                raw_data = scipy.sparse.csr_matrix(
+                    (data, indices, indptr), shape=(len(indptr) - 1, n_cols)
+                )
             else:
+                if not isinstance(driver_raw_data, list):
+                    raise ValueError(
+                        "Expected raw data as list (of lists) for dense fit."
+                    )
                 raw_data = (
                     driver_raw_data[0].value
                     if len(driver_raw_data) == 1
@@ -1396,49 +1469,28 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
             internal_model = CumlUMAP(**cuml_alg_params)
             internal_model.embedding_ = cp.array(embedding).data
             internal_model._raw_data = raw_data_cuml
-            internal_model.sparse_fit = self.sparse_fit
+            internal_model.sparse_fit = sparse_fit
 
             return internal_model
 
         def _transform_internal(
             umap: CumlT,
             df: Union[pd.DataFrame, np.ndarray, scipy.sparse._csr.csr_matrix],
-        ) -> pd.Series:
-            from cuml.common.sparse_utils import is_sparse
+        ) -> pd.DataFrame:
 
             embedding = umap.transform(df)
 
-            if is_sparse(df):
-                # scipy csr matrix to dense numpy array
-                df = df.toarray()  # type: ignore
-                """
-                TBD: we may want to convert this back to pyspark SparseVector so it matches the user input, e.g.,
-                vector_udt_rows = [
-                    SparseVector(df.shape[1], row.indices, row.data) for row in df
-                ]
-                ...and edit schema accordingly. 
-                """
-
-            is_df_np = isinstance(df, np.ndarray)
-            is_emb_np = isinstance(embedding, np.ndarray)
-
             # Input is either numpy array or pandas dataframe
-            input_list = [
-                df[i, :] if is_df_np else df.iloc[i, :] for i in range(df.shape[0])  # type: ignore
-            ]
             emb_list = [
-                embedding[i, :] if is_emb_np else embedding.iloc[i, :]
+                (
+                    embedding[i, :]
+                    if isinstance(embedding, np.ndarray)
+                    else embedding.iloc[i, :]
+                )
                 for i in range(embedding.shape[0])
             ]
 
-            result = pd.DataFrame(
-                {
-                    "features": input_list,
-                    outputCol: emb_list,
-                }
-            )
-
-            return result
+            return pd.Series(emb_list)
 
         return _construct_umap, _transform_internal, None
 
@@ -1446,12 +1498,9 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         return (False, False)
 
     def _out_schema(self, input_schema: StructType) -> Union[StructType, str]:
-        return StructType(
-            [
-                StructField("features", ArrayType(FloatType(), False), False),
-                StructField(self.getOutputCol(), ArrayType(FloatType(), False), False),
-            ]
-        )
+        assert self.dtype is not None
+        pyspark_type = dtype_to_pyspark_type(self.dtype)
+        return f"array<{pyspark_type}>"
 
     def _get_model_attributes(self) -> Optional[Dict[str, Any]]:
         """
@@ -1461,7 +1510,17 @@ class UMAPModel(_CumlModel, UMAPClass, _UMAPCumlParams):
         self._model_attributes["embedding_"] = [
             chunk.value for chunk in self.embedding_
         ]
-        self._model_attributes["raw_data_"] = [chunk.value for chunk in self.raw_data_]
+        if isinstance(self.raw_data_, dict):
+            self._model_attributes["raw_data_"] = {
+                "indices": [chunk.value for chunk in self.raw_data_["indices"]],
+                "indptr": [chunk.value for chunk in self.raw_data_["indptr"]],
+                "data": [chunk.value for chunk in self.raw_data_["data"]],
+            }
+        else:
+            self._model_attributes["raw_data_"] = [
+                chunk.value for chunk in self.raw_data_
+            ]
+
         return self._model_attributes
 
     def write(self) -> MLWriter:
@@ -1494,14 +1553,24 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
         if not os.path.exists(data_path):
             os.makedirs(data_path)
         assert model_attributes is not None
-        for key, value in model_attributes.items():
-            if isinstance(value, list) and isinstance(value[0], np.ndarray):
-                paths = []
-                for idx, chunk in enumerate(value):
-                    array_path = os.path.join(data_path, f"{key}_{idx}.npy")
-                    np.save(array_path, chunk)
-                    paths.append(array_path)
-                model_attributes[key] = paths
+
+        for key in ["embedding_", "raw_data_"]:
+            value = model_attributes[key]
+            if isinstance(value, dict):
+                assert key == "raw_data_"
+                # Handle sparse raw data - value is dictionary of CSR attributes
+                npz_path = os.path.join(data_path, f"{key}csr_.npz")
+                raw_data_dict = {}
+                for csr_key, chunk_list in value.items():
+                    for idx, chunk in enumerate(chunk_list):
+                        raw_data_dict[f"{csr_key}_{idx}"] = chunk
+                np.savez_compressed(npz_path, **raw_data_dict)
+                model_attributes[key] = npz_path
+            else:
+                npz_path = os.path.join(data_path, f"{key}.npz")
+                chunk_data = {f"{key}_{idx}": chunk for idx, chunk in enumerate(value)}
+                np.savez_compressed(npz_path, **chunk_data)
+                model_attributes[key] = npz_path
 
         metadata_file_path = os.path.join(data_path, "metadata.json")
         model_attributes_str = json.dumps(model_attributes)
@@ -1523,14 +1592,48 @@ class _CumlModelReaderNumpy(_CumlModelReader):
         model_attr_str = self.sc.textFile(metadata_file_path).collect()[0]
         model_attr_dict = json.loads(model_attr_str)
 
+        spark = _get_spark_session()
+
         for key, value in model_attr_dict.items():
-            if isinstance(value, list) and value[0].endswith(".npy"):
-                arrays = []
-                spark = _get_spark_session()
-                for array_path in value:
-                    array = np.load(array_path)
-                    arrays.append(spark.sparkContext.broadcast(array))
-                model_attr_dict[key] = arrays
+            if isinstance(value, str) and value.endswith(".npz"):
+                npz_data = np.load(value)
+                if value.endswith("csr_.npz"):
+
+                    def _get_sorted_data_keys(
+                        npz_data: np.lib.npyio.NpzFile, csr_key: str
+                    ) -> List[str]:
+                        # Filter keys that start with the given csr_key and sort by the chunk index
+                        sorted_keys = sorted(
+                            [key for key in npz_data.keys() if key.startswith(csr_key)],
+                            key=lambda x: int(x.split("_")[1]),
+                        )
+                        return sorted_keys
+
+                    indices_keys = _get_sorted_data_keys(npz_data, "indices")
+                    indptr_keys = _get_sorted_data_keys(npz_data, "indptr")
+                    data_keys = _get_sorted_data_keys(npz_data, "data")
+
+                    raw_data_dict = {
+                        "indices": [
+                            spark.sparkContext.broadcast(npz_data[key])
+                            for key in indices_keys
+                        ],
+                        "indptr": [
+                            spark.sparkContext.broadcast(npz_data[key])
+                            for key in indptr_keys
+                        ],
+                        "data": [
+                            spark.sparkContext.broadcast(npz_data[key])
+                            for key in data_keys
+                        ],
+                    }
+
+                    model_attr_dict[key] = raw_data_dict
+                else:
+                    chunks = [npz_data[f"{key}_{i}"] for i in range(len(npz_data))]
+                    model_attr_dict[key] = [
+                        spark.sparkContext.broadcast(chunk) for chunk in chunks
+                    ]
 
         instance = self.model_cls(**model_attr_dict)
         DefaultParamsReader.getAndSetParams(instance, metadata)
