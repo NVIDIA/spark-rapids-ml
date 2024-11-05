@@ -273,6 +273,8 @@ def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
         return "int"
     elif dtype == np.int16:
         return "short"
+    elif dtype == np.int64:
+        return "long"
     else:
         raise RuntimeError("Unsupported dtype, found ", dtype)
 

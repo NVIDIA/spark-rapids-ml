@@ -1099,6 +1099,12 @@ class ApproximateNearestNeighbors(
             "ivfpq",
             "cagra",
         }, "currently only ivfflat, ivfpq, and cagra are supported"
+        if not self._input_kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator supports only float32 inputs on GPU and will convert all other data types to float32. Setting float32_inputs to False will be ignored."
+            )
+            self._input_kwargs.pop("float32_inputs")
+
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
@@ -1508,7 +1514,27 @@ class ApproximateNearestNeighborsModel(
                 if isinstance(item, np.ndarray):
                     item = cp.array(item, dtype="float32")
 
-                index_obj = nn_object.build(build_params, item)
+                try:
+                    index_obj = nn_object.build(build_params, item)
+                except Exception as e:
+                    if "k must be less than topk::kMaxCapacity (256)" in str(e):
+                        from cuvs.neighbors import cagra
+
+                        assert nn_object == cagra
+                        assert (
+                            "build_algo" not in index_params
+                            or index_params["build_algo"] == "ivf_pq"
+                        )
+
+                        intermediate_graph_degree = (
+                            build_params.intermediate_graph_degree
+                        )
+                        assert intermediate_graph_degree >= 256
+
+                        error_msg = f"cagra with ivf_pq build_algo expects intermediate_graph_degree ({intermediate_graph_degree}) to be smaller than 256"
+                        raise ValueError(error_msg)
+                    else:
+                        raise e
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."

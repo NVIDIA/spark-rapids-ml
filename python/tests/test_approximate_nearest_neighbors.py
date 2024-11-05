@@ -365,6 +365,11 @@ def ann_algorithm_test_func(
     n_neighbors: int = 50,
 ) -> None:
 
+    assert data_type in {
+        np.float32,
+        np.float64,
+    }, "the test function applies to float dataset dtype only, as it scales the dataset by the average norm of rows"
+
     algorithm = combo[0]
     assert algorithm in {"ivfflat", "ivfpq", "cagra"}
 
@@ -759,6 +764,62 @@ def test_cagra(
 
 
 @pytest.mark.parametrize(
+    "feature_type,data_type",
+    [
+        ("vector", np.float64),
+        ("multi_cols", np.float64),
+        ("multi_cols", np.int16),
+        ("array", np.int64),
+    ],
+)
+@pytest.mark.slow
+def test_cagra_dtype(
+    feature_type: str,
+    data_type: np.dtype,
+) -> None:
+
+    algorithm = "cagra"
+    algo_params = {
+        "intermediate_graph_degree": 128,
+        "graph_degree": 64,
+        "build_algo": "ivf_pq",
+    }
+
+    gpu_number = 1
+    n_neighbors = 2
+    metric = "sqeuclidean"
+    X = np.array(
+        [
+            [10.0, 10.0],
+            [20.0, 20.0],
+            [40.0, 40.0],
+            [50.0, 50.0],
+        ],
+        dtype="int32",
+    )
+    X = X.astype(data_type)
+    y = np.array(range(len(X)))
+    with CleanSparkSession() as spark:
+        data_df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_type, data_type, X, y
+        )
+
+        gpu_knn = ApproximateNearestNeighbors(
+            num_workers=gpu_number,
+            inputCol=features_col,
+            idCol=label_col,
+            k=n_neighbors,
+            metric=metric,
+            algorithm=algorithm,
+            algoParams=algo_params,
+        )
+
+        gpu_model = gpu_knn.fit(data_df)
+        (_, _, knn_df) = gpu_model.kneighbors(data_df)
+        knn_df.show()
+
+
+@pytest.mark.parametrize(
     "algorithm,feature_type,max_records_per_batch,algo_params,metric",
     [
         (
@@ -773,7 +834,6 @@ def test_cagra(
         ),
     ],
 )
-@pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 def test_cagra_params(
     algorithm: str,
@@ -781,10 +841,11 @@ def test_cagra_params(
     max_records_per_batch: int,
     algo_params: Dict[str, Any],
     metric: str,
-    data_shape: Tuple[int, int],
     data_type: np.dtype,
+    caplog: LogCaptureFixture,
 ) -> None:
 
+    data_shape = (1000, 20)
     itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
 
     internal_topk_size = math.ceil(itopk_size / 32) * 32
@@ -804,6 +865,23 @@ def test_cagra_params(
             data_type,
             n_neighbors=n_neighbors,
         )
+
+    # test intermediate_graph_degree restriction on ivf_pq
+    algo_params["itopk_size"] = 64
+    algo_params["intermediate_graph_degree"] = 257
+    error_msg = f"cagra with ivf_pq build_algo expects intermediate_graph_degree (257) to be smaller than 256."
+    with pytest.raises(Exception):
+        test_cagra(
+            algorithm,
+            feature_type,
+            max_records_per_batch,
+            algo_params,
+            metric,
+            data_shape,
+            data_type,
+            n_neighbors=n_neighbors,
+        )
+        assert error_msg in caplog.text
 
 
 @pytest.mark.parametrize(
