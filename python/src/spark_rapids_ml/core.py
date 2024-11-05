@@ -775,6 +775,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                 logger.info("Invoking cuml fit")
 
+                # pyspark uses sighup to kill python workers gracefully, and for some reason
+                # the signal handler for sighup needs to be explicitly reset at this point
+                # to avoid having SIGHUP be swallowed during a usleep call in the nccl library.
+                # this helps avoid zombie surviving python workers when some workers fail.
+                import signal
+
+                signal.signal(signal.SIGHUP, signal.SIG_DFL)
+
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free
                 # memory.  do not rely on inputs after this call.
