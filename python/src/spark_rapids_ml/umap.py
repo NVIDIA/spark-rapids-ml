@@ -958,31 +958,24 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         pdf_output: PandasDataFrame = df_output.toPandas()
 
-        embeddings = np.array(
-            list(
-                pd.concat(
-                    [pd.Series(x) for x in pdf_output["embedding_"]], ignore_index=True
-                )
-            ),
-            dtype=np.float32,
-        )
-
         if self._sparse_fit:
+            embeddings = np.array(
+                list(
+                    pd.concat(
+                        [pd.Series(x) for x in pdf_output["embedding_"]],
+                        ignore_index=True,
+                    )
+                ),
+                dtype=np.float32,
+            )
             # Sparse data is returned in a dict of CSR format.
             indices = pdf_output["indices"].explode().to_numpy(dtype=np.int32)
             indptr = pdf_output["indptr"].explode().to_numpy(dtype=np.int32)
             data = pdf_output["data"].explode().to_numpy(dtype=np.float32)
             raw_data = {"indices": indices, "indptr": indptr, "data": data}
         else:
-            raw_data = np.array(
-                list(
-                    pd.concat(
-                        [pd.Series(x) for x in pdf_output["raw_data_"]],
-                        ignore_index=True,
-                    )
-                ),
-                dtype=np.float32,
-            )  # type: ignore
+            embeddings = np.vstack(pdf_output["embedding_"]).astype(np.float32)
+            raw_data = np.vstack(pdf_output["raw_data_"]).astype(np.float32)  # type: ignore
         del pdf_output
 
         def _chunk_and_broadcast(
@@ -1273,12 +1266,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     )
                 else:
                     yield pd.DataFrame(
-                        data=[
-                            {
-                                "embedding_": embedding[start:end].tolist(),
-                                "raw_data_": raw_data[start:end].tolist(),
-                            }
-                        ]
+                        {
+                            "embedding_": embedding[start:end].tolist(),
+                            "raw_data_": raw_data[start:end].tolist(),
+                        }
                     )
 
         output_df = dataset.mapInPandas(_train_udf, schema=self._out_schema())
@@ -1305,16 +1296,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         else:
             return StructType(
                 [
-                    StructField(
-                        "embedding_",
-                        ArrayType(ArrayType(FloatType(), False), False),
-                        False,
-                    ),
-                    StructField(
-                        "raw_data_",
-                        ArrayType(ArrayType(FloatType(), False), False),
-                        False,
-                    ),
+                    StructField("embedding_", ArrayType(FloatType()), False),
+                    StructField("raw_data_", ArrayType(FloatType()), False),
                 ]
             )
 

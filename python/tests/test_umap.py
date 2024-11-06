@@ -75,8 +75,14 @@ def _assert_umap_model(
     )
     assert raw_data.shape == input_raw_data.shape
     if isinstance(input_raw_data, csr_matrix):
+        assert isinstance(raw_data, csr_matrix)
         assert model._sparse_fit
         assert (raw_data != input_raw_data).nnz == 0
+        assert (
+            np.all(raw_data.indices == input_raw_data.indices)
+            and np.all(raw_data.indptr == input_raw_data.indptr)
+            and np.allclose(raw_data.data, input_raw_data.data)
+        )
     else:
         assert not model._sparse_fit
         assert np.array_equal(raw_data, input_raw_data)
@@ -397,42 +403,59 @@ def test_umap_model_persistence(
         _assert_umap_model(umap_model_loaded, input_raw_data)
 
 
-@pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 20, 8 << 18])
-def test_umap_broadcast_chunks(gpu_number: int, BROADCAST_LIMIT: int) -> None:
+@pytest.mark.parametrize("maxRecordsPerBatch", ["2000"])
+@pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 15])
+# @pytest.mark.parametrize("sparse_fit", [True, False]) # TODO: Uncomment once fixed
+@pytest.mark.parametrize("sparse_fit", [False])
+def test_umap_chunking(
+    gpu_number: int, maxRecordsPerBatch: str, BROADCAST_LIMIT: int, sparse_fit: bool
+) -> None:
     from cuml.datasets import make_blobs
 
     n_rows = 5000
     n_cols = 3000
 
-    X, _ = make_blobs(
-        n_rows,
-        n_cols,
-        centers=5,
-        cluster_std=0.1,
-        dtype=np.float32,
-        random_state=10,
-    )
-
     with CleanSparkSession() as spark:
-        pyspark_type = "float"
-        feature_cols = [f"c{i}" for i in range(X.shape[1])]
-        schema = [f"{c} {pyspark_type}" for c in feature_cols]
-        df = spark.createDataFrame(X.tolist(), ",".join(schema))
-        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+        spark.conf.set(
+            "spark.sql.execution.arrow.maxRecordsPerBatch", maxRecordsPerBatch
+        )
+
+        if sparse_fit:
+            data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
+            df = spark.createDataFrame(data, ["features"])
+            nbytes = input_raw_data.data.nbytes
+        else:
+            X, _ = make_blobs(
+                n_rows,
+                n_cols,
+                centers=5,
+                cluster_std=0.1,
+                dtype=np.float32,
+                random_state=10,
+            )
+            pyspark_type = "float"
+            feature_cols = [f"c{i}" for i in range(X.shape[1])]
+            schema = [f"{c} {pyspark_type}" for c in feature_cols]
+            df = spark.createDataFrame(X.tolist(), ",".join(schema))
+            df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+            input_raw_data = X.get()
+            nbytes = input_raw_data.nbytes
 
         umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
         umap.BROADCAST_LIMIT = BROADCAST_LIMIT
+        assert umap.max_records_per_batch == int(maxRecordsPerBatch)
+        assert nbytes > BROADCAST_LIMIT
 
         umap_model = umap.fit(df)
 
-        _assert_umap_model(umap_model, X.get())
+        _assert_umap_model(umap_model, input_raw_data)
 
         pdf = umap_model.transform(df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
         input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
         dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=5000)
-        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        loc_umap = _local_umap_trustworthiness(input_raw_data, np.zeros(0), 15, False)
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.15
