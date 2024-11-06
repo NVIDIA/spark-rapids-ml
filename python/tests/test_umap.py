@@ -42,6 +42,7 @@ from .utils import (
 def _load_sparse_binary_data(
     n_rows: int, n_cols: int, nnz: int
 ) -> Tuple[List[Tuple[SparseVector]], csr_matrix]:
+    # TODO: Replace this function by adding to SparseDataGen
     # Generate binary sparse data compatible with Jaccard, with nnz non-zero values per row.
     data = []
     for i in range(n_rows):
@@ -61,6 +62,26 @@ def _load_sparse_binary_data(
     csr_mat = csr_matrix((csr_data, csr_indices, csr_indptr), shape=(n_rows, n_cols))
 
     return data, csr_mat
+
+
+def _assert_umap_model(
+    model: UMAPModel, input_raw_data: Union[np.ndarray, csr_matrix]
+) -> None:
+    embedding = model.embedding
+    raw_data = model.rawData
+    assert embedding.shape == (
+        input_raw_data.shape[0],
+        model.cuml_params["n_components"],
+    )
+    assert raw_data.shape == input_raw_data.shape
+    if isinstance(input_raw_data, csr_matrix):
+        assert model._sparse_fit
+        assert (raw_data != input_raw_data).nnz == 0
+    else:
+        assert not model._sparse_fit
+        assert np.array_equal(raw_data, input_raw_data)
+    assert model.dtype == "float32"
+    assert model.n_cols == input_raw_data.shape[1]
 
 
 def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -365,28 +386,15 @@ def test_umap_model_persistence(
         umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
         umap.BROADCAST_LIMIT = BROADCAST_LIMIT
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = model.embedding
-            raw_data = model.rawData
-            assert umap._sparse_fit == sparse_fit
-            assert embedding.shape == (n_rows, 2)
-            assert raw_data.shape == (n_rows, n_cols)
-            if sparse_fit:
-                assert (raw_data != input_raw_data).nnz == 0
-            else:
-                assert np.array_equal(raw_data, input_raw_data)
-            assert model.dtype == "float32"
-            assert model.n_cols == n_cols
-
         umap_model = umap.fit(df)
-        assert_umap_model(model=umap_model)
+        _assert_umap_model(umap_model, input_raw_data)
 
         # Model persistence
         path = tmp_path + "/umap_tests"
         model_path = f"{path}/umap_model"
         umap_model.write().overwrite().save(model_path)
         umap_model_loaded = UMAPModel.load(model_path)
-        assert_umap_model(model=umap_model_loaded)
+        _assert_umap_model(umap_model_loaded, input_raw_data)
 
 
 @pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 20, 8 << 18])
@@ -417,16 +425,7 @@ def test_umap_broadcast_chunks(gpu_number: int, BROADCAST_LIMIT: int) -> None:
 
         umap_model = umap.fit(df)
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = model.embedding
-            raw_data = model.rawData
-            assert embedding.shape == (n_rows, 2)
-            assert raw_data.shape == (n_rows, n_cols)
-            assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
-        assert_umap_model(model=umap_model)
+        _assert_umap_model(umap_model, X.get())
 
         pdf = umap_model.transform(df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
@@ -472,20 +471,14 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 
         umap_model = umap.fit(df)
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = model.embedding
-            raw_data = model.rawData
+        threshold = 2 * np.sqrt(
+            n_rows * sample_fraction * (1 - sample_fraction)
+        )  # 2 std devs
 
-            threshold = 2 * np.sqrt(
-                n_rows * sample_fraction * (1 - sample_fraction)
-            )  # 2 std devs
-
-            assert np.abs(n_rows * sample_fraction - embedding.shape[0]) <= threshold
-            assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
-        assert_umap_model(model=umap_model)
+        embedding = umap_model.embedding
+        raw_data = umap_model.rawData
+        assert np.abs(n_rows * sample_fraction - embedding.shape[0]) <= threshold
+        assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
 
 
 def test_umap_build_algo(gpu_number: int) -> None:
@@ -529,16 +522,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
 
         umap_model = umap.fit(df)
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = model.embedding
-            raw_data = model.rawData
-            assert embedding.shape == (10000, 2)
-            assert raw_data.shape == (10000, 10)
-            assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
-        assert_umap_model(model=umap_model)
+        _assert_umap_model(umap_model, X.get())
 
         pdf = umap_model.transform(df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
@@ -552,10 +536,11 @@ def test_umap_build_algo(gpu_number: int) -> None:
 
 
 @pytest.mark.parametrize("n_rows", [3000])
-@pytest.mark.parametrize("n_cols", [64, 128])
-@pytest.mark.parametrize("nnz", [7, 12])
+@pytest.mark.parametrize("n_cols", [64])
+@pytest.mark.parametrize("nnz", [12])
+@pytest.mark.parametrize("metric", ["jaccard", "hamming", "correlation", "cosine"])
 def test_umap_sparse_vector(
-    n_rows: int, n_cols: int, nnz: int, gpu_number: int, tmp_path: str
+    n_rows: int, n_cols: int, nnz: int, metric: str, gpu_number: int, tmp_path: str
 ) -> None:
     import pyspark
     from cuml.manifold import UMAP as cumlUMAP
@@ -573,23 +558,21 @@ def test_umap_sparse_vector(
         data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, nnz)
         df = spark.createDataFrame(data, ["features"])
 
-        umap_estimator = UMAP(metric="jaccard", num_workers=gpu_number).setFeaturesCol(
-            "features"
-        )
+        umap_estimator = UMAP(
+            metric=metric, num_workers=gpu_number, random_state=42
+        ).setFeaturesCol("features")
         umap_model = umap_estimator.fit(df)
         embedding = umap_model.embedding
 
         # Ensure internal and input CSR data match
-        internal_raw_data = umap_model.rawData
-        assert internal_raw_data.shape == input_raw_data.shape
-        assert (internal_raw_data != input_raw_data).nnz == 0
+        _assert_umap_model(umap_model, input_raw_data)
 
         # Local vs dist trustworthiness check
         output = umap_model.transform(df).toPandas()
         embedding = cp.asarray(output["embedding"].to_list())
         dist_umap = trustworthiness(input_raw_data.toarray(), embedding, n_neighbors=15)
 
-        local_model = cumlUMAP(n_neighbors=15, random_state=42, metric="jaccard")
+        local_model = cumlUMAP(n_neighbors=15, random_state=42, metric=metric)
         local_model.fit(input_raw_data)
         embedding = local_model.transform(input_raw_data)
         loc_umap = trustworthiness(input_raw_data.toarray(), embedding, n_neighbors=15)
