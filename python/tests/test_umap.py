@@ -110,17 +110,28 @@ def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def _local_umap_trustworthiness(
-    local_X: np.ndarray,
+    local_X: Union[np.ndarray, csr_matrix],
     local_y: np.ndarray,
     n_neighbors: int,
     supervised: bool,
+    sparse: bool = False,
 ) -> float:
     from cuml.manifold import UMAP
 
-    local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
+    if sparse:
+        local_model = UMAP(
+            n_neighbors=n_neighbors, random_state=42, init="random", metric="jaccard"
+        )
+    else:
+        local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
+
     y_train = local_y if supervised else None
     local_model.fit(local_X, y=y_train)
     embedding = local_model.transform(local_X)
+
+    if sparse:
+        assert isinstance(local_X, csr_matrix)
+        local_X = local_X.toarray()
 
     return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
@@ -358,10 +369,9 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     _test_input_setter_getter(UMAP)
 
 
-@pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 15, 8 << 20])
 @pytest.mark.parametrize("sparse_fit", [True, False])
 def test_umap_model_persistence(
-    sparse_fit: bool, BROADCAST_LIMIT: int, gpu_number: int, tmp_path: str
+    sparse_fit: bool, gpu_number: int, tmp_path: str
 ) -> None:
     from cuml.datasets import make_blobs
 
@@ -390,7 +400,6 @@ def test_umap_model_persistence(
             input_raw_data = X.get()
 
         umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
-        umap.BROADCAST_LIMIT = BROADCAST_LIMIT
 
         umap_model = umap.fit(df)
         _assert_umap_model(umap_model, input_raw_data)
@@ -405,14 +414,13 @@ def test_umap_model_persistence(
 
 @pytest.mark.parametrize("maxRecordsPerBatch", ["2000"])
 @pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 15])
-# @pytest.mark.parametrize("sparse_fit", [True, False]) # TODO: Uncomment once fixed
-@pytest.mark.parametrize("sparse_fit", [False])
+@pytest.mark.parametrize("sparse_fit", [True, False])
 def test_umap_chunking(
     gpu_number: int, maxRecordsPerBatch: str, BROADCAST_LIMIT: int, sparse_fit: bool
 ) -> None:
     from cuml.datasets import make_blobs
 
-    n_rows = 5000
+    n_rows = int(int(maxRecordsPerBatch) * 2.5)
     n_cols = 3000
 
     with CleanSparkSession() as spark:
@@ -442,20 +450,23 @@ def test_umap_chunking(
             nbytes = input_raw_data.nbytes
 
         umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
-        umap.BROADCAST_LIMIT = BROADCAST_LIMIT
+
         assert umap.max_records_per_batch == int(maxRecordsPerBatch)
         assert nbytes > BROADCAST_LIMIT
 
         umap_model = umap.fit(df)
+        umap_model.BROADCAST_LIMIT = BROADCAST_LIMIT
 
         _assert_umap_model(umap_model, input_raw_data)
 
         pdf = umap_model.transform(df).toPandas()
-        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
-        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+        embedding = np.vstack(pdf["embedding"]).astype(np.float32)
+        input = np.vstack(pdf["features"]).astype(np.float32)
 
         dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=5000)
-        loc_umap = _local_umap_trustworthiness(input_raw_data, np.zeros(0), 15, False)
+        loc_umap = _local_umap_trustworthiness(
+            input_raw_data, np.zeros(0), 15, False, sparse_fit
+        )
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.15
