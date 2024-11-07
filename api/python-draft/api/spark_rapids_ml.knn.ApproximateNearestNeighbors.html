@@ -381,6 +381,17 @@ are approximate and do not represent the exact distances in the original high-di
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
 <dt><strong>k: int (default = 5)</strong></dt><dd><p>the default number of approximate nearest neighbors to retrieve for each query.</p>
+<p>If fewer than k neighbors are found for a query (for example, due to a small nprobe value):
+(1)In ivfflat and ivfpq:</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p>If no item vector is probed, the indices are filled with long_max (9,223,372,036,854,775,807) and distances are set to infinity.</p></li>
+<li><p>If at least one item vector is probed, the indices are filled with the top-1 neighbor’s ID, and distances are filled with infinity.</p></li>
+</ol>
+</div></blockquote>
+<ol class="arabic simple" start="2">
+<li><p>cagra does not have this problem, as at least itopk_size (where itopk_size ≥ k) items are always probed.</p></li>
+</ol>
 </dd>
 <dt><strong>algorithm: str (default = ‘ivfflat’)</strong></dt><dd><p>the algorithm parameter to be passed into cuML. It currently must be ‘ivfflat’, ‘ivfpq’ or ‘cagra’. Other algorithms are expected to be supported later.</p>
 </dd>
