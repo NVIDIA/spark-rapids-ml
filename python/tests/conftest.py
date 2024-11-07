@@ -43,7 +43,8 @@ def _get_devices() -> List[str]:
 
 _gpu_number = min(len(_get_devices()), cupy.cuda.runtime.getDeviceCount())
 # We restrict the max gpu numbers to use
-_gpu_number = _gpu_number if _gpu_number < 4 else 4
+#_gpu_number = _gpu_number if _gpu_number < 4 else 4
+_gpu_number = _gpu_number if _gpu_number < 2 else 2
 
 
 @pytest.fixture
@@ -59,7 +60,14 @@ def tmp_path() -> Generator[str, None, None]:
 
 
 _default_conf = {
-    "spark.master": f"local[{_gpu_number}]",
+    "spark.master": "spark://dgx2h0195.spark.sjc4.nvmetal.net:7077",
+    "spark.executorEnv.NCCL_DEBUG": "INFO",
+    "spark.executor.memory": "128g",
+    "spark.cores.max": "2",
+    "spark.executor.cores": "1",
+    "spark.executor.resource.gpu.amount": "1",
+    "spark.task.resource.gpu.amount": "1",
+    #"spark.master": f"local[{_gpu_number}]",
     "spark.python.worker.reuse": "false",
     "spark.driver.host": "127.0.0.1",
     "spark.task.maxFailures": "1",

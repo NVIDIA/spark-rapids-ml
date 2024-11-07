@@ -919,7 +919,8 @@ class ApproximateNearestNeighbors(
     The IVFPQ algorithm employs product quantization to compress high-dimensional vectors into compact bit representations,
     enabling rapid distance computation between vectors. While IVFPQ typically delivers faster search speeds compared to IVFFLAT,
     it does so with a tradeoff in search quality, such as reduced recall. It is important to note that the distances returned by IVFPQ
-    are approximate and do not represent the exact distances in the original high-dimensional space.
+    are exact distances in the original high-dimensional space (similar to CAGRA and IVFFLAT). This is different from cuvs IVFPQ,
+    which returns approximate distances.
 
     Parameters
     ----------
@@ -1542,8 +1543,24 @@ class ApproximateNearestNeighborsModel(
                 if isinstance(item, np.ndarray):
                     item = cp.array(item, dtype="float32")
 
+                from cuvs.common.exceptions import CuvsException
+
+                def cuvs_exception_handler(e: CuvsException) -> None:
+                    cudaErrorIllegalAddress_msg = (
+                        "A CUDA error was detected, which can occur in ivf_pq and cagra (when using the ivf_pq build algorithm) if fewer than k items are probed for a query. "
+                        "This issue can be mitigated by: (1) reducing k or increasing nprobe for ivf_pq or (2) reducing intermediate_graph_degree for cagra."
+                        f"Currently, you are using the {cuml_alg_params['algorithm']} algorithm with parameters {cuml_alg_params['algo_params']}."
+                    )
+                    if "cudaErrorIllegalAddress" in str(e) or "CUDA error" in str(e):
+                        raise ValueError(cudaErrorIllegalAddress_msg)
+                    else:
+                        raise e
+
                 try:
                     index_obj = nn_object.build(build_params, item)
+                except CuvsException as e:
+                    cuvs_exception_handler(e)
+
                 except Exception as e:
                     if "k must be less than topk::kMaxCapacity (256)" in str(e):
                         from cuvs.neighbors import cagra
@@ -1593,13 +1610,16 @@ class ApproximateNearestNeighborsModel(
                 if cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}:
                     from cuvs.neighbors import refine
 
-                    distances, indices = refine(
-                        dataset=item,
-                        queries=gpu_qfeatures,
-                        candidates=indices,
-                        k=cuml_alg_params["n_neighbors"],
-                        metric=cuml_alg_params["metric"],
-                    )
+                    try:
+                        distances, indices = refine(
+                            dataset=item,
+                            queries=gpu_qfeatures,
+                            candidates=indices,
+                            k=cuml_alg_params["n_neighbors"],
+                            metric=cuml_alg_params["metric"],
+                        )
+                    except CuvsException as e:
+                        cuvs_exception_handler(e)
 
                 distances = cp.asarray(distances)
                 indices = cp.asarray(indices)

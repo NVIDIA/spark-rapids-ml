@@ -39,6 +39,15 @@ cuml_supported_data_types = [np.float32, np.float64]
 CumlParams = TypeVar("CumlParams", bound=_CumlParams)
 
 
+#==================QA session==========================
+import psutil
+import cupy
+single_gpu_memory = round(cupy.cuda.Device(0).mem_info[0] / (1024 ** 3),2) #GB
+spark_version = eval(pyspark.__version__.replace('.',''))
+host_memory = round(psutil.virtual_memory().available / (1024 ** 3),2) #GB
+_gpu_number = min(4, cupy.cuda.runtime.getDeviceCount())
+#==================end of QA session================================
+
 def idfn(val: Any) -> str:
     """Provide an API to provide display names for data type generators."""
     return str(val)
