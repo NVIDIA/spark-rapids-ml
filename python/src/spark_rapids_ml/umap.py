@@ -1153,7 +1153,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
-                        "The number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix."
+                        f"The number of non-zero values of a partition exceeds the int32 index dtype of cupyx csr_matrix. \
+                        cupyx currently does not promote the dtype to int64 when concatenated; keeping as scipy to avoid overflow."
                     )
                 else:
                     inputs = [
@@ -1302,78 +1303,48 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
 
         def _chunk_and_broadcast(
             sc: pyspark.SparkContext,
-            input: Union[np.ndarray, scipy.sparse.csr_matrix],
+            arr: np.ndarray,
             BROADCAST_LIMIT: int,
-        ) -> Union[
-            List[pyspark.broadcast.Broadcast],
-            Dict[str, List[pyspark.broadcast.Broadcast]],
-        ]:
+        ) -> List[pyspark.broadcast.Broadcast]:
             """
             Broadcast the input array, chunking it into smaller arrays if it exceeds the broadcast limit.
             """
-            if isinstance(input, np.ndarray):
-                total_bytes = input.nbytes
-                if total_bytes <= BROADCAST_LIMIT:
-                    return [sc.broadcast(input)]
+            if arr.nbytes < BROADCAST_LIMIT:
+                return [sc.broadcast(arr)]
 
-                rows_per_chunk = BROADCAST_LIMIT // (total_bytes // input.shape[0])
-                num_chunks = (input.shape[0] + rows_per_chunk - 1) // rows_per_chunk
-                return [
-                    sc.broadcast(input[i * rows_per_chunk : (i + 1) * rows_per_chunk])
-                    for i in range(num_chunks)
-                ]
-
-            elif isinstance(input, scipy.sparse.csr_matrix):
-                indices, indptr, data = input.indices, input.indptr, input.data
-                total_bytes = sum(arr.nbytes for arr in [indices, indptr, data])
-                if total_bytes <= BROADCAST_LIMIT:
-                    return {
-                        "indices": [sc.broadcast(indices)],
-                        "indptr": [sc.broadcast(indptr)],
-                        "data": [sc.broadcast(data)],
-                    }
-
-                rows_per_chunk = BROADCAST_LIMIT // (total_bytes // data.shape[0])
-                num_chunks = (data.shape[0] + rows_per_chunk - 1) // rows_per_chunk
-                # indptr is chunked differently because it has less rows; split to match num_chunks
-                indptr_rows_per_chunk = (
-                    indptr.shape[0] + (num_chunks - 1)
-                ) // num_chunks
-                return {
-                    "indices": [
-                        sc.broadcast(
-                            indices[i * rows_per_chunk : (i + 1) * rows_per_chunk]
-                        )
-                        for i in range(num_chunks)
-                    ],
-                    "indptr": [
-                        sc.broadcast(
-                            indptr[
-                                i
-                                * indptr_rows_per_chunk : (i + 1)
-                                * indptr_rows_per_chunk
-                            ]
-                        )
-                        for i in range(num_chunks)
-                    ],
-                    "data": [
-                        sc.broadcast(
-                            data[i * rows_per_chunk : (i + 1) * rows_per_chunk]
-                        )
-                        for i in range(num_chunks)
-                    ],
-                }  # NOTE: CSR chunks are not independently meaningful; do not use until recombined
-            else:
-                # should never get here
-                raise ValueError(f"Unsupported input type: {type(input)}")
+            rows_per_chunk = BROADCAST_LIMIT // (arr.nbytes // arr.shape[0])
+            if rows_per_chunk == 0:
+                raise ValueError(
+                    f"Array cannot be chunked into broadcastable pieces: \
+                        single row exceeds broadcast limit ({BROADCAST_LIMIT} bytes)"
+                )
+            num_chunks = (arr.shape[0] + rows_per_chunk - 1) // rows_per_chunk
+            return [
+                sc.broadcast(arr[i * rows_per_chunk : (i + 1) * rows_per_chunk])
+                for i in range(num_chunks)
+            ]
 
         spark = _get_spark_session()
         broadcast_embeddings = _chunk_and_broadcast(
             spark.sparkContext, self.embedding_, self.BROADCAST_LIMIT
         )
-        broadcast_raw_data = _chunk_and_broadcast(
-            spark.sparkContext, self.raw_data_, self.BROADCAST_LIMIT
-        )
+
+        if sparse_fit:
+            broadcast_raw_data = {
+                "indices": _chunk_and_broadcast(
+                    spark.sparkContext, self.raw_data_.indices, self.BROADCAST_LIMIT
+                ),
+                "indptr": _chunk_and_broadcast(
+                    spark.sparkContext, self.raw_data_.indptr, self.BROADCAST_LIMIT
+                ),
+                "data": _chunk_and_broadcast(
+                    spark.sparkContext, self.raw_data_.data, self.BROADCAST_LIMIT
+                ),
+            }
+        else:
+            broadcast_raw_data = _chunk_and_broadcast(
+                spark.sparkContext, self.raw_data_, self.BROADCAST_LIMIT
+            )
 
         def _construct_umap() -> CumlT:
             import cupy as cp

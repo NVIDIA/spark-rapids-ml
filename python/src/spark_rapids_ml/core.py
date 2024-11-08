@@ -751,7 +751,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
-                        "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
+                        f"The number of non-zero values of a partition exceeds the int32 index dtype of cupyx csr_matrix. \
+                        cupyx currently does not promote the dtype to int64 when concatenated; keeping as scipy to avoid overflow."
                     )
                 else:
                     inputs = [
