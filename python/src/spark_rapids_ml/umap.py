@@ -1329,7 +1329,7 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
             spark.sparkContext, self.embedding_, self.BROADCAST_LIMIT
         )
 
-        if sparse_fit:
+        if isinstance(self.raw_data_, scipy.sparse.csr_matrix):
             broadcast_raw_data = {
                 "indices": _chunk_and_broadcast(
                     spark.sparkContext, self.raw_data_.indices, self.BROADCAST_LIMIT
@@ -1344,7 +1344,7 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
         else:
             broadcast_raw_data = _chunk_and_broadcast(
                 spark.sparkContext, self.raw_data_, self.BROADCAST_LIMIT
-            )
+            )  # type: ignore
 
         def _construct_umap() -> CumlT:
             import cupy as cp
