@@ -1340,7 +1340,7 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
                 "data": _chunk_and_broadcast(
                     spark.sparkContext, self.raw_data_.data, self.BROADCAST_LIMIT
                 ),
-            }
+            }  # NOTE: CSR chunks are not independently meaningful; do not use until recombined.
         else:
             broadcast_raw_data = _chunk_and_broadcast(
                 spark.sparkContext, self.raw_data_, self.BROADCAST_LIMIT
