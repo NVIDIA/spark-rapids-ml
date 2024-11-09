@@ -19,10 +19,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from pandas import DataFrame as PandasDataFrame
-from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.feature import StandardScaler, VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, sum
+from pyspark.sql.functions import array, col, sum
 
 from benchmark.base import BenchmarkBase
 from benchmark.utils import inspect_default_params_from_func, with_benchmark
@@ -105,7 +105,7 @@ class BenchmarkUMAP(BenchmarkBase):
 
         pdf: PandasDataFrame = transformed_df.toPandas()
         embedding = np.array(pdf[transformed_col].to_list())
-        input = np.array(pdf[data_col].to_list())
+        input = np.array(pdf[data_col].to_list()).astype(np.float32)
         score = trustworthiness(input, embedding, n_neighbors=15)
 
         return score
@@ -162,39 +162,45 @@ class BenchmarkUMAP(BenchmarkBase):
             else:
                 gpu_estimator = gpu_estimator.setFeaturesCols(input_cols)
 
-            output_col = "embedding"
-            gpu_estimator = gpu_estimator.setOutputCol(output_col)
-
             gpu_model, fit_time = with_benchmark(
                 "gpu fit", lambda: gpu_estimator.fit(train_df)
             )
 
-            def transform(model: UMAPModel, df: DataFrame) -> DataFrame:
-                transformed_df = model.transform(df)
-                transformed_df.count()
-                return transformed_df
-
-            transformed_df, transform_time = with_benchmark(
-                "gpu transform", lambda: transform(gpu_model, train_df)
+            output_col = "embedding"
+            transformed_df = gpu_model.setOutputCol(output_col).transform(train_df)
+            _, transform_time = with_benchmark(
+                "gpu transform", lambda: transformed_df.foreach(lambda _: None)
             )
+
             total_time = round(time.time() - func_start_time, 2)
             print(f"gpu total took: {total_time} sec")
-            data_col = "features"
+
+            df_for_scoring = transformed_df
+            feature_col = first_col
+            if not is_single_col:
+                feature_col = "features_array"
+                df_for_scoring = transformed_df.select(
+                    array(*input_cols).alias("features_array"), output_col
+                )
+            elif is_vector_col:
+                df_for_scoring = transformed_df.select(
+                    vector_to_array(col(feature_col)).alias(feature_col), output_col
+                )
 
         if num_cpus > 0:
             from pyspark.ml.feature import PCA as SparkPCA
 
             assert num_gpus <= 0
+
             if is_array_col:
                 vector_df = train_df.select(
                     array_to_vector(train_df[first_col]).alias(first_col)
                 )
             elif not is_vector_col:
-                vector_assembler = VectorAssembler(outputCol="features").setInputCols(
+                vector_assembler = VectorAssembler(outputCol=first_col).setInputCols(
                     input_cols
                 )
                 vector_df = vector_assembler.transform(train_df).drop(*input_cols)
-                first_col = "features"
             else:
                 vector_df = train_df
 
@@ -209,11 +215,10 @@ class BenchmarkUMAP(BenchmarkBase):
                     "prepare dataset", lambda: cpu_cache_df(vector_df)
                 )
 
-            output_col = "pca_features"
-
             params = self.class_params
             print(f"Passing {params} to SparkPCA")
 
+            output_col = "pca_features"
             cpu_pca = SparkPCA(**params).setInputCol(first_col).setOutputCol(output_col)
 
             cpu_model, fit_time = with_benchmark(
@@ -233,9 +238,27 @@ class BenchmarkUMAP(BenchmarkBase):
 
             total_time = round(time.time() - func_start_time, 2)
             print(f"cpu total took: {total_time} sec")
-            data_col = first_col
 
-        score = self.score(transformed_df, data_col, output_col)
+            # spark ml does not remove the mean in the transformed features, so do that here
+            # needed for scoring
+            standard_scaler = (
+                StandardScaler()
+                .setWithStd(False)
+                .setWithMean(True)
+                .setInputCol(output_col)
+                .setOutputCol(output_col + "_mean_removed")
+            )
+
+            scaler_model = standard_scaler.fit(transformed_df)
+            transformed_df = scaler_model.transform(transformed_df).drop(output_col)
+
+            feature_col = first_col
+            output_col = output_col + "_mean_removed"
+            df_for_scoring = transformed_df.select(
+                vector_to_array(col(output_col)).alias(output_col), feature_col
+            )
+
+        score = self.score(df_for_scoring, feature_col, output_col)
         print(f"trustworthiness score: {score}")
 
         report_dict = {

@@ -192,17 +192,6 @@ class BenchmarkKMeans(BenchmarkBase):
 
             cluster_centers = gpu_model.cluster_centers_
 
-            # temporary patch for DB with spark-rapids plugin
-            # this part is not timed so overhead is not critical, but should be reverted
-            # once https://github.com/NVIDIA/spark-rapids/issues/10770 is fixed
-            db_version = os.environ.get("DATABRICKS_RUNTIME_VERSION")
-            if db_version:
-                dim = len(cluster_centers[0])
-                # inject unsupported expr (slice) that is essentially a noop
-                df_for_scoring = df_for_scoring.select(
-                    F.slice(feature_col, 1, dim).alias(feature_col), output_col
-                )
-
         if num_cpus > 0:
             from pyspark.ml.clustering import KMeans as SparkKMeans
 
