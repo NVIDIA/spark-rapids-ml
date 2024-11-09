@@ -22,7 +22,9 @@ import numpy as np
 import pytest
 from _pytest.logging import LogCaptureFixture
 from cuml.metrics import trustworthiness
+from pyspark.ml.linalg import SparseVector
 from pyspark.sql.functions import array
+from scipy.sparse import csr_matrix
 from sklearn.datasets import load_digits, load_iris
 
 from spark_rapids_ml.umap import UMAP, UMAPModel
@@ -35,6 +37,57 @@ from .utils import (
     get_default_cuml_parameters,
     pyspark_supported_feature_types,
 )
+
+
+def _load_sparse_binary_data(
+    n_rows: int, n_cols: int, nnz: int
+) -> Tuple[List[Tuple[SparseVector]], csr_matrix]:
+    # TODO: Replace this function by adding to SparseDataGen
+    # Generate binary sparse data compatible with Jaccard, with nnz non-zero values per row.
+    data = []
+    for i in range(n_rows):
+        indices = [(i + j) % n_cols for j in range(nnz)]
+        values = [1] * nnz
+        sparse_vector = SparseVector(n_cols, dict(zip(indices, values)))
+        data.append((sparse_vector,))
+
+    csr_data: List[float] = []
+    csr_indices: List[int] = []
+    csr_indptr: List[int] = [0]
+    for row in data:
+        sparse_vector = row[0]
+        csr_data.extend(sparse_vector.values)
+        csr_indices.extend(sparse_vector.indices)
+        csr_indptr.append(csr_indptr[-1] + len(sparse_vector.indices))
+    csr_mat = csr_matrix((csr_data, csr_indices, csr_indptr), shape=(n_rows, n_cols))
+
+    return data, csr_mat
+
+
+def _assert_umap_model(
+    model: UMAPModel, input_raw_data: Union[np.ndarray, csr_matrix]
+) -> None:
+    embedding = model.embedding
+    raw_data = model.rawData
+    assert embedding.shape == (
+        input_raw_data.shape[0],
+        model.cuml_params["n_components"],
+    )
+    assert raw_data.shape == input_raw_data.shape
+    if isinstance(input_raw_data, csr_matrix):
+        assert isinstance(raw_data, csr_matrix)
+        assert model._sparse_fit
+        assert (raw_data != input_raw_data).nnz == 0
+        assert (
+            np.all(raw_data.indices == input_raw_data.indices)
+            and np.all(raw_data.indptr == input_raw_data.indptr)
+            and np.allclose(raw_data.data, input_raw_data.data)
+        )
+    else:
+        assert not model._sparse_fit
+        assert np.array_equal(raw_data, input_raw_data)
+    assert model.dtype == "float32"
+    assert model.n_cols == input_raw_data.shape[1]
 
 
 def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -57,17 +110,28 @@ def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def _local_umap_trustworthiness(
-    local_X: np.ndarray,
+    local_X: Union[np.ndarray, csr_matrix],
     local_y: np.ndarray,
     n_neighbors: int,
     supervised: bool,
+    sparse: bool = False,
 ) -> float:
     from cuml.manifold import UMAP
 
-    local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
+    if sparse:
+        local_model = UMAP(
+            n_neighbors=n_neighbors, random_state=42, init="random", metric="jaccard"
+        )
+    else:
+        local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
+
     y_train = local_y if supervised else None
     local_model.fit(local_X, y=y_train)
     embedding = local_model.transform(local_X)
+
+    if sparse:
+        assert isinstance(local_X, csr_matrix)
+        local_X = local_X.toarray()
 
     return trustworthiness(local_X, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
@@ -91,22 +155,32 @@ def _spark_umap_trustworthiness(
 
     with CleanSparkSession() as spark:
         if supervised:
-            data_df, features_col, label_col = create_pyspark_dataframe(
+            data_df, feature_cols, label_col = create_pyspark_dataframe(
                 spark, feature_type, dtype, local_X, local_y
             )
             assert label_col is not None
             umap_estimator.setLabelCol(label_col)
         else:
-            data_df, features_col, _ = create_pyspark_dataframe(
+            data_df, feature_cols, _ = create_pyspark_dataframe(
                 spark, feature_type, dtype, local_X, None
             )
 
         data_df = data_df.repartition(n_parts)
-        umap_estimator.setFeaturesCol(features_col)
+        if isinstance(feature_cols, list):
+            umap_estimator.setFeaturesCols(feature_cols)
+        else:
+            umap_estimator.setFeaturesCol(feature_cols)
+
         umap_model = umap_estimator.fit(data_df)
         pdf = umap_model.transform(data_df).toPandas()
+
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
-        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+        if isinstance(feature_cols, list):
+            input = pdf[feature_cols].to_numpy()
+        else:
+            input = pdf[feature_cols].to_list()
+
+        input = cp.asarray(input).astype(cp.float32)
 
     return trustworthiness(input, embedding, n_neighbors=n_neighbors, batch_size=5000)
 
@@ -295,89 +369,104 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     _test_input_setter_getter(UMAP)
 
 
-def test_umap_model_persistence(gpu_number: int, tmp_path: str) -> None:
+@pytest.mark.parametrize("sparse_fit", [True, False])
+def test_umap_model_persistence(
+    sparse_fit: bool, gpu_number: int, tmp_path: str
+) -> None:
     from cuml.datasets import make_blobs
 
-    X, _ = make_blobs(
-        100,
-        20,
-        centers=42,
-        cluster_std=0.1,
-        dtype=np.float32,
-        random_state=10,
-    )
-
     with CleanSparkSession() as spark:
-        pyspark_type = "float"
-        feature_cols = [f"c{i}" for i in range(X.shape[1])]
-        schema = [f"{c} {pyspark_type}" for c in feature_cols]
-        df = spark.createDataFrame(X.tolist(), ",".join(schema))
-        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        n_rows = 5000
+        n_cols = 200
+
+        if sparse_fit:
+            data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
+            df = spark.createDataFrame(data, ["features"])
+        else:
+            X, _ = make_blobs(
+                n_rows,
+                n_cols,
+                centers=5,
+                cluster_std=0.1,
+                dtype=np.float32,
+                random_state=10,
+            )
+            pyspark_type = "float"
+            feature_cols = [f"c{i}" for i in range(X.shape[1])]
+            schema = [f"{c} {pyspark_type}" for c in feature_cols]
+            df = spark.createDataFrame(X.tolist(), ",".join(schema))
+            df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+            input_raw_data = X.get()
 
         umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = np.array(model.embedding)
-            raw_data = np.array(model.raw_data)
-            assert embedding.shape == (100, 2)
-            assert raw_data.shape == (100, 20)
-            assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
         umap_model = umap.fit(df)
-        assert_umap_model(model=umap_model)
+        _assert_umap_model(umap_model, input_raw_data)
 
         # Model persistence
         path = tmp_path + "/umap_tests"
         model_path = f"{path}/umap_model"
         umap_model.write().overwrite().save(model_path)
         umap_model_loaded = UMAPModel.load(model_path)
-        assert_umap_model(model=umap_model_loaded)
+        _assert_umap_model(umap_model_loaded, input_raw_data)
 
 
-@pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 20, 8 << 18])
-def test_umap_broadcast_chunks(gpu_number: int, BROADCAST_LIMIT: int) -> None:
+@pytest.mark.parametrize("maxRecordsPerBatch", ["2000"])
+@pytest.mark.parametrize("BROADCAST_LIMIT", [8 << 15])
+@pytest.mark.parametrize("sparse_fit", [True, False])
+def test_umap_chunking(
+    gpu_number: int, maxRecordsPerBatch: str, BROADCAST_LIMIT: int, sparse_fit: bool
+) -> None:
     from cuml.datasets import make_blobs
 
-    X, _ = make_blobs(
-        5000,
-        3000,
-        centers=42,
-        cluster_std=0.1,
-        dtype=np.float32,
-        random_state=10,
-    )
+    n_rows = int(int(maxRecordsPerBatch) * 2.5)
+    n_cols = 3000
 
     with CleanSparkSession() as spark:
-        pyspark_type = "float"
-        feature_cols = [f"c{i}" for i in range(X.shape[1])]
-        schema = [f"{c} {pyspark_type}" for c in feature_cols]
-        df = spark.createDataFrame(X.tolist(), ",".join(schema))
-        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+        spark.conf.set(
+            "spark.sql.execution.arrow.maxRecordsPerBatch", maxRecordsPerBatch
+        )
+
+        if sparse_fit:
+            data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
+            df = spark.createDataFrame(data, ["features"])
+            nbytes = input_raw_data.data.nbytes
+        else:
+            X, _ = make_blobs(
+                n_rows,
+                n_cols,
+                centers=5,
+                cluster_std=0.1,
+                dtype=np.float32,
+                random_state=10,
+            )
+            pyspark_type = "float"
+            feature_cols = [f"c{i}" for i in range(X.shape[1])]
+            schema = [f"{c} {pyspark_type}" for c in feature_cols]
+            df = spark.createDataFrame(X.tolist(), ",".join(schema))
+            df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+            input_raw_data = X.get()
+            nbytes = input_raw_data.nbytes
 
         umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
-        umap.BROADCAST_LIMIT = BROADCAST_LIMIT
+
+        assert umap.max_records_per_batch == int(maxRecordsPerBatch)
+        assert nbytes > BROADCAST_LIMIT
 
         umap_model = umap.fit(df)
+        umap_model.BROADCAST_LIMIT = BROADCAST_LIMIT
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = np.array(model.embedding)
-            raw_data = np.array(model.raw_data)
-            assert embedding.shape == (5000, 2)
-            assert raw_data.shape == (5000, 3000)
-            assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
-        assert_umap_model(model=umap_model)
+        _assert_umap_model(umap_model, input_raw_data)
 
         pdf = umap_model.transform(df).toPandas()
-        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
-        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+        embedding = np.vstack(pdf["embedding"]).astype(np.float32)
+        input = np.vstack(pdf["features"]).astype(np.float32)
 
         dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=5000)
-        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        loc_umap = _local_umap_trustworthiness(
+            input_raw_data, np.zeros(0), 15, False, sparse_fit
+        )
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.15
@@ -393,7 +482,7 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
     X, _ = make_blobs(
         n_rows,
         10,
-        centers=42,
+        centers=5,
         cluster_std=0.1,
         dtype=np.float32,
         random_state=10,
@@ -416,20 +505,14 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 
         umap_model = umap.fit(df)
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = np.array(model.embedding)
-            raw_data = np.array(model.raw_data)
+        threshold = 2 * np.sqrt(
+            n_rows * sample_fraction * (1 - sample_fraction)
+        )  # 2 std devs
 
-            threshold = 2 * np.sqrt(
-                n_rows * sample_fraction * (1 - sample_fraction)
-            )  # 2 std devs
-
-            assert np.abs(n_rows * sample_fraction - embedding.shape[0]) <= threshold
-            assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
-        assert_umap_model(model=umap_model)
+        embedding = umap_model.embedding
+        raw_data = umap_model.rawData
+        assert np.abs(n_rows * sample_fraction - embedding.shape[0]) <= threshold
+        assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
 
 
 def test_umap_build_algo(gpu_number: int) -> None:
@@ -473,16 +556,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
 
         umap_model = umap.fit(df)
 
-        def assert_umap_model(model: UMAPModel) -> None:
-            embedding = np.array(model.embedding)
-            raw_data = np.array(model.raw_data)
-            assert embedding.shape == (10000, 2)
-            assert raw_data.shape == (10000, 10)
-            assert np.array_equal(raw_data, X.get())
-            assert model.dtype == "float32"
-            assert model.n_cols == X.shape[1]
-
-        assert_umap_model(model=umap_model)
+        _assert_umap_model(umap_model, X.get())
 
         pdf = umap_model.transform(df).toPandas()
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
@@ -492,4 +566,50 @@ def test_umap_build_algo(gpu_number: int) -> None:
         loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
         trust_diff = loc_umap - dist_umap
 
+        assert trust_diff <= 0.15
+
+
+@pytest.mark.parametrize("n_rows", [3000])
+@pytest.mark.parametrize("n_cols", [64])
+@pytest.mark.parametrize("nnz", [12])
+@pytest.mark.parametrize("metric", ["jaccard", "hamming", "correlation", "cosine"])
+def test_umap_sparse_vector(
+    n_rows: int, n_cols: int, nnz: int, metric: str, gpu_number: int, tmp_path: str
+) -> None:
+    import pyspark
+    from cuml.manifold import UMAP as cumlUMAP
+    from packaging import version
+
+    if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+        import logging
+
+        err_msg = "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function for SparseVector. "
+        "The test case will be skipped. Please install pyspark>=3.4."
+        logging.info(err_msg)
+        return
+
+    with CleanSparkSession() as spark:
+        data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, nnz)
+        df = spark.createDataFrame(data, ["features"])
+
+        umap_estimator = UMAP(
+            metric=metric, num_workers=gpu_number, random_state=42
+        ).setFeaturesCol("features")
+        umap_model = umap_estimator.fit(df)
+        embedding = umap_model.embedding
+
+        # Ensure internal and input CSR data match
+        _assert_umap_model(umap_model, input_raw_data)
+
+        # Local vs dist trustworthiness check
+        output = umap_model.transform(df).toPandas()
+        embedding = cp.asarray(output["embedding"].to_list())
+        dist_umap = trustworthiness(input_raw_data.toarray(), embedding, n_neighbors=15)
+
+        local_model = cumlUMAP(n_neighbors=15, random_state=42, metric=metric)
+        local_model.fit(input_raw_data)
+        embedding = local_model.transform(input_raw_data)
+        loc_umap = trustworthiness(input_raw_data.toarray(), embedding, n_neighbors=15)
+
+        trust_diff = loc_umap - dist_umap
         assert trust_diff <= 0.15
