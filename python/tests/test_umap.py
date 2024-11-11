@@ -373,9 +373,9 @@ def test_params(tmp_path: str, default_params: bool) -> None:
 def test_umap_model_persistence(
     sparse_fit: bool, gpu_number: int, tmp_path: str
 ) -> None:
+    import pyspark
     from cuml.datasets import make_blobs
     from packaging import version
-    import pyspark
 
     with CleanSparkSession() as spark:
 
@@ -439,8 +439,8 @@ def test_umap_chunking(
         )
 
         if sparse_fit:
-            from packaging import version
             import pyspark
+            from packaging import version
 
             if version.parse(pyspark.__version__) < version.parse("3.4.0"):
                 import logging
