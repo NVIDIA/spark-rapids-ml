@@ -1154,7 +1154,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
                         f"The number of non-zero values of a partition exceeds the int32 index dtype. \
-                        cupyx csr_matrix currently does not promote the dtype to int64 when concatenated; \
+                        cupyx csr_matrix currently does not support int64 indices (https://github.com/cupy/cupy/issues/3513); \
                         keeping as scipy csr_matrix to avoid overflow."
                     )
                 else:
