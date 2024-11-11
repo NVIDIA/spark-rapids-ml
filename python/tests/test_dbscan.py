@@ -46,35 +46,61 @@ from .utils import (
 )
 
 
-def test_default_cuml_params() -> None:
-    from cuml import DBSCAN as CumlDBSCAN
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(
+    default_params: bool,
+    tmp_path: str,
+) -> None:
+    from cuml import DBSCAN as cumlDBSCAN
 
-    cuml_params = get_default_cuml_parameters([CumlDBSCAN], ["handle", "output_type"])
-    cuml_params["calc_core_sample_indices"] = False
-    spark_params = DBSCAN()._get_cuml_params_default()
-    assert cuml_params == spark_params
-
-
-def test_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -> None:
-    # Default constructor
-    default_spark_params: Dict[str, Any] = {}
-    default_cuml_params = {
-        "eps": 0.5,
-        "min_samples": 5,
-        "metric": "euclidean",
-        "verbose": False,
-        "max_mbytes_per_batch": None,
-        "calc_core_sample_indices": False,
+    spark_params = {
+        param.name: value for param, value in DBSCAN().extractParamMap().items()
     }
-    default_dbscan = DBSCAN()
-    assert_params(default_dbscan, default_spark_params, default_cuml_params)
+
+    cuml_params = get_default_cuml_parameters(
+        cuml_classes=[cumlDBSCAN],
+        excludes=[
+            "handle",
+            "output_type",
+            "calc_core_sample_indices",
+        ],
+    )
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert DBSCAN()._get_cuml_params_default() == cuml_params
+
+    with pytest.raises(
+        ValueError, match="Unsupported param 'calc_core_sample_indices'"
+    ):
+        dbscan_dummy = DBSCAN(calc_core_sample_indices=True)
+
+    if default_params:
+        dbscan = DBSCAN()
+    else:
+        nondefault_params = {
+            "eps": 0.4,
+            "metric": "cosine",
+            "min_samples": 4,
+        }
+        dbscan = DBSCAN(**nondefault_params)  # type: ignore
+        cuml_params.update(nondefault_params)
+        spark_params.update(nondefault_params)
+
+    cuml_params["calc_core_sample_indices"] = (
+        False  # we override this param to False internally
+    )
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(dbscan, spark_params, cuml_params)
+    assert dbscan.cuml_params == cuml_params
 
     # Estimator persistence
     path = tmp_path + "/dbscan_tests"
     estimator_path = f"{path}/dbscan"
-    default_dbscan.write().overwrite().save(estimator_path)
+    dbscan.write().overwrite().save(estimator_path)
     loaded_dbscan = DBSCAN.load(estimator_path)
-    assert_params(loaded_dbscan, default_spark_params, default_cuml_params)
+    assert_params(loaded_dbscan, spark_params, cuml_params)
+    assert loaded_dbscan.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter

@@ -179,17 +179,17 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
 
     Parameters
     ----------
-    k: int (default = 8)
+    k: int (default = 2)
         the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.
 
     initMode: str (default = "k-means||")
         the algorithm to select initial centroids. It can be "k-means||" or "random".
 
-    maxIter: int (default = 300)
+    maxIter: int (default = 20)
         the maximum iterations the algorithm will run to learn the k centers.
         More iterations help generate more accurate centers.
 
-    seed: int (default = 1)
+    seed: int (default = None)
         the random seed used by the algorithm to initialize a set of k random centers to start with.
 
     tol: float (default = 1e-4)
@@ -297,6 +297,12 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     ) -> None:
         super().__init__()
         self._set_params(**self._input_kwargs)
+
+    def setInitMode(self, value: str) -> "KMeans":
+        """
+        Sets the value of :py:attr:`initMode`.
+        """
+        return self._set_params(initMode=value)
 
     def setK(self, value: int) -> "KMeans":
         """
@@ -483,7 +489,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
-            kmeans.n_cols = n_cols
+            kmeans.n_features_in_ = n_cols
             kmeans.dtype = np.dtype(dtype)
             kmeans.cluster_centers_ = cudf_to_cuml_array(
                 np.array(cluster_centers_).astype(dtype), order=array_order
@@ -512,7 +518,6 @@ class DBSCANClass(_CumlClass):
             "algorithm": "brute",
             "verbose": False,
             "max_mbytes_per_batch": None,
-            "calc_core_sample_indices": False,
         }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
@@ -528,7 +533,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             metric="euclidean",
             algorithm="brute",
             max_mbytes_per_batch=None,
-            calc_core_sample_indices=True,
             idCol=alias.row_number,
         )
 
@@ -576,16 +580,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             f"If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device."
         ),
         typeConverter=TypeConverters.toInt,
-    )
-
-    calc_core_sample_indices = Param(
-        Params._dummy(),
-        "calc_core_sample_indices",
-        (
-            f"Indicates whether the indices of the core samples should be calculated."
-            f"Setting this to False will avoid unnecessary kernel launches"
-        ),
-        typeConverter=TypeConverters.toBoolean,
     )
 
     idCol = Param(
@@ -645,12 +639,12 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
     Parameters
     ----------
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
 
-    predictionCol: str
+    predictionCol: str (default = "prediction")
         the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
 
     num_workers:
@@ -687,13 +681,11 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         This enables the trade-off between runtime and memory usage for making the N^2 pairwise distance computations more tractable for large numbers of samples.
         If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device.
 
-    calc_core_sample_indices(optional): boolean (default = True)
-        Indicates whether the indices of the core samples should be calculated.
-        Setting this to False will avoid unnecessary kernel launches
-
     idCol: str (default = 'unique_id')
         The internal unique id column name for label matching, will not reveal in the output.
         Need to be set to a name that does not conflict with an existing column name in the original input data.
+
+    Note: We currently do not support calculating and storing the indices of the core samples via the parameter calc_core_sample_indices=True.
 
     Examples
     ----------
@@ -765,7 +757,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         metric: str = "euclidean",
         algorithm: str = "brute",
         max_mbytes_per_batch: Optional[int] = None,
-        calc_core_sample_indices: bool = True,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
@@ -778,8 +769,8 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         assert max_records_per_batch_str is not None
         self.max_records_per_batch = int(max_records_per_batch_str)
         self.BROADCAST_LIMIT = 8 << 30
-
         self.verbose = verbose
+        self.cuml_params["calc_core_sample_indices"] = False  # currently not supported
 
     def setEps(self: P, value: float) -> P:
         return self._set_params(eps=value)
@@ -811,12 +802,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     def getMaxMbytesPerBatch(self) -> Optional[int]:
         return self.getOrDefault("max_mbytes_per_batch")
 
-    def setCalcCoreSampleIndices(self: P, value: bool) -> P:
-        return self._set_params(calc_core_sample_indices=value)
-
-    def getCalcCoreSampleIndices(self) -> bool:
-        return self.getOrDefault("calc_core_sample_indices")
-
     def _fit(self, dataset: DataFrame) -> _CumlModel:
         if self.getMetric() == "precomputed":
             raise ValueError(
@@ -829,6 +814,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
         model._num_workers = self.num_workers
         self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
 
         return model
 
@@ -970,13 +956,7 @@ class DBSCANModel(
             dbscan = CumlDBSCANMG(
                 handle=params[param_alias.handle],
                 output_type="cudf",
-                eps=self.getOrDefault("eps"),
-                min_samples=self.getOrDefault("min_samples"),
-                metric=self.getOrDefault("metric"),
-                algorithm=self.getOrDefault("algorithm"),
-                max_mbytes_per_batch=self.getOrDefault("max_mbytes_per_batch"),
-                calc_core_sample_indices=self.getOrDefault("calc_core_sample_indices"),
-                verbose=self.verbose,
+                **params[param_alias.cuml_init],
             )
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)

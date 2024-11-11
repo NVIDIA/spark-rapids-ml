@@ -19,8 +19,26 @@ spark-rapids-submit --master local[1] tests_no_import_change/test_no_import_chan
 # runs on cpu with spark-submit
 spark-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
 
+
+# calculate pytest parallelism by following https://github.com/NVIDIA/spark-rapids/blob/branch-24.12/integration_tests/run_pyspark_from_build.sh
+MAX_PARALLEL=3
+NVIDIA_SMI_ARGS="" 
+if [ ${CUDA_VISIBLE_DEVICES} ]; then
+        NVIDIA_SMI_ARGS="${NVIDIA_SMI_ARGS} -i ${CUDA_VISIBLE_DEVICES}" 
+fi
+GPU_MEM_PARALLEL=`nvidia-smi ${NVIDIA_SMI_ARGS} --query-gpu=memory.free --format=csv,noheader | awk 'NR == 1 { MIN = $1 } { if ($1 < MIN) { MIN = $1 } } END { print int((MIN - 2 * 1024) / ((3 * 1024) + 750)) }'`
+CPU_CORES=`nproc`
+TMP_PARALLEL=$(( $GPU_MEM_PARALLEL > $CPU_CORES ? $CPU_CORES : $GPU_MEM_PARALLEL ))
+TMP_PARALLEL=$(( $TMP_PARALLEL > $MAX_PARALLEL ? $MAX_PARALLEL : $TMP_PARALLEL ))
+if  (( $TMP_PARALLEL <= 1 )); then
+        TEST_PARALLEL=1
+    else
+        TEST_PARALLEL=$TMP_PARALLEL
+fi
+echo "Test functions in benchmark/test_gen_data.py and tests/ directory will be executed in parallel with ${TEST_PARALLEL} pytest workers" 
+
 echo "use --runslow to run all tests"
-pytest "$@" benchmark/test_gen_data.py
-PYTHONPATH=`pwd`/benchmark pytest -ra "$@" --durations=10 tests
-#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow --durations=10 tests
+pytest "$@" -n ${TEST_PARALLEL} benchmark/test_gen_data.py
+PYTHONPATH=`pwd`/benchmark pytest -ra "$@" -n ${TEST_PARALLEL} --durations=10 tests
+#PYTHONPATH=`pwd`/benchmark pytest -ra --runslow -n ${TEST_PARALLEL} --durations=10 tests
 #PYTHONPATH=`pwd`/benchmark pytest -ra "$@" --durations=10 tests_large

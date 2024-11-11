@@ -28,7 +28,7 @@ Note: Spark does not provide a k-Nearest Neighbors (k-NN) implementation, but it
 
 | Spark Rapids ML | CUDA  | Spark  | Python |
 | :-------------- | :---- | :----- | :----- |
-| 1.0.0           | 11.5+ | 3.2.1+ | 3.9+   |
+| 1.0.0           | 11.4+ | 3.3+   | 3.10+  |
 
 
 ## Single vs Double precision inputs

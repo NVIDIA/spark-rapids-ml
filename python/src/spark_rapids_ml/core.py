@@ -751,7 +751,9 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
-                        "the number of non-zero values of a partition is larger than the int32 index dtype of cupyx csr_matrix"
+                        f"The number of non-zero values of a partition exceeds the int32 index dtype. \
+                        cupyx csr_matrix currently does not support int64 indices (https://github.com/cupy/cupy/issues/3513); \
+                        keeping as scipy csr_matrix to avoid overflow."
                     )
                 else:
                     inputs = [
@@ -774,6 +776,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 params[param_alias.loop] = cc._loop
 
                 logger.info("Invoking cuml fit")
+
+                # pyspark uses sighup to kill python workers gracefully, and for some reason
+                # the signal handler for sighup needs to be explicitly reset at this point
+                # to avoid having SIGHUP be swallowed during a usleep call in the nccl library.
+                # this helps avoid zombie surviving python workers when some workers fail.
+                import signal
+
+                signal.signal(signal.SIGHUP, signal.SIG_DFL)
 
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free
@@ -1398,7 +1408,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                         yield pdf
                 else:
                     pdfs = [pdf for pdf in pdf_iter]
-                    yield pd.concat(pdfs, ignore_index=True)
+                    if (len(pdfs)) > 0:
+                        yield pd.concat(pdfs, ignore_index=True)
 
             processed_pdf_iter = process_pdf_iter(pdf_iter)
             has_row_number = None

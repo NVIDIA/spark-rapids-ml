@@ -63,14 +63,49 @@ def assert_centers_equal(
         assert a_center == pytest.approx(b_center, tolerance)
 
 
-def test_params() -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool) -> None:
     from cuml import KMeans as CumlKMeans
+    from pyspark.ml.clustering import KMeans as SparkKMeans
+
+    spark_params = {
+        param.name: value for param, value in SparkKMeans().extractParamMap().items()
+    }
 
     cuml_params = get_default_cuml_parameters(
-        [CumlKMeans], ["handle", "output_type", "convert_dtype"]
+        cuml_classes=[CumlKMeans], excludes=["handle", "output_type", "convert_dtype"]
     )
-    spark_params = KMeans()._get_cuml_params_default()
-    assert cuml_params == spark_params
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert KMeans()._get_cuml_params_default() == cuml_params
+
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "n_clusters": spark_params["k"],
+        "max_iter": spark_params["maxIter"],
+        "init": spark_params["initMode"],
+    }
+
+    cuml_params.update(spark_default_overrides)
+
+    if default_params:
+        kmeans = KMeans()
+        seed = kmeans.getSeed()  # get the random seed that Spark generates
+        spark_params["seed"] = seed
+        cuml_params["random_state"] = seed
+    else:
+        kmeans = KMeans(
+            k=10,
+            seed=42,
+        )
+        cuml_params["n_clusters"] = 10
+        cuml_params["random_state"] = 42
+        spark_params["k"] = 10
+        spark_params["seed"] = 42
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(kmeans, spark_params, cuml_params)
+    assert kmeans.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter
@@ -368,6 +403,7 @@ def test_kmeans_spark_compat(
 
         kmeans.setSeed(1)
         kmeans.setMaxIter(10)
+        kmeans.setInitMode("k-means||")
         if isinstance(kmeans, SparkKMeans):
             kmeans.setWeightCol("weighCol")
         else:
@@ -377,6 +413,7 @@ def test_kmeans_spark_compat(
         assert kmeans.getMaxIter() == 10
         assert kmeans.getK() == 2
         assert kmeans.getSeed() == 1
+        assert kmeans.getInitMode() == "k-means||"
 
         kmeans.clear(kmeans.maxIter)
         assert kmeans.getMaxIter() == 20

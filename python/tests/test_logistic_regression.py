@@ -55,6 +55,7 @@ from .utils import (
     assert_params,
     create_pyspark_dataframe,
     feature_types,
+    get_default_cuml_parameters,
     idfn,
     make_classification_dataset,
 )
@@ -172,29 +173,51 @@ def test_toy_example(gpu_number: int) -> None:
 
 
 def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
+    from cuml import LogisticRegression as CumlLogisticRegression
+    from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
+
     # Default params: no regularization
     default_spark_params = {
-        "maxIter": 100,
-        "regParam": 0.0,
-        "elasticNetParam": 0.0,
-        "tol": 1e-06,
-        "fitIntercept": True,
-        "standardization": True,
+        param.name: value
+        for param, value in SparkLogisticRegression().extractParamMap().items()
     }
 
-    default_cuml_params: Dict[str, Any] = {
-        "max_iter": 100,
-        "penalty": None,
-        "C": 0.0,
-        "l1_ratio": 0.0,
-        "tol": 1e-6,
-        "fit_intercept": True,
-        "standardization": True,
+    default_cuml_params = get_default_cuml_parameters(
+        cuml_classes=[CumlLogisticRegression],
+        excludes=[
+            "class_weight",
+            "linesearch_max_iter",
+            "solver",
+            "handle",
+            "output_type",
+        ],
+    )
+
+    default_cuml_params["standardization"] = (
+        False  # Standardization param exists in LogisticRegressionMG (default = False) but not in SG, and we support it. Add it in manually for this check.
+    )
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert default_cuml_params == LogisticRegression()._get_cuml_params_default()
+
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "tol": default_spark_params["tol"],
+        "max_iter": default_spark_params["maxIter"],
+        "standardization": default_spark_params["standardization"],
+        "C": default_spark_params["regParam"],
+        "l1_ratio": default_spark_params[
+            "elasticNetParam"
+        ],  # set to 0.0 when reg_param == 0.0
+        "penalty": None,  # set to None when reg_param == 0.0
     }
+
+    default_cuml_params.update(spark_default_overrides)
 
     default_lr = LogisticRegression()
 
     assert_params(default_lr, default_spark_params, default_cuml_params)
+    assert default_lr.cuml_params == default_cuml_params
 
     # L2 regularization
     spark_params: Dict[str, Any] = {
@@ -222,6 +245,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+    assert spark_lr.cuml_params == expected_cuml_params
 
     # L1 regularization
     spark_params = {
@@ -249,6 +273,7 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         }
     )
     assert_params(spark_lr, expected_spark_params, expected_cuml_params)
+    assert spark_lr.cuml_params == expected_cuml_params
 
     # elasticnet(L1 + L2) regularization
     spark_params = {
@@ -2186,3 +2211,42 @@ def test_sparse_int64() -> None:
         total_tol=tolerance,
         accuracy_and_probability_only=True,
     )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("standardization", [True, False])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_sparse_all_zeroes(
+    standardization: bool,
+    fit_intercept: bool,
+) -> None:
+    tolerance = 0.001
+
+    with CleanSparkSession() as spark:
+        data = [
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": standardization,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            return
+
+        gpu_lr = LogisticRegression(enable_sparse_data_optim=True, **params)
+        gpu_model = gpu_lr.fit(bdf)
+        check_sparse_model_preprocess(gpu_model, bdf)
+
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)

@@ -21,8 +21,14 @@ This directory contains shell scripts for running larger-scale benchmarks on an 
   ```
   **Note**: this step should be repeated for each new version of the spark-rapids-ml package that you want to test.
 
+## Create an ssh key pair
+- The benchmark script needs ssh access to the EMR cluster and this requires creating an [EC2 key pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html).  Choose the **pem** format.  After saving the private key locally with `.pem` as the file extension, set the following environment variable to point to its location.
+  ```
+  export KEYPAIR=/path/to/private/key.pem
+  ```
+
 ## Prepare Subnet 
-- Print out available subnets in CLI then pick a SubnetId of your region (e.g. subnet-0744566f of AvailabilityZone us-east-2a in region Ohio). A subnet is required to start an EMR cluster.
+- Print out available subnets in CLI then pick a SubnetId of your region (e.g. subnet-0744566f of AvailabilityZone us-east-2a in region Ohio). A subnet is required to start an EMR cluster.  Make sure that your selected subnet allows SSH access (port 22) from your local host where you will be invoking the benchmarking script.  The public subnet in the default VPC in your account might be a suitable choice.   See AWS EMR documentation for more info on [VPCs for EMR](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-vpc-host-job-flows.html) and related info on SSH access in [managed security groups used by EMR](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-man-sec-groups.html).
 
   ```
   aws ec2 describe-subnets

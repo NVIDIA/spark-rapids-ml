@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.ml.linalg import VectorUDT
 from pyspark.sql import DataFrame
+from pyspark.sql.types import LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
@@ -18,6 +20,7 @@ from spark_rapids_ml.knn import (
 from .sparksession import CleanSparkSession
 from .utils import (
     array_equal,
+    assert_params,
     create_pyspark_dataframe,
     get_default_cuml_parameters,
     idfn,
@@ -28,15 +31,21 @@ NNEstimator = Union[NearestNeighbors, ApproximateNearestNeighbors]
 NNModel = Union[NearestNeighborsModel, ApproximateNearestNeighborsModel]
 
 
-def test_params(caplog: LogCaptureFixture) -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
     from cuml.neighbors.nearest_neighbors_mg import (
         NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
     )
 
+    spark_params = {
+        param.name: value
+        for param, value in NearestNeighbors().extractParamMap().items()
+    }
+
     cuml_params = get_default_cuml_parameters(
-        [CumlNearestNeighbors, NearestNeighborsMG],
-        [
+        cuml_classes=[CumlNearestNeighbors, NearestNeighborsMG],
+        excludes=[
             "handle",
             "algorithm",
             "metric",
@@ -47,8 +56,18 @@ def test_params(caplog: LogCaptureFixture) -> None:
             "output_type",
         ],
     )
-    spark_params = NearestNeighbors()._get_cuml_params_default()
-    assert cuml_params == spark_params
+    assert cuml_params == NearestNeighbors()._get_cuml_params_default()
+
+    if default_params:
+        knn = NearestNeighbors()
+    else:
+        knn = NearestNeighbors(k=7)
+        cuml_params["n_neighbors"] = 7
+        spark_params["k"] = 7
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(knn, spark_params, cuml_params)
+    assert knn.cuml_params == cuml_params
 
     # float32_inputs warn, NearestNeighbors only accepts float32
     nn_float32 = NearestNeighbors(float32_inputs=False)
@@ -107,9 +126,16 @@ def func_test_example_no_id(
         with pytest.raises(NotImplementedError):
             gpu_model.save(tmp_path + "/knn_model")
 
+        # test kneighbors on empty query dataframe
+        df_empty = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+        knn_df = knn_df.cache()
         knn_df.show()
 
         # check knn results
@@ -161,6 +187,7 @@ def func_test_example_no_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -250,6 +277,9 @@ def func_test_example_no_id(
         (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
         assert knn_df_v2.collect() == knn_df.collect()
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
+
         return gpu_knn, gpu_model
 
 
@@ -296,9 +326,18 @@ def func_test_example_with_id(
         gpu_knn = gpu_knn.setK(topk)
 
         gpu_model = gpu_knn.fit(data_df)
+
+        # test kneighbors on empty query dataframe with id column
+        df_empty = spark.createDataFrame([], schema="id long, features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         item_df_withid, query_df_withid, knn_df = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+
+        knn_df = knn_df.cache()
         knn_df.show()
 
         distances_df = knn_df.select("distances")
@@ -322,6 +361,7 @@ def func_test_example_with_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -345,6 +385,8 @@ def func_test_example_with_id(
         reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
         assert reconstructed_query_ids == [201, 202, 203, 204, 205]
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
         return (gpu_knn, gpu_model)
 
 
