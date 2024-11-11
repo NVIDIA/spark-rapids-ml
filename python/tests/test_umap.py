@@ -374,6 +374,8 @@ def test_umap_model_persistence(
     sparse_fit: bool, gpu_number: int, tmp_path: str
 ) -> None:
     from cuml.datasets import make_blobs
+    from packaging import version
+    import pyspark
 
     with CleanSparkSession() as spark:
 
@@ -381,6 +383,14 @@ def test_umap_model_persistence(
         n_cols = 200
 
         if sparse_fit:
+            if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+                import logging
+
+                err_msg = "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function for SparseVector. "
+                "The test case will be skipped. Please install pyspark>=3.4."
+                logging.info(err_msg)
+                return
+
             data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
             df = spark.createDataFrame(data, ["features"])
         else:
@@ -429,6 +439,17 @@ def test_umap_chunking(
         )
 
         if sparse_fit:
+            from packaging import version
+            import pyspark
+
+            if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+                import logging
+
+                err_msg = "pyspark < 3.4 is detected. Cannot import pyspark `unwrap_udt` function for SparseVector. "
+                "The test case will be skipped. Please install pyspark>=3.4."
+                logging.info(err_msg)
+                return
+
             data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
             df = spark.createDataFrame(data, ["features"])
             nbytes = input_raw_data.data.nbytes
