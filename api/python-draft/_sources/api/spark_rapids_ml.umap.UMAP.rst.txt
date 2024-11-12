@@ -119,6 +119,7 @@ UMAP
        ~UMAP.build_algo
        ~UMAP.build_kwds
        ~UMAP.cuml_params
+       ~UMAP.enable_sparse_data_optim
        ~UMAP.featuresCol
        ~UMAP.featuresCols
        ~UMAP.init
@@ -235,6 +236,7 @@ UMAP
     .. autoattribute:: build_algo
     .. autoattribute:: build_kwds
     .. autoattribute:: cuml_params
+    .. autoattribute:: enable_sparse_data_optim
     .. autoattribute:: featuresCol
     .. autoattribute:: featuresCols
     .. autoattribute:: init

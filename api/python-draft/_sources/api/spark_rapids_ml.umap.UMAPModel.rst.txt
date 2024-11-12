@@ -120,6 +120,7 @@ UMAPModel
        ~UMAPModel.build_kwds
        ~UMAPModel.cuml_params
        ~UMAPModel.embedding
+       ~UMAPModel.enable_sparse_data_optim
        ~UMAPModel.featuresCol
        ~UMAPModel.featuresCols
        ~UMAPModel.init
@@ -138,7 +139,7 @@ UMAPModel
        ~UMAPModel.params
        ~UMAPModel.precomputed_knn
        ~UMAPModel.random_state
-       ~UMAPModel.raw_data
+       ~UMAPModel.rawData
        ~UMAPModel.repulsion_strength
        ~UMAPModel.sample_fraction
        ~UMAPModel.set_op_mix_ratio
@@ -238,6 +239,7 @@ UMAPModel
     .. autoattribute:: build_kwds
     .. autoattribute:: cuml_params
     .. autoattribute:: embedding
+    .. autoattribute:: enable_sparse_data_optim
     .. autoattribute:: featuresCol
     .. autoattribute:: featuresCols
     .. autoattribute:: init
@@ -256,7 +258,7 @@ UMAPModel
     .. autoattribute:: params
     .. autoattribute:: precomputed_knn
     .. autoattribute:: random_state
-    .. autoattribute:: raw_data
+    .. autoattribute:: rawData
     .. autoattribute:: repulsion_strength
     .. autoattribute:: sample_fraction
     .. autoattribute:: set_op_mix_ratio
