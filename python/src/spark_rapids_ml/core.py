@@ -711,11 +711,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 import rmm
                 from rmm.allocators.cupy import rmm_cupy_allocator
 
-                rmm.reinitialize(
-                    managed_memory=True,
-                    devices=_CumlCommon._get_gpu_device(context, is_local),
-                )
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+                # avoid initializing these twice to avoid downstream segfaults and other cuda memory errors
+                if not type(rmm.mr.get_current_device_resource()) == type(
+                    rmm.mr.ManagedMemoryResource()
+                ):
+                    rmm.mr.set_current_device_resource(rmm.mr.ManagedMemoryResource())
+
+                if not cp.cuda.get_allocator().__name__ == rmm_cupy_allocator.__name__:
+                    cp.cuda.set_allocator(rmm_cupy_allocator)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
@@ -1386,13 +1389,14 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
                 import rmm
                 from rmm.allocators.cupy import rmm_cupy_allocator
 
-                rmm.reinitialize(
-                    managed_memory=True,
-                    devices=_CumlCommon._get_gpu_device(
-                        context, is_local, is_transform=True
-                    ),
-                )
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+                # avoid initializing these twice to avoid downstream segfaults and other cuda memory errors
+                if not type(rmm.mr.get_current_device_resource()) == type(
+                    rmm.mr.ManagedMemoryResource()
+                ):
+                    rmm.mr.set_current_device_resource(rmm.mr.ManagedMemoryResource())
+
+                if not cp.cuda.get_allocator().__name__ == rmm_cupy_allocator.__name__:
+                    cp.cuda.set_allocator(rmm_cupy_allocator)
 
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()
