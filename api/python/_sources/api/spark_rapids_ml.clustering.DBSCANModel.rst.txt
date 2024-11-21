@@ -73,7 +73,6 @@ DBSCANModel
     .. autosummary::
     
        ~DBSCANModel.algorithm
-       ~DBSCANModel.calc_core_sample_indices
        ~DBSCANModel.cuml_params
        ~DBSCANModel.eps
        ~DBSCANModel.featuresCol
@@ -133,7 +132,6 @@ DBSCANModel
 
     
     .. autoattribute:: algorithm
-    .. autoattribute:: calc_core_sample_indices
     .. autoattribute:: cuml_params
     .. autoattribute:: eps
     .. autoattribute:: featuresCol

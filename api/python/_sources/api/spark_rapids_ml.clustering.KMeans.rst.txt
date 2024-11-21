@@ -62,6 +62,7 @@ KMeans
        ~KMeans.set
        ~KMeans.setFeaturesCol
        ~KMeans.setFeaturesCols
+       ~KMeans.setInitMode
        ~KMeans.setK
        ~KMeans.setMaxIter
        ~KMeans.setPredictionCol
@@ -127,6 +128,7 @@ KMeans
     .. automethod:: set
     .. automethod:: setFeaturesCol
     .. automethod:: setFeaturesCols
+    .. automethod:: setInitMode
     .. automethod:: setK
     .. automethod:: setMaxIter
     .. automethod:: setPredictionCol

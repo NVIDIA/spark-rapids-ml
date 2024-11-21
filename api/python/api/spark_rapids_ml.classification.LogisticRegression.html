@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>LogisticRegression &#8212; spark-rapids-ml 24.08.0 documentation</title>
+    <title>LogisticRegression &#8212; spark-rapids-ml 24.10.0 documentation</title>
   
   
   
@@ -124,7 +124,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 24.08.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 24.10.0 documentation</p>
   
 </a></div>
     
@@ -384,7 +384,7 @@ to cuML parameters.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<dt><strong>featuresCol: str or List[str] (default = “features”)</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
@@ -392,22 +392,22 @@ to cuML parameters.</p>
 </ul>
 </div></blockquote>
 </dd>
-<dt><strong>labelCol:</strong></dt><dd><p>The label column name.</p>
+<dt><strong>labelCol: (default = “label”)</strong></dt><dd><p>The label column name.</p>
 </dd>
-<dt><strong>predictionCol:</strong></dt><dd><p>The class prediction column name.</p>
+<dt><strong>predictionCol: (default = “prediction”)</strong></dt><dd><p>The class prediction column name.</p>
 </dd>
-<dt><strong>probabilityCol:</strong></dt><dd><p>The probability prediction column name.</p>
+<dt><strong>probabilityCol: (default = “probability”)</strong></dt><dd><p>The probability prediction column name.</p>
 </dd>
-<dt><strong>rawPredictionCol:</strong></dt><dd><p>The column name for class raw predictions - this is currently set equal to probabilityCol values.</p>
+<dt><strong>rawPredictionCol: (default = “rawPrediction”)</strong></dt><dd><p>The column name for class raw predictions - this is currently set equal to probabilityCol values.</p>
 </dd>
-<dt><strong>maxIter:</strong></dt><dd><p>The maximum number of iterations of the underlying L-BFGS algorithm.</p>
+<dt><strong>maxIter: (default = 100)</strong></dt><dd><p>The maximum number of iterations of the underlying L-BFGS algorithm.</p>
 </dd>
-<dt><strong>regParam:</strong></dt><dd><p>The regularization parameter.</p>
+<dt><strong>regParam: (default = 0.0)</strong></dt><dd><p>The regularization parameter.</p>
 </dd>
-<dt><strong>elasticNetParam:</strong></dt><dd><p>The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
+<dt><strong>elasticNetParam: (default = 0.0)</strong></dt><dd><p>The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
 the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.</p>
 </dd>
-<dt><strong>tol:</strong></dt><dd><p>The convergence tolerance.</p>
+<dt><strong>tol: (default = 1e-6)</strong></dt><dd><p>The convergence tolerance.</p>
 </dd>
 <dt><strong>enable_sparse_data_optim: None or boolean, optional (default=None)</strong></dt><dd><p>If features column is VectorUDT type, Spark rapids ml relies on this parameter to decide whether to use dense array or sparse array in cuml.
 If None, use dense array if the first VectorUDT of a dataframe is DenseVector. Use sparse array if it is SparseVector.
@@ -415,9 +415,9 @@ If False, always uses dense array. This is favorable if the majority of VectorUD
 If True, always uses sparse array. This is favorable if the majority of the VectorUDT vectors are SparseVector.
 Note this is only supported in spark &gt;= 3.4.</p>
 </dd>
-<dt><strong>fitIntercept:</strong></dt><dd><p>Whether to fit an intercept term.</p>
+<dt><strong>fitIntercept: (default = True)</strong></dt><dd><p>Whether to fit an intercept term.</p>
 </dd>
-<dt><strong>standardization:</strong></dt><dd><p>Whether to standardize the training data before fit.</p>
+<dt><strong>standardization: (default = True)</strong></dt><dd><p>Whether to standardize the training data before fit.</p>
 </dd>
 <dt><strong>num_workers:</strong></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task
 running on one GPU. If not set, spark-rapids-ml tries to infer the number of

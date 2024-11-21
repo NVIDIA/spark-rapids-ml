@@ -44,6 +44,8 @@ UMAP
        ~UMAP.fitMultiple
        ~UMAP.getA
        ~UMAP.getB
+       ~UMAP.getBuildAlgo
+       ~UMAP.getBuildKwds
        ~UMAP.getFeaturesCol
        ~UMAP.getFeaturesCols
        ~UMAP.getInit
@@ -51,6 +53,7 @@ UMAP
        ~UMAP.getLearningRate
        ~UMAP.getLocalConnectivity
        ~UMAP.getMetric
+       ~UMAP.getMetricKwds
        ~UMAP.getMinDist
        ~UMAP.getNComponents
        ~UMAP.getNEpochs
@@ -76,6 +79,8 @@ UMAP
        ~UMAP.set
        ~UMAP.setA
        ~UMAP.setB
+       ~UMAP.setBuildAlgo
+       ~UMAP.setBuildKwds
        ~UMAP.setFeaturesCol
        ~UMAP.setFeaturesCols
        ~UMAP.setInit
@@ -83,6 +88,7 @@ UMAP
        ~UMAP.setLearningRate
        ~UMAP.setLocalConnectivity
        ~UMAP.setMetric
+       ~UMAP.setMetricKwds
        ~UMAP.setMinDist
        ~UMAP.setNComponents
        ~UMAP.setNEpochs
@@ -110,7 +116,10 @@ UMAP
     
        ~UMAP.a
        ~UMAP.b
+       ~UMAP.build_algo
+       ~UMAP.build_kwds
        ~UMAP.cuml_params
+       ~UMAP.enable_sparse_data_optim
        ~UMAP.featuresCol
        ~UMAP.featuresCols
        ~UMAP.init
@@ -118,6 +127,7 @@ UMAP
        ~UMAP.learning_rate
        ~UMAP.local_connectivity
        ~UMAP.metric
+       ~UMAP.metric_kwds
        ~UMAP.min_dist
        ~UMAP.n_components
        ~UMAP.n_epochs
@@ -152,6 +162,8 @@ UMAP
     .. automethod:: fitMultiple
     .. automethod:: getA
     .. automethod:: getB
+    .. automethod:: getBuildAlgo
+    .. automethod:: getBuildKwds
     .. automethod:: getFeaturesCol
     .. automethod:: getFeaturesCols
     .. automethod:: getInit
@@ -159,6 +171,7 @@ UMAP
     .. automethod:: getLearningRate
     .. automethod:: getLocalConnectivity
     .. automethod:: getMetric
+    .. automethod:: getMetricKwds
     .. automethod:: getMinDist
     .. automethod:: getNComponents
     .. automethod:: getNEpochs
@@ -184,6 +197,8 @@ UMAP
     .. automethod:: set
     .. automethod:: setA
     .. automethod:: setB
+    .. automethod:: setBuildAlgo
+    .. automethod:: setBuildKwds
     .. automethod:: setFeaturesCol
     .. automethod:: setFeaturesCols
     .. automethod:: setInit
@@ -191,6 +206,7 @@ UMAP
     .. automethod:: setLearningRate
     .. automethod:: setLocalConnectivity
     .. automethod:: setMetric
+    .. automethod:: setMetricKwds
     .. automethod:: setMinDist
     .. automethod:: setNComponents
     .. automethod:: setNEpochs
@@ -217,7 +233,10 @@ UMAP
     
     .. autoattribute:: a
     .. autoattribute:: b
+    .. autoattribute:: build_algo
+    .. autoattribute:: build_kwds
     .. autoattribute:: cuml_params
+    .. autoattribute:: enable_sparse_data_optim
     .. autoattribute:: featuresCol
     .. autoattribute:: featuresCols
     .. autoattribute:: init
@@ -225,6 +244,7 @@ UMAP
     .. autoattribute:: learning_rate
     .. autoattribute:: local_connectivity
     .. autoattribute:: metric
+    .. autoattribute:: metric_kwds
     .. autoattribute:: min_dist
     .. autoattribute:: n_components
     .. autoattribute:: n_epochs

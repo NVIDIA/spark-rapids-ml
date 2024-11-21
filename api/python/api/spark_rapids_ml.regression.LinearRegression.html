@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>LinearRegression &#8212; spark-rapids-ml 24.08.0 documentation</title>
+    <title>LinearRegression &#8212; spark-rapids-ml 24.10.0 documentation</title>
   
   
   
@@ -124,7 +124,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 24.08.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 24.10.0 documentation</p>
   
 </a></div>
     
@@ -377,13 +377,13 @@ PySpark Pipeline and PySpark ML meta algorithms like
 </ul>
 <p>LinearRegression automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.LinearRegression.html#pyspark.ml.regression.LinearRegression" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearRegression</span></code></a>,
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v24.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v24.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v24.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
-and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v24.08)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v24.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v24.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v24.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
+and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v24.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
 to cuML parameters.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><dl>
-<dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
+<dt><strong>featuresCol: str or List[str] (default = “features”)</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>When the value is a string, the feature columns must be assembled into 1 column with vector or array type.</p></li>
@@ -391,27 +391,27 @@ to cuML parameters.</p>
 </ul>
 </div></blockquote>
 </dd>
-<dt><strong>labelCol:</strong></dt><dd><p>The label column name.</p>
+<dt><strong>labelCol: str (default = “label”)</strong></dt><dd><p>The label column name.</p>
 </dd>
-<dt><strong>predictionCol:</strong></dt><dd><p>The prediction column name.</p>
+<dt><strong>predictionCol: str (default = “prediction”)</strong></dt><dd><p>The prediction column name.</p>
 </dd>
-<dt><strong>maxIter:</strong></dt><dd><p>Max number of iterations (&gt;= 0).</p>
+<dt><strong>maxIter: int (default = 100)</strong></dt><dd><p>Max number of iterations (&gt;= 0).</p>
 </dd>
-<dt><strong>regParam:</strong></dt><dd><p>Regularization parameter (&gt;= 0)</p>
+<dt><strong>regParam: float (default = 0.0)</strong></dt><dd><p>Regularization parameter (&gt;= 0).</p>
 </dd>
-<dt><strong>elasticNetParam:</strong></dt><dd><p>The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
+<dt><strong>elasticNetParam: float (default = 0.0)</strong></dt><dd><p>The ElasticNet mixing parameter, in range [0, 1]. For alpha = 0,
 the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty.</p>
 </dd>
-<dt><strong>tol:</strong></dt><dd><p>The convergence tolerance for iterative algorithms (&gt;= 0).</p>
+<dt><strong>tol: float (default = 1e-6)</strong></dt><dd><p>The convergence tolerance for iterative algorithms (&gt;= 0).</p>
 </dd>
-<dt><strong>fitIntercept:</strong></dt><dd><p>whether to fit an intercept term.</p>
+<dt><strong>fitIntercept: bool (default = True)</strong></dt><dd><p>Whether to fit an intercept term.</p>
 </dd>
-<dt><strong>standardization:</strong></dt><dd><p>Whether to standardize the training features before fitting the model.</p>
+<dt><strong>standardization: bool (default = True)</strong></dt><dd><p>Whether to standardize the training features before fitting the model.</p>
 </dd>
-<dt><strong>solver:</strong></dt><dd><p>The solver algorithm for optimization. If this is not set or empty, default value is ‘auto’.</p>
+<dt><strong>solver: str (default = “auto”)</strong></dt><dd><p>The solver algorithm for optimization. If this is not set or empty, default value is ‘auto’.</p>
 <p>The supported options: ‘auto’, ‘normal’ and ‘eig’, all of them will be mapped to ‘eig’ in cuML.</p>
 </dd>
-<dt><strong>loss:</strong></dt><dd><p>The loss function to be optimized.
+<dt><strong>loss: str (default = “squaredError”)</strong></dt><dd><p>The loss function to be optimized.
 The supported options: ‘squaredError’</p>
 </dd>
 <dt><strong>num_workers:</strong></dt><dd><p>Number of cuML workers, where each cuML worker corresponds to one Spark task

@@ -43,7 +43,6 @@ DBSCAN
        ~DBSCAN.fit
        ~DBSCAN.fitMultiple
        ~DBSCAN.getAlgorithm
-       ~DBSCAN.getCalcCoreSampleIndices
        ~DBSCAN.getEps
        ~DBSCAN.getFeaturesCol
        ~DBSCAN.getFeaturesCols
@@ -62,7 +61,6 @@ DBSCAN
        ~DBSCAN.save
        ~DBSCAN.set
        ~DBSCAN.setAlgorithm
-       ~DBSCAN.setCalcCoreSampleIndices
        ~DBSCAN.setEps
        ~DBSCAN.setFeaturesCol
        ~DBSCAN.setFeaturesCols
@@ -84,7 +82,6 @@ DBSCAN
     .. autosummary::
     
        ~DBSCAN.algorithm
-       ~DBSCAN.calc_core_sample_indices
        ~DBSCAN.cuml_params
        ~DBSCAN.eps
        ~DBSCAN.featuresCol
@@ -113,7 +110,6 @@ DBSCAN
     .. automethod:: fit
     .. automethod:: fitMultiple
     .. automethod:: getAlgorithm
-    .. automethod:: getCalcCoreSampleIndices
     .. automethod:: getEps
     .. automethod:: getFeaturesCol
     .. automethod:: getFeaturesCols
@@ -132,7 +128,6 @@ DBSCAN
     .. automethod:: save
     .. automethod:: set
     .. automethod:: setAlgorithm
-    .. automethod:: setCalcCoreSampleIndices
     .. automethod:: setEps
     .. automethod:: setFeaturesCol
     .. automethod:: setFeaturesCols
@@ -153,7 +148,6 @@ DBSCAN
 
     
     .. autoattribute:: algorithm
-    .. autoattribute:: calc_core_sample_indices
     .. autoattribute:: cuml_params
     .. autoattribute:: eps
     .. autoattribute:: featuresCol
