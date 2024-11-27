@@ -36,7 +36,7 @@ try:
     import mlflow
 
     mlflow.autolog(disable=True)
-except:
+except ImportError:
     pass
 
 
