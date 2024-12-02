@@ -966,7 +966,9 @@ class ApproximateNearestNeighbors(
             Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.
 
     metric: str (default = "euclidean")
-        the distance metric to use. 'ivfflat' algorithm supports ['euclidean', 'sqeuclidean', 'l2', 'inner_product'].
+        the distance metric to use.
+        'ivfflat' and 'ivfpq' support ['euclidean', 'sqeuclidean', 'l2', 'inner_product', 'cosine'].
+        'cagra' supports ['sqeuclidean'].
 
     inputCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
