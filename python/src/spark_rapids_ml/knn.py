@@ -901,7 +901,8 @@ class ApproximateNearestNeighbors(
     """
     ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-    The ApproximateNearestNeighbors is currently built on the CAGRA (graph-based) algorithm of cuVS, and the IVFFLAT and IVFPQ algorithms of cuML.
+    The ApproximateNearestNeighbors is currently implemented using cuvs. It supports the IVFFLAT, IVFPQ, and
+    CAGRA (graph-based) algorithms and follows the API conventions of cuML.
 
     The current implementation build index independently on each data partition of item_df. Queries will be broadcast to all GPUs,
     then every query probes closest centers on individual index. Local topk results will be aggregated to obtain global topk ANNs.
