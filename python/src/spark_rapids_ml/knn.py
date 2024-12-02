@@ -967,7 +967,7 @@ class ApproximateNearestNeighbors(
             Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.
 
     metric: str (default = "euclidean")
-        the distance metric to use.
+        the distance metric to use with the default set to "euclidean" (following cuml conventions).
         'ivfflat' and 'ivfpq' support ['euclidean', 'sqeuclidean', 'l2', 'inner_product', 'cosine'].
         'cagra' supports ['sqeuclidean'].
 
