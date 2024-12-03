@@ -901,7 +901,8 @@ class ApproximateNearestNeighbors(
     """
     ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-    The ApproximateNearestNeighbors is currently built on the CAGRA (graph-based) algorithm of cuVS, and the IVFFLAT and IVFPQ algorithms of cuML.
+    The ApproximateNearestNeighbors is currently implemented using cuvs. It supports the IVFFLAT, IVFPQ, and
+    CAGRA (graph-based) algorithms and follows the API conventions of cuML.
 
     The current implementation build index independently on each data partition of item_df. Queries will be broadcast to all GPUs,
     then every query probes closest centers on individual index. Local topk results will be aggregated to obtain global topk ANNs.
@@ -966,7 +967,10 @@ class ApproximateNearestNeighbors(
             Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.
 
     metric: str (default = "euclidean")
-        the distance metric to use. 'ivfflat' algorithm supports ['euclidean', 'sqeuclidean', 'l2', 'inner_product'].
+        the distance metric to use with the default set to "euclidean" (following cuml conventions, though cuvs defaults to "sqeuclidean").
+        The 'ivfflat' and 'ivfpq' algorithms support ['euclidean', 'sqeuclidean', 'l2', 'inner_product', 'cosine'].
+        The 'cagra' algorithm supports ['sqeuclidean'], and when using 'cagra' as an algorithm,
+        the metric must be explicitly set to 'sqeuclidean'.
 
     inputCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
@@ -1283,7 +1287,9 @@ class ApproximateNearestNeighborsModel(
     def _cal_cagra_params_and_check(
         cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        assert metric == "sqeuclidean"
+        assert (
+            metric == "sqeuclidean"
+        ), "when using 'cagra' algorithm, the metric must be explicitly set to 'sqeuclidean'."
 
         cagra_index_params: Dict[str, Any] = {"metric": metric}
         cagra_search_params: Dict[str, Any] = {}

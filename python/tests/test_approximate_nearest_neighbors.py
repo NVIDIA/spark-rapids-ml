@@ -782,11 +782,7 @@ def test_cagra(
     TODO: support compression index param
     """
 
-    VALID_METRIC = {"sqeuclidean"}
     VALID_BUILD_ALGO = {"ivf_pq", "nn_descent"}
-    assert (
-        metric in VALID_METRIC
-    ), f"cagra currently supports metric only in {VALID_METRIC}."
     assert algo_params["build_algo"] in {
         "ivf_pq",
         "nn_descent",
@@ -865,7 +861,7 @@ def test_cagra_dtype(
 
 
 @pytest.mark.parametrize(
-    "algorithm,feature_type,max_records_per_batch,algo_params,metric",
+    "algorithm,feature_type,max_records_per_batch,algo_params",
     [
         (
             "cagra",
@@ -875,7 +871,6 @@ def test_cagra_dtype(
                 "build_algo": "ivf_pq",
                 "itopk_size": 32,
             },
-            "sqeuclidean",
         ),
     ],
 )
@@ -885,12 +880,12 @@ def test_cagra_params(
     feature_type: str,
     max_records_per_batch: int,
     algo_params: Dict[str, Any],
-    metric: str,
     data_type: np.dtype,
     caplog: LogCaptureFixture,
 ) -> None:
 
     data_shape = (1000, 20)
+    metric = "sqeuclidean"
     itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
 
     internal_topk_size = math.ceil(itopk_size / 32) * 32
@@ -927,6 +922,22 @@ def test_cagra_params(
             n_neighbors=n_neighbors,
         )
         assert error_msg in caplog.text
+
+    # test metric restriction
+    algo_params["intermediate_graph_degree"] = 255
+    metric = "euclidean"
+    error_msg = f"when using 'cagra' algorithm, the metric must be explicitly set to 'sqeuclidean'."
+    with pytest.raises(AssertionError, match=error_msg):
+        test_cagra(
+            algorithm,
+            feature_type,
+            max_records_per_batch,
+            algo_params,
+            metric,
+            data_shape,
+            data_type,
+            n_neighbors=n_neighbors,
+        )
 
 
 @pytest.mark.parametrize(
