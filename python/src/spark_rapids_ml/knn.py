@@ -1287,7 +1287,9 @@ class ApproximateNearestNeighborsModel(
     def _cal_cagra_params_and_check(
         cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        assert metric == "sqeuclidean"
+        assert (
+            metric == "sqeuclidean"
+        ), "when using 'cagra' algorithm, the metric must be explicitly set to 'sqeuclidean'."
 
         cagra_index_params: Dict[str, Any] = {"metric": metric}
         cagra_search_params: Dict[str, Any] = {}
