@@ -486,14 +486,12 @@ LogisticRegressionModelType = TypeVar(
 
 
 @pytest.mark.compat
-#@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("fit_intercept", [False])
-#@pytest.mark.parametrize("standardization", [True, False])
-@pytest.mark.parametrize("standardization", [True])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("standardization", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
-        #(SparkLogisticRegression, SparkLogisticRegressionModel),
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
         (LogisticRegression, LogisticRegressionModel),
     ],
 )
@@ -545,7 +543,7 @@ def test_compat(
 
         assert _LogisticRegression().getRegParam() == 0.0
         blor = _LogisticRegression(
-            verbose=True, regParam=0.1, fitIntercept=fit_intercept, standardization=standardization
+            regParam=0.1, fitIntercept=fit_intercept, standardization=standardization
         )
 
         assert blor.getRegParam() == 0.1
