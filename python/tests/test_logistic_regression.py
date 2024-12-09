@@ -2267,8 +2267,8 @@ def test_sparse_all_zeroes(
 
 
 @pytest.mark.slow
-#@pytest.mark.parametrize("standardization", [True, False])
-#@pytest.mark.parametrize("fit_intercept", [True, False])
+# @pytest.mark.parametrize("standardization", [True, False])
+# @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("standardization", [True])
 @pytest.mark.parametrize("fit_intercept", [True])
 def test_sparse_one_gpu_all_zeroes(
@@ -2284,7 +2284,7 @@ def test_sparse_one_gpu_all_zeroes(
 
     with CleanSparkSession() as spark:
         data = [
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {0: 10., 1: 20.})),
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
             Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
             Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
             Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
@@ -2303,7 +2303,9 @@ def test_sparse_one_gpu_all_zeroes(
         if version.parse(pyspark.__version__) < version.parse("3.4.0"):
             return
 
-        gpu_lr = LogisticRegression(enable_sparse_data_optim=True, verbose=True, **params)
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True, verbose=True, **params
+        )
         gpu_model = gpu_lr.fit(bdf)
         check_sparse_model_preprocess(gpu_model, bdf)
 
