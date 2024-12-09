@@ -87,6 +87,7 @@ from .params import (
 from .utils import (
     _ArrayOrder,
     _concat_and_free,
+    _configure_memory_resource,
     _get_spark_session,
     _is_local,
     dtype_to_pyspark_type,
@@ -1110,25 +1111,15 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             import cupy as cp
             import cupyx
 
-            if cuda_managed_mem_enabled:
-                import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
-
-                # avoid initializing these twice to avoid downstream segfaults and other cuda memory errors
-                if not type(rmm.mr.get_current_device_resource()) == type(
-                    rmm.mr.ManagedMemoryResource()
-                ):
-                    rmm.mr.set_current_device_resource(rmm.mr.ManagedMemoryResource())
-
-                if not cp.cuda.get_allocator().__name__ == rmm_cupy_allocator.__name__:
-                    cp.cuda.set_allocator(rmm_cupy_allocator)
-
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
             context = TaskContext.get()
 
             # set gpu device
             _CumlCommon._set_gpu_device(context, is_local)
+
+            # must do after setting gpu device
+            _configure_memory_resource(cuda_managed_mem_enabled)
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
