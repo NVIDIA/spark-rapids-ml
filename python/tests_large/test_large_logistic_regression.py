@@ -29,7 +29,7 @@ from .conftest import _spark
 
 def test_sparse_int64(multi_gpus: bool = False) -> None:
     """
-    This test requires minimum 256G CPU memory, 32 GB GPU memory
+    This test requires minimum 128G CPU memory, 32 GB GPU memory
     TODO: move generated dataset to a unified place
     """
     gpu_number = 2 if multi_gpus else 1

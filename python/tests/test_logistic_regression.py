@@ -486,14 +486,12 @@ LogisticRegressionModelType = TypeVar(
 
 
 @pytest.mark.compat
-#@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("fit_intercept", [False])
-#@pytest.mark.parametrize("standardization", [True, False])
-@pytest.mark.parametrize("standardization", [True])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("standardization", [True, False])
 @pytest.mark.parametrize(
     "lr_types",
     [
-        #(SparkLogisticRegression, SparkLogisticRegressionModel),
+        (SparkLogisticRegression, SparkLogisticRegressionModel),
         (LogisticRegression, LogisticRegressionModel),
     ],
 )
@@ -545,7 +543,7 @@ def test_compat(
 
         assert _LogisticRegression().getRegParam() == 0.0
         blor = _LogisticRegression(
-            verbose=True, regParam=0.1, fitIntercept=fit_intercept, standardization=standardization
+            regParam=0.1, fitIntercept=fit_intercept, standardization=standardization
         )
 
         assert blor.getRegParam() == 0.1
@@ -582,7 +580,7 @@ def test_compat(
             else [-2.42377087, 2.42377087]
         )
         assert array_equal(blor_model.coefficients.toArray(), coef_gnd, tolerance)
-        assert blor_model.intercept == pytest.approx(0, abs=1e-4)
+        assert blor_model.intercept == pytest.approx(0, abs=tolerance)
 
         assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
         assert array_equal(
@@ -591,7 +589,7 @@ def test_compat(
             tolerance,
         )
         assert isinstance(blor_model.interceptVector, DenseVector)
-        assert array_equal(blor_model.interceptVector.toArray(), [0.0])
+        assert array_equal(blor_model.interceptVector.toArray(), [0.0], tolerance)
 
         example = bdf.head()
         if example:
@@ -2240,10 +2238,10 @@ def test_sparse_all_zeroes(
 
     with CleanSparkSession() as spark:
         data = [
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
         ]
 
         bdf = spark.createDataFrame(data)
@@ -2283,10 +2281,10 @@ def test_sparse_one_gpu_all_zeroes(
 
     with CleanSparkSession() as spark:
         data = [
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
         ]
 
         bdf = spark.createDataFrame(data)
