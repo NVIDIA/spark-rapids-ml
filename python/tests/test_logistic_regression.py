@@ -2266,11 +2266,8 @@ def test_sparse_all_zeroes(
         compare_model(gpu_model, cpu_model, bdf)
 
 
-@pytest.mark.slow
-# @pytest.mark.parametrize("standardization", [True, False])
-# @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("standardization", [True])
-@pytest.mark.parametrize("fit_intercept", [True])
+@pytest.mark.parametrize("fit_intercept", [True, False])
 def test_sparse_one_gpu_all_zeroes(
     standardization: bool,
     fit_intercept: bool,
