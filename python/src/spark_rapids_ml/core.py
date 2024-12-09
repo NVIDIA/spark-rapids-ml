@@ -75,6 +75,7 @@ from .metrics import EvalMetricInfo
 from .params import _CumlParams
 from .utils import (
     _ArrayOrder,
+    _configure_memory_resource,
     _get_gpu_id,
     _get_spark_session,
     _is_local,
@@ -707,15 +708,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             # set gpu device
             _CumlCommon._set_gpu_device(context, is_local)
 
-            if cuda_managed_mem_enabled:
-                import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
-
-                rmm.reinitialize(
-                    managed_memory=True,
-                    devices=_CumlCommon._get_gpu_device(context, is_local),
-                )
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+            # must do after setting gpu device
+            _configure_memory_resource(cuda_managed_mem_enabled)
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
@@ -1381,18 +1375,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
             _CumlCommon._set_gpu_device(context, is_local, True)
 
-            if cuda_managed_mem_enabled:
-                import cupy as cp
-                import rmm
-                from rmm.allocators.cupy import rmm_cupy_allocator
-
-                rmm.reinitialize(
-                    managed_memory=True,
-                    devices=_CumlCommon._get_gpu_device(
-                        context, is_local, is_transform=True
-                    ),
-                )
-                cp.cuda.set_allocator(rmm_cupy_allocator)
+            # must do after setting gpu device
+            _configure_memory_resource(cuda_managed_mem_enabled)
 
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()
@@ -1560,12 +1544,21 @@ class _CumlModelWithColumns(_CumlModel):
 
         output_schema = self._out_schema(dataset.schema)
 
+        cuda_managed_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled:
+            get_logger(self.__class__).info("CUDA managed memory enabled.")
+
         @pandas_udf(output_schema)  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
             from pyspark import TaskContext
 
             context = TaskContext.get()
             _CumlCommon._set_gpu_device(context, is_local, True)
+            # must do after setting gpu device
+            _configure_memory_resource(cuda_managed_mem_enabled)
             cuml_objects = construct_cuml_object_func()
             cuml_object = (
                 cuml_objects[0] if isinstance(cuml_objects, list) else cuml_objects
