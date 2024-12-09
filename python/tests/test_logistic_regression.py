@@ -2264,3 +2264,48 @@ def test_sparse_all_zeroes(
         cpu_lr = SparkLogisticRegression(**params)
         cpu_model = cpu_lr.fit(bdf)
         compare_model(gpu_model, cpu_model, bdf)
+
+
+@pytest.mark.parametrize("standardization", [True])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_sparse_one_gpu_all_zeroes(
+    standardization: bool,
+    fit_intercept: bool,
+    gpu_number: int,
+) -> None:
+    tolerance = 0.001
+
+    if gpu_number < 2:
+        pytest.skip(reason="test_sparse_one_gpu_zeroes requires at least 2 GPUs")
+    gpu_number = 2
+
+    with CleanSparkSession() as spark:
+        data = [
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
+            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": standardization,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            return
+
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True, verbose=True, **params
+        )
+        gpu_model = gpu_lr.fit(bdf)
+        check_sparse_model_preprocess(gpu_model, bdf)
+
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)
