@@ -2238,10 +2238,10 @@ def test_sparse_all_zeroes(
 
     with CleanSparkSession() as spark:
         data = [
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
         ]
 
         bdf = spark.createDataFrame(data)
@@ -2281,10 +2281,10 @@ def test_sparse_one_gpu_all_zeroes(
 
     with CleanSparkSession() as spark:
         data = [
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
         ]
 
         bdf = spark.createDataFrame(data)
