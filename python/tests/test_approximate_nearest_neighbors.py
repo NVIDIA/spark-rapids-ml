@@ -1046,19 +1046,56 @@ def test_return_fewer_k(
         int64_max = np.iinfo("int64").max
         float_inf = float("inf")
 
-        # ensure consistency with cuvs for ivfflat, and ivfpq > 24.10
+        # ensure consistency with cuvs for ivfflat, and ivfpq + refine
         import cuvs
         from packaging import version
 
-        if algorithm == "ivfflat" or version.parse(cuvs.__version__) > version.parse(
-            "24.10.00"
-        ):
-            ann_evaluator = ANNEvaluator(X, k, metric)
-            spark_indices = np.array([row["indices"] for row in knn_df_collect])
-            spark_distances = np.array([row["distances"] for row in knn_df_collect])
+        spark_indices = np.array([row["indices"] for row in knn_df_collect])
+        spark_distances = np.array([row["distances"] for row in knn_df_collect])
+        ann_evaluator = ANNEvaluator(X, k, metric)
+        if algorithm == "ivfflat":
             ann_evaluator.compare_with_cuml_or_cuvs_sg(
                 algorithm, algo_params, spark_indices, spark_distances, tolerance=0.0
             )
+        else:
+            assert algorithm == "ivfpq"
+            # Refine API behavior in version 24.12:
+            # (1) converts all LONG_MAX values in the indices array to -1
+            # (2) sets the corresponding distances for -1 indices to infinity (inf).
+            # (3) updates the distances array for top-1 indices to reflect the top-1 distance value
+            #     Example: for top-4 indices [2, 3, 2, 2], the distances array would be updated to [0., 0., 0., 0.].
+            # Spark Rapids ML assumes the future Refine API will align with ivfflat and ivfpq in handing the
+            # fewer_than_k_items issue, and currently implements this alignment in the current release.
+            assert version.parse(cuvs.__version__) <= version.parse(
+                "24.12.00"
+            ), "Please verify if cuvs > 24.12 aligns the refine API with ivfflat and ivfpq for handling fewer_than_k_items probed"
+            sg_distances, sg_indices = ann_evaluator.get_cuvs_sg_results(
+                algorithm, algo_params
+            )
+
+            def align_after_ivfpq_refine(
+                in_distances: np.ndarray, in_indices: np.ndarray
+            ) -> Tuple[np.ndarray, np.ndarray]:
+                import cupy as cp
+
+                out_distances = in_distances.copy()
+                out_indices = in_indices.copy()
+
+                out_indices[out_indices == -1] = np.iinfo("int64").max
+                out_distances[out_indices == np.iinfo("int64").max] = float("inf")
+
+                # for the case top-1 nn got filled into indices
+                top1_ind = out_indices[:, 0]
+                rest_indices = out_indices[:, 1:]
+                rest_distances = out_distances[:, 1:]
+                rest_distances[rest_indices == top1_ind[:, cp.newaxis]] = float("inf")
+                return (out_distances, out_indices)
+
+            aligned_distances, aligned_indices = align_after_ivfpq_refine(
+                sg_distances, sg_indices
+            )
+            assert array_equal(spark_distances, aligned_distances)
+            assert array_equal(spark_indices, aligned_indices)
 
         # check result details
         indices_none_probed = [int64_max, int64_max, int64_max, int64_max]
