@@ -1046,36 +1046,64 @@ def test_return_fewer_k(
         int64_max = np.iinfo("int64").max
         float_inf = float("inf")
 
-        # ensure consistency with cuvs for ivfflat, and ivfpq + refine
-        import cuvs
-        from packaging import version
+        # check result details
+        # note that cuVS produces non-deterministic results during the indexing process
+        indices_none_probed = [int64_max, int64_max, int64_max, int64_max]
+        distances_none_probed = [float_inf, float_inf, float_inf, float_inf]
 
-        spark_indices = np.array([row["indices"] for row in knn_df_collect])
-        spark_distances = np.array([row["distances"] for row in knn_df_collect])
+        def check_row_results(
+            i: int,
+            indices_if_probed: List[int],
+            distances_if_probed: List[float],
+            res_indices: List[int],
+            res_distances: List[float],
+        ) -> None:
+            assert i == 0 or i == 2
+            j = i + 1
+            assert res_indices[i] == res_indices[j]
+            assert res_distances[i] == res_distances[j]
+            if res_indices[i] == indices_none_probed:
+                assert res_distances[i] == distances_none_probed
+            else:
+                assert res_indices[i] == indices_if_probed
+                assert res_distances[i] == distances_if_probed
+
+        spark_indices = [row["indices"] for row in knn_df_collect]
+        spark_distances = [row["distances"] for row in knn_df_collect]
+        check_row_results(
+            0,
+            [0, 1, 0, 0],
+            [0.0, 0.0, float_inf, float_inf],
+            spark_indices,
+            spark_distances,
+        )
+        check_row_results(
+            2,
+            [2, 3, 2, 2],
+            [0.0, 0.0, float_inf, float_inf],
+            spark_indices,
+            spark_distances,
+        )
+
+        # ensure consistency of cuvs (non-deterministic indexing of ivfflat/ivfpq + inconsistent outputs of refine)
         ann_evaluator = ANNEvaluator(X, k, metric)
-        if algorithm == "ivfflat":
-            ann_evaluator.compare_with_cuml_or_cuvs_sg(
-                algorithm, algo_params, spark_indices, spark_distances, tolerance=0.0
-            )
-        else:
-            assert algorithm == "ivfpq"
-            # Refine API behavior in version 24.12:
-            # (1) converts all LONG_MAX values in the indices array to -1
-            # (2) sets the corresponding distances for -1 indices to infinity (inf).
-            # (3) updates the distances array for top-1 indices to reflect the top-1 distance value
-            #     Example: for top-4 indices [2, 3, 2, 2], the distances array would be updated to [0., 0., 0., 0.].
-            # Spark Rapids ML assumes the future Refine API will align with ivfflat and ivfpq in handing the
-            # fewer_than_k_items issue, and currently implements this alignment in the current release.
-            assert version.parse(cuvs.__version__) <= version.parse(
-                "24.12.00"
-            ), "Please verify if cuvs > 24.12 aligns the refine API with ivfflat and ivfpq for handling fewer_than_k_items probed"
-            sg_distances, sg_indices = ann_evaluator.get_cuvs_sg_results(
-                algorithm, algo_params
-            )
+        sg_distances, sg_indices = ann_evaluator.get_cuvs_sg_results(
+            algorithm, algo_params
+        )
+        if algorithm == "ivfpq":
 
             def align_after_ivfpq_refine(
                 in_distances: np.ndarray, in_indices: np.ndarray
             ) -> Tuple[np.ndarray, np.ndarray]:
+                """
+                # Refine API behavior in version 24.12:
+                # (1) converts all LONG_MAX values in the indices array to -1
+                # (2) sets the corresponding distances for -1 indices to infinity (inf).
+                # (3) updates the distances array for top-1 indices to reflect the top-1 distance value
+                #     Example: for top-4 indices [2, 3, 2, 2], the distances array would be updated to [0., 0., 0., 0.].
+                # Spark Rapids ML assumes the future Refine API will align with ivfflat and ivfpq in handing the
+                # fewer_than_k_items issue, and currently implements this alignment in the current release.
+                """
                 import cupy as cp
 
                 out_distances = in_distances.copy()
@@ -1091,28 +1119,21 @@ def test_return_fewer_k(
                 rest_distances[rest_indices == top1_ind[:, cp.newaxis]] = float("inf")
                 return (out_distances, out_indices)
 
-            aligned_distances, aligned_indices = align_after_ivfpq_refine(
+            sg_distances, sg_indices = align_after_ivfpq_refine(
                 sg_distances, sg_indices
             )
-            assert array_equal(spark_distances, aligned_distances)
-            assert array_equal(spark_indices, aligned_indices)
 
-        # check result details
-        indices_none_probed = [int64_max, int64_max, int64_max, int64_max]
-        distances_none_probed = [float_inf, float_inf, float_inf, float_inf]
-
-        def check_row_results(
-            i: int, indices_if_probed: List[int], distances_if_probed: List[float]
-        ) -> None:
-            assert i == 0 or i == 2
-            j = i + 1
-            assert knn_df_collect[i]["indices"] == knn_df_collect[j]["indices"]
-            assert knn_df_collect[i]["distances"] == knn_df_collect[j]["distances"]
-            if knn_df_collect[i]["indices"] == indices_none_probed:
-                assert knn_df_collect[i]["distances"] == distances_none_probed
-            else:
-                assert knn_df_collect[i]["indices"] == indices_if_probed
-                assert knn_df_collect[i]["distances"] == distances_if_probed
-
-        check_row_results(0, [0, 1, 0, 0], [0.0, 0.0, float_inf, float_inf])
-        check_row_results(2, [2, 3, 2, 2], [0.0, 0.0, float_inf, float_inf])
+        check_row_results(
+            0,
+            [0, 1, 0, 0],
+            [0.0, 0.0, float_inf, float_inf],
+            sg_indices.tolist(),
+            sg_distances.tolist(),
+        )
+        check_row_results(
+            2,
+            [2, 3, 2, 2],
+            [0.0, 0.0, float_inf, float_inf],
+            sg_indices.tolist(),
+            sg_distances.tolist(),
+        )
