@@ -1055,8 +1055,8 @@ def test_return_fewer_k(
             i: int,
             indices_if_probed: List[int],
             distances_if_probed: List[float],
-            res_indices: List[int],
-            res_distances: List[float],
+            res_indices: List[List[int]],
+            res_distances: List[List[float]],
         ) -> None:
             assert i == 0 or i == 2
             j = i + 1
