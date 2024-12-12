@@ -329,6 +329,33 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(LogisticRegression)
 
 
+def test_lr_copy() -> None:
+    lr = LogisticRegression()
+    default_cuml_params = {
+        "fit_intercept": True,
+        "standardization": True,
+        "verbose": False,
+        "C": 0.0,
+        "penalty": None,
+        "l1_ratio": 0.0,
+        "max_iter": 100,
+        "tol": 1e-06,
+    }
+    assert lr.cuml_params == default_cuml_params
+
+    lr_copy = lr.copy({lr.elasticNetParam: 0.5, lr.regParam: 0.1})
+    assert lr_copy.cuml_params == {
+        "fit_intercept": True,
+        "standardization": True,
+        "verbose": False,
+        "C": 10.0,
+        "penalty": "elasticnet",
+        "l1_ratio": 0.5,
+        "max_iter": 100,
+        "tol": 1e-06,
+    }
+
+
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
