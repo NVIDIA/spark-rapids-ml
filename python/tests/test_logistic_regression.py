@@ -60,7 +60,7 @@ random.seed(0)
 from scipy.sparse import csr_matrix
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
-from spark_rapids_ml.core import _use_sparse_in_cuml, alias
+from spark_rapids_ml.core import _CumlEstimator, _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
@@ -329,31 +329,36 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(LogisticRegression)
 
 
-def test_lr_copy() -> None:
-    lr = LogisticRegression()
-    default_cuml_params = {
-        "fit_intercept": True,
-        "standardization": True,
-        "verbose": False,
-        "C": 0.0,
-        "penalty": None,
-        "l1_ratio": 0.0,
-        "max_iter": 100,
-        "tol": 1e-06,
-    }
-    assert lr.cuml_params == default_cuml_params
+@pytest.mark.parametrize(
+    "Estimator,input_spark_params,cuml_params_update",
+    [
+        (
+            LogisticRegression,
+            {"regParam": 0.1, "elasticNetParam": 0.5},
+            {"penalty": "elasticnet", "C": 10.0, "l1_ratio": 0.5},
+        )
+    ],
+)
+def test_copy(
+    Estimator: Type[_CumlEstimator],
+    input_spark_params: Dict[str, Any],
+    cuml_params_update: Dict[str, Any],
+) -> None:
+    est = Estimator()
+    res_cuml_params = est.cuml_params.copy()
+    res_cuml_params.update(cuml_params_update)
+    assert (
+        est.cuml_params != res_cuml_params
+    ), "please modify cuml_params_update because it does not change the default estimator.cuml_params"
 
-    lr_copy = lr.copy({lr.elasticNetParam: 0.5, lr.regParam: 0.1})
-    assert lr_copy.cuml_params == {
-        "fit_intercept": True,
-        "standardization": True,
-        "verbose": False,
-        "C": 10.0,
-        "penalty": "elasticnet",
-        "l1_ratio": 0.5,
-        "max_iter": 100,
-        "tol": 1e-06,
-    }
+    # test copy function
+    copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
+    lr_copy = est.copy(copy_params)
+    assert lr_copy.cuml_params == res_cuml_params
+
+    # test init function
+    lr_init = Estimator(**input_spark_params)
+    assert lr_init.cuml_params == res_cuml_params
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
