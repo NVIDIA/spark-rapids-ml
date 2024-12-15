@@ -336,7 +336,12 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             LogisticRegression,
             {"regParam": 0.1, "elasticNetParam": 0.5},
             {"penalty": "elasticnet", "C": 10.0, "l1_ratio": 0.5},
-        )
+        ),
+        (
+            LogisticRegression,
+            {"verbose": True},
+            {"verbose": True},
+        ),
     ],
 )
 def test_copy(

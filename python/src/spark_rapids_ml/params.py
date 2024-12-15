@@ -128,6 +128,36 @@ class HasIDCol(Params):
         return df_withid
 
 
+class VerboseTypeConverters(TypeConverters):
+    @staticmethod
+    def _toIntOrBool(value: Any) -> Union[int, bool]:
+        if isinstance(value, bool):
+            return value
+
+        if TypeConverters._is_integer(value):
+            return int(value)
+
+        raise TypeError("Could not convert %s to Union[int, bool]" % value)
+
+
+class HasVerboseParam(Params):
+    """
+    Parameter to enable displaying verbose messages from cuml.
+    Refer to the cuML documentation for details on verbosity levels.
+    """
+
+    verbose: "Param[Union[int, bool]]" = Param(
+        Params._dummy(),
+        "verbose",
+        "cuml verbosity level (False, True or an integer between 0 and 6).",
+        typeConverter=VerboseTypeConverters._toIntOrBool,
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._setDefault(verbose=False)
+
+
 class _CumlClass(object):
     """
     Base class for all _CumlEstimator and _CumlModel implemenations.
@@ -215,7 +245,7 @@ class _CumlClass(object):
         raise NotImplementedError()
 
 
-class _CumlParams(_CumlClass, Params):
+class _CumlParams(_CumlClass, HasVerboseParam, Params):
     """
     Mix-in to handle common parameters for all Spark Rapids ML algorithms, along with utilties
     for synchronizing between Spark ML Params and cuML class parameters.
