@@ -369,38 +369,6 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     _test_input_setter_getter(UMAP)
 
 
-"""
-        n_neighbors: Optional[float] = 15,
-        n_components: Optional[int] = 15,
-        metric: str = "euclidean",
-        metric_kwds: Optional[Dict[str, Any]] = None,
-        n_epochs: Optional[int] = None,
-        learning_rate: Optional[float] = 1.0,
-        init: Optional[str] = "spectral",
-        min_dist: Optional[float] = 0.1,
-        spread: Optional[float] = 1.0,
-        set_op_mix_ratio: Optional[float] = 1.0,
-        local_connectivity: Optional[float] = 1.0,
-        repulsion_strength: Optional[float] = 1.0,
-        negative_sample_rate: Optional[int] = 5,
-        transform_queue_size: Optional[float] = 1.0,
-        a: Optional[float] = None,
-        b: Optional[float] = None,
-        precomputed_knn: Optional[List[List[float]]] = None,
-        random_state: Optional[int] = None,
-        build_algo: Optional[str] = "auto",
-        build_kwds: Optional[Dict[str, Any]] = None,
-        sample_fraction: Optional[float] = 1.0,
-        featuresCol: Optional[Union[str, List[str]]] = None,
-        labelCol: Optional[str] = None,
-        outputCol: Optional[str] = None,
-        num_workers: Optional[int] = None,
-        enable_sparse_data_optim: Optional[
-            bool
-        ] = None
-"""
-
-
 def test_copy() -> None:
     from .test_logistic_regression import test_copy
 
