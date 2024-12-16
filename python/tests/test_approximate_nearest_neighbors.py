@@ -110,6 +110,26 @@ def test_params(default_params: bool) -> None:
     _test_input_setter_getter(ApproximateNearestNeighbors)
 
 
+def test_copy() -> None:
+    from .test_logistic_regression import test_copy
+
+    param_list = [
+        ({"k": 38}, {"n_neighbors": 38}),
+        ({"algorithm": "cagra"},),
+        ({"metric": "cosine"},),
+        (
+            {"algoParams": {"nlist": 999, "nprobe": 11}},
+            {"algo_params": {"nlist": 999, "nprobe": 11}},
+        ),
+        ({"verbose": True},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        test_copy(ApproximateNearestNeighbors, spark_param, cuml_param)
+
+
 def test_search_index_params() -> None:
     # test cagra index params and search params
     cagra_index_param: Dict[str, Any] = {

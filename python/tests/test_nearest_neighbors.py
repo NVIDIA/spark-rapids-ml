@@ -94,6 +94,20 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(NearestNeighbors)
 
 
+def test_copy() -> None:
+    from .test_logistic_regression import test_copy
+
+    param_list = [
+        ({"k": 37}, {"n_neighbors": 37}),
+        ({"verbose": True},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        test_copy(NearestNeighbors, spark_param, cuml_param)
+
+
 def func_test_example_no_id(
     tmp_path: str, gpu_knn: NNEstimator
 ) -> Tuple[NNEstimator, NNModel]:
