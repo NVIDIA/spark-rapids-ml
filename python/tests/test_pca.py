@@ -100,6 +100,20 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(PCA)
 
 
+def test_copy() -> None:
+    from .test_logistic_regression import test_copy
+
+    param_list = [
+        ({"k": 42}, {"n_components": 42}),
+        ({"verbose": 42},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        test_copy(PCA, spark_param, cuml_param)
+
+
 def test_fit(gpu_number: int) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
