@@ -218,6 +218,27 @@ def test_linear_regression_params(
     assert not lr_float32._float32_inputs
 
 
+def test_copy() -> None:
+    from .test_logistic_regression import test_copy
+
+    # solver supports 'auto', 'normal' and 'eig', but all of them will be mapped to 'eig' in cuML.
+    # loss supports 'squaredError' only,
+    param_list = [
+        ({"maxIter": 29}, {"max_iter": 29}),
+        ({"regParam": 0.12}, {"alpha": 0.12}),
+        ({"elasticNetParam": 0.23}, {"l1_ratio": 0.23}),
+        ({"fitIntercept": False}, {"fit_intercept": False}),
+        ({"standardization": False}, {"normalize": False}),
+        ({"tol": 0.0132},),
+        ({"verbose": True},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        test_copy(LinearRegression, spark_param, cuml_param)
+
+
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
 def test_linear_regression_numeric_type(gpu_number: int, data_type: str) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
