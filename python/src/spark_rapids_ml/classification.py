@@ -396,9 +396,9 @@ class RandomForestClassifier(
             * ``4 or False`` - Enables all messages up to and including information messages.
             * ``5 or True`` - Enables all messages up to and including debug messages.
             * ``6`` - Enables all messages up to and including trace messages.
-    n_streams: int (default = 1)
+    n_streams: int (default = 4)
         Number of parallel streams used for forest building.
-        Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
+        Please note that there could be a bug running spark-rapids-ml on a node with multi-gpus
         when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
     min_samples_split: int or float (default = 2)
         The minimum number of samples required to split an internal node.\n

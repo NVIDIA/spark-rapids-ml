@@ -384,12 +384,12 @@ def test_copy(
     input_spark_params: Dict[str, Any],
     cuml_params_update: Optional[Dict[str, Any]],
 ) -> None:
+    """
+    This tests the copy() function of an estimator object.
+    For Spark-specific parameters (e.g. enable_sparse_data_optim in LogisticRegression), set cuml_params_update to None.
+    """
 
     est = Estimator()
-
-    # debug
-    est._set_params(**{"float32_inputs": False})
-
     copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
     lr_copy = est.copy(copy_params)
 
@@ -404,10 +404,6 @@ def test_copy(
     assert (
         est.cuml_params != res_cuml_params
     ), "please modify cuml_params_update because it does not change the default estimator.cuml_params"
-
-    # test copy function
-    # copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
-    # lr_copy = est.copy(copy_params)
     assert lr_copy.cuml_params == res_cuml_params
 
     # test init function
