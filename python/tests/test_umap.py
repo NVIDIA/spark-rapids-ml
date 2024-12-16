@@ -369,6 +369,73 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     _test_input_setter_getter(UMAP)
 
 
+"""
+        n_neighbors: Optional[float] = 15,
+        n_components: Optional[int] = 15,
+        metric: str = "euclidean",
+        metric_kwds: Optional[Dict[str, Any]] = None,
+        n_epochs: Optional[int] = None,
+        learning_rate: Optional[float] = 1.0,
+        init: Optional[str] = "spectral",
+        min_dist: Optional[float] = 0.1,
+        spread: Optional[float] = 1.0,
+        set_op_mix_ratio: Optional[float] = 1.0,
+        local_connectivity: Optional[float] = 1.0,
+        repulsion_strength: Optional[float] = 1.0,
+        negative_sample_rate: Optional[int] = 5,
+        transform_queue_size: Optional[float] = 1.0,
+        a: Optional[float] = None,
+        b: Optional[float] = None,
+        precomputed_knn: Optional[List[List[float]]] = None,
+        random_state: Optional[int] = None,
+        build_algo: Optional[str] = "auto",
+        build_kwds: Optional[Dict[str, Any]] = None,
+        sample_fraction: Optional[float] = 1.0,
+        featuresCol: Optional[Union[str, List[str]]] = None,
+        labelCol: Optional[str] = None,
+        outputCol: Optional[str] = None,
+        num_workers: Optional[int] = None,
+        enable_sparse_data_optim: Optional[
+            bool
+        ] = None
+"""
+
+
+def test_copy() -> None:
+    from .test_logistic_regression import test_copy
+
+    param_list = [
+        ({"n_neighbors": 21},),
+        ({"n_components": 23},),
+        ({"metric": "cosine"},),
+        ({"metric_kwds": {"p": 5}},),
+        ({"n_epochs": 132},),
+        ({"learning_rate": 0.19},),
+        ({"init": "random"},),
+        ({"min_dist": 0.24},),
+        ({"spread": 0.24},),
+        ({"set_op_mix_ratio": 0.94},),
+        ({"local_connectivity": 0.98},),
+        ({"repulsion_strength": 0.99},),
+        ({"negative_sample_rate": 7},),
+        ({"transform_queue_size": 0.77},),
+        ({"a": 1.77},),
+        ({"b": 2.77},),
+        ({"precomputed_knn": [[0.1, 0.2]]},),
+        ({"random_state": 81},),
+        ({"build_algo": "nn_descent"},),
+        ({"build_kwds": {"nnd_graph_degree": 117}},),
+        ({"sample_fraction": 0.74}, None),
+        ({"enable_sparse_data_optim": True}, None),
+        ({"verbose": True},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        test_copy(UMAP, spark_param, cuml_param)
+
+
 @pytest.mark.parametrize("sparse_fit", [True, False])
 def test_umap_model_persistence(
     sparse_fit: bool, gpu_number: int, tmp_path: str
