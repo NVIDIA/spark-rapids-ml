@@ -183,6 +183,24 @@ def test_kmeans_params(
     assert not kmeans_float32._float32_inputs
 
 
+def test_copy() -> None:
+    from .test_logistic_regression import test_copy
+
+    param_list = [
+        ({"k": 17}, {"n_clusters": 17}),
+        ({"initMode": "random"}, {"init": "random"}),
+        ({"tol": 0.0132},),
+        ({"maxIter": 27}, {"max_iter": 27}),
+        ({"seed": 11}, {"random_state": 11}),
+        ({"verbose": True},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        test_copy(KMeans, spark_param, cuml_param)
+
+
 def test_kmeans_basic(
     gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
 ) -> None:
