@@ -339,6 +339,41 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         ),
         (
             LogisticRegression,
+            {"maxIter": 13},
+            {"max_iter": 13},
+        ),
+        (
+            LogisticRegression,
+            {"regParam": 0.25, "elasticNetParam": 0.0},
+            {"penalty": "l2", "C": 4.0, "l1_ratio": 0.0},
+        ),
+        (
+            LogisticRegression,
+            {"regParam": 0.2, "elasticNetParam": 1.0},
+            {"penalty": "l1", "C": 5.0, "l1_ratio": 1.0},
+        ),
+        (
+            LogisticRegression,
+            {"tol": 1e-3},
+            {"tol": 1e-3},
+        ),
+        (
+            LogisticRegression,
+            {"fitIntercept": False},
+            {"fit_intercept": False},
+        ),
+        (
+            LogisticRegression,
+            {"standardization": False},
+            {"standardization": False},
+        ),
+        (
+            LogisticRegression,
+            {"enable_sparse_data_optim": True},
+            None,
+        ),
+        (
+            LogisticRegression,
             {"verbose": True},
             {"verbose": True},
         ),
@@ -347,9 +382,23 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
 def test_copy(
     Estimator: Type[_CumlEstimator],
     input_spark_params: Dict[str, Any],
-    cuml_params_update: Dict[str, Any],
+    cuml_params_update: Optional[Dict[str, Any]],
 ) -> None:
+
     est = Estimator()
+
+    # debug
+    est._set_params(**{"float32_inputs": False})
+
+    copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
+    lr_copy = est.copy(copy_params)
+
+    # handle Spark-Rapids-ML-only params
+    if cuml_params_update is None:
+        for param in input_spark_params:
+            assert lr_copy.getOrDefault(param) == input_spark_params[param]
+        return
+
     res_cuml_params = est.cuml_params.copy()
     res_cuml_params.update(cuml_params_update)
     assert (
@@ -357,8 +406,8 @@ def test_copy(
     ), "please modify cuml_params_update because it does not change the default estimator.cuml_params"
 
     # test copy function
-    copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
-    lr_copy = est.copy(copy_params)
+    # copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
+    # lr_copy = est.copy(copy_params)
     assert lr_copy.cuml_params == res_cuml_params
 
     # test init function
