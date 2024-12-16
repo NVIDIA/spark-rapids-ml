@@ -303,21 +303,33 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
         instance: P = super().copy(extra)
         cuml_params = instance.cuml_params.copy()
 
+        instance._cuml_params = cuml_params
         if isinstance(extra, dict):
             for param, value in extra.items():
                 if isinstance(param, Param):
-                    name = instance._get_cuml_param(param.name, silent=False)
-                    if name is not None:
-                        cuml_params[name] = instance._get_cuml_mapping_value(
-                            name, value
-                        )
+                    instance._set_params(**{param.name: value})
                 else:
                     raise TypeError(
                         "Expecting a valid instance of Param, but received: {}".format(
                             param
                         )
                     )
-        instance._cuml_params = cuml_params
+
+        # if isinstance(extra, dict):
+        #    for param, value in extra.items():
+        #        if isinstance(param, Param):
+        #            name = instance._get_cuml_param(param.name, silent=False)
+        #            if name is not None:
+        #                cuml_params[name] = instance._get_cuml_mapping_value(
+        #                    name, value
+        #                )
+        #        else:
+        #            raise TypeError(
+        #                "Expecting a valid instance of Param, but received: {}".format(
+        #                    param
+        #                )
+        #            )
+        # instance._cuml_params = cuml_params
         return instance
 
     def _initialize_cuml_params(self) -> None:

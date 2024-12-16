@@ -1163,15 +1163,15 @@ class LogisticRegression(
             self._set_cuml_reg_params()
         return self
 
-    def copy(
-        self: "LogisticRegression", extra: Optional["ParamMap"] = None
-    ) -> "LogisticRegression":
-        instance = super().copy(extra)
-        if extra is not None and (
-            self.regParam in extra or self.elasticNetParam in extra
-        ):
-            instance._set_cuml_reg_params()
-        return instance
+    # def copy(
+    #     self: "LogisticRegression", extra: Optional["ParamMap"] = None
+    # ) -> "LogisticRegression":
+    #     instance = super().copy(extra)
+    #     if extra is not None and (
+    #         self.regParam in extra or self.elasticNetParam in extra
+    #     ):
+    #         instance._set_cuml_reg_params()
+    #     return instance
 
     def setMaxIter(self, value: int) -> "LogisticRegression":
         """
