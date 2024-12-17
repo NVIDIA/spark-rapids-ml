@@ -183,7 +183,7 @@ def test_kmeans_params(
     assert not kmeans_float32._float32_inputs
 
 
-def test_copy() -> None:
+def test_kmeans_copy() -> None:
     from .test_common_estimator import _test_est_copy
 
     param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
