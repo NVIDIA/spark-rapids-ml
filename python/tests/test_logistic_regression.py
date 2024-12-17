@@ -330,85 +330,53 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
 
 
 @pytest.mark.parametrize(
-    "Estimator,input_spark_params,cuml_params_update",
+    "input_spark_params,cuml_params_update",
     [
         (
-            LogisticRegression,
             {"regParam": 0.1, "elasticNetParam": 0.5},
             {"penalty": "elasticnet", "C": 10.0, "l1_ratio": 0.5},
         ),
         (
-            LogisticRegression,
             {"maxIter": 13},
             {"max_iter": 13},
         ),
         (
-            LogisticRegression,
             {"regParam": 0.25, "elasticNetParam": 0.0},
             {"penalty": "l2", "C": 4.0, "l1_ratio": 0.0},
         ),
         (
-            LogisticRegression,
             {"regParam": 0.2, "elasticNetParam": 1.0},
             {"penalty": "l1", "C": 5.0, "l1_ratio": 1.0},
         ),
         (
-            LogisticRegression,
             {"tol": 1e-3},
             {"tol": 1e-3},
         ),
         (
-            LogisticRegression,
             {"fitIntercept": False},
             {"fit_intercept": False},
         ),
         (
-            LogisticRegression,
             {"standardization": False},
             {"standardization": False},
         ),
         (
-            LogisticRegression,
             {"enable_sparse_data_optim": True},
             None,
         ),
         (
-            LogisticRegression,
             {"verbose": True},
             {"verbose": True},
         ),
     ],
 )
-def test_copy(
-    Estimator: Type[_CumlEstimator],
+def test_lr_copy(
     input_spark_params: Dict[str, Any],
     cuml_params_update: Optional[Dict[str, Any]],
 ) -> None:
-    """
-    This tests the copy() function of an estimator object.
-    For Spark-specific parameters (e.g. enable_sparse_data_optim in LogisticRegression), set cuml_params_update to None.
-    """
+    from .test_common_estimator import _test_est_copy
 
-    est = Estimator()
-    copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
-    lr_copy = est.copy(copy_params)
-
-    # handle Spark-Rapids-ML-only params
-    if cuml_params_update is None:
-        for param in input_spark_params:
-            assert lr_copy.getOrDefault(param) == input_spark_params[param]
-        return
-
-    res_cuml_params = est.cuml_params.copy()
-    res_cuml_params.update(cuml_params_update)
-    assert (
-        est.cuml_params != res_cuml_params
-    ), "please modify cuml_params_update because it does not change the default estimator.cuml_params"
-    assert lr_copy.cuml_params == res_cuml_params
-
-    # test init function
-    lr_init = Estimator(**input_spark_params)
-    assert lr_init.cuml_params == res_cuml_params
+    _test_est_copy(LogisticRegression, input_spark_params, cuml_params_update)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])

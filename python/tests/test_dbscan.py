@@ -108,10 +108,10 @@ def test_params(
     _test_input_setter_getter(DBSCAN)
 
 
-def test_copy() -> None:
-    from .test_logistic_regression import test_copy
+def test_dbscan_copy() -> None:
+    from .test_common_estimator import _test_est_copy
 
-    param_list = [
+    param_list: List[Dict[str, Any]] = [
         {"eps": 0.7},
         {"min_samples": 10},
         {"metric": "cosine"},
@@ -120,7 +120,7 @@ def test_copy() -> None:
         {"verbose": True},
     ]
     for param in param_list:
-        test_copy(DBSCAN, param, param)
+        _test_est_copy(DBSCAN, param, param)
 
 
 def test_dbscan_basic(

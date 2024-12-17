@@ -100,8 +100,8 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(PCA)
 
 
-def test_copy() -> None:
-    from .test_logistic_regression import test_copy
+def test_pca_copy() -> None:
+    from .test_common_estimator import _test_est_copy
 
     param_list = [
         ({"k": 42}, {"n_components": 42}),
@@ -111,7 +111,7 @@ def test_copy() -> None:
     for pair in param_list:
         spark_param = pair[0]
         cuml_param = spark_param if len(pair) == 1 else pair[1]
-        test_copy(PCA, spark_param, cuml_param)
+        _test_est_copy(PCA, spark_param, cuml_param)
 
 
 def test_fit(gpu_number: int) -> None:

@@ -15,7 +15,7 @@
 #
 
 import math
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
 import numpy as np
@@ -369,39 +369,43 @@ def test_params(tmp_path: str, default_params: bool) -> None:
     _test_input_setter_getter(UMAP)
 
 
-def test_copy() -> None:
-    from .test_logistic_regression import test_copy
+def test_umap_copy() -> None:
+    from .test_common_estimator import _test_est_copy
 
-    param_list = [
-        ({"n_neighbors": 21},),
-        ({"n_components": 23},),
-        ({"metric": "cosine"},),
-        ({"metric_kwds": {"p": 5}},),
-        ({"n_epochs": 132},),
-        ({"learning_rate": 0.19},),
-        ({"init": "random"},),
-        ({"min_dist": 0.24},),
-        ({"spread": 0.24},),
-        ({"set_op_mix_ratio": 0.94},),
-        ({"local_connectivity": 0.98},),
-        ({"repulsion_strength": 0.99},),
-        ({"negative_sample_rate": 7},),
-        ({"transform_queue_size": 0.77},),
-        ({"a": 1.77},),
-        ({"b": 2.77},),
-        ({"precomputed_knn": [[0.1, 0.2]]},),
-        ({"random_state": 81},),
-        ({"build_algo": "nn_descent"},),
-        ({"build_kwds": {"nnd_graph_degree": 117}},),
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"n_neighbors": 21}, {"n_neighbors": 21}),
+        ({"n_components": 23}, {"n_components": 23}),
+        ({"metric": "cosine"}, {"metric": "cosine"}),
+        ({"metric_kwds": {"p": 5}}, {"metric_kwds": {"p": 5}}),
+        ({"n_epochs": 132}, {"n_epochs": 132}),
+        ({"learning_rate": 0.19}, {"learning_rate": 0.19}),
+        ({"init": "random"}, {"init": "random"}),
+        ({"min_dist": 0.24}, {"min_dist": 0.24}),
+        ({"spread": 0.24}, {"spread": 0.24}),
+        ({"set_op_mix_ratio": 0.94}, {"set_op_mix_ratio": 0.94}),
+        ({"local_connectivity": 0.98}, {"local_connectivity": 0.98}),
+        ({"repulsion_strength": 0.99}, {"repulsion_strength": 0.99}),
+        ({"negative_sample_rate": 7}, {"negative_sample_rate": 7}),
+        ({"transform_queue_size": 0.77}, {"transform_queue_size": 0.77}),
+        ({"a": 1.77}, {"a": 1.77}),
+        ({"b": 2.77}, {"b": 2.77}),
+        ({"precomputed_knn": [[0.1, 0.2]]}, {"precomputed_knn": [[0.1, 0.2]]}),
+        (
+            {"random_state": 81},
+            {"random_state": 81},
+        ),
+        ({"build_algo": "nn_descent"}, {"build_algo": "nn_descent"}),
+        (
+            {"build_kwds": {"nnd_graph_degree": 117}},
+            {"build_kwds": {"nnd_graph_degree": 117}},
+        ),
         ({"sample_fraction": 0.74}, None),
         ({"enable_sparse_data_optim": True}, None),
-        ({"verbose": True},),
+        ({"verbose": True}, {"verbose": True}),
     ]
 
-    for pair in param_list:
-        spark_param = pair[0]
-        cuml_param = spark_param if len(pair) == 1 else pair[1]
-        test_copy(UMAP, spark_param, cuml_param)
+    for params in param_list:
+        _test_est_copy(UMAP, params[0], params[1])
 
 
 @pytest.mark.parametrize("sparse_fit", [True, False])

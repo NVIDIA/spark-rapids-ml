@@ -299,6 +299,30 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
         self._num_workers = value
 
     def copy(self: P, extra: Optional["ParamMap"] = None) -> P:
+        """
+        Create a copy of the current instance, including its parameters and cuml_params.
+
+        This function extends the default `copy()` method to ensure the `cuml_params` variable
+        is also copied. The default `super().copy()` method only handles `_paramMap` and
+        `_defaultParamMap`.
+
+        Parameters
+        -----------
+        extra : Optional[ParamMap]
+            A dictionary or ParamMap containing additional parameters to set in the copied instance.
+            Note ParamMap = Dict[pyspark.ml.param.Param, Any].
+
+        Returns
+        --------
+        P
+            A new instance of the same type as the current object, with parameters and
+            cuml_params copied.
+
+        Raises
+        -------
+        TypeError
+            If any key in the `extra` dictionary is not an instance of `pyspark.ml.param.Param`.
+        """
         # override this function to update cuml_params if possible
         instance: P = super().copy(extra)
         cuml_params = instance.cuml_params.copy()

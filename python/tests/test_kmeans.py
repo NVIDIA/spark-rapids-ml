@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Dict, List, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 import pyspark
@@ -184,21 +184,19 @@ def test_kmeans_params(
 
 
 def test_copy() -> None:
-    from .test_logistic_regression import test_copy
+    from .test_common_estimator import _test_est_copy
 
-    param_list = [
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
         ({"k": 17}, {"n_clusters": 17}),
         ({"initMode": "random"}, {"init": "random"}),
-        ({"tol": 0.0132},),
+        ({"tol": 0.0132}, {"tol": 0.0132}),
         ({"maxIter": 27}, {"max_iter": 27}),
         ({"seed": 11}, {"random_state": 11}),
-        ({"verbose": True},),
+        ({"verbose": True}, {"verbose": True}),
     ]
 
     for pair in param_list:
-        spark_param = pair[0]
-        cuml_param = spark_param if len(pair) == 1 else pair[1]
-        test_copy(KMeans, spark_param, cuml_param)
+        _test_est_copy(KMeans, pair[0], pair[1])
 
 
 def test_kmeans_basic(

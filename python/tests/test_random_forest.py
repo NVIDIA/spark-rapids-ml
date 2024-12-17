@@ -183,10 +183,10 @@ def test_params(default_params: bool, Estimator: RandomForest) -> None:
     _test_input_setter_getter(Estimator)
 
 
-def test_copy() -> None:
-    from .test_logistic_regression import test_copy
+def test_rf_copy() -> None:
+    from .test_common_estimator import _test_est_copy
 
-    param_list = [
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
         ({"maxDepth": 51}, {"max_depth": 51}),
         ({"maxBins": 61}, {"n_bins": 61}),
         ({"minInstancesPerNode": 63}, {"min_samples_leaf": 63}),
@@ -194,23 +194,26 @@ def test_copy() -> None:
         ({"featureSubsetStrategy": "onethird"}, {"max_features": 1.0 / 3.0}),
         ({"seed": 21}, {"random_state": 21}),
         ({"bootstrap": False}, {"bootstrap": False}),
-        ({"n_streams": 2},),
-        ({"min_samples_split": 19},),
-        ({"max_samples": 0.77},),
-        ({"max_leaves": 72},),
-        ({"min_impurity_decrease": 0.03},),
-        ({"max_batch_size": 1025},),
-        ({"verbose": True},),
     ]
 
+    cuml_specific_params: List[Dict[str, Any]] = [
+        {"n_streams": 2},
+        {"min_samples_split": 19},
+        {"max_samples": 0.77},
+        {"max_leaves": 72},
+        {"min_impurity_decrease": 0.03},
+        {"max_batch_size": 1025},
+        {"verbose": True},
+    ]
+
+    param_list += [(p, p) for p in cuml_specific_params]
+
     for pair in param_list:
-        spark_param = pair[0]
-        cuml_param = spark_param if len(pair) == 1 else pair[1]
-        test_copy(RandomForestClassifier, spark_param, cuml_param)
-        test_copy(RandomForestRegressor, spark_param, cuml_param)
+        _test_est_copy(RandomForestClassifier, pair[0], pair[1])
+        _test_est_copy(RandomForestRegressor, pair[0], pair[1])
 
     # RandomForestRegressor supports impurity="variance" only
-    test_copy(
+    _test_est_copy(
         RandomForestClassifier, {"impurity": "entropy"}, {"split_criterion": "entropy"}
     )
 
