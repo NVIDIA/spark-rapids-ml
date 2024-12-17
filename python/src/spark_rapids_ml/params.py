@@ -128,6 +128,36 @@ class HasIDCol(Params):
         return df_withid
 
 
+class VerboseTypeConverters(TypeConverters):
+    @staticmethod
+    def _toIntOrBool(value: Any) -> Union[int, bool]:
+        if isinstance(value, bool):
+            return value
+
+        if TypeConverters._is_integer(value):
+            return int(value)
+
+        raise TypeError("Could not convert %s to Union[int, bool]" % value)
+
+
+class HasVerboseParam(Params):
+    """
+    Parameter to enable displaying verbose messages from cuml.
+    Refer to the cuML documentation for details on verbosity levels.
+    """
+
+    verbose: "Param[Union[int, bool]]" = Param(
+        Params._dummy(),
+        "verbose",
+        "cuml verbosity level (False, True or an integer between 0 and 6).",
+        typeConverter=VerboseTypeConverters._toIntOrBool,
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._setDefault(verbose=False)
+
+
 class _CumlClass(object):
     """
     Base class for all _CumlEstimator and _CumlModel implemenations.
@@ -215,7 +245,7 @@ class _CumlClass(object):
         raise NotImplementedError()
 
 
-class _CumlParams(_CumlClass, Params):
+class _CumlParams(_CumlClass, HasVerboseParam, Params):
     """
     Mix-in to handle common parameters for all Spark Rapids ML algorithms, along with utilties
     for synchronizing between Spark ML Params and cuML class parameters.
@@ -269,25 +299,46 @@ class _CumlParams(_CumlClass, Params):
         self._num_workers = value
 
     def copy(self: P, extra: Optional["ParamMap"] = None) -> P:
+        """
+        Create a copy of the current instance, including its parameters and cuml_params.
+
+        This function extends the default `copy()` method to ensure the `cuml_params` variable
+        is also copied. The default `super().copy()` method only handles `_paramMap` and
+        `_defaultParamMap`.
+
+        Parameters
+        -----------
+        extra : Optional[ParamMap]
+            A dictionary or ParamMap containing additional parameters to set in the copied instance.
+            Note ParamMap = Dict[pyspark.ml.param.Param, Any].
+
+        Returns
+        --------
+        P
+            A new instance of the same type as the current object, with parameters and
+            cuml_params copied.
+
+        Raises
+        -------
+        TypeError
+            If any key in the `extra` dictionary is not an instance of `pyspark.ml.param.Param`.
+        """
         # override this function to update cuml_params if possible
         instance: P = super().copy(extra)
         cuml_params = instance.cuml_params.copy()
 
+        instance._cuml_params = cuml_params
         if isinstance(extra, dict):
             for param, value in extra.items():
                 if isinstance(param, Param):
-                    name = instance._get_cuml_param(param.name, silent=False)
-                    if name is not None:
-                        cuml_params[name] = instance._get_cuml_mapping_value(
-                            name, value
-                        )
+                    instance._set_params(**{param.name: value})
                 else:
                     raise TypeError(
                         "Expecting a valid instance of Param, but received: {}".format(
                             param
                         )
                     )
-        instance._cuml_params = cuml_params
+
         return instance
 
     def _initialize_cuml_params(self) -> None:

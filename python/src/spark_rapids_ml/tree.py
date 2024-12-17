@@ -38,7 +38,13 @@ from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
 from pyspark.ml.linalg import Vector
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
+from pyspark.ml.param.shared import (
+    HasFeaturesCol,
+    HasLabelCol,
+    Param,
+    Params,
+    TypeConverters,
+)
 from pyspark.ml.regression import DecisionTreeRegressionModel
 from pyspark.ml.regression import (
     RandomForestRegressionModel as SparkRandomForestRegressionModel,
@@ -148,8 +154,57 @@ class _RandomForestCumlParams(
     HasFeaturesCols,
     HasLabelCol,
 ):
+
+    n_streams = Param(
+        Params._dummy(),
+        "n_streams",
+        "The n_streams parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
+    min_samples_split = Param(
+        Params._dummy(),
+        "min_samples_split",
+        "The min_sample_split parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
+    max_samples = Param(
+        Params._dummy(),
+        "max_samples",
+        "The max_samples parameter to use for cuml.",
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    max_leaves = Param(
+        Params._dummy(),
+        "max_leaves",
+        "The max_leaves parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
+    min_impurity_decrease = Param(
+        Params._dummy(),
+        "min_impurity_decrease",
+        "The min_impurity_decrease parameter to use for cuml.",
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    max_batch_size = Param(
+        Params._dummy(),
+        "max_batch_size",
+        "The max_batch_size parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
     def __init__(self) -> None:
         super().__init__()
+        self._setDefault(n_streams=4)
+        self._setDefault(min_samples_split=2)
+        self._setDefault(max_samples=1.0)
+        self._setDefault(max_leaves=-1)
+        self._setDefault(min_impurity_decrease=0.0)
+        self._setDefault(max_batch_size=4096)
         # restrict default seed to max value of 32-bit signed integer for CuML
         self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
 

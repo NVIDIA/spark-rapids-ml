@@ -60,7 +60,7 @@ random.seed(0)
 from scipy.sparse import csr_matrix
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
-from spark_rapids_ml.core import _use_sparse_in_cuml, alias
+from spark_rapids_ml.core import _CumlEstimator, _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
@@ -327,6 +327,56 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(LogisticRegression)
+
+
+@pytest.mark.parametrize(
+    "input_spark_params,cuml_params_update",
+    [
+        (
+            {"regParam": 0.1, "elasticNetParam": 0.5},
+            {"penalty": "elasticnet", "C": 10.0, "l1_ratio": 0.5},
+        ),
+        (
+            {"maxIter": 13},
+            {"max_iter": 13},
+        ),
+        (
+            {"regParam": 0.25, "elasticNetParam": 0.0},
+            {"penalty": "l2", "C": 4.0, "l1_ratio": 0.0},
+        ),
+        (
+            {"regParam": 0.2, "elasticNetParam": 1.0},
+            {"penalty": "l1", "C": 5.0, "l1_ratio": 1.0},
+        ),
+        (
+            {"tol": 1e-3},
+            {"tol": 1e-3},
+        ),
+        (
+            {"fitIntercept": False},
+            {"fit_intercept": False},
+        ),
+        (
+            {"standardization": False},
+            {"standardization": False},
+        ),
+        (
+            {"enable_sparse_data_optim": True},
+            None,
+        ),
+        (
+            {"verbose": True},
+            {"verbose": True},
+        ),
+    ],
+)
+def test_lr_copy(
+    input_spark_params: Dict[str, Any],
+    cuml_params_update: Optional[Dict[str, Any]],
+) -> None:
+    from .test_common_estimator import _test_est_copy
+
+    _test_est_copy(LogisticRegression, input_spark_params, cuml_params_update)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
