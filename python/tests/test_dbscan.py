@@ -108,6 +108,21 @@ def test_params(
     _test_input_setter_getter(DBSCAN)
 
 
+def test_dbscan_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Dict[str, Any]] = [
+        {"eps": 0.7},
+        {"min_samples": 10},
+        {"metric": "cosine"},
+        {"algorithm": "rbc"},
+        {"max_mbytes_per_batch": 1000},
+        {"verbose": True},
+    ]
+    for param in param_list:
+        _test_est_copy(DBSCAN, param, param)
+
+
 def test_dbscan_basic(
     gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
 ) -> None:

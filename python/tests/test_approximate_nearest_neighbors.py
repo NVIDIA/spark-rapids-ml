@@ -110,6 +110,24 @@ def test_params(default_params: bool) -> None:
     _test_input_setter_getter(ApproximateNearestNeighbors)
 
 
+def test_ann_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"k": 38}, {"n_neighbors": 38}),
+        ({"algorithm": "cagra"}, {"algorithm": "cagra"}),
+        ({"metric": "cosine"}, {"metric": "cosine"}),
+        (
+            {"algoParams": {"nlist": 999, "nprobe": 11}},
+            {"algo_params": {"nlist": 999, "nprobe": 11}},
+        ),
+        ({"verbose": True}, {"verbose": True}),
+    ]
+
+    for pair in param_list:
+        _test_est_copy(ApproximateNearestNeighbors, pair[0], pair[1])
+
+
 def test_search_index_params() -> None:
     # test cagra index params and search params
     cagra_index_param: Dict[str, Any] = {
