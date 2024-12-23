@@ -15,7 +15,7 @@
 #
 
 from abc import ABCMeta
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -343,6 +343,38 @@ def _test_input_setter_getter(est_class: Any) -> None:
             "f1",
             "f2",
         ]
+
+
+def _test_est_copy(
+    Estimator: Type[_CumlEstimator],
+    input_spark_params: Dict[str, Any],
+    cuml_params_update: Optional[Dict[str, Any]],
+) -> None:
+    """
+    This tests the copy() function of an estimator object.
+    For Spark-specific parameters (e.g. enable_sparse_data_optim in LogisticRegression), set cuml_params_update to None.
+    """
+
+    est = Estimator()
+    copy_params = {getattr(est, p): input_spark_params[p] for p in input_spark_params}
+    est_copy = est.copy(copy_params)
+
+    # handle Spark-Rapids-ML-only params
+    if cuml_params_update is None:
+        for param in input_spark_params:
+            assert est_copy.getOrDefault(param) == input_spark_params[param]
+        return
+
+    res_cuml_params = est.cuml_params.copy()
+    res_cuml_params.update(cuml_params_update)
+    assert (
+        est.cuml_params != res_cuml_params
+    ), "please modify cuml_params_update because it does not change the default estimator.cuml_params"
+    assert est_copy.cuml_params == res_cuml_params
+
+    # test init function
+    est_init = Estimator(**input_spark_params)
+    assert est_init.cuml_params == res_cuml_params
 
 
 def test_default_cuml_params() -> None:

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import Any, Dict, List, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 import pyspark
@@ -181,6 +181,22 @@ def test_kmeans_params(
     kmeans_float32 = KMeans(float32_inputs=False)
     assert "float32_inputs to False" not in caplog.text
     assert not kmeans_float32._float32_inputs
+
+
+def test_kmeans_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"k": 17}, {"n_clusters": 17}),
+        ({"initMode": "random"}, {"init": "random"}),
+        ({"tol": 0.0132}, {"tol": 0.0132}),
+        ({"maxIter": 27}, {"max_iter": 27}),
+        ({"seed": 11}, {"random_state": 11}),
+        ({"verbose": True}, {"verbose": True}),
+    ]
+
+    for pair in param_list:
+        _test_est_copy(KMeans, pair[0], pair[1])
 
 
 def test_kmeans_basic(

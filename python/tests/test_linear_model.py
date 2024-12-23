@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import warnings
-from typing import Any, Dict, List, Tuple, Type, TypeVar, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 import numpy as np
 import pyspark
@@ -216,6 +216,25 @@ def test_linear_regression_params(
     lr_float32 = LinearRegression(float32_inputs=False)
     assert "float32_inputs to False" not in caplog.text
     assert not lr_float32._float32_inputs
+
+
+def test_linear_regression_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    # solver supports 'auto', 'normal' and 'eig', but all of them will be mapped to 'eig' in cuML.
+    # loss supports 'squaredError' only,
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"maxIter": 29}, {"max_iter": 29}),
+        ({"regParam": 0.12}, {"alpha": 0.12}),
+        ({"elasticNetParam": 0.23}, {"l1_ratio": 0.23}),
+        ({"fitIntercept": False}, {"fit_intercept": False}),
+        ({"standardization": False}, {"normalize": False}),
+        ({"tol": 0.0132}, {"tol": 0.0132}),
+        ({"verbose": True}, {"verbose": True}),
+    ]
+
+    for pair in param_list:
+        _test_est_copy(LinearRegression, pair[0], pair[1])
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
