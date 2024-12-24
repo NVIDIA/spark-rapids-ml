@@ -571,7 +571,7 @@ will be automatically added to the dataframe and used as unique identifier for e
 <td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.copy" title="spark_rapids_ml.knn.ApproximateNearestNeighbors.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
-<td><p></p></td>
+<td><p>Create a copy of the current instance, including its parameters and cuml_params.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.explainParam" title="spark_rapids_ml.knn.ApproximateNearestNeighbors.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
 <td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
@@ -693,6 +693,9 @@ will be automatically added to the dataframe and used as unique identifier for e
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.params" title="spark_rapids_ml.knn.ApproximateNearestNeighbors.params"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params</span></code></a></p></td>
 <td><p>Returns all params ordered by name.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.verbose" title="spark_rapids_ml.knn.ApproximateNearestNeighbors.verbose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">verbose</span></code></a></p></td>
+<td><p></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -706,7 +709,33 @@ will be automatically added to the dataframe and used as unique identifier for e
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.ApproximateNearestNeighbors.copy">
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.copy" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
+<dd><p>Create a copy of the current instance, including its parameters and cuml_params.</p>
+<p>This function extends the default <cite>copy()</cite> method to ensure the <cite>cuml_params</cite> variable
+is also copied. The default <cite>super().copy()</cite> method only handles <cite>_paramMap</cite> and
+<cite>_defaultParamMap</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">Optional[ParamMap]</span></dt><dd><p>A dictionary or ParamMap containing additional parameters to set in the copied instance.
+Note ParamMap = Dict[pyspark.ml.param.Param, Any].</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>P</dt><dd><p>A new instance of the same type as the current object, with parameters and
+cuml_params copied.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>TypeError</dt><dd><p>If any key in the <cite>extra</cite> dictionary is not an instance of <cite>pyspark.ml.param.Param</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.knn.ApproximateNearestNeighbors.explainParam">
@@ -994,6 +1023,11 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <code class="xref py py-class docutils literal notranslate"><span class="pre">Param</span></code>.</p>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.knn.ApproximateNearestNeighbors.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='cuml</span> <span class="pre">verbosity</span> <span class="pre">level</span> <span class="pre">(False,</span> <span class="pre">True</span> <span class="pre">or</span> <span class="pre">an</span> <span class="pre">integer</span> <span class="pre">between</span> <span class="pre">0</span> <span class="pre">and</span> <span class="pre">6).')</span></em><a class="headerlink" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 </section>
@@ -1085,6 +1119,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.metric"><code class="docutils literal notranslate"><span class="pre">ApproximateNearestNeighbors.metric</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.num_workers"><code class="docutils literal notranslate"><span class="pre">ApproximateNearestNeighbors.num_workers</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.params"><code class="docutils literal notranslate"><span class="pre">ApproximateNearestNeighbors.params</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.knn.ApproximateNearestNeighbors.verbose"><code class="docutils literal notranslate"><span class="pre">ApproximateNearestNeighbors.verbose</span></code></a></li>
 </ul>
 </li>
 </ul>

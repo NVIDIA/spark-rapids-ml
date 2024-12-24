@@ -90,6 +90,7 @@ KMeansModel
        ~KMeansModel.predictionCol
        ~KMeansModel.seed
        ~KMeansModel.tol
+       ~KMeansModel.verbose
 
     
     
@@ -154,6 +155,7 @@ KMeansModel
     .. autoattribute:: predictionCol
     .. autoattribute:: seed
     .. autoattribute:: tol
+    .. autoattribute:: verbose
 
     
     

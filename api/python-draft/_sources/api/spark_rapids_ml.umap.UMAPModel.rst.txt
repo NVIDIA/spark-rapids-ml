@@ -145,6 +145,7 @@ UMAPModel
        ~UMAPModel.set_op_mix_ratio
        ~UMAPModel.spread
        ~UMAPModel.transform_queue_size
+       ~UMAPModel.verbose
 
     
     
@@ -264,6 +265,7 @@ UMAPModel
     .. autoattribute:: set_op_mix_ratio
     .. autoattribute:: spread
     .. autoattribute:: transform_queue_size
+    .. autoattribute:: verbose
 
     
     

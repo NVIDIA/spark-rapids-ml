@@ -91,6 +91,7 @@ KMeans
        ~KMeans.predictionCol
        ~KMeans.seed
        ~KMeans.tol
+       ~KMeans.verbose
 
     
     
@@ -156,6 +157,7 @@ KMeans
     .. autoattribute:: predictionCol
     .. autoattribute:: seed
     .. autoattribute:: tol
+    .. autoattribute:: verbose
 
     
     

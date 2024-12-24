@@ -369,7 +369,7 @@ document.write(`
 <td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.copy" title="spark_rapids_ml.classification.RandomForestClassificationModel.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
-<td><p></p></td>
+<td><p>Create a copy of the current instance, including its parameters and cuml_params.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.cpu" title="spark_rapids_ml.classification.RandomForestClassificationModel.cpu"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu</span></code></a>()</p></td>
 <td><p>Return the PySpark ML RandomForestClassificationModel</p></td>
@@ -533,7 +533,25 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.maxDepth" title="spark_rapids_ml.classification.RandomForestClassificationModel.maxDepth"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxDepth</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode" title="spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minInstancesPerNode</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_batch_size" title="spark_rapids_ml.classification.RandomForestClassificationModel.max_batch_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_batch_size</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_leaves" title="spark_rapids_ml.classification.RandomForestClassificationModel.max_leaves"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_leaves</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_samples" title="spark_rapids_ml.classification.RandomForestClassificationModel.max_samples"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_samples</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode" title="spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minInstancesPerNode</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.min_impurity_decrease" title="spark_rapids_ml.classification.RandomForestClassificationModel.min_impurity_decrease"><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_impurity_decrease</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.min_samples_split" title="spark_rapids_ml.classification.RandomForestClassificationModel.min_samples_split"><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_samples_split</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.n_streams" title="spark_rapids_ml.classification.RandomForestClassificationModel.n_streams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_streams</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses" title="spark_rapids_ml.classification.RandomForestClassificationModel.numClasses"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numClasses</span></code></a></p></td>
@@ -581,6 +599,9 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.trees" title="spark_rapids_ml.classification.RandomForestClassificationModel.trees"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trees</span></code></a></p></td>
 <td><p>Trees in this ensemble.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.classification.RandomForestClassificationModel.verbose" title="spark_rapids_ml.classification.RandomForestClassificationModel.verbose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">verbose</span></code></a></p></td>
+<td><p></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -594,7 +615,33 @@ document.write(`
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.copy">
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.copy" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
+<dd><p>Create a copy of the current instance, including its parameters and cuml_params.</p>
+<p>This function extends the default <cite>copy()</cite> method to ensure the <cite>cuml_params</cite> variable
+is also copied. The default <cite>super().copy()</cite> method only handles <cite>_paramMap</cite> and
+<cite>_defaultParamMap</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">Optional[ParamMap]</span></dt><dd><p>A dictionary or ParamMap containing additional parameters to set in the copied instance.
+Note ParamMap = Dict[pyspark.ml.param.Param, Any].</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>P</dt><dd><p>A new instance of the same type as the current object, with parameters and
+cuml_params copied.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>TypeError</dt><dd><p>If any key in the <cite>extra</cite> dictionary is not an instance of <cite>pyspark.ml.param.Param</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.cpu">
@@ -959,8 +1006,38 @@ a default value.</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.max_batch_size">
+<span class="sig-name descname"><span class="pre">max_batch_size</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_batch_size',</span> <span class="pre">doc='The</span> <span class="pre">max_batch_size</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_batch_size" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.max_leaves">
+<span class="sig-name descname"><span class="pre">max_leaves</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_leaves',</span> <span class="pre">doc='The</span> <span class="pre">max_leaves</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_leaves" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.max_samples">
+<span class="sig-name descname"><span class="pre">max_samples</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_samples',</span> <span class="pre">doc='The</span> <span class="pre">max_samples</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_samples" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode">
 <span class="sig-name descname"><span class="pre">minInstancesPerNode</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='minInstancesPerNode',</span> <span class="pre">doc='Minimum</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">instances</span> <span class="pre">each</span> <span class="pre">child</span> <span class="pre">must</span> <span class="pre">have</span> <span class="pre">after</span> <span class="pre">split.</span> <span class="pre">If</span> <span class="pre">a</span> <span class="pre">split</span> <span class="pre">causes</span> <span class="pre">the</span> <span class="pre">left</span> <span class="pre">or</span> <span class="pre">right</span> <span class="pre">child</span> <span class="pre">to</span> <span class="pre">have</span> <span class="pre">fewer</span> <span class="pre">than</span> <span class="pre">minInstancesPerNode,</span> <span class="pre">the</span> <span class="pre">split</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">discarded</span> <span class="pre">as</span> <span class="pre">invalid.</span> <span class="pre">Should</span> <span class="pre">be</span> <span class="pre">&gt;=</span> <span class="pre">1.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.min_impurity_decrease">
+<span class="sig-name descname"><span class="pre">min_impurity_decrease</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='min_impurity_decrease',</span> <span class="pre">doc='The</span> <span class="pre">min_impurity_decrease</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.min_impurity_decrease" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.min_samples_split">
+<span class="sig-name descname"><span class="pre">min_samples_split</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='min_samples_split',</span> <span class="pre">doc='The</span> <span class="pre">min_sample_split</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.min_samples_split" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.n_streams">
+<span class="sig-name descname"><span class="pre">n_streams</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_streams',</span> <span class="pre">doc='The</span> <span class="pre">n_streams</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.n_streams" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -1048,6 +1125,11 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <span class="sig-name descname"><span class="pre">trees</span></span><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.trees" title="Permalink to this definition">#</a></dt>
 <dd><p>Trees in this ensemble. Warning: These have null parent Estimators.</p>
 </dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.classification.RandomForestClassificationModel.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='cuml</span> <span class="pre">verbosity</span> <span class="pre">level</span> <span class="pre">(False,</span> <span class="pre">True</span> <span class="pre">or</span> <span class="pre">an</span> <span class="pre">integer</span> <span class="pre">between</span> <span class="pre">0</span> <span class="pre">and</span> <span class="pre">6).')</span></em><a class="headerlink" href="#spark_rapids_ml.classification.RandomForestClassificationModel.verbose" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -1154,7 +1236,13 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.labelCol"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.labelCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.maxBins"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.maxBins</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.maxDepth"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.maxDepth</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_batch_size"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.max_batch_size</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_leaves"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.max_leaves</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.max_samples"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.max_samples</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.minInstancesPerNode"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.minInstancesPerNode</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.min_impurity_decrease"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.min_impurity_decrease</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.min_samples_split"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.min_samples_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.n_streams"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.n_streams</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.numClasses"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.numClasses</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.numFeatures"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.numFeatures</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.numTrees"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.numTrees</span></code></a></li>
@@ -1170,6 +1258,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.totalNumNodes"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.totalNumNodes</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.treeWeights"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.treeWeights</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.trees"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.trees</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.classification.RandomForestClassificationModel.verbose"><code class="docutils literal notranslate"><span class="pre">RandomForestClassificationModel.verbose</span></code></a></li>
 </ul>
 </li>
 </ul>

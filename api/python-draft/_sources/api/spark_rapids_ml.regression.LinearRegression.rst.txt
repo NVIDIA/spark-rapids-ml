@@ -101,6 +101,7 @@ LinearRegression
        ~LinearRegression.solver
        ~LinearRegression.standardization
        ~LinearRegression.tol
+       ~LinearRegression.verbose
 
     
     
@@ -176,6 +177,7 @@ LinearRegression
     .. autoattribute:: solver
     .. autoattribute:: standardization
     .. autoattribute:: tol
+    .. autoattribute:: verbose
 
     
     

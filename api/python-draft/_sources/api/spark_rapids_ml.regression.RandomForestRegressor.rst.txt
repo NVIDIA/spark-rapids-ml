@@ -96,13 +96,20 @@ RandomForestRegressor
        ~RandomForestRegressor.labelCol
        ~RandomForestRegressor.maxBins
        ~RandomForestRegressor.maxDepth
+       ~RandomForestRegressor.max_batch_size
+       ~RandomForestRegressor.max_leaves
+       ~RandomForestRegressor.max_samples
        ~RandomForestRegressor.minInstancesPerNode
+       ~RandomForestRegressor.min_impurity_decrease
+       ~RandomForestRegressor.min_samples_split
+       ~RandomForestRegressor.n_streams
        ~RandomForestRegressor.numTrees
        ~RandomForestRegressor.num_workers
        ~RandomForestRegressor.params
        ~RandomForestRegressor.seed
        ~RandomForestRegressor.supportedFeatureSubsetStrategies
        ~RandomForestRegressor.supportedImpurities
+       ~RandomForestRegressor.verbose
 
     
     
@@ -173,13 +180,20 @@ RandomForestRegressor
     .. autoattribute:: labelCol
     .. autoattribute:: maxBins
     .. autoattribute:: maxDepth
+    .. autoattribute:: max_batch_size
+    .. autoattribute:: max_leaves
+    .. autoattribute:: max_samples
     .. autoattribute:: minInstancesPerNode
+    .. autoattribute:: min_impurity_decrease
+    .. autoattribute:: min_samples_split
+    .. autoattribute:: n_streams
     .. autoattribute:: numTrees
     .. autoattribute:: num_workers
     .. autoattribute:: params
     .. autoattribute:: seed
     .. autoattribute:: supportedFeatureSubsetStrategies
     .. autoattribute:: supportedImpurities
+    .. autoattribute:: verbose
 
     
     

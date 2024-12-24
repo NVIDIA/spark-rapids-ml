@@ -85,6 +85,7 @@ DBSCANModel
        ~DBSCANModel.num_workers
        ~DBSCANModel.params
        ~DBSCANModel.predictionCol
+       ~DBSCANModel.verbose
 
     
     
@@ -144,6 +145,7 @@ DBSCANModel
     .. autoattribute:: num_workers
     .. autoattribute:: params
     .. autoattribute:: predictionCol
+    .. autoattribute:: verbose
 
     
     

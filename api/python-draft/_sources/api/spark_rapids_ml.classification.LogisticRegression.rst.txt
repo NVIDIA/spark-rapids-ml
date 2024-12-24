@@ -104,6 +104,7 @@ LogisticRegression
        ~LogisticRegression.regParam
        ~LogisticRegression.standardization
        ~LogisticRegression.tol
+       ~LogisticRegression.verbose
 
     
     
@@ -182,6 +183,7 @@ LogisticRegression
     .. autoattribute:: regParam
     .. autoattribute:: standardization
     .. autoattribute:: tol
+    .. autoattribute:: verbose
 
     
     

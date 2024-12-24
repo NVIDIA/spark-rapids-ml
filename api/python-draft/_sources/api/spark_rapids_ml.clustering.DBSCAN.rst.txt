@@ -92,6 +92,7 @@ DBSCAN
        ~DBSCAN.min_samples
        ~DBSCAN.num_workers
        ~DBSCAN.params
+       ~DBSCAN.verbose
 
     
     
@@ -158,6 +159,7 @@ DBSCAN
     .. autoattribute:: min_samples
     .. autoattribute:: num_workers
     .. autoattribute:: params
+    .. autoattribute:: verbose
 
     
     

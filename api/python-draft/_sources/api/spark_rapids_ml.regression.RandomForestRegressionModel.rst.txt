@@ -92,7 +92,13 @@ RandomForestRegressionModel
        ~RandomForestRegressionModel.labelCol
        ~RandomForestRegressionModel.maxBins
        ~RandomForestRegressionModel.maxDepth
+       ~RandomForestRegressionModel.max_batch_size
+       ~RandomForestRegressionModel.max_leaves
+       ~RandomForestRegressionModel.max_samples
        ~RandomForestRegressionModel.minInstancesPerNode
+       ~RandomForestRegressionModel.min_impurity_decrease
+       ~RandomForestRegressionModel.min_samples_split
+       ~RandomForestRegressionModel.n_streams
        ~RandomForestRegressionModel.numFeatures
        ~RandomForestRegressionModel.numTrees
        ~RandomForestRegressionModel.num_workers
@@ -105,6 +111,7 @@ RandomForestRegressionModel
        ~RandomForestRegressionModel.totalNumNodes
        ~RandomForestRegressionModel.treeWeights
        ~RandomForestRegressionModel.trees
+       ~RandomForestRegressionModel.verbose
 
     
     
@@ -171,7 +178,13 @@ RandomForestRegressionModel
     .. autoattribute:: labelCol
     .. autoattribute:: maxBins
     .. autoattribute:: maxDepth
+    .. autoattribute:: max_batch_size
+    .. autoattribute:: max_leaves
+    .. autoattribute:: max_samples
     .. autoattribute:: minInstancesPerNode
+    .. autoattribute:: min_impurity_decrease
+    .. autoattribute:: min_samples_split
+    .. autoattribute:: n_streams
     .. autoattribute:: numFeatures
     .. autoattribute:: numTrees
     .. autoattribute:: num_workers
@@ -184,6 +197,7 @@ RandomForestRegressionModel
     .. autoattribute:: totalNumNodes
     .. autoattribute:: treeWeights
     .. autoattribute:: trees
+    .. autoattribute:: verbose
 
     
     
