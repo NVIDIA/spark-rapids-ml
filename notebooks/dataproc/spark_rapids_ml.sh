@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-RAPIDS_VERSION=24.10.0
+RAPIDS_VERSION=24.12.0
 
 # patch existing packages
 mamba install "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"

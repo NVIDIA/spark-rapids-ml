@@ -29,7 +29,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
 - Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS:
   ```
   export CUDA_VERSION=11.8
-  export RAPIDS_VERSION=24.10.0
+  export RAPIDS_VERSION=24.12.0
 
   gcloud dataproc clusters create $USER-spark-rapids-ml \
   --image-version=2.1-ubuntu \
