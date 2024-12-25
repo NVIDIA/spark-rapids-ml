@@ -411,7 +411,20 @@ class _RandomForestEstimator(
                     all_tl_mod_handles = [
                         rf._tl_handle_from_bytes(i) for i in mod_bytes
                     ]
-                    rf._concatenate_treelite_handle(all_tl_mod_handles)
+
+                    # tree concatenation raises a non-user friendly error if some workers didn't get all label values
+                    try:
+                        rf._concatenate_treelite_handle(all_tl_mod_handles)
+                    except RuntimeError as err:
+                        import traceback
+
+                        exc_str = traceback.format_exc()
+                        if "different num_class than the first model object" in exc_str:
+                            raise RuntimeError(
+                                "Some GPU workers did not receive all label values.  Rerun with fewer workers or shuffle input data."
+                            )
+                        else:
+                            raise err
 
                     from cuml.fil.fil import TreeliteModel
 
