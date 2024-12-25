@@ -218,7 +218,7 @@ def _run_spark_test(
 
     trust_diff = loc_umap - dist_umap
 
-    return trust_diff <= 0.07
+    return trust_diff <= 0.06
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
@@ -529,7 +529,7 @@ def test_umap_chunking(
         )
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.07
+        assert trust_diff <= 0.06
 
 
 def test_umap_sample_fraction(gpu_number: int) -> None:
@@ -624,7 +624,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
         loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.07
+        assert trust_diff <= 0.06
 
 
 @pytest.mark.parametrize("n_rows", [3000])
@@ -671,7 +671,7 @@ def test_umap_sparse_vector(
 
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.07
+        assert trust_diff <= 0.06
 
 
 @pytest.mark.parametrize("knn_graph_format", ["sparse", "dense", "tuple"])
@@ -760,4 +760,4 @@ def test_umap_precomputed_knn(
         loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.07
+        assert trust_diff <= 0.06
