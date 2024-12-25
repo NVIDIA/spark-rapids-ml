@@ -694,6 +694,7 @@ def test_umap_precomputed_knn(
     k = 15
     knn_metric = "sqeuclidean"
 
+    # Test a few different KNN implementations
     if knn_graph_format == "tuple":
         from cuvs.neighbors import cagra
 
