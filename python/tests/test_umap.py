@@ -734,6 +734,7 @@ def test_umap_precomputed_knn(
 
         # Double check that the precomputed_knn attribute is set correctly
         model_precomputed_knn = umap.cuml_params.get("precomputed_knn")
+        assert model_precomputed_knn is not None
         if isinstance(precomputed_knn, tuple):
             assert cp.array_equal(precomputed_knn[0], model_precomputed_knn[0])
             assert cp.array_equal(precomputed_knn[1], model_precomputed_knn[1])

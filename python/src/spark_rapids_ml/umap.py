@@ -1438,7 +1438,7 @@ class _CumlModelWriterParquet(_CumlModelWriter):
 
         spark = _get_spark_session()
 
-        def write_sparse_array(array: scipy.sparse.spmatrix, df_path: str):
+        def write_sparse_array(array: scipy.sparse.spmatrix, df_path: str) -> None:
             schema = StructType(
                 [
                     StructField("indices", ArrayType(IntegerType(), False), False),
@@ -1460,7 +1460,7 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             )
             data_df.write.parquet(df_path, mode="overwrite")
 
-        def write_dense_array(array: np.ndarray, df_path: str):
+        def write_dense_array(array: np.ndarray, df_path: str) -> None:
             data_df = spark.createDataFrame([Row(array.tolist())])
             data_df.write.parquet(df_path, mode="overwrite")
 
@@ -1518,7 +1518,9 @@ class _CumlModelReaderParquet(_CumlModelReader):
 
         def read_dense_array(df_path: str) -> np.ndarray:
             data_df = spark.read.parquet(df_path)
-            return np.array(data_df.first()[0])
+            first_row = data_df.first()
+            assert first_row is not None
+            return np.array(first_row[0])
 
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         data_path = os.path.join(path, "data")
