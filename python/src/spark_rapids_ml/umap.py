@@ -35,6 +35,7 @@ import numpy as np
 import pandas as pd
 import pyspark
 import scipy
+from numpy.typing import ArrayLike
 from pandas import DataFrame as PandasDataFrame
 from pyspark.ml.param.shared import (
     HasFeaturesCol,
@@ -160,7 +161,6 @@ class _UMAPCumlParams(
             transform_queue_size=4.0,
             a=None,
             b=None,
-            precomputed_knn=None,
             random_state=None,
             build_algo="auto",
             build_kwds=None,
@@ -333,18 +333,6 @@ class _UMAPCumlParams(
             f" ``min_dist`` and ``spread``."
         ),
         typeConverter=TypeConverters.toFloat,
-    )
-
-    precomputed_knn = Param(
-        Params._dummy(),
-        "precomputed_knn",
-        (
-            f"Either one of a tuple (indices, distances) of arrays of shape (n_samples, n_neighbors), a pairwise distances"
-            f" dense array of shape (n_samples, n_samples) or a KNN graph sparse array (preferably CSR/COO). This feature"
-            f" allows the precomputation of the KNN outside of UMAP and also allows the use of a custom distance function."
-            f" This function should match the metric used to train the UMAP embeedings."
-        ),
-        typeConverter=TypeConverters.toListListFloat,
     )
 
     random_state = Param(
@@ -585,18 +573,6 @@ class _UMAPCumlParams(
         Sets the value of `b`.
         """
         return self._set_params(b=value)
-
-    def getPrecomputedKNN(self: P) -> List[List[float]]:
-        """
-        Gets the value of `precomputed_knn`.
-        """
-        return self.getOrDefault("precomputed_knn")
-
-    def setPrecomputedKNN(self: P, value: List[List[float]]) -> P:
-        """
-        Sets the value of `precomputed_knn`.
-        """
-        return self._set_params(precomputed_knn=value)
 
     def getRandomState(self: P) -> int:
         """
@@ -841,7 +817,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     >>> X, _ = make_blobs(500, 5, centers=42, cluster_std=0.1, dtype=np.float32, random_state=10)
     >>> feature_cols = [f"c{i}" for i in range(X.shape[1])]
-    >>> schema = [f"{c} {"float"}" for c in feature_cols]
+    >>> schema = [f"{c} {'float'}" for c in feature_cols]
     >>> df = spark.createDataFrame(X.tolist(), ",".join(schema))
     >>> df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
     >>> df.show(10, False)
@@ -904,7 +880,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         transform_queue_size: Optional[float] = 1.0,
         a: Optional[float] = None,
         b: Optional[float] = None,
-        precomputed_knn: Optional[List[List[float]]] = None,
+        precomputed_knn: Optional[Union[ArrayLike, Tuple[ArrayLike, ArrayLike]]] = None,
         random_state: Optional[int] = None,
         build_algo: Optional[str] = "auto",
         build_kwds: Optional[Dict[str, Any]] = None,
@@ -948,6 +924,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         # Force to single partition, single worker
         self._num_workers = 1
         if data_subset.rdd.getNumPartitions() != 1:
+            get_logger(self.__class__).info(
+                "Coalescing input data(sub)set to one partition for fit()."
+            )
             data_subset = data_subset.coalesce(1)
 
         df_output = self._call_cuml_fit_func_dataframe(
@@ -992,6 +971,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
         model._num_workers = input_num_workers
 
+        # We don't need the precomputed knn anymore
+        self.cuml_params["precomputed_knn"] = None
         self._copyValues(model)
         self._copy_cuml_params(model)  # type: ignore
 
@@ -1441,19 +1422,48 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
         return f"array<{pyspark_type}>"
 
     def write(self) -> MLWriter:
-        return _CumlModelWriterNumpy(self)
+        return _CumlModelWriterParquet(self)
 
     @classmethod
     def read(cls) -> MLReader:
-        return _CumlModelReaderNumpy(cls)
+        return _CumlModelReaderParquet(cls)
 
 
-class _CumlModelWriterNumpy(_CumlModelWriter):
+class _CumlModelWriterParquet(_CumlModelWriter):
     """
-    Override parent writer to save numpy objects of _CumlModel to the file
+    Override parent writer to write _CumlModel array attributes to Spark Dataframe as parquet
     """
 
     def saveImpl(self, path: str) -> None:
+
+        spark = _get_spark_session()
+
+        def write_sparse_array(array: scipy.sparse.spmatrix, df_path: str):
+            schema = StructType(
+                [
+                    StructField("indices", ArrayType(IntegerType(), False), False),
+                    StructField("indptr", ArrayType(IntegerType(), False), False),
+                    StructField("data", ArrayType(FloatType(), False), False),
+                    StructField("shape", ArrayType(IntegerType(), False), False),
+                ]
+            )
+            data_df = spark.createDataFrame(
+                [
+                    Row(
+                        array.indices.tolist(),
+                        array.indptr.tolist(),
+                        array.data.tolist(),
+                        array.shape,
+                    )
+                ],
+                schema=schema,
+            )
+            data_df.write.parquet(df_path, mode="overwrite")
+
+        def write_dense_array(array: np.ndarray, df_path: str):
+            data_df = spark.createDataFrame([Row(array.tolist())])
+            data_df.write.parquet(df_path, mode="overwrite")
+
         DefaultParamsWriter.saveMetadata(
             self.instance,
             path,
@@ -1464,22 +1474,23 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
                 "_float32_inputs": self.instance._float32_inputs,
             },
         )
-        data_path = os.path.join(path, "data")
-        model_attributes = self.instance._get_model_attributes()
 
+        model_attributes = self.instance._get_model_attributes()
+        assert model_attributes is not None
+
+        data_path = os.path.join(path, "data")
         if not os.path.exists(data_path):
             os.makedirs(data_path)
-        assert model_attributes is not None
 
         for key in ["embedding_", "raw_data_"]:
             array = model_attributes[key]
             if isinstance(array, scipy.sparse.csr_matrix):
-                npz_path = os.path.join(data_path, f"{key}csr_.npz")
-                scipy.sparse.save_npz(npz_path, array)
+                df_path = os.path.join(data_path, f"{key}csr_.npz")
+                write_sparse_array(array, df_path)
             else:
-                npz_path = os.path.join(data_path, f"{key}.npz")
-                np.savez_compressed(npz_path, array)
-            model_attributes[key] = npz_path
+                df_path = os.path.join(data_path, f"{key}.parquet")
+                write_dense_array(array, df_path)
+            model_attributes[key] = df_path
 
         metadata_file_path = os.path.join(data_path, "metadata.json")
         model_attributes_str = json.dumps(model_attributes)
@@ -1488,12 +1499,27 @@ class _CumlModelWriterNumpy(_CumlModelWriter):
         )
 
 
-class _CumlModelReaderNumpy(_CumlModelReader):
+class _CumlModelReaderParquet(_CumlModelReader):
     """
-    Override parent reader to instantiate numpy objects of _CumlModel from file
+    Override parent reader to instantiate _CumlModel array attributes from Spark DataFrame parquet files
     """
 
     def load(self, path: str) -> "_CumlEstimator":
+
+        spark = _get_spark_session()
+
+        def read_sparse_array(df_path: str) -> scipy.sparse.csr_matrix:
+            data_df = spark.read.parquet(df_path)
+            first_row = data_df.collect()[0]
+            return scipy.sparse.csr_matrix(
+                (first_row.data, first_row.indices, first_row.indptr),
+                shape=first_row.shape,
+            )
+
+        def read_dense_array(df_path: str) -> np.ndarray:
+            data_df = spark.read.parquet(df_path)
+            return np.array(data_df.first()[0])
+
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         data_path = os.path.join(path, "data")
         metadata_file_path = os.path.join(data_path, "metadata.json")
@@ -1502,12 +1528,11 @@ class _CumlModelReaderNumpy(_CumlModelReader):
         model_attr_dict = json.loads(model_attr_str)
 
         for key in ["embedding_", "raw_data_"]:
-            npz_path = model_attr_dict[key]
-            if npz_path.endswith("csr_.npz"):
-                model_attr_dict[key] = scipy.sparse.load_npz(npz_path)
+            df_path = model_attr_dict[key]
+            if df_path.endswith("csr_.parquet"):
+                model_attr_dict[key] = read_sparse_array(df_path)
             else:
-                with np.load(npz_path) as data:
-                    model_attr_dict[key] = data["arr_0"]
+                model_attr_dict[key] = read_dense_array(df_path)
 
         instance = self.model_cls(**model_attr_dict)
         DefaultParamsReader.getAndSetParams(instance, metadata)
