@@ -1485,7 +1485,7 @@ class _CumlModelWriterParquet(_CumlModelWriter):
         for key in ["embedding_", "raw_data_"]:
             array = model_attributes[key]
             if isinstance(array, scipy.sparse.csr_matrix):
-                df_path = os.path.join(data_path, f"{key}csr_.npz")
+                df_path = os.path.join(data_path, f"{key}csr_.parquet")
                 write_sparse_array(array, df_path)
             else:
                 df_path = os.path.join(data_path, f"{key}.parquet")
