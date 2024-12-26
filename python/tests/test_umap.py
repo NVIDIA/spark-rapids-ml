@@ -510,7 +510,9 @@ def test_umap_chunking(
             input_raw_data = X.get()
             nbytes = input_raw_data.nbytes
 
-        umap = UMAP(num_workers=gpu_number, random_state=random_state).setFeaturesCol("features")
+        umap = UMAP(num_workers=gpu_number, random_state=random_state).setFeaturesCol(
+            "features"
+        )
 
         assert umap.max_records_per_batch == int(maxRecordsPerBatch)
         assert nbytes > BROADCAST_LIMIT
@@ -536,7 +538,7 @@ def test_umap_chunking(
 def test_umap_sample_fraction(gpu_number: int) -> None:
 
     n_rows = 5000
-    n_cols = 10  
+    n_cols = 10
     random_state = 42
     sample_fraction = 0.5
 
