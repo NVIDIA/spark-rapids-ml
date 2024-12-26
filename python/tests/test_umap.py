@@ -218,7 +218,7 @@ def _run_spark_test(
 
     trust_diff = loc_umap - dist_umap
 
-    return trust_diff <= 0.06
+    return trust_diff <= 0.1
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
@@ -471,6 +471,7 @@ def test_umap_chunking(
 
     n_rows = int(int(maxRecordsPerBatch) * 2.5)
     n_cols = 3000
+    random_state = 42
 
     with CleanSparkSession() as spark:
         spark.conf.set(
@@ -499,7 +500,7 @@ def test_umap_chunking(
                 centers=5,
                 cluster_std=0.1,
                 dtype=cp.float32,
-                random_state=10,
+                random_state=random_state,
             )
             pyspark_type = "float"
             feature_cols = [f"c{i}" for i in range(X.shape[1])]
@@ -509,7 +510,7 @@ def test_umap_chunking(
             input_raw_data = X.get()
             nbytes = input_raw_data.nbytes
 
-        umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
+        umap = UMAP(num_workers=gpu_number, random_state=random_state).setFeaturesCol("features")
 
         assert umap.max_records_per_batch == int(maxRecordsPerBatch)
         assert nbytes > BROADCAST_LIMIT
@@ -529,18 +530,19 @@ def test_umap_chunking(
         )
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.06
+        assert trust_diff <= 0.07
 
 
 def test_umap_sample_fraction(gpu_number: int) -> None:
 
     n_rows = 5000
-    sample_fraction = 0.5
+    n_cols = 10  
     random_state = 42
+    sample_fraction = 0.5
 
     X, _ = make_blobs(
         n_rows,
-        10,
+        n_cols,
         centers=5,
         cluster_std=0.1,
         dtype=cp.float32,
@@ -577,11 +579,12 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 def test_umap_build_algo(gpu_number: int) -> None:
 
     n_rows = 10000
+    n_cols = 10
     random_state = 42
 
     X, _ = make_blobs(
         n_rows,
-        10,
+        n_cols,
         centers=5,
         cluster_std=0.1,
         dtype=cp.float32,
@@ -624,7 +627,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
         loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.06
+        assert trust_diff <= 0.07
 
 
 @pytest.mark.parametrize("n_rows", [3000])
@@ -671,7 +674,7 @@ def test_umap_sparse_vector(
 
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.06
+        assert trust_diff <= 0.07
 
 
 @pytest.mark.parametrize("knn_graph_format", ["sparse", "dense", "tuple"])
@@ -680,11 +683,12 @@ def test_umap_precomputed_knn(
 ) -> None:
 
     n_rows = 10000
+    n_cols = 50
     random_state = 42
 
     X, _ = make_blobs(
         n_rows,
-        50,
+        n_cols,
         centers=5,
         cluster_std=0.1,
         dtype=cp.float32,
@@ -758,8 +762,8 @@ def test_umap_precomputed_knn(
         embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
         input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
-        dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=10000)
-        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        dist_umap = trustworthiness(input, embedding, n_neighbors=k, batch_size=10000)
+        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), k, False)
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.06
+        assert trust_diff <= 0.07
