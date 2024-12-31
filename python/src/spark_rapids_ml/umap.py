@@ -1442,8 +1442,14 @@ class _CumlModelWriterParquet(_CumlModelWriter):
         def write_sparse_array(array: scipy.sparse.spmatrix, df_dir: str) -> None:
             indptr_df = spark.createDataFrame(array.indptr, schema=["indptr"])
             indices_data_df = spark.createDataFrame(
-                pd.DataFrame({"indices": array.indices, "data": array.data})
-            ).withColumn("row_id", monotonically_increasing_id())
+                pd.DataFrame(
+                    {
+                        "indices": array.indices,
+                        "data": array.data,
+                        "row_id": range(len(array.indices)),
+                    }
+                )
+            )
 
             indptr_df.write.parquet(
                 os.path.join(df_dir, "indptr.parquet"), mode="overwrite"
