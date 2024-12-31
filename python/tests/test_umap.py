@@ -18,9 +18,12 @@ import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
+import cupyx
 import numpy as np
 import pytest
+import scipy
 from _pytest.logging import LogCaptureFixture
+from cuml.datasets import make_blobs
 from cuml.metrics import trustworthiness
 from pyspark.ml.linalg import SparseVector
 from pyspark.sql.functions import array
@@ -65,7 +68,8 @@ def _load_sparse_binary_data(
 
 
 def _assert_umap_model(
-    model: UMAPModel, input_raw_data: Union[np.ndarray, csr_matrix]
+    model: UMAPModel,
+    input_raw_data: Union[np.ndarray, csr_matrix],
 ) -> None:
     embedding = model.embedding
     raw_data = model.rawData
@@ -215,7 +219,7 @@ def _run_spark_test(
 
     trust_diff = loc_umap - dist_umap
 
-    return trust_diff <= 0.15
+    return trust_diff <= 0.1
 
 
 @pytest.mark.parametrize("n_parts", [2, 9])
@@ -389,7 +393,6 @@ def test_umap_copy() -> None:
         ({"transform_queue_size": 0.77}, {"transform_queue_size": 0.77}),
         ({"a": 1.77}, {"a": 1.77}),
         ({"b": 2.77}, {"b": 2.77}),
-        ({"precomputed_knn": [[0.1, 0.2]]}, {"precomputed_knn": [[0.1, 0.2]]}),
         (
             {"random_state": 81},
             {"random_state": 81},
@@ -413,7 +416,6 @@ def test_umap_model_persistence(
     sparse_fit: bool, gpu_number: int, tmp_path: str
 ) -> None:
     import pyspark
-    from cuml.datasets import make_blobs
     from packaging import version
 
     with CleanSparkSession() as spark:
@@ -438,7 +440,7 @@ def test_umap_model_persistence(
                 n_cols,
                 centers=5,
                 cluster_std=0.1,
-                dtype=np.float32,
+                dtype=cp.float32,
                 random_state=10,
             )
             pyspark_type = "float"
@@ -467,10 +469,10 @@ def test_umap_model_persistence(
 def test_umap_chunking(
     gpu_number: int, maxRecordsPerBatch: str, BROADCAST_LIMIT: int, sparse_fit: bool
 ) -> None:
-    from cuml.datasets import make_blobs
 
     n_rows = int(int(maxRecordsPerBatch) * 2.5)
     n_cols = 3000
+    random_state = 42
 
     with CleanSparkSession() as spark:
         spark.conf.set(
@@ -498,8 +500,8 @@ def test_umap_chunking(
                 n_cols,
                 centers=5,
                 cluster_std=0.1,
-                dtype=np.float32,
-                random_state=10,
+                dtype=cp.float32,
+                random_state=random_state,
             )
             pyspark_type = "float"
             feature_cols = [f"c{i}" for i in range(X.shape[1])]
@@ -509,7 +511,9 @@ def test_umap_chunking(
             input_raw_data = X.get()
             nbytes = input_raw_data.nbytes
 
-        umap = UMAP(num_workers=gpu_number).setFeaturesCol("features")
+        umap = UMAP(num_workers=gpu_number, random_state=random_state).setFeaturesCol(
+            "features"
+        )
 
         assert umap.max_records_per_batch == int(maxRecordsPerBatch)
         assert nbytes > BROADCAST_LIMIT
@@ -529,23 +533,23 @@ def test_umap_chunking(
         )
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.15
+        assert trust_diff <= 0.07
 
 
 def test_umap_sample_fraction(gpu_number: int) -> None:
-    from cuml.datasets import make_blobs
 
     n_rows = 5000
-    sample_fraction = 0.5
+    n_cols = 10
     random_state = 42
+    sample_fraction = 0.5
 
     X, _ = make_blobs(
         n_rows,
-        10,
+        n_cols,
         centers=5,
         cluster_std=0.1,
-        dtype=np.float32,
-        random_state=10,
+        dtype=cp.float32,
+        random_state=random_state,
     )
 
     with CleanSparkSession() as spark:
@@ -576,18 +580,18 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 
 
 def test_umap_build_algo(gpu_number: int) -> None:
-    from cuml.datasets import make_blobs
 
     n_rows = 10000
+    n_cols = 10
     random_state = 42
 
     X, _ = make_blobs(
         n_rows,
-        10,
+        n_cols,
         centers=5,
         cluster_std=0.1,
-        dtype=np.float32,
-        random_state=10,
+        dtype=cp.float32,
+        random_state=random_state,
     )
 
     with CleanSparkSession() as spark:
@@ -626,7 +630,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
         loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
         trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.15
+        assert trust_diff <= 0.07
 
 
 @pytest.mark.parametrize("n_rows", [3000])
@@ -672,4 +676,100 @@ def test_umap_sparse_vector(
         loc_umap = trustworthiness(input_raw_data.toarray(), embedding, n_neighbors=15)
 
         trust_diff = loc_umap - dist_umap
-        assert trust_diff <= 0.15
+
+        assert trust_diff <= 0.07
+
+
+@pytest.mark.parametrize("knn_graph_format", ["sparse", "dense", "tuple"])
+def test_umap_precomputed_knn(
+    knn_graph_format: str, tmp_path: str, gpu_number: int
+) -> None:
+
+    n_rows = 10000
+    n_cols = 50
+    random_state = 42
+
+    X, _ = make_blobs(
+        n_rows,
+        n_cols,
+        centers=5,
+        cluster_std=0.1,
+        dtype=cp.float32,
+        random_state=random_state,
+    )
+
+    k = 15
+    knn_metric = "sqeuclidean"
+
+    # Test a few different KNN implementations
+    if knn_graph_format == "tuple":
+        from cuvs.neighbors import cagra
+
+        X_row_major = cp.ascontiguousarray(X)
+        build_params = cagra.IndexParams(metric=knn_metric)
+        index = cagra.build(build_params, X_row_major)
+        distances, neighbors = cagra.search(cagra.SearchParams(), index, X_row_major, k)
+        distances = cp.asarray(distances)
+        neighbors = cp.asarray(neighbors)
+        precomputed_knn = (neighbors.get(), distances.get())
+        assert isinstance(precomputed_knn[0], np.ndarray) and isinstance(
+            precomputed_knn[1], np.ndarray
+        )
+    elif knn_graph_format == "sparse":
+        from cuml.neighbors import NearestNeighbors
+
+        knn_model = NearestNeighbors(n_neighbors=k, metric=knn_metric)
+        knn_model.fit(X)
+        precomputed_knn = knn_model.kneighbors_graph(X).get()
+        assert isinstance(precomputed_knn, scipy.sparse.spmatrix)
+    else:  # knn_graph_format == "dense"
+        from cuml.metrics import pairwise_distances
+
+        precomputed_knn = pairwise_distances(X, metric=knn_metric).get()
+        assert isinstance(precomputed_knn, np.ndarray)
+
+    with CleanSparkSession() as spark:
+        pyspark_type = "float"
+        feature_cols = [f"c{i}" for i in range(X.shape[1])]
+        schema = [f"{c} {pyspark_type}" for c in feature_cols]
+        df = spark.createDataFrame(X.tolist(), ",".join(schema))
+        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+
+        umap = UMAP(
+            num_workers=gpu_number,
+            metric="sqeuclidean",
+            random_state=random_state,
+            precomputed_knn=precomputed_knn,
+        ).setFeaturesCol("features")
+
+        # Double check that the precomputed_knn attribute is set correctly
+        model_precomputed_knn = umap.cuml_params.get("precomputed_knn")
+        assert model_precomputed_knn is not None
+        if isinstance(precomputed_knn, tuple):
+            assert np.array_equal(precomputed_knn[0], model_precomputed_knn[0])
+            assert np.array_equal(precomputed_knn[1], model_precomputed_knn[1])
+        elif isinstance(precomputed_knn, scipy.sparse.spmatrix):
+            assert (precomputed_knn != model_precomputed_knn).nnz == 0
+            assert (
+                np.all(precomputed_knn.indices == model_precomputed_knn.indices)
+                and np.all(precomputed_knn.indptr == model_precomputed_knn.indptr)
+                and np.allclose(precomputed_knn.data, model_precomputed_knn.data)
+            )
+        else:
+            assert np.array_equal(model_precomputed_knn, precomputed_knn)
+
+        # Call fit, which will delete the precomputed_knn attribute
+        umap_model = umap.fit(df)
+
+        assert umap_model.cuml_params.get("precomputed_knn") is None
+        _assert_umap_model(umap_model, X.get())
+
+        pdf = umap_model.transform(df).toPandas()
+        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+
+        dist_umap = trustworthiness(input, embedding, n_neighbors=k, batch_size=10000)
+        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), k, False)
+        trust_diff = loc_umap - dist_umap
+
+        assert trust_diff <= 0.07
