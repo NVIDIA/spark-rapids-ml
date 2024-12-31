@@ -983,9 +983,7 @@ class DBSCANModel(
         _TransformFunc,
         Optional[_EvaluateFunc],
     ]:
-        raise NotImplementedError(
-            "DBSCAN does not can not have a separate transform UDF"
-        )
+        raise NotImplementedError("DBSCAN does not have a separate transform UDF")
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         logger = get_logger(self.__class__)
