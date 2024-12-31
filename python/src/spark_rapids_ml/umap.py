@@ -48,6 +48,7 @@ from pyspark.ml.param.shared import (
 from pyspark.ml.util import DefaultParamsReader, DefaultParamsWriter, MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.functions import monotonically_increasing_id
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
@@ -1438,30 +1439,21 @@ class _CumlModelWriterParquet(_CumlModelWriter):
 
         spark = _get_spark_session()
 
-        def write_sparse_array(array: scipy.sparse.spmatrix, df_path: str) -> None:
-            schema = StructType(
-                [
-                    StructField("indices", ArrayType(IntegerType(), False), False),
-                    StructField("indptr", ArrayType(IntegerType(), False), False),
-                    StructField("data", ArrayType(FloatType(), False), False),
-                    StructField("shape", ArrayType(IntegerType(), False), False),
-                ]
+        def write_sparse_array(array: scipy.sparse.spmatrix, df_dir: str) -> None:
+            indptr_df = spark.createDataFrame(array.indptr, schema=["indptr"])
+            indices_data_df = spark.createDataFrame(
+                pd.DataFrame({"indices": array.indices, "data": array.data})
+            ).withColumn("row_id", monotonically_increasing_id())
+
+            indptr_df.write.parquet(
+                os.path.join(df_dir, "indptr.parquet"), mode="overwrite"
             )
-            data_df = spark.createDataFrame(
-                [
-                    Row(
-                        array.indices.tolist(),
-                        array.indptr.tolist(),
-                        array.data.tolist(),
-                        array.shape,
-                    )
-                ],
-                schema=schema,
+            indices_data_df.write.parquet(
+                os.path.join(df_dir, "indices_data.parquet"), mode="overwrite"
             )
-            data_df.write.parquet(df_path, mode="overwrite")
 
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
-            data_df = spark.createDataFrame([Row(array.tolist())])
+            data_df = spark.createDataFrame(array)
             data_df.write.parquet(df_path, mode="overwrite")
 
         DefaultParamsWriter.saveMetadata(
@@ -1485,12 +1477,14 @@ class _CumlModelWriterParquet(_CumlModelWriter):
         for key in ["embedding_", "raw_data_"]:
             array = model_attributes[key]
             if isinstance(array, scipy.sparse.csr_matrix):
-                df_path = os.path.join(data_path, f"{key}csr_.parquet")
-                write_sparse_array(array, df_path)
+                df_dir = os.path.join(data_path, f"{key}csr")
+                write_sparse_array(array, df_dir)
+                model_attributes[key] = df_dir
+                model_attributes[key + "shape"] = array.shape
             else:
                 df_path = os.path.join(data_path, f"{key}.parquet")
                 write_dense_array(array, df_path)
-            model_attributes[key] = df_path
+                model_attributes[key] = df_path
 
         metadata_file_path = os.path.join(data_path, "metadata.json")
         model_attributes_str = json.dumps(model_attributes)
@@ -1508,19 +1502,29 @@ class _CumlModelReaderParquet(_CumlModelReader):
 
         spark = _get_spark_session()
 
-        def read_sparse_array(df_path: str) -> scipy.sparse.csr_matrix:
-            data_df = spark.read.parquet(df_path)
-            first_row = data_df.collect()[0]
-            return scipy.sparse.csr_matrix(
-                (first_row.data, first_row.indices, first_row.indptr),
-                shape=first_row.shape,
+        def read_sparse_array(
+            df_dir: str, csr_shape: Tuple[int, int]
+        ) -> scipy.sparse.csr_matrix:
+            indptr_df = spark.read.parquet(
+                os.path.join(df_dir, "indptr.parquet")
+            ).orderBy("indptr")
+            indices_data_df = spark.read.parquet(
+                os.path.join(df_dir, "indices_data.parquet")
+            ).orderBy("row_id")
+
+            indptr = np.squeeze(np.array(indptr_df.collect(), dtype=np.int32))
+            indices = np.squeeze(
+                np.array(indices_data_df.select("indices").collect(), dtype=np.int32)
             )
+            data = np.squeeze(
+                np.array(indices_data_df.select("data").collect(), dtype=np.float32)
+            )
+
+            return scipy.sparse.csr_matrix((data, indices, indptr), shape=csr_shape)
 
         def read_dense_array(df_path: str) -> np.ndarray:
             data_df = spark.read.parquet(df_path)
-            first_row = data_df.first()
-            assert first_row is not None
-            return np.array(first_row[0])
+            return np.array(data_df.collect(), dtype=np.float32)
 
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         data_path = os.path.join(path, "data")
@@ -1531,8 +1535,9 @@ class _CumlModelReaderParquet(_CumlModelReader):
 
         for key in ["embedding_", "raw_data_"]:
             df_path = model_attr_dict[key]
-            if df_path.endswith("csr_.parquet"):
-                model_attr_dict[key] = read_sparse_array(df_path)
+            if df_path.endswith("csr"):
+                csr_shape = model_attr_dict.pop(key + "shape")
+                model_attr_dict[key] = read_sparse_array(df_path, csr_shape)
             else:
                 model_attr_dict[key] = read_dense_array(df_path)
 

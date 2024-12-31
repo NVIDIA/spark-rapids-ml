@@ -21,6 +21,7 @@ import cupy as cp
 import cupyx
 import numpy as np
 import pytest
+import scipy
 from _pytest.logging import LogCaptureFixture
 from cuml.datasets import make_blobs
 from cuml.metrics import trustworthiness
@@ -710,19 +711,22 @@ def test_umap_precomputed_knn(
         distances, neighbors = cagra.search(cagra.SearchParams(), index, X_row_major, k)
         distances = cp.asarray(distances)
         neighbors = cp.asarray(neighbors)
-        precomputed_knn = (neighbors, distances)
+        precomputed_knn = (neighbors.get(), distances.get())
+        assert isinstance(precomputed_knn[0], np.ndarray) and isinstance(
+            precomputed_knn[1], np.ndarray
+        )
     elif knn_graph_format == "sparse":
         from cuml.neighbors import NearestNeighbors
 
         knn_model = NearestNeighbors(n_neighbors=k, metric=knn_metric)
         knn_model.fit(X)
-        precomputed_knn = knn_model.kneighbors_graph(X)
-        assert isinstance(precomputed_knn, cupyx.scipy.sparse.spmatrix)
-    else:
+        precomputed_knn = knn_model.kneighbors_graph(X).get()
+        assert isinstance(precomputed_knn, scipy.sparse.spmatrix)
+    else:  # knn_graph_format == "dense"
         from cuml.metrics import pairwise_distances
 
-        precomputed_knn = pairwise_distances(X, metric=knn_metric)
-        assert isinstance(precomputed_knn, cp.ndarray)
+        precomputed_knn = pairwise_distances(X, metric=knn_metric).get()
+        assert isinstance(precomputed_knn, np.ndarray)
 
     with CleanSparkSession() as spark:
         pyspark_type = "float"
@@ -742,9 +746,9 @@ def test_umap_precomputed_knn(
         model_precomputed_knn = umap.cuml_params.get("precomputed_knn")
         assert model_precomputed_knn is not None
         if isinstance(precomputed_knn, tuple):
-            assert cp.array_equal(precomputed_knn[0], model_precomputed_knn[0])
-            assert cp.array_equal(precomputed_knn[1], model_precomputed_knn[1])
-        elif isinstance(precomputed_knn, cupyx.scipy.sparse.spmatrix):
+            assert np.array_equal(precomputed_knn[0], model_precomputed_knn[0])
+            assert np.array_equal(precomputed_knn[1], model_precomputed_knn[1])
+        elif isinstance(precomputed_knn, scipy.sparse.spmatrix):
             assert (precomputed_knn != model_precomputed_knn).nnz == 0
             assert (
                 np.all(precomputed_knn.indices == model_precomputed_knn.indices)
@@ -752,7 +756,7 @@ def test_umap_precomputed_knn(
                 and np.allclose(precomputed_knn.data, model_precomputed_knn.data)
             )
         else:
-            assert cp.array_equal(model_precomputed_knn, precomputed_knn)
+            assert np.array_equal(model_precomputed_knn, precomputed_knn)
 
         # Call fit, which will delete the precomputed_knn attribute
         umap_model = umap.fit(df)
