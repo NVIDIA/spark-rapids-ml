@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,12 +48,12 @@ from pyspark.ml.param.shared import (
 from pyspark.ml.util import DefaultParamsReader, DefaultParamsWriter, MLReader, MLWriter
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import monotonically_increasing_id
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
     FloatType,
     IntegerType,
+    LongType,
     Row,
     StructField,
     StructType,
@@ -1440,7 +1440,18 @@ class _CumlModelWriterParquet(_CumlModelWriter):
         spark = _get_spark_session()
 
         def write_sparse_array(array: scipy.sparse.spmatrix, df_dir: str) -> None:
-            indptr_df = spark.createDataFrame(array.indptr, schema=["indptr"])
+            indptr_schema = StructType([StructField("indptr", IntegerType(), False)])
+            indptr_df = spark.createDataFrame(
+                pd.DataFrame(array.indptr), schema=indptr_schema
+            )
+
+            indices_data_schema = StructType(
+                [
+                    StructField("indices", IntegerType(), False),
+                    StructField("data", FloatType(), False),
+                    StructField("row_id", LongType(), False),
+                ]
+            )
             indices_data_df = spark.createDataFrame(
                 pd.DataFrame(
                     {
@@ -1448,7 +1459,8 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                         "data": array.data,
                         "row_id": range(len(array.indices)),
                     }
-                )
+                ),
+                schema=indices_data_schema,
             )
 
             indptr_df.write.parquet(
@@ -1459,7 +1471,13 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             )
 
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
-            data_df = spark.createDataFrame(array)
+            schema = StructType(
+                [
+                    StructField(f"_{i}", FloatType(), False)
+                    for i in range(1, array.shape[1] + 1)
+                ]
+            )
+            data_df = spark.createDataFrame(pd.DataFrame(array), schema=schema)
             data_df.write.parquet(df_path, mode="overwrite")
 
         DefaultParamsWriter.saveMetadata(
