@@ -1436,49 +1436,32 @@ class _CumlModelWriterParquet(_CumlModelWriter):
     """
 
     def saveImpl(self, path: str) -> None:
-        from packaging import version
 
         spark = _get_spark_session()
-        require_schemas = version.parse(pyspark.__version__) < version.parse("3.4.0")
 
         def write_sparse_array(array: scipy.sparse.spmatrix, df_dir: str) -> None:
-            # Spark < 3.4.0 cannot infer schemas from numpy arrays in createDataFrame.
-            if require_schemas:
-                indptr_schema = StructType(
-                    [StructField("indptr", IntegerType(), False)]
-                )
-                indptr_df = spark.createDataFrame(
-                    pd.DataFrame(array.indptr), schema=indptr_schema
-                )
+            indptr_schema = StructType([StructField("indptr", IntegerType(), False)])
+            indptr_df = spark.createDataFrame(
+                pd.DataFrame(array.indptr), schema=indptr_schema
+            )
 
-                indices_data_schema = StructType(
-                    [
-                        StructField("indices", IntegerType(), False),
-                        StructField("data", FloatType(), False),
-                        StructField("row_id", LongType(), False),
-                    ]
-                )
-                indices_data_df = spark.createDataFrame(
-                    pd.DataFrame(
-                        {
-                            "indices": array.indices,
-                            "data": array.data,
-                            "row_id": range(len(array.indices)),
-                        }
-                    ),
-                    schema=indices_data_schema,
-                )
-            else:
-                indptr_df = spark.createDataFrame(array.indptr, schema="indptr: int")
-                indices_data_df = spark.createDataFrame(
-                    pd.DataFrame(
-                        {
-                            "indices": array.indices,
-                            "data": array.data,
-                            "row_id": range(len(array.indices)),
-                        }
-                    )
-                )
+            indices_data_schema = StructType(
+                [
+                    StructField("indices", IntegerType(), False),
+                    StructField("data", FloatType(), False),
+                    StructField("row_id", LongType(), False),
+                ]
+            )
+            indices_data_df = spark.createDataFrame(
+                pd.DataFrame(
+                    {
+                        "indices": array.indices,
+                        "data": array.data,
+                        "row_id": range(len(array.indices)),
+                    }
+                ),
+                schema=indices_data_schema,
+            )
 
             indptr_df.write.parquet(
                 os.path.join(df_dir, "indptr.parquet"), mode="overwrite"
@@ -1488,17 +1471,13 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             )
 
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
-            # Spark < 3.4.0 cannot infer schemas from numpy arrays in createDataFrame.
-            if require_schemas:
-                schema = StructType(
-                    [
-                        StructField(f"_{i}", FloatType(), False)
-                        for i in range(1, array.shape[1] + 1)
-                    ]
-                )
-                data_df = spark.createDataFrame(pd.DataFrame(array), schema=schema)
-            else:
-                data_df = spark.createDataFrame(array)
+            schema = StructType(
+                [
+                    StructField(f"_{i}", FloatType(), False)
+                    for i in range(1, array.shape[1] + 1)
+                ]
+            )
+            data_df = spark.createDataFrame(pd.DataFrame(array), schema=schema)
             data_df.write.parquet(df_path, mode="overwrite")
 
         DefaultParamsWriter.saveMetadata(
