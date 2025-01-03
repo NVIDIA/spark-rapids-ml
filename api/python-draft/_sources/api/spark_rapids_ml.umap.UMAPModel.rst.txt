@@ -61,7 +61,6 @@ UMAPModel
        ~UMAPModel.getOrDefault
        ~UMAPModel.getOutputCol
        ~UMAPModel.getParam
-       ~UMAPModel.getPrecomputedKNN
        ~UMAPModel.getRandomState
        ~UMAPModel.getRepulsionStrength
        ~UMAPModel.getSampleFraction
@@ -94,7 +93,6 @@ UMAPModel
        ~UMAPModel.setNNeighbors
        ~UMAPModel.setNegativeSampleRate
        ~UMAPModel.setOutputCol
-       ~UMAPModel.setPrecomputedKNN
        ~UMAPModel.setRandomState
        ~UMAPModel.setRepulsionStrength
        ~UMAPModel.setSampleFraction
@@ -137,7 +135,6 @@ UMAPModel
        ~UMAPModel.num_workers
        ~UMAPModel.outputCol
        ~UMAPModel.params
-       ~UMAPModel.precomputed_knn
        ~UMAPModel.random_state
        ~UMAPModel.rawData
        ~UMAPModel.repulsion_strength
@@ -182,7 +179,6 @@ UMAPModel
     .. automethod:: getOrDefault
     .. automethod:: getOutputCol
     .. automethod:: getParam
-    .. automethod:: getPrecomputedKNN
     .. automethod:: getRandomState
     .. automethod:: getRepulsionStrength
     .. automethod:: getSampleFraction
@@ -215,7 +211,6 @@ UMAPModel
     .. automethod:: setNNeighbors
     .. automethod:: setNegativeSampleRate
     .. automethod:: setOutputCol
-    .. automethod:: setPrecomputedKNN
     .. automethod:: setRandomState
     .. automethod:: setRepulsionStrength
     .. automethod:: setSampleFraction
@@ -257,7 +252,6 @@ UMAPModel
     .. autoattribute:: num_workers
     .. autoattribute:: outputCol
     .. autoattribute:: params
-    .. autoattribute:: precomputed_knn
     .. autoattribute:: random_state
     .. autoattribute:: rawData
     .. autoattribute:: repulsion_strength
