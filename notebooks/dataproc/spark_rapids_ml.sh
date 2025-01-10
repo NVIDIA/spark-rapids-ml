@@ -24,9 +24,9 @@ mamba uninstall -y pyarrow arrow
 
 # install cudf and cuml
 pip install --upgrade pip
-pip install cudf-cu11~=${RAPIDS_VERSION} cuml-cu11~=${RAPIDS_VERSION} cuvs-cu11~=${RAPIDS_VERSION} \
-    pylibraft-cu11~=${RAPIDS_VERSION} \
-    rmm-cu11~=${RAPIDS_VERSION} \
+pip install cudf-cu12~=${RAPIDS_VERSION} cuml-cu12~=${RAPIDS_VERSION} cuvs-cu12~=${RAPIDS_VERSION} \
+    pylibraft-cu12~=${RAPIDS_VERSION} \
+    rmm-cu12~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml

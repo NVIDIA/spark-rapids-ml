@@ -32,6 +32,7 @@ gpu_args=$(cat <<EOF
 --master-accelerator type=nvidia-tesla-t4,count=1
 --worker-accelerator type=nvidia-tesla-t4,count=1
 --initialization-actions gs://${BENCHMARK_HOME}/spark-rapids.sh,gs://${BENCHMARK_HOME}/init_benchmark.sh
+--initialization-action-timeout=20m
 --metadata gpu-driver-provider="NVIDIA"
 --metadata rapids-runtime=SPARK
 --metadata benchmark-home=${BENCHMARK_HOME}
@@ -62,7 +63,7 @@ if [[ $? == 0 ]]; then
 else
     set -x
     gcloud dataproc clusters create ${cluster_name} \
-    --image-version=2.1-ubuntu \
+    --image-version=2.2-ubuntu22 \
     --region ${COMPUTE_REGION} \
     --master-machine-type n1-standard-16 \
     --num-workers 2 \
