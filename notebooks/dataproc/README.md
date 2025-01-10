@@ -41,7 +41,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --worker-machine-type n1-standard-16 \
   --num-worker-local-ssds 4 \
   --worker-local-ssd-interface=NVME \
-  --initialization-actions gs://${GCS_BUCKET}/spark_rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
+  --initialization-actions gs://${GCS_BUCKET}/spark-rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
   --initialization-action-timeout=20m \
   --optional-components=JUPYTER \
   --metadata gpu-driver-provider="NVIDIA" \
