@@ -16,11 +16,6 @@
 
 RAPIDS_VERSION=24.12.0
 
-# patch existing packages
-mamba install "llvmlite<0.40,>=0.39.0dev0" "numba>=0.56.2"
-
-# dataproc 2.1 pyarrow and arrow conda installation is not compatible with cudf
-mamba uninstall -y pyarrow arrow
 
 # install cudf and cuml
 pip install --upgrade pip

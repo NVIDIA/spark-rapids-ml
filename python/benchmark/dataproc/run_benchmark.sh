@@ -102,8 +102,6 @@ for i in `seq $kmeans_runs`; do
     sleep 30
 done
 
-exit
-
 # # Note: requires 24GB GPU, i.e. A10 or A100
 # echo
 # echo "$sep algo: knn $sep"
