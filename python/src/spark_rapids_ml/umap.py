@@ -790,8 +790,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     sample_fraction : float (optional, default=1.0)
         The fraction of the dataset to be used for fitting the model. Since fitting is done on a single node, very large
-        datasets must be subsampled to fit within the node's memory and execute in a reasonable time. Smaller fractions
-        will result in faster training, but may result in sub-optimal embeddings.
+        datasets must be subsampled to fit within the node's memory. Smaller fractions will result in faster training, but
+        may decrease embedding quality. Note: this is not guaranteed to provide exactly the fraction specified of the total
+        count of the given DataFrame.
 
     featuresCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
@@ -1473,11 +1474,19 @@ class _CumlModelWriterParquet(_CumlModelWriter):
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
             schema = StructType(
                 [
-                    StructField(f"_{i}", FloatType(), False)
-                    for i in range(1, array.shape[1] + 1)
+                    StructField("row_id", LongType(), False),
+                    StructField("data", ArrayType(FloatType(), False), False),
                 ]
             )
-            data_df = spark.createDataFrame(pd.DataFrame(array), schema=schema)
+            data_df = spark.createDataFrame(
+                pd.DataFrame(
+                    {
+                        "row_id": range(array.shape[0]),
+                        "data": array.tolist(),
+                    }
+                ),
+                schema=schema,
+            )
             data_df.write.parquet(df_path, mode="overwrite")
 
         DefaultParamsWriter.saveMetadata(
@@ -1495,8 +1504,6 @@ class _CumlModelWriterParquet(_CumlModelWriter):
         assert model_attributes is not None
 
         data_path = os.path.join(path, "data")
-        if not os.path.exists(data_path):
-            os.makedirs(data_path)
 
         for key in ["embedding_", "raw_data_"]:
             array = model_attributes[key]
@@ -1547,8 +1554,8 @@ class _CumlModelReaderParquet(_CumlModelReader):
             return scipy.sparse.csr_matrix((data, indices, indptr), shape=csr_shape)
 
         def read_dense_array(df_path: str) -> np.ndarray:
-            data_df = spark.read.parquet(df_path)
-            return np.array(data_df.collect(), dtype=np.float32)
+            data_df = spark.read.parquet(df_path).orderBy("row_id")
+            return np.array([row.data for row in data_df.collect()], dtype=np.float32)
 
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         data_path = os.path.join(path, "data")
