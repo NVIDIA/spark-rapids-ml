@@ -1,3 +1,17 @@
+# Copyright (c) 2024, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # needed for bm script arguments
 cat <<EOF
 {
@@ -9,7 +23,7 @@ cat <<EOF
         "spark.task.cpus": "1",
         "spark.databricks.delta.preview.enabled": "true",
         "spark.python.worker.reuse": "true",
-        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-24.08.1.jar:/databricks/spark/python",
+        "spark.executorEnv.PYTHONPATH": "/databricks/jars/rapids-4-spark_2.12-24.10.1.jar:/databricks/spark/python",
         "spark.sql.files.minPartitionNum": "2",
         "spark.sql.execution.arrow.maxRecordsPerBatch": "10000",
         "spark.executor.cores": "8",

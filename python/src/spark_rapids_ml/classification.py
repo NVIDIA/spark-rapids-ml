@@ -396,9 +396,9 @@ class RandomForestClassifier(
             * ``4 or False`` - Enables all messages up to and including information messages.
             * ``5 or True`` - Enables all messages up to and including debug messages.
             * ``6`` - Enables all messages up to and including trace messages.
-    n_streams: int (default = 1)
+    n_streams: int (default = 4)
         Number of parallel streams used for forest building.
-        Please note that there is a bug running spark-rapids-ml on a node with multi-gpus
+        Please note that there could be a bug running spark-rapids-ml on a node with multi-gpus
         when n_streams > 1. See https://github.com/rapidsai/cuml/issues/5402.
     min_samples_split: int or float (default = 2)
         The minimum number of samples required to split an internal node.\n
@@ -986,60 +986,7 @@ class LogisticRegression(
                 params[param_alias.num_cols],
             )
 
-            # Use cupy to standardize dataset as a workaround to gain better numeric stability
-            standarization_with_cupy = standardization and not is_sparse
-            if standarization_with_cupy is True:
-                import cupy as cp
-
-                if isinstance(concated, np.ndarray):
-                    concated = cp.array(concated)
-                elif isinstance(concated, pd.DataFrame):
-                    concated = cp.array(concated.values)
-                else:
-                    assert isinstance(
-                        concated, cp.ndarray
-                    ), "only numpy array, cupy array, and pandas dataframe are supported when standardization_with_cupy is on"
-
-                mean_partial = concated.sum(axis=0) / pdesc.m
-
-                import json
-
-                from pyspark import BarrierTaskContext
-
-                context = BarrierTaskContext.get()
-
-                def all_gather_then_sum(
-                    cp_array: cp.ndarray, dtype: Union[np.float32, np.float64]
-                ) -> cp.ndarray:
-                    msgs = context.allGather(json.dumps(cp_array.tolist()))
-                    arrays = [json.loads(p) for p in msgs]
-                    array_sum = np.sum(arrays, axis=0).astype(dtype)
-                    return cp.array(array_sum)
-
-                mean = all_gather_then_sum(mean_partial, concated.dtype)
-                concated -= mean
-
-                l2 = cp.linalg.norm(concated, ord=2, axis=0)
-
-                var_partial = l2 * l2 / (pdesc.m - 1)
-                var = all_gather_then_sum(var_partial, concated.dtype)
-
-                assert cp.all(
-                    var >= 0
-                ), "numeric instable detected when calculating variance. Got negative variance"
-
-                stddev = cp.sqrt(var)
-
-                stddev_inv = cp.where(stddev != 0, 1.0 / stddev, 1.0)
-
-                if fit_intercept is False:
-                    concated += mean
-
-                concated *= stddev_inv
-
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
-                if standarization_with_cupy is True:
-                    init_parameters["standardization"] = False
 
                 if init_parameters["C"] == 0.0:
                     init_parameters["penalty"] = None
@@ -1071,13 +1018,6 @@ class LogisticRegression(
 
                 coef_ = logistic_regression.coef_
                 intercept_ = logistic_regression.intercept_
-                if standarization_with_cupy is True:
-                    import cupy as cp
-
-                    coef_ = cp.where(stddev > 0, coef_ / stddev, coef_)
-                    if init_parameters["fit_intercept"] is True:
-                        intercept_ = intercept_ - cp.dot(coef_, mean)
-
                 intercept_array = intercept_
                 # follow Spark to center the intercepts for multinomial classification
                 if (

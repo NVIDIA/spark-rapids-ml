@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import argparse
+import logging
 import pprint
 import subprocess
 from abc import abstractmethod
@@ -27,6 +28,16 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col
 
 from .utils import WithSparkSession, to_bool, with_benchmark
+
+# disable mlflow autologging if in the environment (e.g. Databricks)
+# due to observed heavy resource usage
+logging.warning("***** Disabling mflow autologging for benchmark runs *****")
+try:
+    import mlflow
+
+    mlflow.autolog(disable=True)
+except ImportError:
+    pass
 
 
 class BenchmarkBase:

@@ -1,3 +1,17 @@
+# Copyright (c) 2024, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
@@ -46,7 +60,7 @@ random.seed(0)
 from scipy.sparse import csr_matrix
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
-from spark_rapids_ml.core import _use_sparse_in_cuml, alias
+from spark_rapids_ml.core import _CumlEstimator, _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
@@ -315,6 +329,56 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(LogisticRegression)
 
 
+@pytest.mark.parametrize(
+    "input_spark_params,cuml_params_update",
+    [
+        (
+            {"regParam": 0.1, "elasticNetParam": 0.5},
+            {"penalty": "elasticnet", "C": 10.0, "l1_ratio": 0.5},
+        ),
+        (
+            {"maxIter": 13},
+            {"max_iter": 13},
+        ),
+        (
+            {"regParam": 0.25, "elasticNetParam": 0.0},
+            {"penalty": "l2", "C": 4.0, "l1_ratio": 0.0},
+        ),
+        (
+            {"regParam": 0.2, "elasticNetParam": 1.0},
+            {"penalty": "l1", "C": 5.0, "l1_ratio": 1.0},
+        ),
+        (
+            {"tol": 1e-3},
+            {"tol": 1e-3},
+        ),
+        (
+            {"fitIntercept": False},
+            {"fit_intercept": False},
+        ),
+        (
+            {"standardization": False},
+            {"standardization": False},
+        ),
+        (
+            {"enable_sparse_data_optim": True},
+            None,
+        ),
+        (
+            {"verbose": True},
+            {"verbose": True},
+        ),
+    ],
+)
+def test_lr_copy(
+    input_spark_params: Dict[str, Any],
+    cuml_params_update: Optional[Dict[str, Any]],
+) -> None:
+    from .test_common_estimator import _test_est_copy
+
+    _test_est_copy(LogisticRegression, input_spark_params, cuml_params_update)
+
+
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
@@ -566,7 +630,7 @@ def test_compat(
             else [-2.42377087, 2.42377087]
         )
         assert array_equal(blor_model.coefficients.toArray(), coef_gnd, tolerance)
-        assert blor_model.intercept == pytest.approx(0, abs=1e-4)
+        assert blor_model.intercept == pytest.approx(0, abs=tolerance)
 
         assert isinstance(blor_model.coefficientMatrix, DenseMatrix)
         assert array_equal(
@@ -575,7 +639,7 @@ def test_compat(
             tolerance,
         )
         assert isinstance(blor_model.interceptVector, DenseVector)
-        assert array_equal(blor_model.interceptVector.toArray(), [0.0])
+        assert array_equal(blor_model.interceptVector.toArray(), [0.0], tolerance)
 
         example = bdf.head()
         if example:
@@ -2224,10 +2288,10 @@ def test_sparse_all_zeroes(
 
     with CleanSparkSession() as spark:
         data = [
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=1.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
-            Row(label=0.0, weight=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
         ]
 
         bdf = spark.createDataFrame(data)
@@ -2244,6 +2308,51 @@ def test_sparse_all_zeroes(
             return
 
         gpu_lr = LogisticRegression(enable_sparse_data_optim=True, **params)
+        gpu_model = gpu_lr.fit(bdf)
+        check_sparse_model_preprocess(gpu_model, bdf)
+
+        cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)
+
+
+@pytest.mark.parametrize("standardization", [True])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_sparse_one_gpu_all_zeroes(
+    standardization: bool,
+    fit_intercept: bool,
+    gpu_number: int,
+) -> None:
+    tolerance = 0.001
+
+    if gpu_number < 2:
+        pytest.skip(reason="test_sparse_one_gpu_zeroes requires at least 2 GPUs")
+    gpu_number = 2
+
+    with CleanSparkSession() as spark:
+        data = [
+            Row(label=1.0, features=Vectors.sparse(2, {0: 10.0, 1: 20.0})),
+            Row(label=1.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+            Row(label=0.0, features=Vectors.sparse(2, {})),
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        params: Dict[str, Any] = {
+            "regParam": 0.1,
+            "fitIntercept": fit_intercept,
+            "standardization": standardization,
+            "featuresCol": "features",
+            "labelCol": "label",
+        }
+
+        if version.parse(pyspark.__version__) < version.parse("3.4.0"):
+            return
+
+        gpu_lr = LogisticRegression(
+            enable_sparse_data_optim=True, verbose=True, **params
+        )
         gpu_model = gpu_lr.fit(bdf)
         check_sparse_model_preprocess(gpu_model, bdf)
 

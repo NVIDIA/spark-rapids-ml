@@ -1,4 +1,18 @@
 #!/bin/bash
+# Copyright (c) 2024, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 set -ex
 
@@ -13,7 +27,7 @@ sudo bash -c "wget https://www.python.org/ftp/python/3.10.9/Python-3.10.9.tgz &&
 tar xzf Python-3.10.9.tgz && cd Python-3.10.9 && \
 ./configure --enable-optimizations && make altinstall"
 
-RAPIDS_VERSION=24.10.0
+RAPIDS_VERSION=24.12.0
 
 sudo /usr/local/bin/pip3.10 install --upgrade pip
 

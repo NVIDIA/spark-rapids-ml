@@ -1,3 +1,17 @@
+# Copyright (c) 2024, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -94,6 +108,24 @@ def test_params(default_params: bool) -> None:
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(ApproximateNearestNeighbors)
+
+
+def test_ann_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"k": 38}, {"n_neighbors": 38}),
+        ({"algorithm": "cagra"}, {"algorithm": "cagra"}),
+        ({"metric": "cosine"}, {"metric": "cosine"}),
+        (
+            {"algoParams": {"nlist": 999, "nprobe": 11}},
+            {"algo_params": {"nlist": 999, "nprobe": 11}},
+        ),
+        ({"verbose": True}, {"verbose": True}),
+    ]
+
+    for pair in param_list:
+        _test_est_copy(ApproximateNearestNeighbors, pair[0], pair[1])
 
 
 def test_search_index_params() -> None:
@@ -768,11 +800,7 @@ def test_cagra(
     TODO: support compression index param
     """
 
-    VALID_METRIC = {"sqeuclidean"}
     VALID_BUILD_ALGO = {"ivf_pq", "nn_descent"}
-    assert (
-        metric in VALID_METRIC
-    ), f"cagra currently supports metric only in {VALID_METRIC}."
     assert algo_params["build_algo"] in {
         "ivf_pq",
         "nn_descent",
@@ -851,7 +879,7 @@ def test_cagra_dtype(
 
 
 @pytest.mark.parametrize(
-    "algorithm,feature_type,max_records_per_batch,algo_params,metric",
+    "algorithm,feature_type,max_records_per_batch,algo_params",
     [
         (
             "cagra",
@@ -861,7 +889,6 @@ def test_cagra_dtype(
                 "build_algo": "ivf_pq",
                 "itopk_size": 32,
             },
-            "sqeuclidean",
         ),
     ],
 )
@@ -871,12 +898,12 @@ def test_cagra_params(
     feature_type: str,
     max_records_per_batch: int,
     algo_params: Dict[str, Any],
-    metric: str,
     data_type: np.dtype,
     caplog: LogCaptureFixture,
 ) -> None:
 
     data_shape = (1000, 20)
+    metric = "sqeuclidean"
     itopk_size = 64 if "itopk_size" not in algo_params else algo_params["itopk_size"]
 
     internal_topk_size = math.ceil(itopk_size / 32) * 32
@@ -913,6 +940,22 @@ def test_cagra_params(
             n_neighbors=n_neighbors,
         )
         assert error_msg in caplog.text
+
+    # test metric restriction
+    algo_params["intermediate_graph_degree"] = 255
+    metric = "euclidean"
+    error_msg = f"when using 'cagra' algorithm, the metric must be explicitly set to 'sqeuclidean'."
+    with pytest.raises(AssertionError, match=error_msg):
+        test_cagra(
+            algorithm,
+            feature_type,
+            max_records_per_batch,
+            algo_params,
+            metric,
+            data_shape,
+            data_type,
+            n_neighbors=n_neighbors,
+        )
 
 
 @pytest.mark.parametrize(
@@ -1021,36 +1064,94 @@ def test_return_fewer_k(
         int64_max = np.iinfo("int64").max
         float_inf = float("inf")
 
-        # ensure consistency with cuvs for ivfflat, and ivfpq > 24.10
-        import cuvs
-        from packaging import version
-
-        if algorithm == "ivfflat" or version.parse(cuvs.__version__) > version.parse(
-            "24.10.00"
-        ):
-            ann_evaluator = ANNEvaluator(X, k, metric)
-            spark_indices = np.array([row["indices"] for row in knn_df_collect])
-            spark_distances = np.array([row["distances"] for row in knn_df_collect])
-            ann_evaluator.compare_with_cuml_or_cuvs_sg(
-                algorithm, algo_params, spark_indices, spark_distances, tolerance=0.0
-            )
-
         # check result details
+        # note that cuVS produces non-deterministic results during the indexing process
         indices_none_probed = [int64_max, int64_max, int64_max, int64_max]
         distances_none_probed = [float_inf, float_inf, float_inf, float_inf]
 
         def check_row_results(
-            i: int, indices_if_probed: List[int], distances_if_probed: List[float]
+            i: int,
+            indices_if_probed: List[int],
+            distances_if_probed: List[float],
+            res_indices: List[List[int]],
+            res_distances: List[List[float]],
         ) -> None:
             assert i == 0 or i == 2
             j = i + 1
-            assert knn_df_collect[i]["indices"] == knn_df_collect[j]["indices"]
-            assert knn_df_collect[i]["distances"] == knn_df_collect[j]["distances"]
-            if knn_df_collect[i]["indices"] == indices_none_probed:
-                assert knn_df_collect[i]["distances"] == distances_none_probed
+            assert res_indices[i] == res_indices[j]
+            assert res_distances[i] == res_distances[j]
+            if res_indices[i] == indices_none_probed:
+                assert res_distances[i] == distances_none_probed
             else:
-                assert knn_df_collect[i]["indices"] == indices_if_probed
-                assert knn_df_collect[i]["distances"] == distances_if_probed
+                assert res_indices[i] == indices_if_probed
+                assert res_distances[i] == distances_if_probed
 
-        check_row_results(0, [0, 1, 0, 0], [0.0, 0.0, float_inf, float_inf])
-        check_row_results(2, [2, 3, 2, 2], [0.0, 0.0, float_inf, float_inf])
+        spark_indices = [row["indices"] for row in knn_df_collect]
+        spark_distances = [row["distances"] for row in knn_df_collect]
+        check_row_results(
+            0,
+            [0, 1, 0, 0],
+            [0.0, 0.0, float_inf, float_inf],
+            spark_indices,
+            spark_distances,
+        )
+        check_row_results(
+            2,
+            [2, 3, 2, 2],
+            [0.0, 0.0, float_inf, float_inf],
+            spark_indices,
+            spark_distances,
+        )
+
+        # ensure consistency of cuvs (non-deterministic indexing of ivfflat/ivfpq + inconsistent outputs of refine)
+        ann_evaluator = ANNEvaluator(X, k, metric)
+        sg_distances, sg_indices = ann_evaluator.get_cuvs_sg_results(
+            algorithm, algo_params
+        )
+        if algorithm == "ivfpq":
+
+            def align_after_ivfpq_refine(
+                in_distances: np.ndarray, in_indices: np.ndarray
+            ) -> Tuple[np.ndarray, np.ndarray]:
+                """
+                # Refine API behavior in version 24.12:
+                # (1) converts all LONG_MAX values in the indices array to -1
+                # (2) sets the corresponding distances for -1 indices to infinity (inf).
+                # (3) updates the distances array for top-1 indices to reflect the top-1 distance value
+                #     Example: for top-4 indices [2, 3, 2, 2], the distances array would be updated to [0., 0., 0., 0.].
+                # Spark Rapids ML assumes the future Refine API will align with ivfflat and ivfpq in handing the
+                # fewer_than_k_items issue, and currently implements this alignment in the current release.
+                """
+                import cupy as cp
+
+                out_distances = in_distances.copy()
+                out_indices = in_indices.copy()
+
+                out_indices[out_indices == -1] = np.iinfo("int64").max
+                out_distances[out_indices == np.iinfo("int64").max] = float("inf")
+
+                # for the case top-1 nn got filled into indices
+                top1_ind = out_indices[:, 0]
+                rest_indices = out_indices[:, 1:]
+                rest_distances = out_distances[:, 1:]
+                rest_distances[rest_indices == top1_ind[:, cp.newaxis]] = float("inf")
+                return (out_distances, out_indices)
+
+            sg_distances, sg_indices = align_after_ivfpq_refine(
+                sg_distances, sg_indices
+            )
+
+        check_row_results(
+            0,
+            [0, 1, 0, 0],
+            [0.0, 0.0, float_inf, float_inf],
+            sg_indices.tolist(),
+            sg_distances.tolist(),
+        )
+        check_row_results(
+            2,
+            [2, 3, 2, 2],
+            [0.0, 0.0, float_inf, float_inf],
+            sg_indices.tolist(),
+            sg_distances.tolist(),
+        )

@@ -8,9 +8,9 @@ For simplicity, the following instructions just use Spark local mode, assuming a
 
 First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 11.8:
 ```bash
-conda create -n rapids-24.10 \
+conda create -n rapids-24.12 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=24.10 cuvs=24.10 python=3.10 cuda-version=11.8
+    cuml=24.12 cuvs=24.12 python=3.10 cuda-version=11.8 numpy~=1.0
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -19,7 +19,7 @@ conda create -n rapids-24.10 \
 
 Once you have the conda environment, activate it and install the required packages.
 ```bash
-conda activate rapids-24.10
+conda activate rapids-24.12
 
 ## for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
@@ -184,15 +184,19 @@ print(centers)  # slightly different results
 
 ## CLIs Enabling No Package Import Change
 
-Using some experimental CLIs include in `spark_rapids_ml`, pyspark application scripts importing estimators and models from `pyspark.ml` and deployed either via direct invocation (in cases where the spark context and session are created and configured in the script) or via `spark-submit` can be accelerated without the need for changing the package import statements to `spark_rapids_ml` as in the above examples.  In the case of direct invocation of self-contained pyspark applications the following can be used:
+Using some experimental CLIs included in `spark_rapids_ml`, pyspark application scripts importing estimators and models from `pyspark.ml` can be accelerated without the need for changing the package import statements to use `spark_rapids_ml` as in the above examples.  
+
+In the case of direct invocation of self-contained pyspark applications, the following can be used:
 ```bash
-python -m spark_rapids_ml spark_enabled_application.py < application options >
+python -m spark_rapids_ml spark_enabled_application.py <application options>
 ```
 and if the app is deployed using `spark-submit` the following included CLI (installed with the original `pip install spark-rapids-ml`) can be used:
 ```bash
-spark-rapids-submit --master < master > < other spark submit options > application.py < application options >
+spark-rapids-submit --master <master> <other spark submit options> application.py <application options>
 ```
 For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors.
+
+Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).
 
 ## API Documentation
 

@@ -28,11 +28,10 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   ```
 - Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS:
   ```
-  export CUDA_VERSION=11.8
-  export RAPIDS_VERSION=24.10.0
+  export RAPIDS_VERSION=24.12.0
 
   gcloud dataproc clusters create $USER-spark-rapids-ml \
-  --image-version=2.1-ubuntu \
+  --image-version=2.2-ubuntu22 \
   --region ${COMPUTE_REGION} \
   --master-machine-type n1-standard-16 \
   --master-accelerator type=nvidia-tesla-t4,count=1 \
@@ -42,11 +41,11 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --worker-machine-type n1-standard-16 \
   --num-worker-local-ssds 4 \
   --worker-local-ssd-interface=NVME \
-  --initialization-actions gs://goog-dataproc-initialization-actions-us-central1/gpu/install_gpu_driver.sh,gs://${GCS_BUCKET}/spark_rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
+  --initialization-actions gs://${GCS_BUCKET}/spark-rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
+  --initialization-action-timeout=20m \
   --optional-components=JUPYTER \
   --metadata gpu-driver-provider="NVIDIA" \
   --metadata rapids-runtime=SPARK \
-  --metadata cuda-version=${CUDA_VERSION} \
   --metadata rapids-version=${RAPIDS_VERSION} \
   --bucket ${GCS_BUCKET} \
   --enable-component-gateway \

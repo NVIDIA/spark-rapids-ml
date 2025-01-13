@@ -769,7 +769,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         assert max_records_per_batch_str is not None
         self.max_records_per_batch = int(max_records_per_batch_str)
         self.BROADCAST_LIMIT = 8 << 30
-        self.verbose = verbose
         self.cuml_params["calc_core_sample_indices"] = False  # currently not supported
 
     def setEps(self: P, value: float) -> P:
@@ -810,7 +809,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
         # Create parameter-copied model without accessing the input dataframe
         # All information will be retrieved from Model and transform
-        model = DBSCANModel(verbose=self.verbose, n_cols=0, dtype="")
+        model = DBSCANModel(n_cols=0, dtype="")
 
         model._num_workers = self.num_workers
         self._copyValues(model)
@@ -842,7 +841,6 @@ class DBSCANModel(
         self,
         n_cols: int,
         dtype: str,
-        verbose: Union[int, bool],
     ):
         super(DBSCANClass, self).__init__()
         super(_CumlModelWithPredictionCol, self).__init__(n_cols=n_cols, dtype=dtype)
@@ -852,7 +850,6 @@ class DBSCANModel(
             idCol=alias.row_number,
         )
 
-        self.verbose = verbose
         self.BROADCAST_LIMIT = 8 << 30
         self._dbscan_spark_model = None
 
@@ -986,9 +983,7 @@ class DBSCANModel(
         _TransformFunc,
         Optional[_EvaluateFunc],
     ]:
-        raise NotImplementedError(
-            "DBSCAN does not can not have a separate transform UDF"
-        )
+        raise NotImplementedError("DBSCAN does not have a separate transform UDF")
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         logger = get_logger(self.__class__)
@@ -1069,12 +1064,3 @@ class DBSCANModel(
         # JOIN the transformed label column into the original input dataset
         # and discard the internal idCol for row matching
         return dataset.join(pred_df, idCol_name).drop(idCol_name)
-
-    def _get_model_attributes(self) -> Optional[Dict[str, Any]]:
-        """
-        Override parent method to bring broadcast variables to driver before JSON serialization.
-        """
-
-        self._model_attributes["verbose"] = self.verbose
-
-        return self._model_attributes
