@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import math
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
-import cupyx
 import numpy as np
 import pytest
 import scipy
@@ -415,6 +414,9 @@ def test_umap_copy() -> None:
 def test_umap_model_persistence(
     sparse_fit: bool, gpu_number: int, tmp_path: str
 ) -> None:
+    import os
+    import re
+
     import pyspark
     from packaging import version
 
@@ -459,7 +461,42 @@ def test_umap_model_persistence(
         path = tmp_path + "/umap_tests"
         model_path = f"{path}/umap_model"
         umap_model.write().overwrite().save(model_path)
+
+        try:
+            umap_model.write().save(model_path)
+            assert False, "Overwriting should not be permitted"
+        except Exception as e:
+            assert re.search(r"Output directory .* already exists", str(e))
+
+        # double check expected files/directories
+        model_dir_contents = os.listdir(model_path)
+        data_dir_contents = os.listdir(f"{model_path}/data")
+        assert set(model_dir_contents) == {"data", "metadata"}
+        if sparse_fit:
+            assert set(data_dir_contents) == {
+                "metadata.json",
+                "embedding_.parquet",
+                "raw_data_csr",
+            }
+            assert set(os.listdir(f"{model_path}/data/raw_data_csr")) == {
+                "indptr.parquet",
+                "indices_data.parquet",
+            }
+        else:
+            assert set(data_dir_contents) == {
+                "metadata.json",
+                "embedding_.parquet",
+                "raw_data_.parquet",
+            }
+
+        # make sure we can overwrite
+        umap_model._cuml_params["n_neighbors"] = 10
+        umap_model._cuml_params["set_op_mix_ratio"] = 0.4
+        umap_model.write().overwrite().save(model_path)
+
         umap_model_loaded = UMAPModel.load(model_path)
+        assert umap_model_loaded._cuml_params["n_neighbors"] == 10
+        assert umap_model_loaded._cuml_params["set_op_mix_ratio"] == 0.4
         _assert_umap_model(umap_model_loaded, input_raw_data)
 
 
