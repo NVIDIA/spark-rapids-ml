@@ -15,6 +15,7 @@
 #
 
 import math
+import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
@@ -460,6 +461,13 @@ def test_umap_model_persistence(
         model_path = f"{path}/umap_model"
         umap_model.write().overwrite().save(model_path)
 
+        try:
+            umap_model.write().save(model_path)
+            assert False, "Overwriting should not be permitted"
+        except Exception as e:
+            # regex match that there is a line formatted like "Output directory ... already exists"
+            assert re.search(r"Output directory .* already exists", str(e))
+
         # double check expected files/directories
         import os
 
@@ -483,7 +491,15 @@ def test_umap_model_persistence(
                 "raw_data_.parquet",
             }
 
+        # make sure we can overwrite
+        umap_model._cuml_params["n_neighbors"] = 10
+        umap_model._cuml_params["set_op_mix_ratio"] = 0.4
+        umap_model.write().overwrite().save(model_path)
+
         umap_model_loaded = UMAPModel.load(model_path)
+        assert umap_model_loaded.cuml_params
+        assert umap_model_loaded._cuml_params["n_neighbors"] == 10
+        assert umap_model_loaded._cuml_params["set_op_mix_ratio"] == 0.4
         _assert_umap_model(umap_model_loaded, input_raw_data)
 
 
