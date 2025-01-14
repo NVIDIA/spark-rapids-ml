@@ -15,11 +15,9 @@
 #
 
 import math
-import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
-import cupyx
 import numpy as np
 import pytest
 import scipy
@@ -416,6 +414,9 @@ def test_umap_copy() -> None:
 def test_umap_model_persistence(
     sparse_fit: bool, gpu_number: int, tmp_path: str
 ) -> None:
+    import os
+    import re
+
     import pyspark
     from packaging import version
 
@@ -468,8 +469,6 @@ def test_umap_model_persistence(
             assert re.search(r"Output directory .* already exists", str(e))
 
         # double check expected files/directories
-        import os
-
         model_dir_contents = os.listdir(model_path)
         data_dir_contents = os.listdir(f"{model_path}/data")
         assert set(model_dir_contents) == {"data", "metadata"}
@@ -496,7 +495,6 @@ def test_umap_model_persistence(
         umap_model.write().overwrite().save(model_path)
 
         umap_model_loaded = UMAPModel.load(model_path)
-        assert umap_model_loaded.cuml_params
         assert umap_model_loaded._cuml_params["n_neighbors"] == 10
         assert umap_model_loaded._cuml_params["set_op_mix_ratio"] == 0.4
         _assert_umap_model(umap_model_loaded, input_raw_data)
