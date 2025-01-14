@@ -459,6 +459,30 @@ def test_umap_model_persistence(
         path = tmp_path + "/umap_tests"
         model_path = f"{path}/umap_model"
         umap_model.write().overwrite().save(model_path)
+
+        # double check expected files/directories
+        import os
+
+        model_dir_contents = os.listdir(model_path)
+        data_dir_contents = os.listdir(f"{model_path}/data")
+        assert set(model_dir_contents) == {"data", "metadata"}
+        if sparse_fit:
+            assert set(data_dir_contents) == {
+                "metadata.json",
+                "embedding_.parquet",
+                "raw_data_csr",
+            }
+            assert set(os.listdir(f"{model_path}/data/raw_data_csr")) == {
+                "indptr.parquet",
+                "indices_data.parquet",
+            }
+        else:
+            assert set(data_dir_contents) == {
+                "metadata.json",
+                "embedding_.parquet",
+                "raw_data_.parquet",
+            }
+
         umap_model_loaded = UMAPModel.load(model_path)
         _assert_umap_model(umap_model_loaded, input_raw_data)
 
