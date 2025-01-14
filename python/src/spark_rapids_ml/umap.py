@@ -1555,7 +1555,9 @@ class _CumlModelReaderParquet(_CumlModelReader):
 
         def read_dense_array(df_path: str) -> np.ndarray:
             data_df = spark.read.parquet(df_path).orderBy("row_id")
-            return np.array(list(data_df.toPandas().data), dtype=np.float32)
+            pdf = data_df.toPandas()
+            assert type(pdf) == pd.DataFrame
+            return np.array(list(pdf.data), dtype=np.float32)
 
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         data_path = os.path.join(path, "data")
