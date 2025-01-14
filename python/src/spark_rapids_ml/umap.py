@@ -914,6 +914,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
         if self.getSampleFraction() < 1.0:
+            if self.cuml_params["precomputed_knn"] is not None:
+                raise ValueError(
+                    f"Both precomputed_knn and sample_fraction < 1.0 cannot be used simultaneously, as the KNN graph must be built on the same subset used to fit the model."
+                )
+
             data_subset = dataset.sample(
                 withReplacement=False,
                 fraction=self.getSampleFraction(),
@@ -1163,10 +1168,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     yield pd.DataFrame(
                         data=[
                             {
-                                "embedding_": embedding[start:end].tolist(),
-                                "indices": indices.tolist(),
-                                "indptr": indptr.tolist(),
-                                "data": data.tolist(),
+                                "embedding_": list(embedding[start:end]),
+                                "indices": list(indices),
+                                "indptr": list(indptr),
+                                "data": list(data),
                                 "shape": [end - start, dimension],
                             }
                         ]
@@ -1174,8 +1179,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 else:
                     yield pd.DataFrame(
                         {
-                            "embedding_": embedding[start:end].tolist(),
-                            "raw_data_": raw_data[start:end].tolist(),
+                            "embedding_": list(embedding[start:end]),
+                            "raw_data_": list(raw_data[start:end]),
                         }
                     )
 
