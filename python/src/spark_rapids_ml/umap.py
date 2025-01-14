@@ -1468,6 +1468,10 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             indices_data_df.write.parquet(os.path.join(df_dir, "indices_data.parquet"))
 
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
+            assert (
+                spark.conf.get("spark.sql.execution.arrow.pyspark.enabled") == "true"
+            ), "spark.sql.execution.arrow.pyspark.enabled must be set to true to persist array attributes"
+
             schema = StructType(
                 [
                     StructField("row_id", LongType(), False),
@@ -1478,7 +1482,7 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                 pd.DataFrame(
                     {
                         "row_id": range(array.shape[0]),
-                        "data": array.tolist(),
+                        "data": list(array),
                     }
                 ),
                 schema=schema,
