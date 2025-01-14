@@ -465,7 +465,6 @@ def test_umap_model_persistence(
             umap_model.write().save(model_path)
             assert False, "Overwriting should not be permitted"
         except Exception as e:
-            # regex match that there is a line formatted like "Output directory ... already exists"
             assert re.search(r"Output directory .* already exists", str(e))
 
         # double check expected files/directories
