@@ -772,9 +772,6 @@ def test_umap_precomputed_knn(
         df = spark.createDataFrame(X.tolist(), ",".join(schema))
         df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
 
-        knn_sampling_emsg = (
-            "precomputed_knn and sample_fraction < 1.0 cannot be used simultaneously"
-        )
         try:
             umap = UMAP(
                 num_workers=gpu_number,
@@ -783,9 +780,12 @@ def test_umap_precomputed_knn(
                 precomputed_knn=precomputed_knn,
             )
             umap.fit(df)
-            assert False, knn_sampling_emsg
+            assert False, "We should have raised an error"
         except ValueError as e:
-            assert knn_sampling_emsg in str(e)
+            assert (
+                "precomputed_knn and sample_fraction < 1.0 cannot be used simultaneously"
+                in str(e)
+            )
 
         try:
             umap = UMAP(
@@ -794,9 +794,12 @@ def test_umap_precomputed_knn(
                 precomputed_knn=precomputed_knn,
             )
             umap.setSampleFraction(0.5).fit(df)
-            assert False, knn_sampling_emsg
+            assert False, "We should have raised an error"
         except ValueError as e:
-            assert knn_sampling_emsg in str(e)
+            assert (
+                "precomputed_knn and sample_fraction < 1.0 cannot be used simultaneously"
+                in str(e)
+            )
 
         umap = UMAP(
             num_workers=gpu_number,
