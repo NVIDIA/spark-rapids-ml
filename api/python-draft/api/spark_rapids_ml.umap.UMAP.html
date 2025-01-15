@@ -463,8 +463,9 @@ to run with brute force knn if number of data rows is smaller than or equal to 5
 will result in batch-building with NN Descent.</p>
 </dd>
 <dt><strong>sample_fraction</strong><span class="classifier">float (optional, default=1.0)</span></dt><dd><p>The fraction of the dataset to be used for fitting the model. Since fitting is done on a single node, very large
-datasets must be subsampled to fit within the node’s memory and execute in a reasonable time. Smaller fractions
-will result in faster training, but may result in sub-optimal embeddings.</p>
+datasets must be subsampled to fit within the node’s memory. Smaller fractions will result in faster training, but
+may decrease embedding quality. Note: this is not guaranteed to provide exactly the fraction specified of the total
+count of the given DataFrame.</p>
 </dd>
 <dt><strong>featuresCol: str or List[str]</strong></dt><dd><p>The feature column names, spark-rapids-ml supports vector, array and columnar as the input.</p>
 <blockquote>
