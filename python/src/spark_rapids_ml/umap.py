@@ -1166,48 +1166,45 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     indices = csr_chunk.indices
                     indptr = csr_chunk.indptr
                     data = csr_chunk.data
-                    yield pd.DataFrame(
-                        data=[
-                            {
-                                "embedding_": (
-                                    list(embedding[start:end].get())
-                                    if cuda_managed_mem_enabled
-                                    else list(embedding[start:end])
-                                ),
-                                "indices": (
-                                    list(indices.get())
-                                    if cuda_managed_mem_enabled
-                                    else list(indices)
-                                ),
-                                "indptr": (
-                                    list(indptr.get())
-                                    if cuda_managed_mem_enabled
-                                    else list(indptr)
-                                ),
-                                "data": (
-                                    list(data.get())
-                                    if cuda_managed_mem_enabled
-                                    else list(data)
-                                ),
-                                "shape": [end - start, dimension],
-                            }
-                        ]
-                    )
+                    if cuda_managed_mem_enabled:
+                        yield pd.DataFrame(
+                            data=[
+                                {
+                                    "embedding_": list(embedding[start:end].get()),
+                                    "indices": list(indices.get()),
+                                    "indptr": list(indptr.get()),
+                                    "data": list(data.get()),
+                                    "shape": [end - start, dimension],
+                                }
+                            ]
+                        )
+                    else:
+                        yield pd.DataFrame(
+                            data=[
+                                {
+                                    "embedding_": list(embedding[start:end]),
+                                    "indices": list(indices),
+                                    "indptr": list(indptr),
+                                    "data": list(data),
+                                    "shape": [end - start, dimension],
+                                }
+                            ]
+                        )
                 else:
-                    yield pd.DataFrame(
-                        {
-                            "embedding_": (
-                                list(embedding[start:end].get())
-                                if cuda_managed_mem_enabled
-                                else list(embedding[start:end])
-                            ),
-                            "raw_data_": (
-                                list(raw_data[start:end].get())
-                                if cuda_managed_mem_enabled
-                                else list(raw_data[start:end])
-                            ),
-                        }
-                    )
+                    if cuda_managed_mem_enabled:
+                        yield pd.DataFrame(
+                            {
+                                "embedding_": list(embedding[start:end].get()),
+                                "raw_data_": list(raw_data[start:end].get()),
+                            }
+                        )
+                    else:
+                        yield pd.DataFrame(
+                            {
+                                "embedding_": list(embedding[start:end]),
+                                "raw_data_": list(raw_data[start:end]),
+                            }
+                        )
 
         output_df = dataset.mapInPandas(_train_udf, schema=self._out_schema())
 
