@@ -1169,10 +1169,26 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     yield pd.DataFrame(
                         data=[
                             {
-                                "embedding_": list(embedding[start:end].get()),
-                                "indices": list(indices.get()),
-                                "indptr": list(indptr.get()),
-                                "data": list(data.get()),
+                                "embedding_": (
+                                    list(embedding[start:end].get())
+                                    if cuda_managed_mem_enabled
+                                    else list(embedding[start:end])
+                                ),
+                                "indices": (
+                                    list(indices.get())
+                                    if cuda_managed_mem_enabled
+                                    else list(indices)
+                                ),
+                                "indptr": (
+                                    list(indptr.get())
+                                    if cuda_managed_mem_enabled
+                                    else list(indptr)
+                                ),
+                                "data": (
+                                    list(data.get())
+                                    if cuda_managed_mem_enabled
+                                    else list(data)
+                                ),
                                 "shape": [end - start, dimension],
                             }
                         ]
@@ -1180,8 +1196,16 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 else:
                     yield pd.DataFrame(
                         {
-                            "embedding_": list(embedding[start:end].get()),
-                            "raw_data_": list(raw_data[start:end].get()),
+                            "embedding_": (
+                                list(embedding[start:end].get())
+                                if cuda_managed_mem_enabled
+                                else list(embedding[start:end])
+                            ),
+                            "raw_data_": (
+                                list(raw_data[start:end].get())
+                                if cuda_managed_mem_enabled
+                                else list(raw_data[start:end])
+                            ),
                         }
                     )
 
