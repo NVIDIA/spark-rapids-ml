@@ -759,7 +759,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         Either one of a tuple (indices, distances) of arrays of shape (n_samples, n_neighbors), a pairwise distances
         dense array of shape (n_samples, n_samples) or a KNN graph sparse array (preferably CSR/COO). This feature
         allows the precomputation of the KNN outside of UMAP and also allows the use of a custom distance function.
-        This function should match the metric used to train the UMAP embeedings.
+        This function should match the metric used to train the UMAP embeedings. Note: supplying a precomputed KNN graph
+        with sample_fraction < 1.0 is not supported, as the KNN graph must be built on the same subset used to fit the model.
 
     random_state : int, RandomState instance (optional, default=None)
         The seed used by the random number generator during embedding initialization and during sampling used by the
@@ -914,6 +915,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     def _fit(self, dataset: DataFrame) -> "UMAPModel":
         if self.getSampleFraction() < 1.0:
+            if self.cuml_params["precomputed_knn"] is not None:
+                raise ValueError(
+                    f"Both precomputed_knn and sample_fraction < 1.0 cannot be used simultaneously, as the KNN graph must be built on the same subset used to fit the model."
+                )
+
             data_subset = dataset.sample(
                 withReplacement=False,
                 fraction=self.getSampleFraction(),
@@ -1160,24 +1166,45 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     indices = csr_chunk.indices
                     indptr = csr_chunk.indptr
                     data = csr_chunk.data
-                    yield pd.DataFrame(
-                        data=[
-                            {
-                                "embedding_": embedding[start:end].tolist(),
-                                "indices": indices.tolist(),
-                                "indptr": indptr.tolist(),
-                                "data": data.tolist(),
-                                "shape": [end - start, dimension],
-                            }
-                        ]
-                    )
+                    if cuda_managed_mem_enabled:
+                        yield pd.DataFrame(
+                            data=[
+                                {
+                                    "embedding_": list(embedding[start:end].get()),
+                                    "indices": list(indices.get()),
+                                    "indptr": list(indptr.get()),
+                                    "data": list(data.get()),
+                                    "shape": [end - start, dimension],
+                                }
+                            ]
+                        )
+                    else:
+                        yield pd.DataFrame(
+                            data=[
+                                {
+                                    "embedding_": list(embedding[start:end]),
+                                    "indices": list(indices),
+                                    "indptr": list(indptr),
+                                    "data": list(data),
+                                    "shape": [end - start, dimension],
+                                }
+                            ]
+                        )
                 else:
-                    yield pd.DataFrame(
-                        {
-                            "embedding_": embedding[start:end].tolist(),
-                            "raw_data_": raw_data[start:end].tolist(),
-                        }
-                    )
+                    if cuda_managed_mem_enabled:
+                        yield pd.DataFrame(
+                            {
+                                "embedding_": list(embedding[start:end].get()),
+                                "raw_data_": list(raw_data[start:end].get()),
+                            }
+                        )
+                    else:
+                        yield pd.DataFrame(
+                            {
+                                "embedding_": list(embedding[start:end]),
+                                "raw_data_": list(raw_data[start:end]),
+                            }
+                        )
 
         output_df = dataset.mapInPandas(_train_udf, schema=self._out_schema())
 
