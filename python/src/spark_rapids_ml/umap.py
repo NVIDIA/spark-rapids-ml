@@ -759,7 +759,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         Either one of a tuple (indices, distances) of arrays of shape (n_samples, n_neighbors), a pairwise distances
         dense array of shape (n_samples, n_samples) or a KNN graph sparse array (preferably CSR/COO). This feature
         allows the precomputation of the KNN outside of UMAP and also allows the use of a custom distance function.
-        This function should match the metric used to train the UMAP embeedings.
+        This function should match the metric used to train the UMAP embeedings. Note: supplying a precomputed KNN graph
+        with sample_fraction < 1.0 is not supported, as the KNN graph must be built on the same subset used to fit the model.
 
     random_state : int, RandomState instance (optional, default=None)
         The seed used by the random number generator during embedding initialization and during sampling used by the
