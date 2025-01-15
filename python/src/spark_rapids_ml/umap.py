@@ -790,8 +790,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     sample_fraction : float (optional, default=1.0)
         The fraction of the dataset to be used for fitting the model. Since fitting is done on a single node, very large
-        datasets must be subsampled to fit within the node's memory and execute in a reasonable time. Smaller fractions
-        will result in faster training, but may result in sub-optimal embeddings.
+        datasets must be subsampled to fit within the node's memory. Smaller fractions will result in faster training, but
+        may decrease embedding quality. Note: this is not guaranteed to provide exactly the fraction specified of the total
+        count of the given DataFrame.
 
     featuresCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
@@ -1463,22 +1464,30 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                 schema=indices_data_schema,
             )
 
-            indptr_df.write.parquet(
-                os.path.join(df_dir, "indptr.parquet"), mode="overwrite"
-            )
-            indices_data_df.write.parquet(
-                os.path.join(df_dir, "indices_data.parquet"), mode="overwrite"
-            )
+            indptr_df.write.parquet(os.path.join(df_dir, "indptr.parquet"))
+            indices_data_df.write.parquet(os.path.join(df_dir, "indices_data.parquet"))
 
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
+            assert (
+                spark.conf.get("spark.sql.execution.arrow.pyspark.enabled") == "true"
+            ), "spark.sql.execution.arrow.pyspark.enabled must be set to true to persist array attributes"
+
             schema = StructType(
                 [
-                    StructField(f"_{i}", FloatType(), False)
-                    for i in range(1, array.shape[1] + 1)
+                    StructField("row_id", LongType(), False),
+                    StructField("data", ArrayType(FloatType(), False), False),
                 ]
             )
-            data_df = spark.createDataFrame(pd.DataFrame(array), schema=schema)
-            data_df.write.parquet(df_path, mode="overwrite")
+            data_df = spark.createDataFrame(
+                pd.DataFrame(
+                    {
+                        "row_id": range(array.shape[0]),
+                        "data": list(array),
+                    }
+                ),
+                schema=schema,
+            )
+            data_df.write.parquet(df_path)
 
         DefaultParamsWriter.saveMetadata(
             self.instance,
@@ -1491,12 +1500,12 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             },
         )
 
+        # get a copy, since we're going to modify the array attributes
         model_attributes = self.instance._get_model_attributes()
         assert model_attributes is not None
+        model_attributes = model_attributes.copy()
 
         data_path = os.path.join(path, "data")
-        if not os.path.exists(data_path):
-            os.makedirs(data_path)
 
         for key in ["embedding_", "raw_data_"]:
             array = model_attributes[key]
@@ -1547,8 +1556,10 @@ class _CumlModelReaderParquet(_CumlModelReader):
             return scipy.sparse.csr_matrix((data, indices, indptr), shape=csr_shape)
 
         def read_dense_array(df_path: str) -> np.ndarray:
-            data_df = spark.read.parquet(df_path)
-            return np.array(data_df.collect(), dtype=np.float32)
+            data_df = spark.read.parquet(df_path).orderBy("row_id")
+            pdf = data_df.toPandas()
+            assert type(pdf) == pd.DataFrame
+            return np.array(list(pdf.data), dtype=np.float32)
 
         metadata = DefaultParamsReader.loadMetadata(path, self.sc)
         data_path = os.path.join(path, "data")
