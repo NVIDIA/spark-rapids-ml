@@ -1169,10 +1169,10 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     yield pd.DataFrame(
                         data=[
                             {
-                                "embedding_": list(embedding[start:end]),
-                                "indices": list(indices),
-                                "indptr": list(indptr),
-                                "data": list(data),
+                                "embedding_": list(embedding[start:end].get()),
+                                "indices": list(indices.get()),
+                                "indptr": list(indptr.get()),
+                                "data": list(data.get()),
                                 "shape": [end - start, dimension],
                             }
                         ]
@@ -1180,8 +1180,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 else:
                     yield pd.DataFrame(
                         {
-                            "embedding_": list(embedding[start:end]),
-                            "raw_data_": list(raw_data[start:end]),
+                            "embedding_": list(embedding[start:end].get()),
+                            "raw_data_": list(raw_data[start:end].get()),
                         }
                     )
 
