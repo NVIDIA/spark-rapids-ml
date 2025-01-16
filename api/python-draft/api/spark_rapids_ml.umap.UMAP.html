@@ -433,7 +433,8 @@ by <code class="docutils literal notranslate"><span class="pre">min_dist</span><
 <dt><strong>precomputed_knn</strong><span class="classifier">array / sparse array / tuple - device or host (optional, default=None)</span></dt><dd><p>Either one of a tuple (indices, distances) of arrays of shape (n_samples, n_neighbors), a pairwise distances
 dense array of shape (n_samples, n_samples) or a KNN graph sparse array (preferably CSR/COO). This feature
 allows the precomputation of the KNN outside of UMAP and also allows the use of a custom distance function.
-This function should match the metric used to train the UMAP embeedings.</p>
+This function should match the metric used to train the UMAP embeedings. Note: supplying a precomputed KNN graph
+with sample_fraction &lt; 1.0 is not supported, as the KNN graph must be built on the same subset used to fit the model.</p>
 </dd>
 <dt><strong>random_state</strong><span class="classifier">int, RandomState instance (optional, default=None)</span></dt><dd><p>The seed used by the random number generator during embedding initialization and during sampling used by the
 optimizer. Unfortunately, achieving a high amount of parallelism during the optimization stage often comes at
