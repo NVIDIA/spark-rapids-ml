@@ -100,7 +100,13 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.labelCol
        ~RandomForestClassificationModel.maxBins
        ~RandomForestClassificationModel.maxDepth
+       ~RandomForestClassificationModel.max_batch_size
+       ~RandomForestClassificationModel.max_leaves
+       ~RandomForestClassificationModel.max_samples
        ~RandomForestClassificationModel.minInstancesPerNode
+       ~RandomForestClassificationModel.min_impurity_decrease
+       ~RandomForestClassificationModel.min_samples_split
+       ~RandomForestClassificationModel.n_streams
        ~RandomForestClassificationModel.numClasses
        ~RandomForestClassificationModel.numFeatures
        ~RandomForestClassificationModel.numTrees
@@ -116,6 +122,7 @@ RandomForestClassificationModel
        ~RandomForestClassificationModel.totalNumNodes
        ~RandomForestClassificationModel.treeWeights
        ~RandomForestClassificationModel.trees
+       ~RandomForestClassificationModel.verbose
 
     
     
@@ -190,7 +197,13 @@ RandomForestClassificationModel
     .. autoattribute:: labelCol
     .. autoattribute:: maxBins
     .. autoattribute:: maxDepth
+    .. autoattribute:: max_batch_size
+    .. autoattribute:: max_leaves
+    .. autoattribute:: max_samples
     .. autoattribute:: minInstancesPerNode
+    .. autoattribute:: min_impurity_decrease
+    .. autoattribute:: min_samples_split
+    .. autoattribute:: n_streams
     .. autoattribute:: numClasses
     .. autoattribute:: numFeatures
     .. autoattribute:: numTrees
@@ -206,6 +219,7 @@ RandomForestClassificationModel
     .. autoattribute:: totalNumNodes
     .. autoattribute:: treeWeights
     .. autoattribute:: trees
+    .. autoattribute:: verbose
 
     
     

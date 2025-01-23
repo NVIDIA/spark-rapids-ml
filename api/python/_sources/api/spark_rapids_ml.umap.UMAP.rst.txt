@@ -62,7 +62,6 @@ UMAP
        ~UMAP.getOrDefault
        ~UMAP.getOutputCol
        ~UMAP.getParam
-       ~UMAP.getPrecomputedKNN
        ~UMAP.getRandomState
        ~UMAP.getRepulsionStrength
        ~UMAP.getSampleFraction
@@ -95,7 +94,6 @@ UMAP
        ~UMAP.setNNeighbors
        ~UMAP.setNegativeSampleRate
        ~UMAP.setOutputCol
-       ~UMAP.setPrecomputedKNN
        ~UMAP.setRandomState
        ~UMAP.setRepulsionStrength
        ~UMAP.setSampleFraction
@@ -136,13 +134,13 @@ UMAP
        ~UMAP.num_workers
        ~UMAP.outputCol
        ~UMAP.params
-       ~UMAP.precomputed_knn
        ~UMAP.random_state
        ~UMAP.repulsion_strength
        ~UMAP.sample_fraction
        ~UMAP.set_op_mix_ratio
        ~UMAP.spread
        ~UMAP.transform_queue_size
+       ~UMAP.verbose
 
     
     
@@ -180,7 +178,6 @@ UMAP
     .. automethod:: getOrDefault
     .. automethod:: getOutputCol
     .. automethod:: getParam
-    .. automethod:: getPrecomputedKNN
     .. automethod:: getRandomState
     .. automethod:: getRepulsionStrength
     .. automethod:: getSampleFraction
@@ -213,7 +210,6 @@ UMAP
     .. automethod:: setNNeighbors
     .. automethod:: setNegativeSampleRate
     .. automethod:: setOutputCol
-    .. automethod:: setPrecomputedKNN
     .. automethod:: setRandomState
     .. automethod:: setRepulsionStrength
     .. automethod:: setSampleFraction
@@ -253,13 +249,13 @@ UMAP
     .. autoattribute:: num_workers
     .. autoattribute:: outputCol
     .. autoattribute:: params
-    .. autoattribute:: precomputed_knn
     .. autoattribute:: random_state
     .. autoattribute:: repulsion_strength
     .. autoattribute:: sample_fraction
     .. autoattribute:: set_op_mix_ratio
     .. autoattribute:: spread
     .. autoattribute:: transform_queue_size
+    .. autoattribute:: verbose
 
     
     

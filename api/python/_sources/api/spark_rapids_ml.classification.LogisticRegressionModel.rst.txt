@@ -110,6 +110,7 @@ LogisticRegressionModel
        ~LogisticRegressionModel.standardization
        ~LogisticRegressionModel.summary
        ~LogisticRegressionModel.tol
+       ~LogisticRegressionModel.verbose
 
     
     
@@ -194,6 +195,7 @@ LogisticRegressionModel
     .. autoattribute:: standardization
     .. autoattribute:: summary
     .. autoattribute:: tol
+    .. autoattribute:: verbose
 
     
     

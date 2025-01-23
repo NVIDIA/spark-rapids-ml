@@ -79,6 +79,7 @@ NearestNeighborsModel
        ~NearestNeighborsModel.labelCol
        ~NearestNeighborsModel.num_workers
        ~NearestNeighborsModel.params
+       ~NearestNeighborsModel.verbose
 
     
     
@@ -132,6 +133,7 @@ NearestNeighborsModel
     .. autoattribute:: labelCol
     .. autoattribute:: num_workers
     .. autoattribute:: params
+    .. autoattribute:: verbose
 
     
     

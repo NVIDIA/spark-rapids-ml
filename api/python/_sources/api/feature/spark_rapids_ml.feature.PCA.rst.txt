@@ -79,6 +79,7 @@ PCA
        ~PCA.num_workers
        ~PCA.outputCol
        ~PCA.params
+       ~PCA.verbose
 
     
     
@@ -132,6 +133,7 @@ PCA
     .. autoattribute:: num_workers
     .. autoattribute:: outputCol
     .. autoattribute:: params
+    .. autoattribute:: verbose
 
     
     

@@ -86,6 +86,7 @@ ApproximateNearestNeighbors
        ~ApproximateNearestNeighbors.metric
        ~ApproximateNearestNeighbors.num_workers
        ~ApproximateNearestNeighbors.params
+       ~ApproximateNearestNeighbors.verbose
 
     
     
@@ -146,6 +147,7 @@ ApproximateNearestNeighbors
     .. autoattribute:: metric
     .. autoattribute:: num_workers
     .. autoattribute:: params
+    .. autoattribute:: verbose
 
     
     

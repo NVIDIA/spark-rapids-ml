@@ -81,6 +81,7 @@ PCAModel
        ~PCAModel.outputCol
        ~PCAModel.params
        ~PCAModel.pc
+       ~PCAModel.verbose
 
     
     
@@ -136,6 +137,7 @@ PCAModel
     .. autoattribute:: outputCol
     .. autoattribute:: params
     .. autoattribute:: pc
+    .. autoattribute:: verbose
 
     
     

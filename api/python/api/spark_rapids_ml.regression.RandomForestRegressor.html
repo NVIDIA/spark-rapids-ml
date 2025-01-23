@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>RandomForestRegressor &#8212; spark-rapids-ml 24.10.0 documentation</title>
+    <title>RandomForestRegressor &#8212; spark-rapids-ml 24.12.0 documentation</title>
   
   
   
@@ -124,7 +124,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 24.10.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 24.12.0 documentation</p>
   
 </a></div>
     
@@ -375,7 +375,7 @@ data so that each worker builds trees on a subset of the total dataset works
 well, but it generally requires the data to be well-shuffled in advance.</p>
 <p>RandomForestRegressor automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.RandomForestRegressor.html#pyspark.ml.regression.RandomForestRegressor" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RandomForestRegressor</span></code></a> and
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ensemble.RandomForestRegressor" title="(in cuml v24.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ensemble.RandomForestRegressor</span></code></a>. And it can automatically map
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ensemble.RandomForestRegressor" title="(in cuml v24.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ensemble.RandomForestRegressor</span></code></a>. And it can automatically map
 pyspark parameters to cuML parameters.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -468,9 +468,9 @@ samples for each split.    max_samples:</p></li>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">spark_rapids_ml.regression</span> <span class="kn">import</span> <span class="n">RandomForestRegressor</span><span class="p">,</span> <span class="n">RandomForestRegressionModel</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">allclose</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyspark.ml.linalg</span> <span class="kn">import</span> <span class="n">Vectors</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">spark_rapids_ml.regression</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomForestRegressor</span><span class="p">,</span> <span class="n">RandomForestRegressionModel</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">allclose</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.ml.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">Vectors</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">createDataFrame</span><span class="p">([</span>
 <span class="gp">... </span>    <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)),</span>
 <span class="gp">... </span>    <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Vectors</span><span class="o">.</span><span class="n">sparse</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[]))],</span> <span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="s2">&quot;features&quot;</span><span class="p">])</span>
@@ -512,7 +512,7 @@ samples for each split.    max_samples:</p></li>
 <td><p>Reset a Spark ML Param to its default value, setting matching cuML parameter, if exists.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.copy" title="spark_rapids_ml.regression.RandomForestRegressor.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>([extra])</p></td>
-<td><p></p></td>
+<td><p>Create a copy of the current instance, including its parameters and cuml_params.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.explainParam" title="spark_rapids_ml.regression.RandomForestRegressor.explainParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explainParam</span></code></a>(param)</p></td>
 <td><p>Explains a single param and returns its name, doc, and optional default value and user-supplied value in a string.</p></td>
@@ -664,7 +664,25 @@ samples for each split.    max_samples:</p></li>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.maxDepth" title="spark_rapids_ml.regression.RandomForestRegressor.maxDepth"><code class="xref py py-obj docutils literal notranslate"><span class="pre">maxDepth</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode" title="spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minInstancesPerNode</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.max_batch_size" title="spark_rapids_ml.regression.RandomForestRegressor.max_batch_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_batch_size</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.max_leaves" title="spark_rapids_ml.regression.RandomForestRegressor.max_leaves"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_leaves</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.max_samples" title="spark_rapids_ml.regression.RandomForestRegressor.max_samples"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_samples</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode" title="spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minInstancesPerNode</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.min_impurity_decrease" title="spark_rapids_ml.regression.RandomForestRegressor.min_impurity_decrease"><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_impurity_decrease</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.min_samples_split" title="spark_rapids_ml.regression.RandomForestRegressor.min_samples_split"><code class="xref py py-obj docutils literal notranslate"><span class="pre">min_samples_split</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.n_streams" title="spark_rapids_ml.regression.RandomForestRegressor.n_streams"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_streams</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.numTrees" title="spark_rapids_ml.regression.RandomForestRegressor.numTrees"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numTrees</span></code></a></p></td>
@@ -685,6 +703,9 @@ samples for each split.    max_samples:</p></li>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.supportedImpurities" title="spark_rapids_ml.regression.RandomForestRegressor.supportedImpurities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supportedImpurities</span></code></a></p></td>
 <td><p></p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.RandomForestRegressor.verbose" title="spark_rapids_ml.regression.RandomForestRegressor.verbose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">verbose</span></code></a></p></td>
+<td><p></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -698,7 +719,33 @@ samples for each split.    max_samples:</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.copy">
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">ParamMap</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.copy" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
+<dd><p>Create a copy of the current instance, including its parameters and cuml_params.</p>
+<p>This function extends the default <cite>copy()</cite> method to ensure the <cite>cuml_params</cite> variable
+is also copied. The default <cite>super().copy()</cite> method only handles <cite>_paramMap</cite> and
+<cite>_defaultParamMap</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>extra</strong><span class="classifier">Optional[ParamMap]</span></dt><dd><p>A dictionary or ParamMap containing additional parameters to set in the copied instance.
+Note ParamMap = Dict[pyspark.ml.param.Param, Any].</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>P</dt><dd><p>A new instance of the same type as the current object, with parameters and
+cuml_params copied.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>TypeError</dt><dd><p>If any key in the <cite>extra</cite> dictionary is not an instance of <cite>pyspark.ml.param.Param</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.explainParam">
@@ -1054,8 +1101,38 @@ a default value.</p>
 <dd></dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.max_batch_size">
+<span class="sig-name descname"><span class="pre">max_batch_size</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_batch_size',</span> <span class="pre">doc='The</span> <span class="pre">max_batch_size</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.max_batch_size" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.max_leaves">
+<span class="sig-name descname"><span class="pre">max_leaves</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_leaves',</span> <span class="pre">doc='The</span> <span class="pre">max_leaves</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.max_leaves" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.max_samples">
+<span class="sig-name descname"><span class="pre">max_samples</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='max_samples',</span> <span class="pre">doc='The</span> <span class="pre">max_samples</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.max_samples" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode">
 <span class="sig-name descname"><span class="pre">minInstancesPerNode</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='minInstancesPerNode',</span> <span class="pre">doc='Minimum</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">instances</span> <span class="pre">each</span> <span class="pre">child</span> <span class="pre">must</span> <span class="pre">have</span> <span class="pre">after</span> <span class="pre">split.</span> <span class="pre">If</span> <span class="pre">a</span> <span class="pre">split</span> <span class="pre">causes</span> <span class="pre">the</span> <span class="pre">left</span> <span class="pre">or</span> <span class="pre">right</span> <span class="pre">child</span> <span class="pre">to</span> <span class="pre">have</span> <span class="pre">fewer</span> <span class="pre">than</span> <span class="pre">minInstancesPerNode,</span> <span class="pre">the</span> <span class="pre">split</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">discarded</span> <span class="pre">as</span> <span class="pre">invalid.</span> <span class="pre">Should</span> <span class="pre">be</span> <span class="pre">&gt;=</span> <span class="pre">1.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.min_impurity_decrease">
+<span class="sig-name descname"><span class="pre">min_impurity_decrease</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='min_impurity_decrease',</span> <span class="pre">doc='The</span> <span class="pre">min_impurity_decrease</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.min_impurity_decrease" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.min_samples_split">
+<span class="sig-name descname"><span class="pre">min_samples_split</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='min_samples_split',</span> <span class="pre">doc='The</span> <span class="pre">min_sample_split</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.min_samples_split" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.n_streams">
+<span class="sig-name descname"><span class="pre">n_streams</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='n_streams',</span> <span class="pre">doc='The</span> <span class="pre">n_streams</span> <span class="pre">parameter</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">for</span> <span class="pre">cuml.')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.n_streams" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -1091,6 +1168,11 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <dl class="py attribute">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.supportedImpurities">
 <span class="sig-name descname"><span class="pre">supportedImpurities</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['variance']</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.supportedImpurities" title="Permalink to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.RandomForestRegressor.verbose">
+<span class="sig-name descname"><span class="pre">verbose</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Param</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">Param(parent='undefined',</span> <span class="pre">name='verbose',</span> <span class="pre">doc='cuml</span> <span class="pre">verbosity</span> <span class="pre">level</span> <span class="pre">(False,</span> <span class="pre">True</span> <span class="pre">or</span> <span class="pre">an</span> <span class="pre">integer</span> <span class="pre">between</span> <span class="pre">0</span> <span class="pre">and</span> <span class="pre">6).')</span></em><a class="headerlink" href="#spark_rapids_ml.regression.RandomForestRegressor.verbose" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -1194,13 +1276,20 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.labelCol"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.labelCol</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.maxBins"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.maxBins</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.maxDepth"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.maxDepth</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.max_batch_size"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.max_batch_size</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.max_leaves"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.max_leaves</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.max_samples"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.max_samples</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.minInstancesPerNode"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.minInstancesPerNode</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.min_impurity_decrease"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.min_impurity_decrease</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.min_samples_split"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.min_samples_split</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.n_streams"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.n_streams</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.numTrees"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.numTrees</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.num_workers"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.num_workers</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.params"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.params</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.seed"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.seed</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.supportedFeatureSubsetStrategies"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.supportedFeatureSubsetStrategies</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.supportedImpurities"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.supportedImpurities</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.RandomForestRegressor.verbose"><code class="docutils literal notranslate"><span class="pre">RandomForestRegressor.verbose</span></code></a></li>
 </ul>
 </li>
 </ul>
