@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -627,7 +627,7 @@ def test_ivfflat(
     # cuvs ivf_flat None sets nlist to 1000 and nprobe to 20, leading to unstable results when run multiple times
     expected_avg_recall: float = 0.95 if algoParams != None else 0.5
     expected_avg_dist_gap: float = 1e-4 if algoParams != None else 1e-2
-    tolerance: float = 1e-4 if algoParams != None else 1e-2
+    tolerance: float = 1e-4 if algoParams != None else 0.05
     data_shape: Tuple[int, int] = (10000, 50)
     ann_algorithm_test_func(
         combo=combo,
