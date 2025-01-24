@@ -46,6 +46,4 @@ def main_cli() -> None:
         + " ".join(sys.argv[i:])
     )
 
-    print(f"running: {command_line}")
-
     subprocess.run(command_line, shell=True)
