@@ -194,6 +194,12 @@ and if the app is deployed using `spark-submit` the following included CLI (inst
 ```bash
 spark-rapids-submit --master <master> <other spark submit options> application.py <application options>
 ```
+
+A similar `spark_rapids_ml` enabling CLI is included for `pyspark` shell:
+```bash
+pyspark-rapids --master <master> <other pyspark options>
+```
+
 For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors.
 
 Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).

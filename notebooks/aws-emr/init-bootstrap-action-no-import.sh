@@ -32,13 +32,21 @@ RAPIDS_VERSION=24.12.0
 sudo /usr/local/bin/pip3.10 install --upgrade pip
 
 # install scikit-learn 
-sudo /usr/local/bin/pip3.10 install scikit-learn
+sudo /usr/local/bin/pip3.10 install scikit-learn numpy~=1.0
 
 # install cudf and cuml
 sudo /usr/local/bin/pip3.10 install --no-cache-dir cudf-cu12 --extra-index-url=https://pypi.nvidia.com --verbose
 sudo /usr/local/bin/pip3.10 install --no-cache-dir cuml-cu12 cuvs-cu12 --extra-index-url=https://pypi.nvidia.com --verbose
 sudo /usr/local/bin/pip3.10 install spark-rapids-ml
+
 sudo /usr/local/bin/pip3.10 list
+
+# set up no-import-change
+cd /usr/lib/livy/repl_2.12-jars
+sudo jar xf livy-repl_2.12*.jar fake_shell.py
+sudo sed -i fake_shell.py -e '/from __future__/ s/\(.*\)/\1\ntry:\n    import spark_rapids_ml.install\nexcept:\n    pass\n/g'
+sudo jar uf livy-repl_2.12*.jar fake_shell.py
+sudo rm fake_shell.py
 
 # ensure notebook comes up in python 3.10 by using a background script that waits for an 
 # application file to be installed before modifying.
@@ -57,4 +65,5 @@ exit 0
 EOF
 sudo bash /tmp/mod_start_kernel.sh &
 exit 0
+
 

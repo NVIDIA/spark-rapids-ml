@@ -21,8 +21,16 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   gcloud storage buckets create gs://${GCS_BUCKET}
   ```
 - Upload the initialization scripts to your GCS bucket:
+  First, set the init script name for running the default notebooks:
   ```
-  gsutil cp spark_rapids_ml.sh gs://${GCS_BUCKET}/spark_rapids_ml.sh
+  export INIT_SCRIPT=spark_rapids_ml.sh
+  ```
+  or if you wish to run the [no-import-change](../README.md#no-import-change) example notebook:
+  ```
+  export INIT_SCRIPT=spark_rapids_ml_no_import.sh
+  ```
+  ```
+  gsutil cp ${INIT_SCRIPT} gs://${GCS_BUCKET}/${INIT_SCRIPT}
   curl -LO https://raw.githubusercontent.com/GoogleCloudDataproc/initialization-actions/master/spark-rapids/spark-rapids.sh
   gsutil cp spark-rapids.sh gs://${GCS_BUCKET}/spark-rapids.sh
   ```
@@ -41,7 +49,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --worker-machine-type n1-standard-16 \
   --num-worker-local-ssds 4 \
   --worker-local-ssd-interface=NVME \
-  --initialization-actions gs://${GCS_BUCKET}/spark-rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
+  --initialization-actions gs://${GCS_BUCKET}/spark-rapids.sh,gs://${GCS_BUCKET}/${INIT_SCRIPT} \
   --initialization-action-timeout=20m \
   --optional-components=JUPYTER \
   --metadata gpu-driver-provider="NVIDIA" \
@@ -53,7 +61,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --no-shielded-secure-boot
   ```
 - In the [Dataproc console](https://console.cloud.google.com/dataproc/clusters), select your cluster, go to the "Web Interfaces" tab, and click on the "JupyterLab" link.
-- In JupyterLab, upload the desired [notebook](../) via the `Upload Files` button.
+- In JupyterLab, upload the desired [notebook](../) via the `Upload Files` button.  For the no-import-change UX, you can try the example [kmeans-no-import-change.ipynb](../kmeans-no-import-change.ipynb).
 - Add the following to a new cell at the beginning of the notebook, since Dataproc does not start the `SparkSession` by default:
   ```
   from pyspark.sql import SparkSession
