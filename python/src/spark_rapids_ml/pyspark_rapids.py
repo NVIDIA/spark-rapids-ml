@@ -26,13 +26,13 @@ def main_cli() -> None:
     i = 1
     while i < len(sys.argv) and sys.argv[i].startswith("-"):
         if sys.argv[i] in ["--help", "-h", "--version"]:
-                output = subprocess.run(
-                    f"pyspark {sys.argv[i]}", shell=True, capture_output=True
-                ).stderr
-                output_str = output.decode("utf-8")
-                output_str = output_str.replace("pyspark", "pyspark-rapids")
-                print(output_str, file=sys.stderr)
-                exit(0)
+            output = subprocess.run(
+                f"pyspark {sys.argv[i]}", shell=True, capture_output=True
+            ).stderr
+            output_str = output.decode("utf-8")
+            output_str = output_str.replace("pyspark", "pyspark-rapids")
+            print(output_str, file=sys.stderr)
+            exit(0)
 
     command_line = "pyspark " + " ".join(sys.argv[1:])
     env = dict(os.environ)
