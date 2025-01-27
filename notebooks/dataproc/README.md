@@ -51,32 +51,22 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --metadata rapids-runtime=SPARK \
   --metadata rapids-version=${RAPIDS_VERSION} \
   --metadata spark-rapids-ml-no-import-enabled=0 \
+  --properties spark:spark.executor.resource.gpu.amount=1,\
+spark:spark.task.resource.gpu.amount=1,\
+spark:spark.executorEnv.CUPY_CACHE_DIR=/tmp/.cupy,\
+spark:spark.locality.wait=0,\
+spark:spark.sql.execution.arrow.pyspark.enabled=true,\
+spark:spark.sql.execution.arrow.maxRecordsPerBatch=100000,\
+spark:spark.rapids.memory.gpu.pooling.enabled=false \
   --bucket ${GCS_BUCKET} \
   --enable-component-gateway \
   --subnet=default \
   --no-shielded-secure-boot
   ```
+  **Note**: the `properties` settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
 - In the [Dataproc console](https://console.cloud.google.com/dataproc/clusters), select your cluster, go to the "Web Interfaces" tab, and click on the "JupyterLab" link.
 - In JupyterLab, upload the desired [notebook](../) via the `Upload Files` button.  For the no-import-change UX, you can try the example [kmeans-no-import-change.ipynb](../kmeans-no-import-change.ipynb).
-- Add the following to a new cell at the beginning of the notebook, since Dataproc does not start the `SparkSession` by default:
-  ```
-  from pyspark.sql import SparkSession
+  
+  Open the notebook and select the `PySpark` kernel using, e.g., the drop down that appears after clicking on the kernel name appearing in the top right corner of the notebook view.
 
-  spark = SparkSession.builder \
-  .appName("spark-rapids-ml") \
-  .config("spark.executor.resource.gpu.amount", "1") \
-  .config("spark.task.resource.gpu.amount", "1") \
-  .config("spark.executorEnv.CUPY_CACHE_DIR", "/tmp/.cupy") \
-  .config("spark.locality.wait", "0") \
-  .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-  .config("spark.sql.execution.arrow.maxRecordsPerBatch", "100000") \
-  .config("spark.rapids.memory.gpu.pooling.enabled", "false") \
-  .config("spark.rapids.memory.gpu.reserve", "90") \
-  .getOrCreate()
-  ```
-  **Note**: these settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
 - Run the notebook cells.  **Note**: you may need to change file paths to use `hdfs://` paths.
-- Add the following to a new cell at the end of the notebook to close the `SparkSession`:
-  ```
-  spark.stop()
-  ```
