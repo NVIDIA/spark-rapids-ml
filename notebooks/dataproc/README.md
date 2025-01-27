@@ -28,7 +28,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   ```
 - Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS.
   
-  If you wish that the initia enable no-import change UX (see [no-import-change](../README.md#no-import-change)) in the cluster, change the `spark-rapids-ml-no-import-enabled` metadata value to `1` in the command.  The initialization script `spark_rapids_ml.sh` checks this metadata value and modifies the run time accordingly.
+  If you wish to enable [no-import-change](../README.md#no-import-change) UX for the cluster, change the `spark-rapids-ml-no-import-enabled` metadata value to `1` in the command.  The initialization script `spark_rapids_ml.sh` checks this metadata value and modifies the run time accordingly.
 
   ```
   export RAPIDS_VERSION=24.12.0

@@ -29,7 +29,8 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   If this is your first time using EMR notebooks via EMR Studio and EMR Workspaces, we recommend creating a fresh VPC and subnets meeting the EMR requirements, per EMR documentation, and then specifying one of the new subnets in the above.
 
 - Create a cluster with at least two single-gpu workers. You will obtain a ClusterId in terminal. Noted three GPU nodes are requested here, because EMR cherry picks one node (either CORE or TASK) to run JupyterLab service for notebooks and will not use the node for compute.
-  If you wish to also enable no-import change UX for the cluster (see [no-import-change](../README.md#no-import-change)), change the init script argument `Args=[--no-import-enabled,0]` to `Args=[--no-import-enabled,1]` below.   The init script `init-bootstrap-action.sh` checks this argument and modifies the runtime accordingly.
+  
+  If you wish to also enable [no-import-change](../README.md#no-import-change) UX for the cluster, change the init script argument `Args=[--no-import-enabled,0]` to `Args=[--no-import-enabled,1]` below.   The init script `init-bootstrap-action.sh` checks this argument and modifies the runtime accordingly.
 
   ```
   export CLUSTER_NAME="spark_rapids_ml"
