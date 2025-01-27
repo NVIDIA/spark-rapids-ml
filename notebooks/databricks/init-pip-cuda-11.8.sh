@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# set portion of path below after /dbfs/ to dbfs zip file location
-SPARK_RAPIDS_ML_ZIP=/dbfs/path/to/zip/file
+set -ex
+
 # IMPORTANT: specify RAPIDS_VERSION fully 23.10.0 and not 23.10
 # also in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 23.8.0 and not 23.08.0)
 # while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.08.2 and not 23.8.2)
@@ -39,12 +39,16 @@ ln -s /usr/local/cuda-11.8 /usr/local/cuda
 /databricks/python/bin/pip install cudf-cu11~=${RAPIDS_VERSION} \
     cuml-cu11~=${RAPIDS_VERSION} \
     cuvs-cu11~=${RAPIDS_VERSION} \
-    pylibraft-cu11~=${RAPIDS_VERSION} \
-    rmm-cu11~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml
-python_ver=`python --version | grep -oP '3\.[0-9]+'`
-unzip ${SPARK_RAPIDS_ML_ZIP} -d /databricks/python3/lib/python${python_ver}/site-packages
+/databricks/python/bin/pip install spark-rapids-ml
+
+# set up no-import-change for cluster if enabled
+if [[ $SPARK_RAPIDS_ML_NO_IMPORT_ENABLED == 1 ]]; then
+    echo "enabling no import change in cluster" 1>&2
+    sed -i /databricks/python_shell/dbruntime/monkey_patches.py -e '1 s/\(.*\)/import spark_rapids_ml.install\n\1/g'
+fi
+
 
 

@@ -42,14 +42,14 @@ import spark_rapids_ml.install
 ```
 or by modifying the PySpark/Jupyter launch command above to use a CLI `pyspark-rapids` installed by our `pip` package to start Jupyter with pyspark as follows: 
 ```bash
-    cd spark-rapids-ml/notebooks
+cd spark-rapids-ml/notebooks
 
-    PYSPARK_DRIVER_PYTHON=jupyter \
-    PYSPARK_DRIVER_PYTHON_OPTS='notebook --ip=0.0.0.0' \
-    CUDA_VISIBLE_DEVICES=0 \
-    pyspark-rapids --master local[12] \
-    --driver-memory 128g \
-    --conf spark.sql.execution.arrow.pyspark.enabled=true
+PYSPARK_DRIVER_PYTHON=jupyter \
+PYSPARK_DRIVER_PYTHON_OPTS='notebook --ip=0.0.0.0' \
+CUDA_VISIBLE_DEVICES=0 \
+pyspark-rapids --master local[12] \
+--driver-memory 128g \
+--conf spark.sql.execution.arrow.pyspark.enabled=true
 ``` 
 
 After executing either of the above, all subsequent imports and accesses of supported accelerated classes from `pyspark.ml` will automatically redirect and return their counterparts in `spark_rapids_ml`.  Unaccelerated classes will import from `pyspark.ml` as usual.  Thus, all supported acceleration in an existing `pyspark` notebook is enabled with no additional import statement or code changes.  Directly importing from `spark_rapids_ml` also still works (needed for non-MLlib algorithms like UMAP).

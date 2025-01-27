@@ -21,20 +21,15 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   gcloud storage buckets create gs://${GCS_BUCKET}
   ```
 - Upload the initialization scripts to your GCS bucket:
-  First, set the init script name for running the default notebooks:
   ```
-  export INIT_SCRIPT=spark_rapids_ml.sh
-  ```
-  or if you wish to run the [no-import-change](../README.md#no-import-change) example notebook:
-  ```
-  export INIT_SCRIPT=spark_rapids_ml_no_import.sh
-  ```
-  ```
-  gsutil cp ${INIT_SCRIPT} gs://${GCS_BUCKET}/${INIT_SCRIPT}
+  gsutil cp spark_rapids_ml.sh gs://${GCS_BUCKET}
   curl -LO https://raw.githubusercontent.com/GoogleCloudDataproc/initialization-actions/master/spark-rapids/spark-rapids.sh
   gsutil cp spark-rapids.sh gs://${GCS_BUCKET}/spark-rapids.sh
   ```
-- Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS:
+- Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS.
+  
+  If you wish that the initia enable no-import change UX (see [no-import-change](../README.md#no-import-change)) in the cluster, change the `spark-rapids-ml-no-import-enabled` metadata value to `1` in the command.  The initialization script `spark_rapids_ml.sh` checks this metadata value and modifies the run time accordingly.
+
   ```
   export RAPIDS_VERSION=24.12.0
 
@@ -49,12 +44,13 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --worker-machine-type n1-standard-16 \
   --num-worker-local-ssds 4 \
   --worker-local-ssd-interface=NVME \
-  --initialization-actions gs://${GCS_BUCKET}/spark-rapids.sh,gs://${GCS_BUCKET}/${INIT_SCRIPT} \
+  --initialization-actions gs://${GCS_BUCKET}/spark-rapids.sh,gs://${GCS_BUCKET}/spark_rapids_ml.sh \
   --initialization-action-timeout=20m \
   --optional-components=JUPYTER \
   --metadata gpu-driver-provider="NVIDIA" \
   --metadata rapids-runtime=SPARK \
   --metadata rapids-version=${RAPIDS_VERSION} \
+  --metadata spark-rapids-ml-no-import-enabled=0 \
   --bucket ${GCS_BUCKET} \
   --enable-component-gateway \
   --subnet=default \
