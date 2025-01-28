@@ -15,7 +15,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   export S3_BUCKET=<your_s3_bucket_name>
   aws s3 mb s3://${S3_BUCKET}
   ```
-- Upload the initialization scripts to S3.
+- Upload the initialization script to S3.
   ```
   aws s3 cp init-bootstrap-action.sh s3://${S3_BUCKET}/
   ```
@@ -26,7 +26,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   export SUBNET_ID=<your_SubnetId>
   ```
   
-  If this is your first time using EMR notebooks via EMR Studio and EMR Workspaces, we recommend creating a fresh VPC and subnets meeting the EMR requirements, per EMR documentation, and then specifying one of the new subnets in the above.
+  If this is your first time using EMR notebooks via EMR Studio and EMR Workspaces, we recommend creating a fresh VPC and subnets with internet access (the initialization script downloads artifacts) meeting the EMR requirements, per EMR documentation, and then specifying one of the new subnets in the above.
 
 - Create a cluster with at least two single-gpu workers. You will obtain a ClusterId in terminal. Noted three GPU nodes are requested here, because EMR cherry picks one node (either CORE or TASK) to run JupyterLab service for notebooks and will not use the node for compute.
   
@@ -50,7 +50,7 @@ If you already have a AWS EMR account, you can run the example notebooks on an E
   --bootstrap-actions Name='Spark Rapids ML Bootstrap action',Path=s3://${S3_BUCKET}/init-bootstrap-action.sh,Args=[--no-import-enabled,0]
   ```
 - In the [AWS EMR console](https://console.aws.amazon.com/emr/), click "Clusters", you can find the cluster id of the created cluster. Wait until the cluster has the "Waiting" status. 
-- To use notebooks on EMR you will need an EMR Studio and an associated Workspace.   If you don't already have these, in the [AWS EMR console](https://console.aws.amazon.com/emr/), on the left, in the "EMR Studio" section, click the respective "Studio" and "Workspace (Notebooks)" links and follow instructions.  Please check EMR documentation for further instructions.  Note that the Studio VPC should match the VPC of the subnet used for the cluster.  Select "\*Default\*" for all security group prompts and drop downs. 
+- To use notebooks on EMR you will need an EMR Studio and an associated Workspace.   If you don't already have these, in the [AWS EMR console](https://console.aws.amazon.com/emr/), on the left, in the "EMR Studio" section, click the respective "Studio" and "Workspace (Notebooks)" links and follow instructions to create them.  When creating a Studio, select the `Custom` setup option to allow for configuring a VPC and a Subnet.  These should match the VPC and Subnet used for the cluster.  Select "\*Default\*" for all security group prompts and drop downs for Studio and Workspace setting.  Please check/search EMR documentation for further instructions. 
 
 - In the "Workspace (Notebooks)" list of workspaces, select the created workspace, make sure it has the "Idle" status (select "Stop" otherwise in the "Actions" drop down) and click "Attach" to attach the newly created cluster through cluster id to the workspace.
 
