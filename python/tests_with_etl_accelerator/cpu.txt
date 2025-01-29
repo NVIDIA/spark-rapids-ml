@@ -1,0 +1,46 @@
+!Exec <ProjectExec> cannot run on GPU because not all expressions can be replaced; unsupported data types in output: org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7 [features#59]
+  @Expression <AttributeReference> orig_channel#0 could run on GPU
+  @Expression <AttributeReference> first_home_buyer#1 could run on GPU
+  @Expression <AttributeReference> loan_purpose#2 could run on GPU
+  @Expression <AttributeReference> property_type#3 could run on GPU
+  @Expression <AttributeReference> occupancy_status#4 could run on GPU
+  @Expression <AttributeReference> property_state#5 could run on GPU
+  @Expression <AttributeReference> product_type#6 could run on GPU
+  @Expression <AttributeReference> relocation_mortgage_indicator#7 could run on GPU
+  @Expression <AttributeReference> seller_name#8 could run on GPU
+  @Expression <AttributeReference> mod_flag#9 could run on GPU
+  @Expression <AttributeReference> orig_interest_rate#10 could run on GPU
+  @Expression <AttributeReference> orig_upb#11 could run on GPU
+  @Expression <AttributeReference> orig_loan_term#12 could run on GPU
+  @Expression <AttributeReference> orig_ltv#13 could run on GPU
+  @Expression <AttributeReference> orig_cltv#14 could run on GPU
+  @Expression <AttributeReference> num_borrowers#15 could run on GPU
+  @Expression <AttributeReference> dti#16 could run on GPU
+  @Expression <AttributeReference> borrower_credit_score#17 could run on GPU
+  @Expression <AttributeReference> num_units#18 could run on GPU
+  @Expression <AttributeReference> zip#19 could run on GPU
+  @Expression <AttributeReference> mortgage_insurance_percent#20 could run on GPU
+  @Expression <AttributeReference> current_loan_delinquency_status#21 could run on GPU
+  @Expression <AttributeReference> current_actual_upb#22 could run on GPU
+  @Expression <AttributeReference> interest_rate#23 could run on GPU
+  @Expression <AttributeReference> loan_age#24 could run on GPU
+  @Expression <AttributeReference> msa#25 could run on GPU
+  @Expression <AttributeReference> non_interest_bearing_upb#26 could run on GPU
+  @Expression <AttributeReference> delinquency_12#27 could run on GPU
+  !Expression <Alias> UDF(struct(first_home_buyer_double_VectorAssembler_ce322aa19c6f, cast(first_home_buyer#1 as double), borrower_credit_score, borrower_credit_score#17, zip_double_VectorAssembler_ce322aa19c6f, cast(zip#19 as double))) AS features#59 cannot run on GPU because expression Alias UDF(struct(first_home_buyer_double_VectorAssembler_ce322aa19c6f, cast(first_home_buyer#1 as double), borrower_credit_score, borrower_credit_score#17, zip_double_VectorAssembler_ce322aa19c6f, cast(zip#19 as double))) AS features#59 produces an unsupported type org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7; input expression ScalaUDF UDF(struct(first_home_buyer_double_VectorAssembler_ce322aa19c6f, cast(first_home_buyer#1 as double), borrower_credit_score, borrower_credit_score#17, zip_double_VectorAssembler_ce322aa19c6f, cast(zip#19 as double))) (org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7 is not supported)
+    !Expression <ScalaUDF> UDF(struct(first_home_buyer_double_VectorAssembler_ce322aa19c6f, cast(first_home_buyer#1 as double), borrower_credit_score, borrower_credit_score#17, zip_double_VectorAssembler_ce322aa19c6f, cast(zip#19 as double))) cannot run on GPU because expression ScalaUDF UDF(struct(first_home_buyer_double_VectorAssembler_ce322aa19c6f, cast(first_home_buyer#1 as double), borrower_credit_score, borrower_credit_score#17, zip_double_VectorAssembler_ce322aa19c6f, cast(zip#19 as double))) produces an unsupported type org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7
+      @Expression <CreateNamedStruct> struct(first_home_buyer_double_VectorAssembler_ce322aa19c6f, cast(first_home_buyer#1 as double), borrower_credit_score, borrower_credit_score#17, zip_double_VectorAssembler_ce322aa19c6f, cast(zip#19 as double)) could run on GPU
+        @Expression <Literal> first_home_buyer_double_VectorAssembler_ce322aa19c6f could run on GPU
+        @Expression <Cast> cast(first_home_buyer#1 as double) could run on GPU
+          @Expression <AttributeReference> first_home_buyer#1 could run on GPU
+        @Expression <Literal> borrower_credit_score could run on GPU
+        @Expression <AttributeReference> borrower_credit_score#17 could run on GPU
+        @Expression <Literal> zip_double_VectorAssembler_ce322aa19c6f could run on GPU
+        @Expression <Cast> cast(zip#19 as double) could run on GPU
+          @Expression <AttributeReference> zip#19 could run on GPU
+
+25/01/28 16:09:45 WARN package: Truncated the string representation of a plan since it was too large. This behavior can be adjusted by setting 'spark.sql.debug.maxToStringFields'.
+== Physical Plan ==
+*(1) Project [orig_channel#0, first_home_buyer#1, loan_purpose#2, property_type#3, occupancy_status#4, property_state#5, product_type#6, relocation_mortgage_indicator#7, seller_name#8, mod_flag#9, orig_interest_rate#10, orig_upb#11, orig_loan_term#12, orig_ltv#13, orig_cltv#14, num_borrowers#15, dti#16, borrower_credit_score#17, num_units#18, zip#19, mortgage_insurance_percent#20, current_loan_delinquency_status#21, current_actual_upb#22, interest_rate#23, ... 5 more fields]
++- GpuColumnarToRow false
+   +- GpuFileGpuScan parquet [orig_channel#0,first_home_buyer#1,loan_purpose#2,property_type#3,occupancy_status#4,property_state#5,product_type#6,relocation_mortgage_indicator#7,seller_name#8,mod_flag#9,orig_interest_rate#10,orig_upb#11,orig_loan_term#12,orig_ltv#13,orig_cltv#14,num_borrowers#15,dti#16,borrower_credit_score#17,num_units#18,zip#19,mortgage_insurance_percent#20,current_loan_delinquency_status#21,current_actual_upb#22,interest_rate#23,... 4 more fields] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex[file:/tmp/tmp.parquet], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<orig_channel:int,first_home_buyer:int,loan_purpose:int,property_type:int,occupancy_status:...

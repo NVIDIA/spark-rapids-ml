@@ -26,7 +26,7 @@ from pyspark.ml.common import _py2java
 from pyspark.ml.feature import PCAModel as SparkPCAModel
 from pyspark.ml.feature import _PCAParams
 from pyspark.ml.linalg import DenseMatrix, DenseVector
-from pyspark.ml.param.shared import HasInputCols
+from pyspark.ml.param.shared import HasHandleInvalid, HasInputCols, HasOutputCol
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import (
     ArrayType,
@@ -445,3 +445,81 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
         pyspark_type = dtype_to_pyspark_type(self.dtype)
         return f"array<{pyspark_type}>"
+
+
+from pyspark.ml.base import Transformer
+from pyspark.ml.feature import VectorAssembler as CPUVectorAssembler
+from pyspark.sql import functions as F
+from pyspark.sql.types import FloatType
+
+from spark_rapids_ml.core import _CumlCommon, col_name_unique_tag
+
+
+class VectorAssembler(
+    Transformer, HasInputCols, HasOutputCol, HasHandleInvalid, _CumlCommon
+):
+    """
+    TODO:
+    1. support double
+    """
+
+    _input_kwargs: Dict[str, Any]
+
+    @keyword_only
+    def __init__(
+        self,
+        inputCols: Optional[List[str]] = None,
+        outputCol: Optional[str] = None,
+        handleInvalid: str = "error",
+    ):
+        super().__init__()
+        kwargs = self._input_kwargs
+        self.setParams(**kwargs)
+
+    def _transform(self, dataset: DataFrame) -> DataFrame:
+        input_cols = self.getInputCols()
+        output_col_array = f"{self.outputCol}_{col_name_unique_tag}"
+        output_col = self.getOutputCol()
+
+        inputs = [F.col(col_name).cast(FloatType()) for col_name in input_cols]
+        df = dataset.withColumn(output_col_array, F.array(inputs))
+
+        from pyspark.ml.functions import array_to_vector
+
+        df_res = df.withColumn(
+            output_col, array_to_vector(F.col(output_col_array))
+        ).drop(output_col_array)
+        return df_res
+
+    @keyword_only
+    def setParams(
+        self,
+        *,
+        inputCols: Optional[List[str]] = None,
+        outputCol: Optional[str] = None,
+        handleInvalid: str = "error",
+    ) -> "VectorAssembler":
+        """
+        setParams(self, \\*, inputCols=None, outputCol=None, handleInvalid="error")
+        Sets params for this VectorAssembler.
+        """
+        kwargs = self._input_kwargs
+        return self._set(**kwargs)
+
+    def setInputCols(self, value: List[str]) -> "VectorAssembler":
+        """
+        Sets the value of :py:attr:`inputCols`.
+        """
+        return self._set(inputCols=value)
+
+    def setOutputCol(self, value: str) -> "VectorAssembler":
+        """
+        Sets the value of :py:attr:`outputCol`.
+        """
+        return self._set(outputCol=value)
+
+    def setHandleInvalid(self, value: str) -> "VectorAssembler":
+        """
+        Sets the value of :py:attr:`handleInvalid`.
+        """
+        return self._set(handleInvalid=value)

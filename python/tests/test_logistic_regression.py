@@ -115,6 +115,45 @@ def check_sparse_model_preprocess(
     assert _use_sparse_in_cuml(internal_df) is True
 
 
+def test_training_for_binary_classification(gpu_number: int) -> None:
+    """test training for binary classfication"""
+
+    with CleanSparkSession() as spark:
+        training = spark.createDataFrame(
+            [
+                (1.0, Vectors.dense([0.0, 1.1, 0.1])),
+                (0.0, Vectors.dense([2.0, 1.0, -1.0])),
+                (0.0, Vectors.dense([2.0, 1.3, 1.0])),
+                (1.0, Vectors.dense([0.0, 1.2, -0.5])),
+            ],
+            ["label", "features"],
+        )
+        lr = LogisticRegression(num_workers=gpu_number)
+        lr.setMaxIter(10)
+        lr.setRegParam(0.01)
+        model1 = lr.fit(training)
+        print("Model 1 was fit using parameters: ")
+        print(model1.extractParamMap())
+        test = spark.createDataFrame(
+            [
+                (1.0, Vectors.dense([-1.0, 1.5, 1.3])),
+                (0.0, Vectors.dense([3.0, 2.0, -0.1])),
+                (1.0, Vectors.dense([0.0, 2.2, -1.5])),
+            ],
+            ["label", "features"],
+        )
+        prediction = model1.transform(test)
+        result = prediction.select(
+            "features", "label", "probability", "prediction"
+        ).collect()
+
+        for row in result:
+            print(
+                "features=%s, label=%s -> prob=%s, prediction=%s"
+                % (row.features, row.label, row.probability, row.prediction)
+            )
+
+
 def test_toy_example(gpu_number: int) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
