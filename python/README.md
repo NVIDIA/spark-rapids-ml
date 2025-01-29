@@ -1,6 +1,17 @@
-# Spark Rapids ML (Python)
+# Spark Rapids ML (Python) <!-- omit in toc -->
 
 This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-accelerated implementations of many common ML algorithms.  These implementations are adapted to use PySpark for distributed training and inference.
+
+## Contents <!-- omit in toc -->
+- [Installation](#installation)
+- [Examples](#examples)
+  - [PySpark shell](#pyspark-shell)
+  - [Jupyter Notebooks](#jupyter-notebooks)
+- [API Compatibility](#api-compatibility)
+- [CLIs Enabling No Package Import Change](#clis-enabling-no-package-import-change)
+- [API Documentation](#api-documentation)
+
+---
 
 ## Installation
 
@@ -40,7 +51,7 @@ These examples demonstrate the API using toy datasets.  However, GPUs are more e
 
 ### PySpark shell
 
-#### Linear Regression
+#### Linear Regression <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.regression import LinearRegression
@@ -66,7 +77,7 @@ model.coefficients
 # DenseVector([0.5, -0.5])
 ```
 
-#### K-Means
+#### K-Means <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.clustering import KMeans
@@ -107,7 +118,7 @@ rows[2].newPrediction == rows[3].newPrediction
 # True
 ```
 
-#### PCA
+#### PCA <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.feature import PCA
@@ -194,6 +205,12 @@ and if the app is deployed using `spark-submit` the following included CLI (inst
 ```bash
 spark-rapids-submit --master <master> <other spark submit options> application.py <application options>
 ```
+
+A similar `spark_rapids_ml` enabling CLI is included for `pyspark` shell:
+```bash
+pyspark-rapids --master <master> <other pyspark options>
+```
+
 For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors.
 
 Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).
