@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ classifiers = [
 
 [project.scripts]
 spark-rapids-submit = "spark_rapids_ml.spark_rapids_submit:main_cli"
+pyspark-rapids = "spark_rapids_ml.pyspark_rapids:main_cli"
 
 [build-system]
 requires = ["setuptools>=61.0"]

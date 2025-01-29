@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -888,7 +888,7 @@ def test_fit_multiple_in_single_pass(
         models = rf.fit(train_df, param_maps)
 
         def get_num_trees(
-            model: Union[RandomForestClassificationModel, RandomForestRegressionModel]
+            model: Union[RandomForestClassificationModel, RandomForestRegressionModel],
         ) -> int:
             model_jsons = cast(List[str], model._model_json)
             trees = [

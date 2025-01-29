@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,38 @@ sudo /usr/local/bin/pip3.10 install --upgrade pip
 sudo /usr/local/bin/pip3.10 install scikit-learn
 
 # install cudf and cuml
-sudo /usr/local/bin/pip3.10 install --no-cache-dir cudf-cu12 --extra-index-url=https://pypi.nvidia.com --verbose
-sudo /usr/local/bin/pip3.10 install --no-cache-dir cuml-cu12 cuvs-cu12 --extra-index-url=https://pypi.nvidia.com --verbose
-
+sudo /usr/local/bin/pip3.10 install --no-cache-dir cudf-cu12~=${RAPIDS_VERSION} \
+         cuml-cu12~=${RAPIDS_VERSION} \
+         cuvs-cu12~=${RAPIDS_VERSION} \
+         --extra-index-url=https://pypi.nvidia.com --verbose
+sudo /usr/local/bin/pip3.10 install spark-rapids-ml
 sudo /usr/local/bin/pip3.10 list
+
+# set up no-import-change for cluster if enabled
+if [[ $1 == "--no-import-enabled" && $2 == 1 ]]; then
+    echo "enabling no import change in cluster" 1>&2
+    cd /usr/lib/livy/repl_2.12-jars
+    sudo jar xf livy-repl_2.12*.jar fake_shell.py
+    sudo sed -i fake_shell.py -e '/from __future__/ s/\(.*\)/\1\ntry:\n    import spark_rapids_ml.install\nexcept:\n    pass\n/g'
+    sudo jar uf livy-repl_2.12*.jar fake_shell.py
+    sudo rm fake_shell.py
+fi 
+
+# ensure notebook comes up in python 3.10 by using a background script that waits for an 
+# application file to be installed before modifying.
+cat <<EOF >/tmp/mod_start_kernel.sh
+#!/bin/bash
+set -ex
+while [ ! -f /mnt/notebook-env/bin/start_kernel_as_emr_notebook.sh ]; do
+echo "waiting for /mnt/notebook-env/bin/start_kernel_as_emr_notebook.sh"
+sleep 10
+done
+echo "done waiting"
+sleep 10
+sudo sed -i /mnt/notebook-env/bin/start_kernel_as_emr_notebook.sh -e 's#"spark.pyspark.python": "python3"#"spark.pyspark.python": "/usr/local/bin/python3.10"#g'
+sudo sed -i /mnt/notebook-env/bin/start_kernel_as_emr_notebook.sh -e 's#"spark.pyspark.virtualenv.enabled": "true"#"spark.pyspark.virtualenv.enabled": "false"#g'
+exit 0
+EOF
+sudo bash /tmp/mod_start_kernel.sh &
+exit 0
 

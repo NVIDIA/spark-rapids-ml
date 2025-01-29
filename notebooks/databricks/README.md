@@ -7,44 +7,20 @@ If you already have a Databricks account, you can run the example notebooks on a
   export PROFILE=spark-rapids-ml
   databricks configure --token --profile ${PROFILE}
   ```
-- Create a zip file for the `spark-rapids-ml` package.
-  ```bash
-  cd spark-rapids-ml/python/src
-  zip -r spark_rapids_ml.zip spark_rapids_ml
-  ```
-- Copy the zip file to DBFS, setting `SAVE_DIR` to the directory of your choice.
-  ```bash
-  export SAVE_DIR="/path/to/save/artifacts"
-  databricks fs cp spark_rapids_ml.zip dbfs:${SAVE_DIR}/spark_rapids_ml.zip --profile ${PROFILE}
-  ```
-- Edit the [init-pip-cuda-11.8.sh](init-pip-cuda-11.8.sh) init script to set the `SPARK_RAPIDS_ML_ZIP` variable to the DBFS location used above.
-  ```bash
-  cd spark-rapids-ml/notebooks/databricks
-  sed -i"" -e "s;/path/to/zip/file;${SAVE_DIR}/spark_rapids_ml.zip;" init-pip-cuda-11.8.sh
-  ```
-  **Note**: the `databricks` CLI requires the `dbfs:` prefix for all DBFS paths, but inside the spark nodes, DBFS will be mounted to a local `/dbfs` volume, so the path prefixes will be slightly different depending on the context.
-
-  **Note**: this init script does the following on each Spark node:
-  - updates the CUDA runtime to 11.8 (required for Spark Rapids ML dependencies).
-  - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
-  - installs various `cuXX` dependencies via pip.
-
-- Copy the modified `init-pip-cuda-11.8.sh` init script to your *workspace* (not DBFS) (ex. workspace directory: /Users/< databricks-user-name >/init_scripts).
+- Copy the init scripts to your *workspace* (not DBFS) (ex. workspace directory: /Users/< databricks-user-name >/init_scripts).
   ```bash
   export WS_SAVE_DIR="/path/to/directory/in/workspace"
   databricks workspace mkdirs ${WS_SAVE_DIR} --profile ${PROFILE}
+  databricks workspace import --format AUTO --file init-pip-cuda-11.8.sh ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
   ```
-  For Mac
-  ```bash
-  databricks workspace import --format AUTO --content $(base64 -i init-pip-cuda-11.8.sh) ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
-  ```
-  For Linux
-  ```bash
-  databricks workspace import --format AUTO --content $(base64 -w 0 init-pip-cuda-11.8.sh) ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
-  ```
+  **Note**: the init script does the following on each Spark node:
+  - updates the CUDA runtime to 11.8 (required for Spark Rapids ML dependencies).
+  - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
+  - installs various `cuXX` dependencies via pip.
+  - if the cluster environment variable `SPARK_RAPIDS_ML_NO_IMPORT_ENABLED=1` is define (see below), the init script also modifies a Databricks notebook kernel startup script to enable no-import change UX for the cluster.  See [no-import-change](../README.md#no-import-change).
 - Create a cluster using **Databricks 13.3 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
   - **Init Scripts**
-    - add the workspace path to the uploaded init script, e.g. `${WS_SAVE_DIR}/init-pip-cuda-11.8.sh`.
+    - add the workspace path to the uploaded init script `${WS_SAVE_DIR}/init-pip-cuda-11.8.sh` as set above (but substitute variables manually in the form).
   - **Spark**
     - **Spark config**
       ```
@@ -74,6 +50,8 @@ If you already have a Databricks account, you can run the example notebooks on a
       ```
       LIBCUDF_CUFILE_POLICY=OFF
       NCCL_DEBUG=INFO
+      SPARK_RAPIDS_ML_NO_IMPORT_ENABLED=0
       ```
+      If you wish to enable [no-import-change](../README.md#no-import-change) UX for the cluster, set `SPARK_RAPIDS_ML_NO_IMPORT_ENABLED=1` instead.  The init script checks this cluster environment variable and modifies the runtime accordingly.
 - Start the configured cluster.
-- Select your workspace and upload the desired [notebook](../) via `Import` in the drop down menu for your workspace.
+- Select your workspace and upload the desired [notebook](../) via `Import` in the drop down menu for your workspace.  For the no-import-change UX, you can try the example [kmeans-no-import-change.ipynb](../kmeans-no-import-change.ipynb).
