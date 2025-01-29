@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,11 +35,16 @@ from pyspark.ml.common import _py2java
 from pyspark.ml.evaluation import Evaluator, RegressionEvaluator
 from pyspark.ml.linalg import Vector, Vectors, _convert_to_vector
 from pyspark.ml.regression import LinearRegressionModel as SparkLinearRegressionModel
-from pyspark.ml.regression import LinearRegressionSummary
+from pyspark.ml.regression import (
+    LinearRegressionSummary,
+)
 from pyspark.ml.regression import (
     RandomForestRegressionModel as SparkRandomForestRegressionModel,
 )
-from pyspark.ml.regression import _LinearRegressionParams, _RandomForestRegressorParams
+from pyspark.ml.regression import (
+    _LinearRegressionParams,
+    _RandomForestRegressorParams,
+)
 from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import (
     ArrayType,
