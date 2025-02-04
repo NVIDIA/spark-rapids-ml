@@ -30,5 +30,6 @@ pip install spark-rapids-ml
 no_import_change=$(/usr/share/google/get_metadata_value attributes/spark-rapids-ml-no-import-enabled)
 if [[ $no_import_change == 1 ]]; then
     echo "enabling no import change in cluster" 1>&2
-    sed -i /usr/lib/spark/python/pyspark/shell.py -e '1 s/\(.*\)/import spark_rapids_ml.install\n\1/g'
+    mkdir -p /root/.ipython/profile_default/startup
+    echo "import spark_rapids_ml.install" >/root/.ipython/profile_default/startup/00-spark-rapids-ml.py
 fi

@@ -47,7 +47,8 @@ ln -s /usr/local/cuda-11.8 /usr/local/cuda
 # set up no-import-change for cluster if enabled
 if [[ $SPARK_RAPIDS_ML_NO_IMPORT_ENABLED == 1 ]]; then
     echo "enabling no import change in cluster" 1>&2
-    sed -i /databricks/python_shell/dbruntime/monkey_patches.py -e '1 s/\(.*\)/import spark_rapids_ml.install\n\1/g'
+    mkdir -p /root/.ipython/profile_default/startup
+    echo "import spark_rapids_ml.install" >/root/.ipython/profile_default/startup/00-spark-rapids-ml.py
 fi
 
 
