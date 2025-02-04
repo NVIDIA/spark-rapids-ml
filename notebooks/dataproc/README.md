@@ -52,7 +52,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --metadata rapids-version=${RAPIDS_VERSION} \
   --metadata spark-rapids-ml-no-import-enabled=0 \
   --properties spark:spark.executor.resource.gpu.amount=1,\
-  spark:spark.task.resource.gpu.amount=1,\
+  spark:spark.task.resource.gpu.amount=0.0625,\
   spark:spark.executorEnv.CUPY_CACHE_DIR=/tmp/.cupy,\
   spark:spark.locality.wait=0,\
   spark:spark.sql.execution.arrow.pyspark.enabled=true,\
