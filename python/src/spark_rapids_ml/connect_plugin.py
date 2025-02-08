@@ -75,8 +75,6 @@ def main(infile: IO, outfile: IO) -> None:
     This is responsible for searching the available Python Data Sources so they can be
     statically registered automatically.
     """
-    with open("/tmp/ccccccc", "w") as f:
-        f.write(f"in main of connect_plugin\n")
     faulthandler_log_path = os.environ.get("PYTHON_FAULTHANDLER_DIR", None)
     try:
         if faulthandler_log_path:
@@ -94,24 +92,17 @@ def main(infile: IO, outfile: IO) -> None:
         # Receive variables from JVM
         auth_token = utf8_deserializer.loads(infile)
         estimator_name = utf8_deserializer.loads(infile)
-        dataset_key = utf8_deserializer.loads(infile)
         java_sc_key = utf8_deserializer.loads(infile)
-
-        with open("/tmp/ccccccc", "w") as f:
-            f.write(f"------------------------- {auth_token} {estimator_name}\n")
+        dataset_key = utf8_deserializer.loads(infile)
 
         # Create a Java Gateway
         gateway = py4j.java_gateway.JavaGateway(
             gateway_parameters=GatewayParameters(auth_token=auth_token, auto_convert=True))
         _java_import(gateway)
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 1\n")
 
         # Get the JavaObject of Dataset and JavaSparkContext
         jdf = py4j.java_gateway.JavaObject(dataset_key, gateway._gateway_client)
         jsc = py4j.java_gateway.JavaObject(java_sc_key, gateway._gateway_client)
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 2\n")
 
         # Test
         jdf.show()
@@ -119,32 +110,24 @@ def main(infile: IO, outfile: IO) -> None:
         # Prepare to create SparkContext and SparkSession
         sc = SparkContext(conf=SparkConf(_jconf=jsc.sc().conf()), gateway=gateway, jsc=jsc)
         spark = SparkSession(sc, jdf.sparkSession())
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 3\n")
 
         # Create DataFrame
         df = DataFrame(jdf, spark)
 
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 4\n")
 
         # Initialize the estimator of spark-rapids-ml
         module = importlib.import_module("spark_rapids_ml.classification")
         klass = getattr(module, "LogisticRegression")
         lr = klass()
-        lr.setFeaturesCols(["features"])
+        # lr.setFeaturesCols(["features"])
         lr.setMaxIter(26)
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 5\n")
+        print("-------------------------- 5")
         model = lr.fit(df)
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 6\n")
+        print("-------------------------- 7")
         print(f"the maxIter of model is {model.getMaxIter()}")
 
     except BaseException as e:
-        with open("/tmp/ccccccc", "a") as f:
-            f.write(f"------------------------- 6\n")
-            print(f"Exception occurred: {e}")
+        print(f"-------------exception ------------- {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:
