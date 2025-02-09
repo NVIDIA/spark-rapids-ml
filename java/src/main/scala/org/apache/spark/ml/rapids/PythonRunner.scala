@@ -36,12 +36,12 @@ class RapidsMLFunction extends SimplePythonFunction(
 class PythonRunner(name: String,
                    params: Map[String, String],
                    dataset: DataFrame,
-                   func: PythonFunction) extends PythonPlannerRunner[Int](func) {
+                   func: PythonFunction) extends PythonPlannerRunner[Int](func) with AutoCloseable {
 
   private val datasetKey = PythonRunner.putNewObjectToPy4j(dataset)
   private val jscKey = PythonRunner.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
 
-//  override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
+  //  override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
   override protected val workerModule: String = "pyspark.sql.worker.connect_plugin"
 
 
@@ -55,9 +55,12 @@ class PythonRunner(name: String,
 
   override protected def receiveFromPython(dataIn: DataInputStream): Int = {
     println("in receiveFromPython ")
-//    PythonRunner.deleteObject(jscKey)
-//    PythonRunner.deleteObject(datasetKey)
     1234
+  }
+
+  override def close(): Unit = {
+    PythonRunner.deleteObject(jscKey)
+    PythonRunner.deleteObject(datasetKey)
   }
 }
 
