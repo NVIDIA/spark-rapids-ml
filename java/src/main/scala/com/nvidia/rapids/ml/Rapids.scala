@@ -9,5 +9,6 @@ trait Rapids {
     } finally {
       r.close()
     }
+  }
 
 }
