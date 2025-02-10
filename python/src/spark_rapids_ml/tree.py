@@ -33,7 +33,9 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pyspark.ml.classification import DecisionTreeClassificationModel
+from pyspark.ml.classification import (
+    DecisionTreeClassificationModel,
+)
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
@@ -45,7 +47,9 @@ from pyspark.ml.param.shared import (
     Params,
     TypeConverters,
 )
-from pyspark.ml.regression import DecisionTreeRegressionModel
+from pyspark.ml.regression import (
+    DecisionTreeRegressionModel,
+)
 from pyspark.ml.regression import (
     RandomForestRegressionModel as SparkRandomForestRegressionModel,
 )
