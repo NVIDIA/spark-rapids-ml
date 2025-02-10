@@ -44,9 +44,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from pyspark import Row, TaskContext, keyword_only
-from pyspark.ml.classification import (
-    BinaryRandomForestClassificationSummary,
-)
+from pyspark.ml.classification import BinaryRandomForestClassificationSummary
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )

@@ -329,9 +329,10 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(LogisticRegression)
 
 
-@pytest.mark.parametrize(
-    "input_spark_params,cuml_params_update",
-    [
+def test_lr_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
         (
             {"regParam": 0.1, "elasticNetParam": 0.5},
             {"penalty": "elasticnet", "C": 10.0, "l1_ratio": 0.5},
@@ -368,15 +369,31 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
             {"verbose": True},
             {"verbose": True},
         ),
-    ],
-)
-def test_lr_copy(
-    input_spark_params: Dict[str, Any],
-    cuml_params_update: Optional[Dict[str, Any]],
-) -> None:
-    from .test_common_estimator import _test_est_copy
+    ]
 
-    _test_est_copy(LogisticRegression, input_spark_params, cuml_params_update)
+    for pair in param_list:
+        input_spark_params = pair[0]
+        cuml_params_update = pair[1]
+        _test_est_copy(LogisticRegression, input_spark_params, cuml_params_update)
+
+
+def test_lr_model_copy() -> None:
+
+    from .test_common_estimator import _test_model_copy
+    from .utils import get_toy_model
+
+    model_params: List[Dict[str, Any]] = [
+        {"featuresCol": "fea_dummy"},
+        {"predictionCol": "fea_dummy"},
+        {"probabilityCol": "fea_dummy"},
+        {"rawPredictionCol": "fea_dummy"},
+    ]
+    with CleanSparkSession() as spark:
+        gpu_model = get_toy_model(LogisticRegression, spark)
+        cpu_model = get_toy_model(SparkLogisticRegression, spark)
+
+        for p in model_params:
+            _test_model_copy(gpu_model, cpu_model, p)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
