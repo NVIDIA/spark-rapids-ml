@@ -12,17 +12,35 @@ import java.io.{DataInputStream, DataOutputStream}
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 
+private object PythonRunner {
+  val AUTH_TOKEN = "SPARK-RAPIDS-ML"
+
+  val PYTHON_EXEC = "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python"
+
+  private lazy val gw: py4j.Gateway = {
+    val server = new GatewayServerBuilder().authToken(AUTH_TOKEN).build()
+    server.start()
+    server.getGateway
+  }
+
+  def putNewObjectToPy4j(o: Object): String = {
+    gw.putNewObject(o)
+  }
+
+  def deleteObject(key: String): Unit = {
+    gw.deleteObject(key)
+  }
+}
 
 class RapidsMLFunction extends SimplePythonFunction(
   command = Array[Byte](),
   envVars = Map(
-    "PYTHONPATH" -> "/home/bobwang/work.d/spark-rapids-ml/python/src/spark_rapids_ml.zip",
-    "PYSPARK_PYTHON" -> "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python",
-    "PYSPARK_DRIVER_PYTHON" -> "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python"
+    "PYSPARK_PYTHON" -> PythonRunner.PYTHON_EXEC,
+    "PYSPARK_DRIVER_PYTHON" -> PythonRunner.PYTHON_EXEC,
   ).asJava,
   pythonIncludes = ArrayBuffer("").asJava,
-  pythonExec = "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python",
-  pythonVer = "3.10",
+  pythonExec = PythonRunner.PYTHON_EXEC,
+  pythonVer = "3.10", // TODO, run the python process to get the python version.
   broadcastVars = List.empty.asJava,
   accumulator = null)
 
@@ -60,23 +78,5 @@ class PythonRunner(name: String,
   override def close(): Unit = {
     PythonRunner.deleteObject(jscKey)
     PythonRunner.deleteObject(datasetKey)
-  }
-}
-
-private object PythonRunner {
-  val AUTH_TOKEN = "SPARK-RAPIDS-ML"
-
-  private lazy val gw: py4j.Gateway = {
-    val server = new GatewayServerBuilder().authToken(AUTH_TOKEN).build()
-    server.start()
-    server.getGateway
-  }
-
-  def putNewObjectToPy4j(o: Object): String = {
-    gw.putNewObject(o)
-  }
-
-  def deleteObject(key: String): Unit = {
-    gw.deleteObject(key)
   }
 }
