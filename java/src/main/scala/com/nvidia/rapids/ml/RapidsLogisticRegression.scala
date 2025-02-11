@@ -26,7 +26,7 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
         Map.empty,
         dataset.toDF,
         new RapidsMLFunction())) { runner =>
-      runner.runInPython(useDaemon = true)
+      runner.runInPython(useDaemon = false)
     }
     RapidsUtils.dummyLogisticRegressionModel
   }

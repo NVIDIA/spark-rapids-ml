@@ -16,9 +16,10 @@ import scala.jdk.CollectionConverters._
 class RapidsMLFunction extends SimplePythonFunction(
   command = Array[Byte](),
   envVars = Map(
-//    "PYTHONPATH" -> "/home/bobwang/work.d/spark-rapids-ml/python/src:/home/bobwang/work.d/spark/spark-4.0/python",
+    "PYTHONPATH" -> "/home/bobwang/work.d/spark-rapids-ml/python/src/spark_rapids_ml.zip",
     "PYSPARK_PYTHON" -> "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python",
-    "PYSPARK_DRIVER_PYTHON" -> "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python").asJava,
+    "PYSPARK_DRIVER_PYTHON" -> "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python"
+  ).asJava,
   pythonIncludes = ArrayBuffer("").asJava,
   pythonExec = "/home/bobwang/anaconda3/envs/rapids-24.10/bin/python",
   pythonVer = "3.10",
@@ -41,9 +42,7 @@ class PythonRunner(name: String,
   private val datasetKey = PythonRunner.putNewObjectToPy4j(dataset)
   private val jscKey = PythonRunner.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
 
-//    override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
-  override protected val workerModule: String = "pyspark.sql.worker.connect_plugin"
-
+    override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
     println("in writeToPython")
