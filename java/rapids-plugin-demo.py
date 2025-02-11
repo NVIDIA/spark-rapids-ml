@@ -5,7 +5,9 @@ from pyspark.ml.classification import (LogisticRegression,
 from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession
 
-spark = SparkSession.builder.getOrCreate()
+spark = (SparkSession.builder.remote("sc://localhost")
+         .config("spark.connect.ml.backend.classes", "com.nvidia.rapids.ml.Plugin")
+         .getOrCreate())
 spark.addArtifact("/home/bobwang/work.d/spark-rapids-ml/java/target/com.nvidia.rapids.ml-1.0-SNAPSHOT.jar")
 
 def run_test():
@@ -23,3 +25,4 @@ print("first test")
 run_test()
 # spark.conf.unset("spark.connect.ml.backend.classes")
 # run_test()
+
