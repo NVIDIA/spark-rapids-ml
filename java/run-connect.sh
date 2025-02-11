@@ -2,6 +2,9 @@
 
 which spark-submit
 
-spark-submit \
- --class com.nvidia.rapids.ml.Main \
- target/com.nvidia.rapids.ml-1.0-SNAPSHOT.jar
+
+spark-submit --master "sc://localhost" \
+ --conf spark.connect.ml.backend.classes=com.nvidia.rapids.ml.Plugin \
+ rapids-plugin-demo.py
+
+

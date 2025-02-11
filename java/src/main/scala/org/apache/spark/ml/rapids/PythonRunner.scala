@@ -35,7 +35,7 @@ private object PythonRunner {
 class RapidsMLFunction extends SimplePythonFunction(
   command = Array[Byte](),
   envVars = Map(
-    "PYSPARK_PYTHON" -> PythonRunner.PYTHON_EXEC,
+    "PYSPARK_PYTHON" -> PythonRunner.PYTHON_EXEC, // TODO, how to get the PYSPARK_PYTHON?
     "PYSPARK_DRIVER_PYTHON" -> PythonRunner.PYTHON_EXEC,
   ).asJava,
   pythonIncludes = ArrayBuffer("").asJava,
