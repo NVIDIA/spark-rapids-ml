@@ -7,7 +7,7 @@ import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressio
 import org.apache.spark.ml.rapids.{PythonRunner, RapidsMLFunction, RapidsUtils}
 
 
-class RapidsLogisticRegression(override val uid: String) extends LogisticRegression with Rapids {
+class RapidsLogisticRegression(override val uid: String) extends LogisticRegression with RapidsEstimator {
 
   private val logger = LogFactory.getLog("com.nvidia.rapids.ml.RapidsLogisticRegression")
 
@@ -16,13 +16,21 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
   override def train(dataset: Dataset[_]): LogisticRegressionModel = {
     logger.info("Bobby train in SparkRapidsML library.")
 
-    withResource(
-      new PythonRunner("LogisticRegression",
-        Map.empty, dataset.toDF,
+    // Get the user-defined parameters and pass them to python process as a dictionary
+    //    val params = this.paramMap
+    //    this.params
+
+    // TODO get the parameters (coefficients and intercepts) and construct the LogisticRegressionModel
+    val modelParameters = withResource(
+      new PythonRunner(estimatorName,
+        Map.empty,
+        dataset.toDF,
         new RapidsMLFunction())) { runner =>
       runner.runInPython(useDaemon = true)
     }
     RapidsUtils.dummyLogisticRegressionModel
   }
+
+  override def estimatorName: String = "LogisticRegression"
 
 }

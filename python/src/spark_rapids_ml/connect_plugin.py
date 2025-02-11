@@ -95,6 +95,8 @@ def main(infile: IO, outfile: IO) -> None:
         java_sc_key = utf8_deserializer.loads(infile)
         dataset_key = utf8_deserializer.loads(infile)
 
+        # TODO read the parameters from JVM
+
         # Create a Java Gateway
         gateway = py4j.java_gateway.JavaGateway(
             gateway_parameters=GatewayParameters(auth_token=auth_token, auto_convert=True))
@@ -114,17 +116,18 @@ def main(infile: IO, outfile: IO) -> None:
         # Create DataFrame
         df = DataFrame(jdf, spark)
 
-
-        # Initialize the estimator of spark-rapids-ml
-        module = importlib.import_module("spark_rapids_ml.classification")
-        klass = getattr(module, "LogisticRegression")
-        lr = klass()
-        # lr.setFeaturesCols(["features"])
-        lr.setMaxIter(26)
-        print("-------------------------- 5")
-        model = lr.fit(df)
-        print("-------------------------- 7")
-        print(f"the maxIter of model is {model.getMaxIter()}")
+        print(f"------------ Running {estimator_name} with")
+        if estimator_name == "LogisticRegression":
+            # Initialize the estimator of spark-rapids-ml
+            module = importlib.import_module("spark_rapids_ml.classification")
+            klass = getattr(module, "LogisticRegression")
+            lr = klass()
+            lr.setMaxIter(26)
+            model = lr.fit(df)
+            print("-------------------------- 7")
+            print(f"the maxIter of model is {model.getMaxIter()}")
+        else:
+            raise RuntimeError(f"Unsupported estimator: {estimator_name}")
 
     except BaseException as e:
         print(f"-------------exception ------------- {e}")
