@@ -2,7 +2,7 @@ package org.apache.spark.ml.rapids
 
 import net.razorvine.pickle.Pickler
 import org.apache.spark.api.java.JavaSparkContext
-import org.apache.spark.api.python.{PythonFunction, PythonRDD, SimplePythonFunction}
+import org.apache.spark.api.python.{PythonFunction, PythonRDD, PythonWorkerUtils, SimplePythonFunction}
 import PythonRunner.AUTH_TOKEN
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.python.PythonPlannerRunner
@@ -72,8 +72,12 @@ class PythonRunner(name: String,
   }
 
   override protected def receiveFromPython(dataIn: DataInputStream): Int = {
-    println("in receiveFromPython ")
-    1234
+    val numClasses = dataIn.readInt()
+//    val isMultiNormial = dataIn.readBoolean()
+//    val pickledCoefficients: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
+//    val pickledIntercept: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
+    println(s"---------------- in receiveFromPython $numClasses")
+    1
   }
 
   override def close(): Unit = {

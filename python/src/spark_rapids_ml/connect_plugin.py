@@ -43,6 +43,12 @@ from pyspark.worker_util import (
     setup_memory_limits,
     setup_spark_files,
 )
+from spark_rapids_ml.classification import LogisticRegressionModel
+
+if os.environ.get("PYSPARK_ENABLE_NAMEDTUPLE_PATCH") == "1":
+    from pyspark.serializers import PickleSerializer as CPickleSerializer
+else:
+    from pyspark.serializers import CloudPickleSerializer as CPickleSerializer
 
 utf8_deserializer = UTF8Deserializer()
 
@@ -118,7 +124,13 @@ def main(infile: IO, outfile: IO) -> None:
             klass = getattr(module, "LogisticRegression")
             lr = klass(**params)
             print(f"===== maxIter: {lr.getMaxIter()}, tol: {lr.getTol()}")
-            model = lr.fit(df)
+            model: LogisticRegressionModel = lr.fit(df)
+            print("------------- the numclass is ", model.numClasses)
+            write_int(model.numClasses, outfile)
+            # write_with_length(CPickleSerializer().dumps(model.coefficientMatrix))
+            # write_with_length(CPickleSerializer().dumps(model.interceptVector))
+            # weights["is_multinomial"] = False if len(model.numClasses) == 2 else True
+
             print(f"the maxIter of model is {model.getMaxIter()}, tol: {lr.getTol()}")
         else:
             raise RuntimeError(f"Unsupported estimator: {estimator_name}")

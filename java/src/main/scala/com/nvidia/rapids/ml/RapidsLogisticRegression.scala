@@ -22,6 +22,7 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
     val params = RapidsUtils.getUserDefinedParams(this)
     println(s"--------------------parameters of lr -------- ${params}")
 
+
     // TODO get the parameters (coefficients and intercepts) and construct the LogisticRegressionModel
     val modelParameters = withResource(
       new PythonRunner(estimatorName,
