@@ -16,8 +16,8 @@
 #
 import faulthandler
 import importlib
+import json
 from importlib import import_module
-from pkgutil import iter_modules
 import os
 import sys
 from typing import IO
@@ -25,7 +25,6 @@ from typing import IO
 import py4j
 from py4j.java_gateway import GatewayParameters, java_import
 
-import pyspark
 from pyspark import SparkConf, SQLContext, SparkContext
 from pyspark.accumulators import _accumulatorRegistry
 from pyspark.serializers import (
@@ -35,7 +34,6 @@ from pyspark.serializers import (
     SpecialLengths, UTF8Deserializer,
 )
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.datasource import DataSource
 from pyspark.util import handle_worker_exception, local_connect_and_auth
 from pyspark.worker_util import (
     check_python_version,
@@ -92,10 +90,9 @@ def main(infile: IO, outfile: IO) -> None:
         # Receive variables from JVM
         auth_token = utf8_deserializer.loads(infile)
         estimator_name = utf8_deserializer.loads(infile)
+        params = utf8_deserializer.loads(infile)
         java_sc_key = utf8_deserializer.loads(infile)
         dataset_key = utf8_deserializer.loads(infile)
-
-        # TODO read the parameters from JVM
 
         # Create a Java Gateway
         gateway = py4j.java_gateway.JavaGateway(
@@ -106,9 +103,6 @@ def main(infile: IO, outfile: IO) -> None:
         jdf = py4j.java_gateway.JavaObject(dataset_key, gateway._gateway_client)
         jsc = py4j.java_gateway.JavaObject(java_sc_key, gateway._gateway_client)
 
-        # Test
-        jdf.show()
-
         # Prepare to create SparkContext and SparkSession
         sc = SparkContext(conf=SparkConf(_jconf=jsc.sc().conf()), gateway=gateway, jsc=jsc)
         spark = SparkSession(sc, jdf.sparkSession())
@@ -116,21 +110,20 @@ def main(infile: IO, outfile: IO) -> None:
         # Create DataFrame
         df = DataFrame(jdf, spark)
 
-        print(f"------------ Running {estimator_name} with")
+        print(f"Running {estimator_name} with parameters: {params}")
+        params = json.loads(params)
         if estimator_name == "LogisticRegression":
             # Initialize the estimator of spark-rapids-ml
             module = importlib.import_module("spark_rapids_ml.classification")
             klass = getattr(module, "LogisticRegression")
-            lr = klass()
-            lr.setMaxIter(26)
+            lr = klass(**params)
+            print(f"===== maxIter: {lr.getMaxIter()}, tol: {lr.getTol()}")
             model = lr.fit(df)
-            print("-------------------------- 7")
-            print(f"the maxIter of model is {model.getMaxIter()}")
+            print(f"the maxIter of model is {model.getMaxIter()}, tol: {lr.getTol()}")
         else:
             raise RuntimeError(f"Unsupported estimator: {estimator_name}")
 
     except BaseException as e:
-        print(f"-------------exception ------------- {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:
@@ -149,7 +142,6 @@ def main(infile: IO, outfile: IO) -> None:
         sys.exit(-1)
 
 
-print("------------------------------------------------ bobby ----- connect_plugin")
 if __name__ == "__main__":
     # Read information about how to connect back to the JVM from the environment.
     java_port = int(os.environ["PYTHON_WORKER_FACTORY_PORT"])

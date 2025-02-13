@@ -49,11 +49,11 @@ class RapidsMLFunction extends SimplePythonFunction(
  * estimator related message to python process and run.
  *
  * @param name    estimator name, not the java qualification name. Eg, LogisticRegression
- * @param params  the parameters of the estimator
+ * @param params  estimator parameters which has been encoded to json string
  * @param dataset input dataset
  */
 class PythonRunner(name: String,
-                   params: Map[String, String],
+                   params: String,
                    dataset: DataFrame,
                    func: PythonFunction) extends PythonPlannerRunner[Int](func) with AutoCloseable {
 
@@ -66,6 +66,7 @@ class PythonRunner(name: String,
     println("in writeToPython")
     PythonRDD.writeUTF(AUTH_TOKEN, dataOut)
     PythonRDD.writeUTF(name, dataOut)
+    PythonRDD.writeUTF(params, dataOut)
     PythonRDD.writeUTF(jscKey, dataOut)
     PythonRDD.writeUTF(datasetKey, dataOut)
   }

@@ -18,12 +18,14 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
 
     // Get the user-defined parameters and pass them to python process as a dictionary
     //    val params = this.paramMap
-    //    this.params
+
+    val params = RapidsUtils.getUserDefinedParams(this)
+    println(s"--------------------parameters of lr -------- ${params}")
 
     // TODO get the parameters (coefficients and intercepts) and construct the LogisticRegressionModel
     val modelParameters = withResource(
       new PythonRunner(estimatorName,
-        Map.empty,
+        params,
         dataset.toDF,
         new RapidsMLFunction())) { runner =>
       runner.runInPython(useDaemon = false)
