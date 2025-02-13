@@ -127,8 +127,8 @@ def main(infile: IO, outfile: IO) -> None:
             model: LogisticRegressionModel = lr.fit(df)
             print("------------- the numclass is ", model.numClasses)
             write_int(model.numClasses, outfile)
-            # write_with_length(CPickleSerializer().dumps(model.coefficientMatrix))
-            # write_with_length(CPickleSerializer().dumps(model.interceptVector))
+            write_with_length(CPickleSerializer().dumps(model.coefficientMatrix), outfile)
+            write_with_length(CPickleSerializer().dumps(model.interceptVector), outfile)
             # weights["is_multinomial"] = False if len(model.numClasses) == 2 else True
 
             print(f"the maxIter of model is {model.getMaxIter()}, tol: {lr.getTol()}")

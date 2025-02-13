@@ -4,6 +4,7 @@ import net.razorvine.pickle.Pickler
 import org.apache.spark.api.java.JavaSparkContext
 import org.apache.spark.api.python.{PythonFunction, PythonRDD, PythonWorkerUtils, SimplePythonFunction}
 import PythonRunner.AUTH_TOKEN
+import org.apache.spark.ml.python.MLSerDe
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.python.PythonPlannerRunner
 import py4j.GatewayServer.GatewayServerBuilder
@@ -60,7 +61,7 @@ class PythonRunner(name: String,
   private val datasetKey = PythonRunner.putNewObjectToPy4j(dataset)
   private val jscKey = PythonRunner.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
 
-    override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
+  override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
     println("in writeToPython")
@@ -73,9 +74,12 @@ class PythonRunner(name: String,
 
   override protected def receiveFromPython(dataIn: DataInputStream): Int = {
     val numClasses = dataIn.readInt()
-//    val isMultiNormial = dataIn.readBoolean()
-//    val pickledCoefficients: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
-//    val pickledIntercept: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
+    //    val isMultiNormial = dataIn.readBoolean()
+    val pickledCoefficients: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
+    val coefficients = MLSerDe.loads(pickledCoefficients)
+    val pickledIntercept: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
+    val intercepts = MLSerDe.loads(pickledIntercept)
+    println(s"------------------------coefficients: ${coefficients} ${intercepts}")
     println(s"---------------- in receiveFromPython $numClasses")
     1
   }
