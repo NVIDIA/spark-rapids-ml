@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -351,7 +351,7 @@ def test_pca(
 
     n_components = 3
 
-    cu_pca = cuPCA(n_components=n_components, output_type="numpy", verbose=7)
+    cu_pca = cuPCA(n_components=n_components, output_type="numpy", verbose=6)
     cu_model = cu_pca.fit(X)
 
     # Spark does not remove the mean from the transformed data

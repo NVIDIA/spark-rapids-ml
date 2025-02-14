@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -243,7 +243,7 @@ def test_dbscan(
         metric=metric,
         algorithm=algorithm,
         output_type="numpy",
-        verbose=7,
+        verbose=6,
     )
 
     import cudf
@@ -271,7 +271,7 @@ def test_dbscan(
             eps=eps,
             min_samples=min_samples,
             metric=metric,
-            verbose=7,
+            verbose=6,
         ).setFeaturesCol(features_col)
 
         dbscan_model = dbscan.fit(df)

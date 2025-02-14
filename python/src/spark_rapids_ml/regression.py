@@ -218,7 +218,7 @@ class LinearRegressionClass(_CumlClass):
         return {
             "algorithm": "eig",
             "fit_intercept": True,
-            "copy_X": None,
+            "copy_X": True,
             "normalize": False,
             "verbose": False,
             "alpha": 0.0001,
