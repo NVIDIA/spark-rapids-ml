@@ -129,13 +129,14 @@ def main(infile: IO, outfile: IO) -> None:
             write_int(model.numClasses, outfile)
             write_with_length(CPickleSerializer().dumps(model.coefficientMatrix), outfile)
             write_with_length(CPickleSerializer().dumps(model.interceptVector), outfile)
-            # weights["is_multinomial"] = False if len(model.numClasses) == 2 else True
-
+            multinomial = 0 if model.numClasses == 2 else 1
+            write_int(multinomial, outfile)
             print(f"the maxIter of model is {model.getMaxIter()}, tol: {lr.getTol()}")
         else:
             raise RuntimeError(f"Unsupported estimator: {estimator_name}")
 
     except BaseException as e:
+        print(f"-------------------exception {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:

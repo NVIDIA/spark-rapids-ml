@@ -74,12 +74,13 @@ class PythonRunner(name: String,
 
   override protected def receiveFromPython(dataIn: DataInputStream): Int = {
     val numClasses = dataIn.readInt()
-    //    val isMultiNormial = dataIn.readBoolean()
     val pickledCoefficients: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
     val coefficients = MLSerDe.loads(pickledCoefficients)
     val pickledIntercept: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
     val intercepts = MLSerDe.loads(pickledIntercept)
-    println(s"------------------------coefficients: ${coefficients} ${intercepts}")
+    val multinomial = dataIn.readInt()
+    val isMultinomial: Boolean = (multinomial == 1)
+    println(s"------------------------coefficients: ${coefficients} ${intercepts} $isMultinomial")
     println(s"---------------- in receiveFromPython $numClasses")
     1
   }
