@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -375,6 +375,31 @@ def _test_est_copy(
     # test init function
     est_init = Estimator(**input_spark_params)
     assert est_init.cuml_params == res_cuml_params
+
+
+def _test_model_copy(
+    gpu_model: Params,
+    cpu_model: Params,
+    input_spark_params: Dict[str, Any],
+) -> None:
+    """
+    This tests the copy() function of a model object.
+    """
+
+    gpu_attrs = {
+        getattr(gpu_model, p): input_spark_params[p] for p in input_spark_params
+    }
+    gpu_model_copy = gpu_model.copy(gpu_attrs)
+
+    cpu_attrs = {
+        getattr(cpu_model, p): input_spark_params[p] for p in input_spark_params
+    }
+    cpu_model_copy = cpu_model.copy(cpu_attrs)
+
+    for p in input_spark_params:
+        assert gpu_model_copy.getOrDefault(p) == input_spark_params[p]
+        assert gpu_model_copy.getOrDefault(p) == cpu_model_copy.getOrDefault(p)
+    return
 
 
 def test_default_cuml_params() -> None:
