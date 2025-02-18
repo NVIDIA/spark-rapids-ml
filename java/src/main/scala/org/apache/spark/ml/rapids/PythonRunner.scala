@@ -2,9 +2,9 @@ package org.apache.spark.ml.rapids
 
 import net.razorvine.pickle.Pickler
 import org.apache.spark.api.java.JavaSparkContext
-import org.apache.spark.api.python.{PythonFunction, PythonRDD, PythonWorkerUtils, SimplePythonFunction}
+import org.apache.spark.api.python.{PythonFunction, PythonRDD, SimplePythonFunction}
 import PythonRunner.AUTH_TOKEN
-import org.apache.spark.ml.python.MLSerDe
+import org.apache.spark.ml.Model
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.python.PythonPlannerRunner
 import py4j.GatewayServer.GatewayServerBuilder
@@ -45,18 +45,19 @@ class RapidsMLFunction extends SimplePythonFunction(
   broadcastVars = List.empty.asJava,
   accumulator = null)
 
+case class Fit(name: String, uid: String, params: String)
+
 /**
  * PythonRunner is a bridge to launch/manage Python process. And it sends the
  * estimator related message to python process and run.
  *
- * @param name    estimator name, not the java qualification name. Eg, LogisticRegression
- * @param params  estimator parameters which has been encoded to json string
+ * @param fit     the estimator information
  * @param dataset input dataset
  */
-class PythonRunner(name: String,
-                   params: String,
+class PythonRunner(fit: Fit,
                    dataset: DataFrame,
-                   func: PythonFunction) extends PythonPlannerRunner[Int](func) with AutoCloseable {
+                   callBack: (String, DataInputStream) => Model[_],
+                   func: PythonFunction) extends PythonPlannerRunner[Model[_]](func) with AutoCloseable {
 
   private val datasetKey = PythonRunner.putNewObjectToPy4j(dataset)
   private val jscKey = PythonRunner.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
@@ -64,25 +65,16 @@ class PythonRunner(name: String,
   override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
-    println("in writeToPython")
+    println(s"in writeToPython ${fit.name}")
     PythonRDD.writeUTF(AUTH_TOKEN, dataOut)
-    PythonRDD.writeUTF(name, dataOut)
-    PythonRDD.writeUTF(params, dataOut)
+    PythonRDD.writeUTF(fit.name, dataOut)
+    PythonRDD.writeUTF(fit.params, dataOut)
     PythonRDD.writeUTF(jscKey, dataOut)
     PythonRDD.writeUTF(datasetKey, dataOut)
   }
 
-  override protected def receiveFromPython(dataIn: DataInputStream): Int = {
-    val numClasses = dataIn.readInt()
-    val pickledCoefficients: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
-    val coefficients = MLSerDe.loads(pickledCoefficients)
-    val pickledIntercept: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
-    val intercepts = MLSerDe.loads(pickledIntercept)
-    val multinomial = dataIn.readInt()
-    val isMultinomial: Boolean = (multinomial == 1)
-    println(s"------------------------coefficients: ${coefficients} ${intercepts} $isMultinomial")
-    println(s"---------------- in receiveFromPython $numClasses")
-    1
+  override protected def receiveFromPython(dataIn: DataInputStream): Model[_] = {
+    callBack(fit.uid, dataIn)
   }
 
   override def close(): Unit = {
