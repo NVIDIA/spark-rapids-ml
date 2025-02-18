@@ -15,13 +15,12 @@ object RapidsUtils {
   def buildLogisticRegressionModel(uid: String, dataIn: DataInputStream): LogisticRegressionModel = {
     val numClasses = dataIn.readInt()
     val pickledCoefficients: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
-    val coefficients = MLSerDe.loads(pickledCoefficients)
+    val coefficients = MLSerDe.loads(pickledCoefficients).asInstanceOf[DenseMatrix]
     val pickledIntercept: Array[Byte] = PythonWorkerUtils.readBytes(dataIn)
-    val intercepts = MLSerDe.loads(pickledIntercept)
+    val intercepts = MLSerDe.loads(pickledIntercept).asInstanceOf[Vector]
     val multinomial = dataIn.readInt()
     val isMultinomial: Boolean = multinomial == 1
-//    new LogisticRegressionModel(uid, coefficients, intercepts, numClasses, isMultinomial)
-    new LogisticRegressionModel()
+    new LogisticRegressionModel(uid, coefficients, intercepts, numClasses, isMultinomial)
   }
 
   def getUserDefinedParams(instance: Params): String = {
