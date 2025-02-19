@@ -57,7 +57,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   spark:spark.locality.wait=0,\
   spark:spark.sql.execution.arrow.pyspark.enabled=true,\
   spark:spark.sql.execution.arrow.maxRecordsPerBatch=100000,\
-  spark:spark.rapids.memory.gpu.pooling.enabled=false \
+  spark:spark.rapids.memory.gpu.pool=NONE \
   --bucket ${GCS_BUCKET} \
   --enable-component-gateway \
   --subnet=default \
