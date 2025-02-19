@@ -57,7 +57,7 @@
             "spark.sql.adaptive.enabled":"false",
             "spark.python.worker.reuse":"true",
             "spark.rapids.memory.gpu.minAllocFraction":"0.0001",
-            "spark.rapids.memory.gpu.pooling.enabled":"false",
+            "spark.rapids.memory.gpu.pool":"NONE",
             "spark.rapids.sql.explain":"ALL",
             "spark.rapids.memory.gpu.reserve":"20",
             "spark.rapids.sql.python.gpu.enabled":"true",

@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ cat <<EOF
         "spark.plugins": "com.nvidia.spark.SQLPlugin",
         "spark.locality.wait": "0s",
         "spark.sql.cache.serializer": "com.nvidia.spark.ParquetCachedBatchSerializer",
-        "spark.rapids.memory.gpu.pooling.enabled": "false",
+        "spark.rapids.memory.gpu.pool": "NONE",
         "spark.rapids.sql.explain": "ALL",
         "spark.sql.execution.sortBeforeRepartition": "false",
         "spark.rapids.sql.python.gpu.enabled": "true",

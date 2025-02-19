@@ -1,5 +1,5 @@
 #! /bin/bash
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ cat <<EOF
 --spark_confs spark.plugins=com.nvidia.spark.SQLPlugin \
 --spark_confs spark.locality.wait=0s \
 --spark_confs spark.sql.cache.serializer=com.nvidia.spark.ParquetCachedBatchSerializer \
---spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
+--spark_confs spark.rapids.memory.gpu.pool=NONE \
 --spark_confs spark.rapids.sql.explain=ALL \
 --spark_confs spark.sql.execution.sortBeforeRepartition=false \
 --spark_confs spark.rapids.sql.format.parquet.reader.type=MULTITHREADED \

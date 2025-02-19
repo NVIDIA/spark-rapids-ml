@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ gpu_args=$(cat <<EOF
 --num_gpus=2 \
 --spark_confs spark.executor.resource.gpu.amount=1 \
 --spark_confs spark.task.resource.gpu.amount=1 \
---spark_confs spark.rapids.memory.gpu.pooling.enabled=false
+--spark_confs spark.rapids.memory.gpu.pool=NONE
 EOF
 )
 
