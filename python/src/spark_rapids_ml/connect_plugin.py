@@ -17,15 +17,13 @@
 import faulthandler
 import importlib
 import json
-from importlib import import_module
 import os
 import sys
 from typing import IO
 
 import py4j
 from py4j.java_gateway import GatewayParameters, java_import
-
-from pyspark import SparkConf, SQLContext, SparkContext
+from pyspark import SparkConf, SparkContext
 from pyspark.accumulators import _accumulatorRegistry
 from pyspark.serializers import (
     read_int,
@@ -37,7 +35,6 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.util import handle_worker_exception, local_connect_and_auth
 from pyspark.worker_util import (
     check_python_version,
-    pickleSer,
     send_accumulator_updates,
     setup_broadcasts,
     setup_memory_limits,
@@ -52,6 +49,7 @@ else:
 
 utf8_deserializer = UTF8Deserializer()
 
+
 def _java_import(gateway) -> None:
     java_import(gateway.jvm, "org.apache.spark.SparkConf")
     java_import(gateway.jvm, "org.apache.spark.api.java.*")
@@ -59,7 +57,6 @@ def _java_import(gateway) -> None:
     java_import(gateway.jvm, "org.apache.spark.ml.python.*")
     java_import(gateway.jvm, "org.apache.spark.mllib.api.python.*")
     java_import(gateway.jvm, "org.apache.spark.resource.*")
-    # TODO(davies): move into sql
     java_import(gateway.jvm, "org.apache.spark.sql.Encoders")
     java_import(gateway.jvm, "org.apache.spark.sql.OnSuccessCall")
     java_import(gateway.jvm, "org.apache.spark.sql.functions")
@@ -68,16 +65,10 @@ def _java_import(gateway) -> None:
     java_import(gateway.jvm, "org.apache.spark.sql.hive.*")
     java_import(gateway.jvm, "scala.Tuple2")
 
+
 def main(infile: IO, outfile: IO) -> None:
     """
-    Main method for looking up the available Python Data Sources in Python path.
-
-    This process is invoked from the `UserDefinedPythonDataSourceLookupRunner.runInPython`
-    method in `UserDefinedPythonDataSource.lookupAllDataSourcesInPython` when the first
-    call related to Python Data Source happens via `DataSourceManager`.
-
-    This is responsible for searching the available Python Data Sources so they can be
-    statically registered automatically.
+    Main method for running spark-rapids-ml.
     """
     faulthandler_log_path = os.environ.get("PYTHON_FAULTHANDLER_DIR", None)
     try:
@@ -123,20 +114,17 @@ def main(infile: IO, outfile: IO) -> None:
             module = importlib.import_module("spark_rapids_ml.classification")
             klass = getattr(module, "LogisticRegression")
             lr = klass(**params)
-            print(f"===== maxIter: {lr.getMaxIter()}, tol: {lr.getTol()}")
             model: LogisticRegressionModel = lr.fit(df)
-            print("------------- the numclass is ", model.numClasses)
             write_int(model.numClasses, outfile)
             write_with_length(CPickleSerializer().dumps(model.coefficientMatrix), outfile)
             write_with_length(CPickleSerializer().dumps(model.interceptVector), outfile)
             multinomial = 0 if model.numClasses == 2 else 1
             write_int(multinomial, outfile)
-            print(f"the maxIter of model is {model.getMaxIter()}, tol: {lr.getTol()}")
         else:
             raise RuntimeError(f"Unsupported estimator: {estimator_name}")
 
     except BaseException as e:
-        print(f"-------------------exception {e}")
+        print(f"spark-rapids-plugin exception: {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:

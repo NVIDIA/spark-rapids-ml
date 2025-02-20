@@ -1,10 +1,26 @@
+/**
+ * Copyright (c) 2025, NVIDIA CORPORATION.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.nvidia.rapids.ml
 
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
-import org.apache.spark.ml.rapids.{Fit, PythonRunner, RapidsMLFunction, RapidsUtils}
+import org.apache.spark.ml.rapids.{Fit, PythonRunner, RapidsUtils}
 
 
 class RapidsLogisticRegression(override val uid: String) extends LogisticRegression with RapidsEstimator {
@@ -14,24 +30,21 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
   def this() = this(Identifiable.randomUID("logreg"))
 
   override def train(dataset: Dataset[_]): LogisticRegressionModel = {
-    logger.info("Bobby train in SparkRapidsML library.")
-
+    logger.info("Training ...")
     // Get the user-defined parameters and pass them to python process as a dictionary
-    //    val params = this.paramMap
     val params = RapidsUtils.getUserDefinedParams(this)
-    println(s"--------------------parameters of lr -------- ${params}")
+    val runner = new PythonRunner(
+      Fit(estimatorName, uid, params),
+      dataset.toDF,
+      RapidsUtils.buildLogisticRegressionModel)
 
-    // TODO get the parameters (coefficients and intercepts) and construct the LogisticRegressionModel
-    withResource(
-      new PythonRunner(
-        Fit(estimatorName, uid, params),
-        dataset.toDF,
-        RapidsUtils.buildLogisticRegressionModel,
-        new RapidsMLFunction())) { runner =>
+    val model = withResource(runner) { _ =>
       runner.runInPython(useDaemon = false)
     }.asInstanceOf[LogisticRegressionModel]
-  }
 
+    logger.info("Training finished")
+    model
+  }
 
   /**
    * The estimator name
