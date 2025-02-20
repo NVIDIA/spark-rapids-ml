@@ -231,18 +231,10 @@ def get_default_cuml_parameters(
 
 def get_toy_model(EstimatorCLS: Callable, spark: SparkSession) -> Model:
     data = [
-        Row(
-            id=0, label=1.0, weight=1.0, features=Vectors.sparse(3, {2: 1.0})
-        ),  # (0., 0., 1.)
-        Row(
-            id=1, label=1.0, weight=1.0, features=Vectors.dense([0.0, 1.0, 0.0])
-        ),  # (0., 1., 0.)
-        Row(
-            id=2, label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 1.0})
-        ),  # (1., 0., 0.)
-        Row(
-            id=3, label=0.0, weight=1.0, features=Vectors.sparse(3, {0: 2.0, 2: -1.0})
-        ),  # (2., 0., -1.)
+        Row(id=0, label=1.0, weight=1.0, features=Vectors.dense([0.0, 0.0, 1.0])),
+        Row(id=1, label=1.0, weight=1.0, features=Vectors.dense([0.0, 1.0, 0.0])),
+        Row(id=2, label=0.0, weight=1.0, features=Vectors.dense([1.0, 0.0, 0.0])),
+        Row(id=3, label=0.0, weight=1.0, features=Vectors.dense([2.0, 0.0, -1.0])),
     ]
     train_df = spark.createDataFrame(data)
 
