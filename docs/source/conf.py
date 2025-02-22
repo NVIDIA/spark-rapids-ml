@@ -23,7 +23,7 @@
 project = 'spark-rapids-ml'
 copyright = '2024, NVIDIA'
 author = 'NVIDIA'
-release = '24.12.0'
+release = '25.02.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

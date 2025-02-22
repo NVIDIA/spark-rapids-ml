@@ -34,7 +34,7 @@ spark-rapids-submit --master local[1] tests_no_import_change/test_no_import_chan
 spark-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
 
 
-# calculate pytest parallelism by following https://github.com/NVIDIA/spark-rapids/blob/branch-24.12/integration_tests/run_pyspark_from_build.sh
+# calculate pytest parallelism by following https://github.com/NVIDIA/spark-rapids/blob/branch-25.02/integration_tests/run_pyspark_from_build.sh
 MAX_PARALLEL=3
 NVIDIA_SMI_ARGS="" 
 if [ ${CUDA_VISIBLE_DEVICES} ]; then
