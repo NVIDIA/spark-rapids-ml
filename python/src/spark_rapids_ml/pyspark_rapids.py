@@ -33,6 +33,10 @@ def main_cli() -> None:
             output_str = output_str.replace("pyspark", "pyspark-rapids")
             print(output_str, file=sys.stderr)
             exit(0)
+        elif sys.argv[i] in ["--verbose", "-v", "--supervise"]:
+            i += 1
+        else:
+            i += 2
 
     command_line = "pyspark " + " ".join(sys.argv[1:])
     env = dict(os.environ)
