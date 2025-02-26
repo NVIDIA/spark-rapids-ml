@@ -1,8 +1,7 @@
-# Spark Rapids ML Java
+# Spark Rapids ML Connect Plugin
 
-Spark-rapids-ml java project is the java wrapper of spark-rapids-ml python package,
-which could accelerate the Spark ML library on the connect environment without changing
-users' code.
+Spark Rapids ML Connect Plugin is a project that could leverage spark-rapids-ml python package to
+accelerate Spark ML algorithms on the spark connect environment without changing user's code.
 
 ## Compile
 
@@ -10,19 +9,19 @@ users' code.
 mvn clean package
 ```
 
-After compiling, you can get the latest `com.nvidia.rapids.ml-1.0-SNAPSHOT.jar` under target
+After compiling, you can get the latest `com.nvidia.rapids.ml-<LATEST_VERSION>.jar` under target directory.
 
-## Deploy
+## Local deploy
 
 ### Installation
 
-Follow up [this guide](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-25.02/python/README.md#installation) to
-install spark-rapids-ml
+Follow up [this guide](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-25.02/python/README.md#installation)
+to install spark-rapids-ml on the server side.
 
 ### Start connect server
 
 ``` shell
-export PYSPARK_PYTHON=YOUR_PATH_PATH_WITH_SPARK_RAPIDS_ML
+export PYSPARK_PYTHON=YOUR_PYTHON_PATH_WITH_SPARK_RAPIDS_ML
 start-connect-server.sh --master local[*] \
   --jars ${SPARK_HOME}/jars/spark-connect_2.13-4.0.0-SNAPSHOT.jar,com.nvidia.rapids.ml-1.0-SNAPSHOT.jar \
   --conf spark.driver.memory=20G
@@ -50,7 +49,9 @@ df = spark.createDataFrame([
         ], schema=['features', 'label'])
 lr = LogisticRegression(maxIter=19, tol=0.0023)
 model = lr.fit(df)
-print(f"======== model.intercept: {model.intercept}")
-print(f"======== model.coefficients: {model.coefficients}")
+
+print(f"model.intercept: {model.intercept}")
+print(f"model.coefficients: {model.coefficients}")
+
 model.transform(df).show()
 ```

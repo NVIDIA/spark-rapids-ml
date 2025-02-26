@@ -23,16 +23,26 @@ import PythonRunner.AUTH_TOKEN
 import org.apache.spark.ml.Model
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.python.PythonPlannerRunner
+
+import java.util.Base64
 import py4j.GatewayServer.GatewayServerBuilder
 
 import java.io.{DataInputStream, DataOutputStream}
+import java.security.SecureRandom
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 import scala.sys.process.Process
 
 
-private object PythonRunner {
-  val AUTH_TOKEN = "SPARK-RAPIDS-ML"
+private[this] object PythonRunner {
+  private def generateSecrets = {
+    val rnd = new SecureRandom()
+    val token = new Array[Byte](32)
+    rnd.nextBytes(token)
+    Base64.getEncoder.encodeToString(token)
+  }
+
+  lazy val AUTH_TOKEN: String = generateSecrets
 
   private lazy val RAPIDS_PYTHON_FUNC = {
     val defaultPythonExec: String = sys.env.getOrElse(
@@ -55,17 +65,19 @@ private object PythonRunner {
     )
   }
 
-  private lazy val gw: py4j.Gateway = {
+  private val gwLock = new Object() // Lock object
+
+  private lazy val gw: py4j.Gateway = gwLock.synchronized {
     val server = new GatewayServerBuilder().authToken(AUTH_TOKEN).build()
     server.start()
     server.getGateway
   }
 
-  def putNewObjectToPy4j(o: Object): String = {
+  def putNewObjectToPy4j(o: Object): String = gwLock.synchronized {
     gw.putNewObject(o)
   }
 
-  def deleteObject(key: String): Unit = {
+  def deleteObject(key: String): Unit = gwLock.synchronized {
     gw.deleteObject(key)
   }
 }
