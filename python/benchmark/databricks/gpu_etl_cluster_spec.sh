@@ -32,7 +32,7 @@ cat <<EOF
         "spark.plugins": "com.nvidia.spark.SQLPlugin",
         "spark.locality.wait": "0s",
         "spark.sql.cache.serializer": "com.nvidia.spark.ParquetCachedBatchSerializer",
-        "spark.rapids.memory.gpu.pool": "NONE",
+        "spark.rapids.memory.gpu.pooling.enabled": "false",
         "spark.rapids.sql.explain": "ALL",
         "spark.sql.execution.sortBeforeRepartition": "false",
         "spark.rapids.sql.python.gpu.enabled": "true",

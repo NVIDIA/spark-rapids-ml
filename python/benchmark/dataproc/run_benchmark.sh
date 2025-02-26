@@ -35,7 +35,7 @@ gpu_args=$(cat <<EOF
 --num_gpus=2 \
 --spark_confs spark.executor.resource.gpu.amount=1 \
 --spark_confs spark.task.resource.gpu.amount=1 \
---spark_confs spark.rapids.memory.gpu.pool=NONE
+--spark_confs spark.rapids.memory.gpu.pooling.enabled=false
 EOF
 )
 
