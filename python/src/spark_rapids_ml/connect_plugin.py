@@ -31,7 +31,9 @@ from pyspark.serializers import (
     read_int,
     write_int,
     write_with_length,
-    SpecialLengths, UTF8Deserializer,
+    CloudPickleSerializer,
+    SpecialLengths,
+    UTF8Deserializer,
 )
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.util import handle_worker_exception, local_connect_and_auth
@@ -43,11 +45,6 @@ from pyspark.worker_util import (
     setup_spark_files,
 )
 from spark_rapids_ml.classification import LogisticRegressionModel
-
-if os.environ.get("PYSPARK_ENABLE_NAMEDTUPLE_PATCH") == "1":
-    from pyspark.serializers import PickleSerializer as CPickleSerializer
-else:
-    from pyspark.serializers import CloudPickleSerializer as CPickleSerializer
 
 utf8_deserializer = UTF8Deserializer()
 
@@ -118,8 +115,8 @@ def main(infile: IO, outfile: IO) -> None:
             lr = klass(**params)
             model: LogisticRegressionModel = lr.fit(df)
             write_int(model.numClasses, outfile)
-            write_with_length(CPickleSerializer().dumps(model.coefficientMatrix), outfile)
-            write_with_length(CPickleSerializer().dumps(model.interceptVector), outfile)
+            write_with_length(CloudPickleSerializer().dumps(model.coefficientMatrix), outfile)
+            write_with_length(CloudPickleSerializer().dumps(model.interceptVector), outfile)
             multinomial = 0 if model.numClasses == 2 else 1
             write_int(multinomial, outfile)
         else:
