@@ -1,35 +1,73 @@
 # Spark Rapids ML Connect Plugin
 
-Spark Rapids ML Connect Plugin is a project that could leverage spark-rapids-ml python package to
-accelerate Spark ML algorithms on the spark connect environment without changing user's code.
+The Spark Rapids ML Connect Plugin is a project designed to accelerate Spark ML algorithms
+in a Spark Connect environment using the spark-rapids-ml Python package. It enables GPU
+acceleration for machine learning workloads without requiring changes to the user's existing code.
 
-## Compile
+## Environment Setup
 
-``` shell
-mvn clean package
-```
+- Compile the Spark Rapids ML Connect Plugin
 
-After compiling, you can get the latest `com.nvidia.rapids.ml-<LATEST_VERSION>.jar` under target directory.
+  To compile the plugin, run the following command:
 
-## Local deploy
+    ``` shell
+    mvn clean package
+    ```
 
-### Installation
+  After compilation, the latest JAR file, `com.nvidia.rapids.ml-<LATEST_VERSION>.jar`, will be
+  available in the `target` directory.
 
-Follow up [this guide](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-25.02/python/README.md#installation)
-to install spark-rapids-ml on the server side.
+- Install spark-rapids-ml
 
-### Start connect server
+  Follow
+  the [installation guide](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-25.02/python/README.md#installation)
+  to install the spark-rapids-ml package on the server side.
+
+- Setup Spark
+
+  Download the latest Spark snapshot archive
+  from [this site](https://urm.nvidia.com/artifactory/sw-spark-maven-local/org/apache/spark/4.1.0-SNAPSHOT/)
+
+  Extract the archive and set the `SPARK_HOME` environment variable to point to the Spark directory.
+
+- Install PySpark Connect Client
+
+  To install the PySpark Connect client on the client side, follow these steps:
+
+    ``` shell
+    cd $SPARK_HOME/python
+    python packaging/client/setup.py sdist
+
+    # Create a new conda environment for the client
+    conda create -n pyspark-client python==3.11
+    conda activate pyspark-client
+
+    # Install the PySpark client package
+    pip install $SPARK_HOME/dist/pyspark-client-4.1.0.dev0.tar.gz
+    ```
+
+  This will set up the PySpark client in the pyspark-client conda environment.
+
+## Testing
+
+This section outlines the steps to test Spark Connect with the RAPIDS ML plugin,
+including setting up the server and running client-side tests.
+
+### Start connect server (server side)
+
+To start the Spark Connect server with RAPIDS ML support, follow these steps:
 
 ``` shell
 export PYSPARK_PYTHON=YOUR_PYTHON_PATH_WITH_SPARK_RAPIDS_ML
 start-connect-server.sh --master local[*] \
-  --jars ${SPARK_HOME}/jars/spark-connect_2.13-4.0.0-SNAPSHOT.jar,com.nvidia.rapids.ml-1.0-SNAPSHOT.jar \
+  --jars ${SPARK_HOME}/jars/spark-connect_2.13-4.1.0-SNAPSHOT.jar,com.nvidia.rapids.ml-1.0-SNAPSHOT.jar \
   --conf spark.driver.memory=20G
 ```
 
-### Test
+### Run the tests (client side)
 
-Then you could play around the following code,
+Once the server is running, you can connect to it from a client under the `pyspark-client` environment
+with Spark Connect support. Run below testing code to test it:
 
 ```shell
 from pyspark.ml.classification import (LogisticRegression,
