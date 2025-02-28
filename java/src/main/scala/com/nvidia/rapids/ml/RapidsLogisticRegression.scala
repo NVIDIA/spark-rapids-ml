@@ -33,10 +33,10 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
     logger.info("Training ...")
     // Get the user-defined parameters and pass them to python process as a dictionary
     val params = RapidsUtils.getUserDefinedParams(this)
+
     val runner = new PythonRunner(
-      Fit(estimatorName, uid, params),
-      dataset.toDF,
-      RapidsUtils.buildLogisticRegressionModel)
+      Fit(estimatorName, params),
+      dataset.toDF)
 
     val model = withResource(runner) { _ =>
       runner.runInPython(useDaemon = false)

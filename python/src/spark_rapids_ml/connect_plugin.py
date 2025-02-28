@@ -31,7 +31,6 @@ from pyspark.serializers import (
     read_int,
     write_int,
     write_with_length,
-    CloudPickleSerializer,
     SpecialLengths,
     UTF8Deserializer,
 )
@@ -107,6 +106,7 @@ def main(infile: IO, outfile: IO) -> None:
         df = DataFrame(jdf, spark)
 
         print(f"Running {estimator_name} with parameters: {params}")
+
         params = json.loads(params)
         if estimator_name == "LogisticRegression":
             # Initialize the estimator of spark-rapids-ml
@@ -114,11 +114,9 @@ def main(infile: IO, outfile: IO) -> None:
             klass = getattr(module, "LogisticRegression")
             lr = klass(**params)
             model: LogisticRegressionModel = lr.fit(df)
-            write_int(model.numClasses, outfile)
-            write_with_length(CloudPickleSerializer().dumps(model.coefficientMatrix), outfile)
-            write_with_length(CloudPickleSerializer().dumps(model.interceptVector), outfile)
-            multinomial = 0 if model.numClasses == 2 else 1
-            write_int(multinomial, outfile)
+            model_cpu = model.cpu()
+            model_targe_id = model_cpu._java_obj._target_id.encode("utf-8")
+            write_with_length(model_targe_id, outfile)
         else:
             raise RuntimeError(f"Unsupported estimator: {estimator_name}")
 

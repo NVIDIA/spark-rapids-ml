@@ -18,9 +18,7 @@ package org.apache.spark.ml.rapids
 
 import net.razorvine.pickle.Pickler
 import org.apache.spark.api.java.JavaSparkContext
-import org.apache.spark.api.python.{PythonFunction, PythonRDD, SimplePythonFunction}
-import PythonRunner.AUTH_TOKEN
-import org.apache.spark.ml.Model
+import org.apache.spark.api.python.{PythonFunction, PythonRDD, PythonWorkerUtils, SimplePythonFunction}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.python.PythonPlannerRunner
 
@@ -80,9 +78,18 @@ private[this] object PythonRunner {
   def deleteObject(key: String): Unit = gwLock.synchronized {
     gw.deleteObject(key)
   }
+
+  /**
+   * Get the model from py4j server and remove its reference in py4j server
+   */
+  def getObjectAndDeref(id: String): Object = gwLock.synchronized {
+    val o = gw.getObject(id)
+    gw.deleteObject(id)
+    o
+  }
 }
 
-case class Fit(name: String, uid: String, params: String)
+case class Fit(name: String, params: String)
 
 /**
  * PythonRunner is a bridge to launch/manage Python process. And it sends the
@@ -93,9 +100,8 @@ case class Fit(name: String, uid: String, params: String)
  */
 class PythonRunner(fit: Fit,
                    dataset: DataFrame,
-                   callBack: (String, DataInputStream) => Model[_],
                    func: PythonFunction = PythonRunner.RAPIDS_PYTHON_FUNC)
-  extends PythonPlannerRunner[Model[_]](func) with AutoCloseable {
+  extends PythonPlannerRunner[Object](func) with AutoCloseable {
 
   private val datasetKey = PythonRunner.putNewObjectToPy4j(dataset)
   private val jscKey = PythonRunner.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
@@ -104,15 +110,17 @@ class PythonRunner(fit: Fit,
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
     println(s"in writeToPython ${fit.name}")
-    PythonRDD.writeUTF(AUTH_TOKEN, dataOut)
+    PythonRDD.writeUTF(PythonRunner.AUTH_TOKEN, dataOut)
     PythonRDD.writeUTF(fit.name, dataOut)
     PythonRDD.writeUTF(fit.params, dataOut)
     PythonRDD.writeUTF(jscKey, dataOut)
     PythonRDD.writeUTF(datasetKey, dataOut)
   }
 
-  override protected def receiveFromPython(dataIn: DataInputStream): Model[_] = {
-    callBack(fit.uid, dataIn)
+  override protected def receiveFromPython(dataIn: DataInputStream): Object = {
+    // Read the model target id in py4j server
+    val modelTargetId = PythonWorkerUtils.readUTF(dataIn)
+    PythonRunner.getObjectAndDeref(modelTargetId)
   }
 
   override def close(): Unit = {
