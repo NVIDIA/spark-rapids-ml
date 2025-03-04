@@ -540,7 +540,7 @@ def test_random_forest_regressor(
         "max_depth": 6,
         "bootstrap": False,
         "max_features": 1.0,
-        "random_state": 1.0,
+        "random_state": 1,
     }
 
     from cuml import RandomForestRegressor as cuRf
@@ -852,7 +852,7 @@ def test_fit_multiple_in_single_pass(
         )
 
         assert label_col is not None
-        rf = RFEstimator(bootstrap=False, max_features=1.0, random_state=1.0)
+        rf = RFEstimator(bootstrap=False, max_features=1.0, random_state=1)
         rf.setFeaturesCol(features_col)
         rf.setLabelCol(label_col)
 

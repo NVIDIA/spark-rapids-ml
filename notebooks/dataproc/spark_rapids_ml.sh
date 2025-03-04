@@ -15,7 +15,7 @@
 
 set -ex
 
-RAPIDS_VERSION=24.12.0
+RAPIDS_VERSION=25.2.0
 
 
 # install cudf and cuml

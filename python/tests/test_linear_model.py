@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -402,7 +402,7 @@ def test_linear_regression(
         )
         assert label_col is not None
 
-        slr = LinearRegression(num_workers=gpu_number, verbose=7, **other_params)
+        slr = LinearRegression(num_workers=gpu_number, verbose=6, **other_params)
         slr.setRegParam(alpha)
         slr.setStandardization(
             False
