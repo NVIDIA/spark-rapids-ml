@@ -322,7 +322,9 @@ def test_kmeans(
 
     n_rows = data_shape[0]
     n_cols = data_shape[1]
-    n_clusters = 8
+    n_clusters = 4
+    tol = 1.0e-20
+    seed = 42  # This does not guarantee deterministic centers in 25.02.
     cluster_std = 1.0
     tolerance = 0.001
 
@@ -333,7 +335,11 @@ def test_kmeans(
     from cuml import KMeans as cuKMeans
 
     cuml_kmeans = cuKMeans(
-        n_clusters=n_clusters, output_type="numpy", tol=1.0e-20, verbose=6
+        n_clusters=n_clusters,
+        output_type="numpy",
+        tol=tol,
+        random_state=seed,
+        verbose=6,
     )
 
     import cudf
@@ -348,7 +354,7 @@ def test_kmeans(
         )
 
         kmeans = KMeans(
-            num_workers=gpu_number, n_clusters=n_clusters, verbose=6
+            num_workers=gpu_number, n_clusters=n_clusters, tol=tol, seed=seed, verbose=6
         ).setFeaturesCol(features_col)
 
         kmeans_model = kmeans.fit(df)
