@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -333,7 +333,7 @@ def test_kmeans(
     from cuml import KMeans as cuKMeans
 
     cuml_kmeans = cuKMeans(
-        n_clusters=n_clusters, output_type="numpy", tol=1.0e-20, verbose=7
+        n_clusters=n_clusters, output_type="numpy", tol=1.0e-20, verbose=6
     )
 
     import cudf
@@ -348,7 +348,7 @@ def test_kmeans(
         )
 
         kmeans = KMeans(
-            num_workers=gpu_number, n_clusters=n_clusters, verbose=7
+            num_workers=gpu_number, n_clusters=n_clusters, verbose=6
         ).setFeaturesCol(features_col)
 
         kmeans_model = kmeans.fit(df)

@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import os
 import subprocess
 import sys
 
@@ -21,14 +22,15 @@ import spark_rapids_ml
 
 
 def main_cli() -> None:
+
     i = 1
     while i < len(sys.argv) and sys.argv[i].startswith("-"):
         if sys.argv[i] in ["--help", "-h", "--version"]:
             output = subprocess.run(
-                f"spark-submit {sys.argv[i]}", shell=True, capture_output=True
+                f"pyspark {sys.argv[i]}", shell=True, capture_output=True
             ).stderr
             output_str = output.decode("utf-8")
-            output_str = output_str.replace("spark-submit", "spark-rapids-submit")
+            output_str = output_str.replace("pyspark", "pyspark-rapids")
             print(output_str, file=sys.stderr)
             exit(0)
         elif sys.argv[i] in ["--verbose", "-v", "--supervise"]:
@@ -36,14 +38,7 @@ def main_cli() -> None:
         else:
             i += 2
 
-    if i >= len(sys.argv):
-        raise ValueError("No application file supplied.")
-
-    command_line = (
-        "spark-submit "
-        + " ".join(sys.argv[1:i])
-        + f" {spark_rapids_ml.__path__[0]}/__main__.py "
-        + " ".join(sys.argv[i:])
-    )
-
-    subprocess.run(command_line, shell=True)
+    command_line = "pyspark " + " ".join(sys.argv[1:])
+    env = dict(os.environ)
+    env["PYTHONSTARTUP"] = f"{spark_rapids_ml.__path__[0]}/install.py"
+    subprocess.run(command_line, shell=True, env=env)
