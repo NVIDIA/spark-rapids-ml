@@ -1,6 +1,17 @@
-# Spark Rapids ML (Python)
+# Spark Rapids ML (Python) <!-- omit in toc -->
 
 This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-accelerated implementations of many common ML algorithms.  These implementations are adapted to use PySpark for distributed training and inference.
+
+## Contents <!-- omit in toc -->
+- [Installation](#installation)
+- [Examples](#examples)
+  - [PySpark shell](#pyspark-shell)
+  - [Jupyter Notebooks](#jupyter-notebooks)
+- [API Compatibility](#api-compatibility)
+- [CLIs Enabling No Package Import Change](#clis-enabling-no-package-import-change)
+- [API Documentation](#api-documentation)
+
+---
 
 ## Installation
 
@@ -8,9 +19,9 @@ For simplicity, the following instructions just use Spark local mode, assuming a
 
 First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 11.8:
 ```bash
-conda create -n rapids-24.12 \
+conda create -n rapids-25.02 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=24.12 cuvs=24.12 python=3.10 cuda-version=11.8 numpy~=1.0
+    cuml=25.02 cuvs=25.02 python=3.10 cuda-version=11.8 numpy~=1.0
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -19,7 +30,7 @@ conda create -n rapids-24.12 \
 
 Once you have the conda environment, activate it and install the required packages.
 ```bash
-conda activate rapids-24.12
+conda activate rapids-25.02
 
 ## for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
@@ -40,7 +51,7 @@ These examples demonstrate the API using toy datasets.  However, GPUs are more e
 
 ### PySpark shell
 
-#### Linear Regression
+#### Linear Regression <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.regression import LinearRegression
@@ -66,7 +77,7 @@ model.coefficients
 # DenseVector([0.5, -0.5])
 ```
 
-#### K-Means
+#### K-Means <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.clustering import KMeans
@@ -107,7 +118,7 @@ rows[2].newPrediction == rows[3].newPrediction
 # True
 ```
 
-#### PCA
+#### PCA <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.feature import PCA
@@ -194,6 +205,12 @@ and if the app is deployed using `spark-submit` the following included CLI (inst
 ```bash
 spark-rapids-submit --master <master> <other spark submit options> application.py <application options>
 ```
+
+A similar `spark_rapids_ml` enabling CLI is included for `pyspark` shell:
+```bash
+pyspark-rapids --master <master> <other pyspark options>
+```
+
 For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors.
 
 Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).

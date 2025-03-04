@@ -22,13 +22,16 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   ```
 - Upload the initialization scripts to your GCS bucket:
   ```
-  gsutil cp spark_rapids_ml.sh gs://${GCS_BUCKET}/spark_rapids_ml.sh
+  gsutil cp spark_rapids_ml.sh gs://${GCS_BUCKET}
   curl -LO https://raw.githubusercontent.com/GoogleCloudDataproc/initialization-actions/master/spark-rapids/spark-rapids.sh
   gsutil cp spark-rapids.sh gs://${GCS_BUCKET}/spark-rapids.sh
   ```
-- Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS:
+- Create a cluster with at least two single-gpu workers.  **Note**: in addition to the initialization script from above, this also uses the standard [initialization actions](https://github.com/GoogleCloudDataproc/initialization-actions) for installing the GPU drivers and RAPIDS.
+  
+  If you wish to enable [no-import-change](../README.md#no-import-change) UX for the cluster, change the `spark-rapids-ml-no-import-enabled` metadata value to `1` in the command.  The initialization script `spark_rapids_ml.sh` checks this metadata value and modifies the run time accordingly.
+
   ```
-  export RAPIDS_VERSION=24.12.0
+  export RAPIDS_VERSION=25.2.0
 
   gcloud dataproc clusters create $USER-spark-rapids-ml \
   --image-version=2.2-ubuntu22 \
@@ -47,32 +50,23 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   --metadata gpu-driver-provider="NVIDIA" \
   --metadata rapids-runtime=SPARK \
   --metadata rapids-version=${RAPIDS_VERSION} \
+  --metadata spark-rapids-ml-no-import-enabled=0 \
+  --properties spark:spark.executor.resource.gpu.amount=1,\
+  spark:spark.task.resource.gpu.amount=0.0625,\
+  spark:spark.executorEnv.CUPY_CACHE_DIR=/tmp/.cupy,\
+  spark:spark.locality.wait=0,\
+  spark:spark.sql.execution.arrow.pyspark.enabled=true,\
+  spark:spark.sql.execution.arrow.maxRecordsPerBatch=100000,\
+  spark:spark.rapids.memory.gpu.pooling.enabled=false \
   --bucket ${GCS_BUCKET} \
   --enable-component-gateway \
   --subnet=default \
   --no-shielded-secure-boot
   ```
+  **Note**: the `properties` settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
 - In the [Dataproc console](https://console.cloud.google.com/dataproc/clusters), select your cluster, go to the "Web Interfaces" tab, and click on the "JupyterLab" link.
-- In JupyterLab, upload the desired [notebook](../) via the `Upload Files` button.
-- Add the following to a new cell at the beginning of the notebook, since Dataproc does not start the `SparkSession` by default:
-  ```
-  from pyspark.sql import SparkSession
+- In JupyterLab, upload the desired [notebook](../) via the `Upload Files` button.  For the no-import-change UX, you can try the example [kmeans-no-import-change.ipynb](../kmeans-no-import-change.ipynb).
+  
+  Open the notebook and select the `PySpark` kernel using, e.g., the drop down that appears after clicking on the kernel name appearing in the top right corner of the notebook view.
 
-  spark = SparkSession.builder \
-  .appName("spark-rapids-ml") \
-  .config("spark.executor.resource.gpu.amount", "1") \
-  .config("spark.task.resource.gpu.amount", "1") \
-  .config("spark.executorEnv.CUPY_CACHE_DIR", "/tmp/.cupy") \
-  .config("spark.locality.wait", "0") \
-  .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-  .config("spark.sql.execution.arrow.maxRecordsPerBatch", "100000") \
-  .config("spark.rapids.memory.gpu.pooling.enabled", "false") \
-  .config("spark.rapids.memory.gpu.reserve", "90") \
-  .getOrCreate()
-  ```
-  **Note**: these settings are for demonstration purposes only.  Additional tuning may be required for optimal performance.
 - Run the notebook cells.  **Note**: you may need to change file paths to use `hdfs://` paths.
-- Add the following to a new cell at the end of the notebook to close the `SparkSession`:
-  ```
-  spark.stop()
-  ```

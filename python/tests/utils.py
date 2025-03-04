@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,17 @@
 
 from collections import namedtuple
 from functools import lru_cache
-from typing import Any, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import pandas as pd
 import pyspark
+from pyspark.ml import Estimator, Model
 from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
+from pyspark.sql.types import Row
 from sklearn.datasets import make_classification, make_regression
 from sklearn.model_selection import train_test_split
 
@@ -224,3 +227,34 @@ def get_default_cuml_parameters(
     for cuml_cls in cuml_classes:
         params.update(_get_default_params_from_func(cuml_cls, excludes))
     return params
+
+
+def get_toy_model(EstimatorCLS: Callable, spark: SparkSession) -> Model:
+    data = [
+        Row(id=0, label=1.0, weight=1.0, features=Vectors.dense([0.0, 0.0, 1.0])),
+        Row(id=1, label=1.0, weight=1.0, features=Vectors.dense([0.0, 1.0, 0.0])),
+        Row(id=2, label=0.0, weight=1.0, features=Vectors.dense([1.0, 0.0, 0.0])),
+        Row(id=3, label=0.0, weight=1.0, features=Vectors.dense([2.0, 0.0, -1.0])),
+    ]
+    train_df = spark.createDataFrame(data)
+
+    if "spark_rapids_ml" in EstimatorCLS.__module__:
+        est = EstimatorCLS(num_workers=1)
+    else:
+        est = EstimatorCLS()
+
+    if est.hasParam("inputCol"):
+        est.setInputCol("features")
+    elif est.hasParam("featuresCol"):
+        est.setFeaturesCol("features")
+    else:
+        assert False, "an Estimator must contain inputCol or featuresCol"
+
+    if est.hasParam("labelCol"):
+        est.setLabelCol("label")
+
+    if est.hasParam("idCol"):
+        est.setIdCol("id")
+
+    model = est.fit(train_df)
+    return model

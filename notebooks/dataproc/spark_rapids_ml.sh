@@ -13,16 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -ex
 
-RAPIDS_VERSION=24.12.0
+RAPIDS_VERSION=25.2.0
 
 
 # install cudf and cuml
 pip install --upgrade pip
 pip install cudf-cu12~=${RAPIDS_VERSION} cuml-cu12~=${RAPIDS_VERSION} cuvs-cu12~=${RAPIDS_VERSION} \
-    pylibraft-cu12~=${RAPIDS_VERSION} \
-    rmm-cu12~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml
 pip install spark-rapids-ml
+
+# set up no-import-change for cluster if enabled
+no_import_change=$(/usr/share/google/get_metadata_value attributes/spark-rapids-ml-no-import-enabled)
+if [[ $no_import_change == 1 ]]; then
+    echo "enabling no import change in cluster" 1>&2
+    mkdir -p /root/.ipython/profile_default/startup
+    echo "import spark_rapids_ml.install" >/root/.ipython/profile_default/startup/00-spark-rapids-ml.py
+fi

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -540,7 +540,7 @@ def test_random_forest_regressor(
         "max_depth": 6,
         "bootstrap": False,
         "max_features": 1.0,
-        "random_state": 1.0,
+        "random_state": 1,
     }
 
     from cuml import RandomForestRegressor as cuRf
@@ -852,7 +852,7 @@ def test_fit_multiple_in_single_pass(
         )
 
         assert label_col is not None
-        rf = RFEstimator(bootstrap=False, max_features=1.0, random_state=1.0)
+        rf = RFEstimator(bootstrap=False, max_features=1.0, random_state=1)
         rf.setFeaturesCol(features_col)
         rf.setLabelCol(label_col)
 
@@ -888,7 +888,7 @@ def test_fit_multiple_in_single_pass(
         models = rf.fit(train_df, param_maps)
 
         def get_num_trees(
-            model: Union[RandomForestClassificationModel, RandomForestRegressionModel]
+            model: Union[RandomForestClassificationModel, RandomForestRegressionModel],
         ) -> int:
             model_jsons = cast(List[str], model._model_json)
             trees = [
