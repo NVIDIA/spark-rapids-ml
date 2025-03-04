@@ -25,7 +25,7 @@ import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressio
  * RapidsLogisticRegression is a JVM wrapper of LogisticRegression in spark-rapids-ml python package.
  *
  * The training process is going to launch a Python Process where to run spark-rapids-ml
- * LogisticRegression and return the corresponing model
+ * LogisticRegression and return the corresponding model
  *
  * @param uid unique ID of the estimator
  */

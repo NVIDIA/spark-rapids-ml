@@ -18,7 +18,7 @@ package com.nvidia.rapids.ml
 
 import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.ml.param.Params
-import org.apache.spark.ml.rapids.{Fit, PythonRunner, RapidsUtils}
+import org.apache.spark.ml.rapids.{Fit, PythonRunnerUtils, RapidsUtils}
 import org.apache.spark.sql.Dataset
 
 /** Implementation of the automatic-resource-management pattern */
@@ -45,7 +45,7 @@ trait RapidsEstimator extends Params {
     // Get the user-defined parameters and pass them to python process as a dictionary
     val params = RapidsUtils.getUserDefinedParams(this)
 
-    val runner = new PythonRunner(
+    val runner = new PythonRunnerUtils(
       Fit(estimatorName, params),
       dataset.toDF)
 

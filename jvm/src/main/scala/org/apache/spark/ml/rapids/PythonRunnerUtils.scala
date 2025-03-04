@@ -32,7 +32,7 @@ import scala.jdk.CollectionConverters._
 import scala.sys.process.Process
 
 
-private[this] object PythonRunner {
+private[this] object PythonRunnerUtils {
   private def generateSecrets = {
     val rnd = new SecureRandom()
     val token = new Array[Byte](32)
@@ -95,22 +95,22 @@ case class Fit(name: String, params: String)
  * PythonRunner is a bridge to launch/manage Python process. And it sends the
  * estimator related message to python process and run.
  *
- * @param fit     the estimator information
+ * @param fit     the fit information
  * @param dataset input dataset
  */
-class PythonRunner(fit: Fit,
-                   dataset: DataFrame,
-                   func: PythonFunction = PythonRunner.RAPIDS_PYTHON_FUNC)
+class PythonRunnerUtils(fit: Fit,
+                        dataset: DataFrame,
+                        func: PythonFunction = PythonRunnerUtils.RAPIDS_PYTHON_FUNC)
   extends PythonPlannerRunner[Object](func) with AutoCloseable {
 
-  private val datasetKey = PythonRunner.putNewObjectToPy4j(dataset)
-  private val jscKey = PythonRunner.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
+  private val datasetKey = PythonRunnerUtils.putNewObjectToPy4j(dataset)
+  private val jscKey = PythonRunnerUtils.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
 
   override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
     println(s"in writeToPython ${fit.name}")
-    PythonRDD.writeUTF(PythonRunner.AUTH_TOKEN, dataOut)
+    PythonRDD.writeUTF(PythonRunnerUtils.AUTH_TOKEN, dataOut)
     PythonRDD.writeUTF(fit.name, dataOut)
     PythonRDD.writeUTF(fit.params, dataOut)
     PythonRDD.writeUTF(jscKey, dataOut)
@@ -120,11 +120,11 @@ class PythonRunner(fit: Fit,
   override protected def receiveFromPython(dataIn: DataInputStream): Object = {
     // Read the model target id in py4j server
     val modelTargetId = PythonWorkerUtils.readUTF(dataIn)
-    PythonRunner.getObjectAndDeref(modelTargetId)
+    PythonRunnerUtils.getObjectAndDeref(modelTargetId)
   }
 
   override def close(): Unit = {
-    PythonRunner.deleteObject(jscKey)
-    PythonRunner.deleteObject(datasetKey)
+    PythonRunnerUtils.deleteObject(jscKey)
+    PythonRunnerUtils.deleteObject(datasetKey)
   }
 }

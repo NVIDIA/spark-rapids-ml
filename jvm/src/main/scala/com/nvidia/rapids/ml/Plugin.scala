@@ -19,6 +19,10 @@ import org.apache.spark.sql.connect.plugin.MLBackendPlugin
 
 import java.util.Optional
 
+/**
+ * Spark connect ml plugin is used to replace the spark built-in algorithms with
+ * spark-rapids-ml python implementations.
+ */
 class Plugin extends MLBackendPlugin {
 
   override def transform(mlName: String): Optional[String] = {
