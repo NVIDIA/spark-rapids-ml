@@ -39,7 +39,7 @@ acceleration for machine learning workloads without requiring changes to the use
     python packaging/client/setup.py sdist
 
     # Create a new conda environment for the client
-    conda create -n pyspark-client python==3.11
+    conda create -n pyspark-client python==3.12
     conda activate pyspark-client
 
     # Install the PySpark client package

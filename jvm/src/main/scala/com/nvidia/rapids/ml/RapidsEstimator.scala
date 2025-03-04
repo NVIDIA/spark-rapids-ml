@@ -16,7 +16,24 @@
 
 package com.nvidia.rapids.ml
 
-trait RapidsEstimator {
+import org.apache.spark.ml.classification.LogisticRegressionModel
+import org.apache.spark.ml.param.Params
+import org.apache.spark.ml.rapids.{Fit, PythonRunner, RapidsUtils}
+import org.apache.spark.sql.Dataset
+
+/** Implementation of the automatic-resource-management pattern */
+object Arm {
+  /** Executes the provided code block and then closes the resource */
+  def withResource[T <: AutoCloseable, V](r: T)(block: T => V): V = {
+    try {
+      block(r)
+    } finally {
+      r.close()
+    }
+  }
+}
+
+trait RapidsEstimator extends Params {
 
   /**
    * The estimator name
@@ -24,12 +41,16 @@ trait RapidsEstimator {
    */
   def estimatorName: String
 
-  /** Executes the provided code block and then closes the resource */
-  def withResource[T <: AutoCloseable, V](r: T)(block: T => V): V = {
-    try {
-      block(r)
-    } finally {
-      r.close()
+  def trainOnPython(dataset: Dataset[_]): Object = {
+    // Get the user-defined parameters and pass them to python process as a dictionary
+    val params = RapidsUtils.getUserDefinedParams(this)
+
+    val runner = new PythonRunner(
+      Fit(estimatorName, params),
+      dataset.toDF)
+
+    Arm.withResource(runner) { _ =>
+      runner.runInPython(useDaemon = false)
     }
   }
 

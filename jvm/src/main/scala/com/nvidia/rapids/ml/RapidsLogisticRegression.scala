@@ -20,9 +20,15 @@ import org.apache.commons.logging.LogFactory
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
-import org.apache.spark.ml.rapids.{Fit, PythonRunner, RapidsUtils}
 
-
+/**
+ * RapidsLogisticRegression is a JVM wrapper of LogisticRegression in spark-rapids-ml python package.
+ *
+ * The training process is going to launch a Python Process where to run spark-rapids-ml
+ * LogisticRegression and return the corresponing model
+ *
+ * @param uid unique ID of the estimator
+ */
 class RapidsLogisticRegression(override val uid: String) extends LogisticRegression with RapidsEstimator {
 
   private val logger = LogFactory.getLog("com.nvidia.rapids.ml.RapidsLogisticRegression")
@@ -31,17 +37,7 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
 
   override def train(dataset: Dataset[_]): LogisticRegressionModel = {
     logger.info("Training ...")
-    // Get the user-defined parameters and pass them to python process as a dictionary
-    val params = RapidsUtils.getUserDefinedParams(this)
-
-    val runner = new PythonRunner(
-      Fit(estimatorName, params),
-      dataset.toDF)
-
-    val model = withResource(runner) { _ =>
-      runner.runInPython(useDaemon = false)
-    }.asInstanceOf[LogisticRegressionModel]
-
+    val model = trainOnPython(dataset).asInstanceOf[LogisticRegressionModel]
     logger.info("Training finished")
     model
   }

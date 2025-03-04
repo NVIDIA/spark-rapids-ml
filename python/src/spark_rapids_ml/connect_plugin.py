@@ -17,7 +17,6 @@
 # limitations under the License.
 #
 import faulthandler
-import importlib
 import json
 import os
 import sys
@@ -106,22 +105,19 @@ def main(infile: IO, outfile: IO) -> None:
         df = DataFrame(jdf, spark)
 
         print(f"Running {estimator_name} with parameters: {params}")
-
         params = json.loads(params)
+
         if estimator_name == "LogisticRegression":
-            # Initialize the estimator of spark-rapids-ml
-            module = importlib.import_module("spark_rapids_ml.classification")
-            klass = getattr(module, "LogisticRegression")
-            lr = klass(**params)
+            from .classification import LogisticRegression
+            lr = LogisticRegression(**params)
             model: LogisticRegressionModel = lr.fit(df)
             model_cpu = model.cpu()
-            model_targe_id = model_cpu._java_obj._target_id.encode("utf-8")
+            model_targe_id = model_cpu._java_obj._get_object_id().encode("utf-8")
             write_with_length(model_targe_id, outfile)
         else:
             raise RuntimeError(f"Unsupported estimator: {estimator_name}")
 
     except BaseException as e:
-        print(f"spark-rapids-plugin exception: {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:
