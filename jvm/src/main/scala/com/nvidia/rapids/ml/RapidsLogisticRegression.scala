@@ -16,7 +16,6 @@
 
 package com.nvidia.rapids.ml
 
-import org.apache.commons.logging.LogFactory
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
@@ -31,15 +30,10 @@ import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressio
  */
 class RapidsLogisticRegression(override val uid: String) extends LogisticRegression with RapidsEstimator {
 
-  private val logger = LogFactory.getLog("com.nvidia.rapids.ml.RapidsLogisticRegression")
-
   def this() = this(Identifiable.randomUID("logreg"))
 
   override def train(dataset: Dataset[_]): LogisticRegressionModel = {
-    logger.info("Training ...")
-    val model = trainOnPython(dataset).asInstanceOf[LogisticRegressionModel]
-    logger.info("Training finished")
-    model
+    trainOnPython(dataset).asInstanceOf[LogisticRegressionModel]
   }
 
   /**

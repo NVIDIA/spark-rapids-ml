@@ -16,78 +16,15 @@
 
 package org.apache.spark.ml.rapids
 
+import java.io.{DataInputStream, DataOutputStream}
+
 import net.razorvine.pickle.Pickler
+
 import org.apache.spark.api.java.JavaSparkContext
-import org.apache.spark.api.python.{PythonFunction, PythonRDD, PythonWorkerUtils, SimplePythonFunction}
+import org.apache.spark.api.python.{PythonFunction, PythonRDD, PythonWorkerUtils}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.execution.python.PythonPlannerRunner
 
-import java.util.Base64
-import py4j.GatewayServer.GatewayServerBuilder
-
-import java.io.{DataInputStream, DataOutputStream}
-import java.security.SecureRandom
-import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters._
-import scala.sys.process.Process
-
-
-private[this] object PythonRunnerUtils {
-  private def generateSecrets = {
-    val rnd = new SecureRandom()
-    val token = new Array[Byte](32)
-    rnd.nextBytes(token)
-    Base64.getEncoder.encodeToString(token)
-  }
-
-  lazy val AUTH_TOKEN: String = generateSecrets
-
-  private lazy val RAPIDS_PYTHON_FUNC = {
-    val defaultPythonExec: String = sys.env.getOrElse(
-      "PYSPARK_DRIVER_PYTHON", sys.env.getOrElse("PYSPARK_PYTHON", "python3"))
-    val pythonVer: String =
-      Process(
-        Seq(defaultPythonExec, "-c", "import sys; print('%d.%d' % sys.version_info[:2])")).!!.trim()
-
-    new SimplePythonFunction(
-      command = Array[Byte](),
-      envVars = Map(
-        "PYSPARK_PYTHON" -> defaultPythonExec,
-        "PYSPARK_DRIVER_PYTHON" -> defaultPythonExec,
-      ).asJava,
-      pythonIncludes = ArrayBuffer("").asJava,
-      pythonExec = defaultPythonExec,
-      pythonVer = pythonVer,
-      broadcastVars = List.empty.asJava,
-      accumulator = null
-    )
-  }
-
-  private val gwLock = new Object() // Lock object
-
-  private lazy val gw: py4j.Gateway = gwLock.synchronized {
-    val server = new GatewayServerBuilder().authToken(AUTH_TOKEN).build()
-    server.start()
-    server.getGateway
-  }
-
-  def putNewObjectToPy4j(o: Object): String = gwLock.synchronized {
-    gw.putNewObject(o)
-  }
-
-  def deleteObject(key: String): Unit = gwLock.synchronized {
-    gw.deleteObject(key)
-  }
-
-  /**
-   * Get the model from py4j server and remove its reference in py4j server
-   */
-  def getObjectAndDeref(id: String): Object = gwLock.synchronized {
-    val o = gw.getObject(id)
-    gw.deleteObject(id)
-    o
-  }
-}
 
 case class Fit(name: String, params: String)
 
@@ -98,9 +35,9 @@ case class Fit(name: String, params: String)
  * @param fit     the fit information
  * @param dataset input dataset
  */
-class PythonRunnerUtils(fit: Fit,
-                        dataset: DataFrame,
-                        func: PythonFunction = PythonRunnerUtils.RAPIDS_PYTHON_FUNC)
+class PythonRunner(fit: Fit,
+                   dataset: DataFrame,
+                   func: PythonFunction = PythonRunnerUtils.RAPIDS_PYTHON_FUNC)
   extends PythonPlannerRunner[Object](func) with AutoCloseable {
 
   private val datasetKey = PythonRunnerUtils.putNewObjectToPy4j(dataset)

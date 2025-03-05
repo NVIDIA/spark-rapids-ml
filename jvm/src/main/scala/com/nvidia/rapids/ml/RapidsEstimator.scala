@@ -16,9 +16,9 @@
 
 package com.nvidia.rapids.ml
 
-import org.apache.spark.ml.classification.LogisticRegressionModel
+import org.apache.commons.logging.LogFactory
 import org.apache.spark.ml.param.Params
-import org.apache.spark.ml.rapids.{Fit, PythonRunnerUtils, RapidsUtils}
+import org.apache.spark.ml.rapids.{Fit, PythonRunner, RapidsUtils}
 import org.apache.spark.sql.Dataset
 
 /** Implementation of the automatic-resource-management pattern */
@@ -34,6 +34,7 @@ object Arm {
 }
 
 trait RapidsEstimator extends Params {
+  protected val logger = LogFactory.getLog("Spark-Rapids-ML Plugin")
 
   /**
    * The estimator name
@@ -42,16 +43,20 @@ trait RapidsEstimator extends Params {
   def estimatorName: String
 
   def trainOnPython(dataset: Dataset[_]): Object = {
+    logger.info(s"Training $estimatorName ...")
     // Get the user-defined parameters and pass them to python process as a dictionary
     val params = RapidsUtils.getUserDefinedParams(this)
 
-    val runner = new PythonRunnerUtils(
+    val runner = new PythonRunner(
       Fit(estimatorName, params),
       dataset.toDF)
 
-    Arm.withResource(runner) { _ =>
+    val model = Arm.withResource(runner) { _ =>
       runner.runInPython(useDaemon = false)
     }
+
+    logger.info(s"Finished $estimatorName training.")
+    model
   }
 
 }
