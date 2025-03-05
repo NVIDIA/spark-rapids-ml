@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -115,7 +115,7 @@ class KMeansClass(_CumlClass):
             "verbose": False,
             "random_state": 1,
             "init": "scalable-k-means++",
-            "n_init": 1,
+            "n_init": "warn",  # See https://github.com/rapidsai/cuml/pull/6142 - this needs to be updated to "auto" for cuml 25.04
             "oversampling_factor": 2.0,
             "max_samples_per_batch": 32768,
         }
