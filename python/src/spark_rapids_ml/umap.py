@@ -1491,8 +1491,18 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                 schema=indices_data_schema,
             )
 
-            indptr_df.write.parquet(os.path.join(df_dir, "indptr.parquet"))
-            indices_data_df.write.parquet(os.path.join(df_dir, "indices_data.parquet"))
+            if self.shouldOverwrite:
+                indptr_df.write.parquet(
+                    os.path.join(df_dir, "indptr.parquet"), mode="overwrite"
+                )
+                indices_data_df.write.parquet(
+                    os.path.join(df_dir, "indices_data.parquet"), mode="overwrite"
+                )
+            else:
+                indptr_df.write.parquet(os.path.join(df_dir, "indptr.parquet"))
+                indices_data_df.write.parquet(
+                    os.path.join(df_dir, "indices_data.parquet")
+                )
 
         def write_dense_array(array: np.ndarray, df_path: str) -> None:
             assert (
@@ -1514,7 +1524,11 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                 ),
                 schema=schema,
             )
-            data_df.write.parquet(df_path)
+
+            if self.shouldOverwrite:
+                data_df.write.parquet(df_path, mode="overwrite")
+            else:
+                data_df.write.parquet(df_path)
 
         DefaultParamsWriter.saveMetadata(
             self.instance,
