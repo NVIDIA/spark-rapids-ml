@@ -42,7 +42,6 @@ from pyspark.worker_util import (
     setup_memory_limits,
     setup_spark_files,
 )
-from spark_rapids_ml.classification import LogisticRegressionModel
 
 utf8_deserializer = UTF8Deserializer()
 
@@ -83,7 +82,7 @@ def main(infile: IO, outfile: IO) -> None:
 
         # Receive variables from JVM
         auth_token = utf8_deserializer.loads(infile)
-        estimator_name = utf8_deserializer.loads(infile)
+        operator_name = utf8_deserializer.loads(infile)
         params = utf8_deserializer.loads(infile)
         java_sc_key = utf8_deserializer.loads(infile)
         dataset_key = utf8_deserializer.loads(infile)
@@ -104,18 +103,34 @@ def main(infile: IO, outfile: IO) -> None:
         # Create DataFrame
         df = DataFrame(jdf, spark)
 
-        print(f"Running {estimator_name} with parameters: {params}")
+        print(f"Running {operator_name} with parameters: {params}")
         params = json.loads(params)
 
-        if estimator_name == "LogisticRegression":
-            from .classification import LogisticRegression
+        need_flush = False
+
+        if operator_name == "LogisticRegression":
+            from .classification import LogisticRegression, LogisticRegressionModel
             lr = LogisticRegression(**params)
             model: LogisticRegressionModel = lr.fit(df)
             model_cpu = model.cpu()
             model_targe_id = model_cpu._java_obj._get_object_id().encode("utf-8")
             write_with_length(model_targe_id, outfile)
+            # Model attributes
+            attributes = [model.coef_, model.intercept_, model.classes_, model.n_cols,
+                          model.dtype, model.num_iters, model.objective]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "LogisticRegressionModel":
+            attributes = utf8_deserializer.loads(infile)
+            attributes = json.loads(attributes)
+            from .classification import LogisticRegressionModel
+            lrm = LogisticRegressionModel(*attributes)
+            transformed_df = lrm.transform(df)
+            transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
+            write_with_length(transformed_df_id, outfile)
+            need_flush = True
         else:
-            raise RuntimeError(f"Unsupported estimator: {estimator_name}")
+            raise RuntimeError(f"Unsupported estimator: {operator_name}")
 
     except BaseException as e:
         handle_worker_exception(e, outfile)
@@ -127,12 +142,21 @@ def main(infile: IO, outfile: IO) -> None:
             os.remove(faulthandler_log_path)
 
     send_accumulator_updates(outfile)
+
+    def flush():
+        if need_flush:
+            outfile.flush()
+            import time
+            time.sleep(2)
+
     # check end of stream
     if read_int(infile) == SpecialLengths.END_OF_STREAM:
         write_int(SpecialLengths.END_OF_STREAM, outfile)
+        flush()
     else:
         # write a different value to tell JVM to not reuse this worker
         write_int(SpecialLengths.END_OF_DATA_SECTION, outfile)
+        flush()
         sys.exit(-1)
 
 
