@@ -468,6 +468,11 @@ def test_umap_model_persistence(
         except Exception as e:
             assert re.search(r"Output directory .* already exists", str(e))
 
+        try:
+            umap_model.write().overwrite().save(model_path)
+        except:
+            assert False, "Overwriting should be permitted"
+
         # double check expected files/directories
         model_dir_contents = os.listdir(model_path)
         data_dir_contents = os.listdir(f"{model_path}/data")
