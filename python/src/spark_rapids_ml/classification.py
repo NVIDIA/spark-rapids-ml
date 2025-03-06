@@ -1451,7 +1451,7 @@ class LogisticRegressionModel(
 
                 data = {}
 
-                scores = lr.decision_function(pdf).T
+                scores = lr.decision_function(pdf)
                 assert isinstance(scores, cp.ndarray)
                 _num_classes = max(scores.shape[1] if len(scores.shape) == 2 else 2, 2)
 
