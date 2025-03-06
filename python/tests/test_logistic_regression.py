@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cuml
 import numpy as np
@@ -35,6 +35,7 @@ if version.parse(cuml.__version__) < version.parse("23.08.00"):
         "Logistic Regression requires cuml 23.08.00 or above. Try upgrading cuml or ignoring this file in testing"
     )
 
+import random
 import warnings
 
 import scipy
@@ -177,9 +178,9 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         "standardization": True,
     }
 
-    default_cuml_params = {
+    default_cuml_params: Dict[str, Any] = {
         "max_iter": 100,
-        "penalty": "none",
+        "penalty": None,
         "C": 0.0,
         "l1_ratio": 0.0,
         "tol": 1e-6,
@@ -279,14 +280,12 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     loaded_lr = LogisticRegression.load(estimator_path)
     assert_params(loaded_lr, expected_spark_params, expected_cuml_params)
 
-    # float32_inputs warn, logistic only accepts float32
-    lr_float32 = LogisticRegression(float32_inputs=False)
-    assert "float32_inputs to False" in caplog.text
-    assert lr_float32._float32_inputs
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(LogisticRegression)
 
 
-# TODO support float64
-# 'vector' will be converted to float32
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
 @pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
@@ -305,8 +304,14 @@ def test_classifier(
     elasticNet_param: float = 0.0,
     tolerance: float = 0.001,
     convert_to_sparse: bool = False,
+    set_float32_inputs: Optional[bool] = None,
 ) -> LogisticRegression:
     standardization: bool = False
+
+    float32_inputs = set_float32_inputs
+    if float32_inputs is None:
+        random.seed(0)
+        float32_inputs = random.choice([True, False])
 
     if convert_to_sparse is True:
         assert feature_type == "vector"
@@ -360,6 +365,7 @@ def test_classifier(
             regParam=reg_param,
             elasticNetParam=elasticNet_param,
             num_workers=gpu_number,
+            float32_inputs=float32_inputs,
         )
 
         assert spark_lr._cuml_params["penalty"] == cu_lr.penalty
@@ -376,7 +382,15 @@ def test_classifier(
 
         # test coefficients and intercepts
         assert spark_lr_model.n_cols == cu_lr.n_cols
-        assert spark_lr_model.dtype == "float32"
+
+        # test float32_inputs
+        assert spark_lr_model._float32_inputs == float32_inputs
+        if float32_inputs is True:
+            assert spark_lr_model.dtype == "float32"
+        elif feature_type is "vector":
+            assert spark_lr_model.dtype == "float64"
+        else:
+            assert spark_lr_model.dtype == np.dtype(data_type)
 
         assert array_equal(np.array(spark_lr_model.coef_), cu_lr.coef_, tolerance)
         assert array_equal(spark_lr_model.intercept_, cu_lr.intercept_, tolerance)  # type: ignore
@@ -1019,6 +1033,7 @@ def test_quick(
     max_record_batch: int,
     n_classes: int,
     gpu_number: int,
+    float32_inputs: bool = True,
 ) -> None:
     tolerance = 0.005
     reg_param = reg_factors[0]
@@ -1035,6 +1050,7 @@ def test_quick(
         tolerance=tolerance,
         reg_param=reg_param,
         elasticNet_param=elasticNet_param,
+        set_float32_inputs=float32_inputs,
     )
 
     assert lr.getRegParam() == reg_param
@@ -1050,7 +1066,7 @@ def test_quick(
     sg = CUMLSG(penalty=penalty, C=C, l1_ratio=l1_ratio)
     l1_strength, l2_strength = sg._get_qn_params()
     if reg_param == 0.0:
-        assert penalty == "none"
+        assert penalty == None
         assert l1_strength == 0.0
         assert l2_strength == 0.0
     elif elasticNet_param == 0.0:
@@ -1078,6 +1094,7 @@ def test_crossvalidator_logistic_regression(
     data_shape: Tuple[int, int],
     convert_to_sparse: bool = False,
 ) -> None:
+
     if convert_to_sparse:
         assert feature_type == feature_types.vector
 
@@ -1654,6 +1671,7 @@ def test_quick_sparse(
     max_record_batch: int,
     n_classes: int,
     gpu_number: int,
+    float32_inputs: bool = True,
 ) -> None:
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
         import logging
@@ -1682,6 +1700,7 @@ def test_quick_sparse(
         reg_param=reg_param,
         elasticNet_param=elasticNet_param,
         convert_to_sparse=convert_to_sparse,
+        set_float32_inputs=float32_inputs,
     )
 
 
@@ -1813,6 +1832,7 @@ def test_standardization(
     max_record_batch: int,
     ncols_nclasses: Tuple[int, int],
     gpu_number: int,
+    float32_inputs: bool = True,
 ) -> None:
     tolerance = 0.001
     reg_param = reg_factors[0]
@@ -1854,6 +1874,10 @@ def test_standardization(
                 regParam=reg_param,
                 elasticNetParam=elasticNet_param,
             )
+
+            if isinstance(estimator, LogisticRegression):
+                estimator._float32_inputs = float32_inputs
+
             estimator.setFeaturesCol(features_col)
             estimator.setLabelCol(label_col)
             model = estimator.fit(train_df)
@@ -1901,7 +1925,7 @@ def test_standardization(
 def test_standardization_sparse_example(
     fit_intercept: bool,
     reg_factors: Tuple[float, float],
-    caplog: LogCaptureFixture,
+    float32_inputs: bool = False,
 ) -> None:
     if version.parse(pyspark.__version__) < version.parse("3.4.0"):
         import logging
@@ -1972,7 +1996,7 @@ def test_standardization_sparse_example(
 
         df = sparse_to_df(X, y)
 
-        gpu_lr = LogisticRegression(**est_params)
+        gpu_lr = LogisticRegression(float32_inputs=float32_inputs, **est_params)
         cpu_lr = SparkLogisticRegression(**est_params)
 
         gpu_model = gpu_lr.fit(df)
@@ -1986,3 +2010,85 @@ def test_standardization_sparse_example(
             tolerance,
             accuracy_and_probability_only=accuracy_and_probability_only,
         )
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "reg_factors", [(0.0, 0.0), (0.1, 0.0), (0.1, 1.0), (0.1, 0.2)]
+)
+@pytest.mark.parametrize("feature_type", ["vector"])
+@pytest.mark.parametrize("data_shape", [(100, 8)], ids=idfn)
+@pytest.mark.parametrize("max_record_batch", [20])
+@pytest.mark.parametrize("n_classes", [2, 4])
+@pytest.mark.slow
+def test_double_precision(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    max_record_batch: int,
+    n_classes: int,
+    gpu_number: int,
+) -> None:
+
+    random.seed(0)
+    random_bool = random.choice([True, False])
+    data_type = np.float32 if random_bool is True else np.float64
+    float32_inputs = random.choice([True, False])
+
+    test_quick(
+        fit_intercept=fit_intercept,
+        reg_factors=reg_factors,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        float32_inputs=float32_inputs,
+    )
+
+    test_quick_sparse(
+        fit_intercept=fit_intercept,
+        reg_factors=reg_factors,
+        feature_type=feature_type,
+        data_shape=data_shape,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        n_classes=n_classes,
+        gpu_number=gpu_number,
+        float32_inputs=float32_inputs,
+    )
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("reg_factors", [(0.0, 0.0), (0.1, 0.2)])
+def test_quick_double_precision(
+    fit_intercept: bool,
+    reg_factors: Tuple[float, float],
+    gpu_number: int,
+) -> None:
+
+    data_type = np.float64
+    float32_inputs = False
+
+    feature_type = "vector"
+    max_record_batch = 20
+    ncols_nclasses = (3, 4)
+
+    test_standardization(
+        fit_intercept=fit_intercept,
+        reg_factors=reg_factors,
+        feature_type=feature_type,
+        data_type=data_type,
+        max_record_batch=max_record_batch,
+        ncols_nclasses=ncols_nclasses,
+        gpu_number=gpu_number,
+        float32_inputs=float32_inputs,
+    )
+
+    test_standardization_sparse_example(
+        fit_intercept=fit_intercept,
+        reg_factors=reg_factors,
+        float32_inputs=float32_inputs,
+    )

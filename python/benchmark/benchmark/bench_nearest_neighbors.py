@@ -36,9 +36,13 @@ class CPUNearestNeighborsModel(ApproximateNearestNeighborsModel):
     def __init__(self, item_df: DataFrame):
         super().__init__(item_df)
 
-    def kneighbors(self, query_df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+    def kneighbors(
+        self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
+    ) -> Tuple[DataFrame, DataFrame, DataFrame]:
         self._item_df_withid = self._ensureIdCol(self._item_df_withid)
-        return super().kneighbors(query_df)
+        return super().kneighbors(
+            query_df, sort_knn_df_by_query_id=sort_knn_df_by_query_id
+        )
 
     def _get_cuml_transform_func(
         self, dataset: DataFrame, eval_metric_info: Optional[EvalMetricInfo] = None
@@ -61,6 +65,9 @@ class CPUNearestNeighborsModel(ApproximateNearestNeighborsModel):
             return nn_object
 
         return _construct_sknn, _transform_internal, None
+
+    def _concate_pdf_batches(self) -> bool:
+        return False
 
 
 class BenchmarkNearestNeighbors(BenchmarkBase):

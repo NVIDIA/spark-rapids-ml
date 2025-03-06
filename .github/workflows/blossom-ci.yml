@@ -34,18 +34,20 @@ jobs:
       args: ${{ env.args }}
 
     # This job only runs for pull request comments
-    if: contains( '\
-      lijinf2,\
-      eordentlich,\
-      wbo4958,\
-      leewyang,\
-      rongou,\
-      wjxiz1992,\
-      GaryShen2008,\
-      NvTimLiu,\
-      YanxuanLiu,\
-      pxLi,\
-      ', format('{0},', github.actor)) && github.event.comment.body == 'build'
+    if: |
+      github.event.comment.body == 'build' &&
+      (
+        github.actor == 'lijinf2' ||
+        github.actor == 'eordentlich' ||
+        github.actor == 'wbo4958' ||
+        github.actor == 'leewyang' ||
+        github.actor == 'rongou' ||
+        github.actor == 'wjxiz1992' ||
+        github.actor == 'GaryShen2008' ||
+        github.actor == 'NvTimLiu' ||
+        github.actor == 'YanxuanLiu' ||
+        github.actor == 'pxLi'
+      )
     steps:
       - name: Check if comment is issued by authorized person
         run: blossom-ci
@@ -60,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ fromJson(needs.Authorization.outputs.args).repo }}
           ref: ${{ fromJson(needs.Authorization.outputs.args).ref }}
@@ -68,7 +70,7 @@ jobs:
 
       # repo specific steps
       - name: Setup java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: adopt
           java-version: 8

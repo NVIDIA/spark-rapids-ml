@@ -32,7 +32,20 @@ from .utils import (
 )
 
 
-def test_default_cuml_params() -> None:
+def cal_dist(v1: np.ndarray, v2: np.ndarray, metric: str) -> float:
+    if metric == "inner_product":
+        return np.dot(v1, v2)
+    elif metric in {"euclidean", "l2", "sqeuclidean"}:
+        dist = float(np.linalg.norm(v1 - v2))
+        if metric == "sqeuclidean":
+            return dist * dist
+        else:
+            return dist
+    else:
+        assert False, f"Does not recognize metric '{metric}'"
+
+
+def test_params() -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
 
     # obtain n_neighbors, verbose, algorithm, algo_params, metric
@@ -50,6 +63,11 @@ def test_default_cuml_params() -> None:
     spark_params = ApproximateNearestNeighbors()._get_cuml_params_default()
     cuml_params["algorithm"] = "ivfflat"  # change cuml default 'auto' to 'ivfflat'
     assert cuml_params == spark_params
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(ApproximateNearestNeighbors)
 
 
 @pytest.mark.parametrize(
@@ -80,26 +98,40 @@ def test_example(
 @pytest.mark.parametrize(
     "combo",
     [
-        ("array", 10000, None),
-        ("vector", 2000, {"nlist": 10, "nprobe": 2}),
-        ("multi_cols", 5000, {"nlist": 20, "nprobe": 4}),
+        ("array", 10000, None, "euclidean"),
+        ("vector", 2000, {"nlist": 10, "nprobe": 2}, "euclidean"),
+        ("multi_cols", 5000, {"nlist": 20, "nprobe": 4}, "euclidean"),
+        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
+        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
+        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
     ],
 )  # vector feature type will be converted to float32 to be compatible with cuml single-GPU NearestNeighbors Class
 @pytest.mark.parametrize("data_shape", [(10000, 50)], ids=idfn)
 @pytest.mark.parametrize("data_type", [np.float32])
 def test_ivfflat(
-    combo: Tuple[str, int, Optional[Dict[str, Any]]],
+    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
     data_shape: Tuple[int, int],
     data_type: np.dtype,
-    metric: str = "euclidean",
-) -> Tuple[ApproximateNearestNeighbors, ApproximateNearestNeighborsModel]:
+) -> None:
 
     feature_type = combo[0]
     max_record_batch = combo[1]
     algoParams = combo[2]
+    metric = combo[3]
     n_neighbors = 50
     n_clusters = 10
     tolerance = 1e-4
+
+    from cuml.neighbors import VALID_METRICS
+
+    assert VALID_METRICS["ivfflat"] == {
+        "euclidean",
+        "sqeuclidean",
+        "cosine",
+        "inner_product",
+        "l2",
+        "correlation",
+    }
 
     expected_avg_recall = 0.95
 
@@ -235,25 +267,21 @@ def test_ivfflat(
         )
         reconstructed_collect = reconstructed_knn_df.collect()
 
-        def get_sorted_indices(row: Row) -> list[int]:
-            row_dists = row["distances"]
-            row_indices = row["indices"]
-            idx_sorted = sorted(
-                range(len(row_indices)), key=lambda i: (row_dists[i], row_indices[i])
-            )
-            indices_sorted = [row["indices"][idx] for idx in idx_sorted]
-            return indices_sorted
-
         def assert_row_equal(r1: Row, r2: Row) -> None:
             assert r1[f"query_{id_col}"] == r2[f"query_{id_col}"]
             r1_distances = r1["distances"]
             r2_distances = r2["distances"]
             assert r1_distances == r2_distances
 
-            # sort indices in case two neighbors having same distance to the query
-            r1_indices_sorted = get_sorted_indices(r1)
-            r2_indices_sorted = get_sorted_indices(r2)
-            assert r1_indices_sorted == r2_indices_sorted
+            assert len(r1["indices"]) == len(r2["indices"])
+            assert len(r1["indices"]) == n_neighbors
+
+            for i1, i2 in zip(r1["indices"], r2["indices"]):
+                if i1 != i2:
+                    query_vec = X[r1[f"query_{id_col}"]]
+                    assert cal_dist(query_vec, X[i1], metric) == pytest.approx(
+                        cal_dist(query_vec, X[i2], metric)
+                    )
 
         assert len(reconstructed_collect) == len(knn_df_collect)
         for i in range(len(reconstructed_collect)):
@@ -261,39 +289,5 @@ def test_ivfflat(
             r2 = knn_df_collect[i]
             assert_row_equal(r1, r2)
 
-        return (knn_est, knn_model)
-
-
-@pytest.mark.parametrize(
-    "combo",  # feature_type, max_batch_size, algo_param, metric
-    [
-        ("array", 2000, {"nlist": 10, "nprobe": 2}, "sqeuclidean"),
-        ("vector", 5000, {"nlist": 20, "nprobe": 4}, "l2"),
-        ("multi_cols", 2000, {"nlist": 10, "nprobe": 2}, "inner_product"),
-    ],
-)
-def test_metric(
-    combo: Tuple[str, int, Optional[Dict[str, Any]], str],
-) -> None:
-    data_shape = (10000, 50)
-    data_type = np.float32
-
-    from cuml.neighbors import VALID_METRICS
-
-    assert VALID_METRICS["ivfflat"] == {
-        "euclidean",
-        "sqeuclidean",
-        "cosine",
-        "inner_product",
-        "l2",
-        "correlation",
-    }
-
-    gpu_est, gpu_model = test_ivfflat(
-        combo=(combo[0], combo[1], combo[2]),
-        data_shape=data_shape,
-        data_type=data_type,
-        metric=combo[3],
-    )
-    assert gpu_est._cuml_params["metric"] == combo[3]
-    assert gpu_model._cuml_params["metric"] == combo[3]
+        assert knn_est._cuml_params["metric"] == combo[3]
+        assert knn_model._cuml_params["metric"] == combo[3]

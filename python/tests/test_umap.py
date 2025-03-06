@@ -250,7 +250,7 @@ def test_spark_umap_fast(
     assert umap_float32._float32_inputs
 
 
-def test_umap_estimator_persistence(tmp_path: str) -> None:
+def test_params(tmp_path: str) -> None:
     # Default constructor
     default_cuml_params = {
         "n_neighbors": 15,
@@ -282,6 +282,11 @@ def test_umap_estimator_persistence(tmp_path: str) -> None:
     loaded_umap = UMAP.load(estimator_path)
     assert_params(loaded_umap, {}, default_cuml_params)
     assert loaded_umap._float32_inputs
+
+    # setter/getter
+    from .test_common_estimator import _test_input_setter_getter
+
+    _test_input_setter_getter(UMAP)
 
 
 def test_umap_model_persistence(gpu_number: int, tmp_path: str) -> None:

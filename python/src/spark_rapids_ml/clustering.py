@@ -96,7 +96,7 @@ class KMeansClass(_CumlClass):
         def tol_value_mapper(x: float) -> float:
             if x == 0.0:
                 logger = get_logger(cls)
-                logger.warn(
+                logger.warning(
                     "tol=0 is not supported in cuml yet. "
                     + "It will be mapped to smallest positive float, i.e. numpy.finfo('float32').tiny."
                 )
@@ -284,7 +284,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     def __init__(
         self,
         *,
-        featuresCol: str = "features",
+        featuresCol: Union[str, List[str]] = "features",
         predictionCol: str = "prediction",
         k: int = 2,
         initMode: str = "k-means||",
@@ -758,7 +758,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     def __init__(
         self,
         *,
-        featuresCol: str = "features",
+        featuresCol: Union[str, List[str]] = "features",
         predictionCol: str = "prediction",
         eps: float = 0.5,
         min_samples: int = 5,
