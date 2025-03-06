@@ -127,12 +127,19 @@ def main(infile: IO, outfile: IO) -> None:
             os.remove(faulthandler_log_path)
 
     send_accumulator_updates(outfile)
+
+    def flush():
+        outfile.flush()
+        import time
+        time.sleep(3)
     # check end of stream
     if read_int(infile) == SpecialLengths.END_OF_STREAM:
         write_int(SpecialLengths.END_OF_STREAM, outfile)
+        flush()
     else:
         # write a different value to tell JVM to not reuse this worker
         write_int(SpecialLengths.END_OF_DATA_SECTION, outfile)
+        flush()
         sys.exit(-1)
 
 
