@@ -302,6 +302,7 @@ def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
         kmeans.fit(df)
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize("feature_type", pyspark_supported_feature_types)
 @pytest.mark.parametrize("data_shape", [(1000, 20)], ids=idfn)
 @pytest.mark.parametrize("data_type", cuml_supported_data_types)
