@@ -1467,7 +1467,9 @@ class _CumlModelWriterParquet(_CumlModelWriter):
 
         spark = _get_spark_session()
 
-        def write_sparse_array(array: scipy.sparse.spmatrix, df_dir: str) -> None:
+        def write_sparse_array(
+            array: scipy.sparse.spmatrix, df_dir: str, mode: str
+        ) -> None:
             indptr_schema = StructType([StructField("indptr", IntegerType(), False)])
             indptr_df = spark.createDataFrame(
                 pd.DataFrame(array.indptr), schema=indptr_schema
@@ -1491,10 +1493,12 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                 schema=indices_data_schema,
             )
 
-            indptr_df.write.parquet(os.path.join(df_dir, "indptr.parquet"))
-            indices_data_df.write.parquet(os.path.join(df_dir, "indices_data.parquet"))
+            indptr_df.write.parquet(os.path.join(df_dir, "indptr.parquet"), mode=mode)
+            indices_data_df.write.parquet(
+                os.path.join(df_dir, "indices_data.parquet"), mode=mode
+            )
 
-        def write_dense_array(array: np.ndarray, df_path: str) -> None:
+        def write_dense_array(array: np.ndarray, df_path: str, mode: str) -> None:
             assert (
                 spark.conf.get("spark.sql.execution.arrow.pyspark.enabled") == "true"
             ), "spark.sql.execution.arrow.pyspark.enabled must be set to true to persist array attributes"
@@ -1514,7 +1518,8 @@ class _CumlModelWriterParquet(_CumlModelWriter):
                 ),
                 schema=schema,
             )
-            data_df.write.parquet(df_path)
+
+            data_df.write.parquet(df_path, mode=mode)
 
         DefaultParamsWriter.saveMetadata(
             self.instance,
@@ -1527,6 +1532,9 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             },
         )
 
+        # adhere to the overwrite() -> shouldOverWrite flag from the MLWriter
+        write_mode = "overwrite" if self.shouldOverwrite else "errorifexists"
+
         # get a copy, since we're going to modify the array attributes
         model_attributes = self.instance._get_model_attributes()
         assert model_attributes is not None
@@ -1538,12 +1546,12 @@ class _CumlModelWriterParquet(_CumlModelWriter):
             array = model_attributes[key]
             if isinstance(array, scipy.sparse.csr_matrix):
                 df_dir = os.path.join(data_path, f"{key}csr")
-                write_sparse_array(array, df_dir)
+                write_sparse_array(array, df_dir, write_mode)
                 model_attributes[key] = df_dir
                 model_attributes[key + "shape"] = array.shape
             else:
                 df_path = os.path.join(data_path, f"{key}.parquet")
-                write_dense_array(array, df_path)
+                write_dense_array(array, df_path, write_mode)
                 model_attributes[key] = df_path
 
         metadata_file_path = os.path.join(data_path, "metadata.json")
