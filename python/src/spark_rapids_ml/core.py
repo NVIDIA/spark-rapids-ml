@@ -566,6 +566,13 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return (True, False)
 
+    def _gpu_mem_ratio_for_data(self) -> Optional[float]:
+        """
+        The ratio of available GPU memory hold for dataset.
+        This helps avoid data copy on GPU.
+        """
+        return None
+
     def _validate_parameters(self) -> None:
         cls_name = self._pyspark_class()
 
@@ -695,6 +702,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         use_sparse_array = _use_sparse_in_cuml(dataset)
 
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
+        gpu_mem_ratio_for_data = self._gpu_mem_ratio_for_data()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             import cupy as cp
@@ -719,27 +727,39 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             inputs = []
             sizes = []
 
-            for pdf in pdf_iter:
-                sizes.append(pdf.shape[0])
-                if multi_col_names:
-                    features = np.array(pdf[multi_col_names], order=array_order)
-                elif use_sparse_array:
-                    # sparse vector
-                    features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
-                else:
-                    # dense vector
-                    features = np.array(list(pdf[alias.data]), order=array_order)
+            if gpu_mem_ratio_for_data:
+                from spark_rapids_ml.utils import _concat_with_reserved_gpu_mem
 
-                # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
-                # invoking cupy array on the list
-                if cuda_managed_mem_enabled and use_sparse_array is False:
-                    features = cp.array(features)
+                inputs = [
+                    _concat_with_reserved_gpu_mem(
+                        pdf_iter, gpu_mem_ratio_for_data, array_order, logger
+                    )
+                ]
+                sizes = [inputs[0][0].shape[0]]
+            else:
+                for pdf in pdf_iter:
+                    sizes.append(pdf.shape[0])
+                    if multi_col_names:
+                        features = np.array(pdf[multi_col_names], order=array_order)
+                    elif use_sparse_array:
+                        # sparse vector
+                        features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
+                    else:
+                        # dense vector
+                        features = np.array(list(pdf[alias.data]), order=array_order)
 
-                label = pdf[alias.label] if alias.label in pdf.columns else None
-                row_number = (
-                    pdf[alias.row_number] if alias.row_number in pdf.columns else None
-                )
-                inputs.append((features, label, row_number))
+                    # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
+                    # invoking cupy array on the list
+                    if cuda_managed_mem_enabled and use_sparse_array is False:
+                        features = cp.array(features)
+
+                    label = pdf[alias.label] if alias.label in pdf.columns else None
+                    row_number = (
+                        pdf[alias.row_number]
+                        if alias.row_number in pdf.columns
+                        else None
+                    )
+                    inputs.append((features, label, row_number))
 
             if cuda_managed_mem_enabled and use_sparse_array is True:
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore

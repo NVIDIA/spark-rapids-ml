@@ -16,7 +16,19 @@
 import inspect
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 if TYPE_CHECKING:
     import cudf
@@ -245,6 +257,9 @@ def _concat_and_free(
     """
     import cupyx
 
+    if len(array_list) == 1:
+        return array_list[0]
+
     if isinstance(array_list[0], scipy.sparse.csr_matrix):
         concated = scipy.sparse.vstack(array_list)
     elif isinstance(array_list[0], cupyx.scipy.sparse.csr_matrix):
@@ -265,6 +280,84 @@ def _concat_and_free(
         array_module.concatenate(array_list, out=concated)
     del array_list[:]
     return concated
+
+
+def _concat_with_reserved_gpu_mem(
+    pdf_iter: Iterator[pd.DataFrame],
+    gpu_mem_ratio_for_data: float,
+    array_order: str,
+    logger: logging.Logger,
+) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
+    # TODO: check restriction on the array_order
+    # TODO: support multiple column and sparse matrix
+    # TODO: support row number
+    # TODO: support pytest -n 8
+
+    assert array_order == "C"
+    assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
+
+    import cupy as cp
+
+    from spark_rapids_ml.core import alias
+
+    first_batch = True
+    num_rows_total = 0
+
+    cp_label = None
+    out_row_number = None
+
+    for pdf in pdf_iter:
+        # dense vector
+        np_features = np.array(
+            list(pdf[alias.data]), order=array_order
+        )  #  type: ignore
+        np_label = pdf[alias.label].values if alias.label in pdf.columns else None
+        np_row_number = (
+            pdf[alias.row_number].values if alias.row_number in pdf.columns else None
+        )
+
+        if first_batch:
+            first_batch = False
+
+            device = cp.cuda.Device(0)
+            free_mem, total_mem = device.mem_info
+            target_mem = int(free_mem * gpu_mem_ratio_for_data)
+
+            dimension = np_features.shape[1]
+            nbytes_per_row = np_features[0].nbytes
+            if np_label is not None:
+                nbytes_per_row += np_label.dtype.itemsize
+
+            target_n_rows = target_mem // nbytes_per_row
+            logger.info(
+                f"Reserved {target_mem / 1000000}MB GPU memory for training dataset with dimension {dimension} and n_rows limit {target_n_rows / 1000000} million"
+            )
+
+            cp_features = cp.empty(
+                shape=(target_n_rows, dimension), dtype=np_features.dtype
+            )
+            if np_label is not None:
+                cp_label = cp.empty(shape=target_n_rows, dtype=np_label.dtype)
+
+        np_rows = np_features.shape[0]
+
+        # import debugpy
+        # debugpy.listen(5901)
+        # debugpy.wait_for_client()
+        # debugpy.breakpoint()
+
+        cp_features[num_rows_total : num_rows_total + np_rows, :] = cp.array(
+            np_features
+        )
+        if np_label is not None:
+            assert len(np_label) == np_rows
+            cp_label[num_rows_total : num_rows_total + np_rows] = cp.array(np_label)
+
+        num_rows_total += np_features.shape[0]
+
+    out_features = cp_features[0:num_rows_total]
+    out_label = None if cp_label is None else cp_label[0:num_rows_total]
+    return (out_features, out_label, out_row_number)
 
 
 def cudf_to_cuml_array(gdf: Union["cudf.DataFrame", "cudf.Series"], order: str = "F"):  # type: ignore

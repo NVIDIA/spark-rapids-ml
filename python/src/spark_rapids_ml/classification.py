@@ -946,6 +946,9 @@ class LogisticRegression(
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
 
+    def _gpu_mem_ratio_for_data(self) -> Optional[float]:
+        return 0.9
+
     def _get_cuml_fit_func(
         self,
         dataset: DataFrame,
