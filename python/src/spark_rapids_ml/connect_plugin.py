@@ -34,13 +34,16 @@ from pyspark.serializers import (
     write_with_length,
 )
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.util import handle_worker_exception, local_connect_and_auth
+from pyspark.util import (  # type: ignore[attr-defined]
+    handle_worker_exception,
+    local_connect_and_auth,
+)
+from pyspark.worker_util import send_accumulator_updates  # type: ignore[attr-defined]
+from pyspark.worker_util import setup_broadcasts  # type: ignore[attr-defined]
+from pyspark.worker_util import setup_memory_limits  # type: ignore[attr-defined]
+from pyspark.worker_util import setup_spark_files  # type: ignore[attr-defined]
 from pyspark.worker_util import (
     check_python_version,
-    send_accumulator_updates,
-    setup_broadcasts,
-    setup_memory_limits,
-    setup_spark_files,
 )
 
 from spark_rapids_ml.classification import LogisticRegressionModel
@@ -48,7 +51,7 @@ from spark_rapids_ml.classification import LogisticRegressionModel
 utf8_deserializer = UTF8Deserializer()
 
 
-def _java_import(gateway) -> None:
+def _java_import(gateway) -> None:  # type: ignore[no-untyped-def]
     java_import(gateway.jvm, "org.apache.spark.SparkConf")
     java_import(gateway.jvm, "org.apache.spark.api.java.*")
     java_import(gateway.jvm, "org.apache.spark.api.python.*")
@@ -121,6 +124,7 @@ def main(infile: IO, outfile: IO) -> None:
             lr = LogisticRegression(**params)
             model: LogisticRegressionModel = lr.fit(df)
             model_cpu = model.cpu()
+            assert model_cpu._java_obj is not None
             model_targe_id = model_cpu._java_obj._get_object_id().encode("utf-8")
             write_with_length(model_targe_id, outfile)
         else:
@@ -137,7 +141,7 @@ def main(infile: IO, outfile: IO) -> None:
 
     send_accumulator_updates(outfile)
 
-    def flush():
+    def flush() -> None:
         outfile.flush()
         import time
 
