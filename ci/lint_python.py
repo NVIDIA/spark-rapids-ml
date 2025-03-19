@@ -110,12 +110,9 @@ class PyLint:
             return len(result_map) - npass
 
         all_scripts = []
-
-        # connect_plugin.py requires pyspark 4.0+
-        skipped_files = ["connect_plugin.py"]
         for root, dirs, files in os.walk(self.pypackage_root):
             for f in files:
-                if f.endswith(".py") and f not in skipped_files:
+                if f.endswith(".py"):
                     all_scripts.append(os.path.join(root, f))
 
         with Pool(cpu_count()) as pool:
