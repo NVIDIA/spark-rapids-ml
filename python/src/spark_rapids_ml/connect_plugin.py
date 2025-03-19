@@ -27,11 +27,11 @@ from py4j.java_gateway import GatewayParameters, java_import
 from pyspark import SparkConf, SparkContext
 from pyspark.accumulators import _accumulatorRegistry
 from pyspark.serializers import (
+    SpecialLengths,
+    UTF8Deserializer,
     read_int,
     write_int,
     write_with_length,
-    SpecialLengths,
-    UTF8Deserializer,
 )
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.util import handle_worker_exception, local_connect_and_auth
@@ -42,6 +42,7 @@ from pyspark.worker_util import (
     setup_memory_limits,
     setup_spark_files,
 )
+
 from spark_rapids_ml.classification import LogisticRegressionModel
 
 utf8_deserializer = UTF8Deserializer()
@@ -70,7 +71,9 @@ def main(infile: IO, outfile: IO) -> None:
     faulthandler_log_path = os.environ.get("PYTHON_FAULTHANDLER_DIR", None)
     try:
         if faulthandler_log_path:
-            faulthandler_log_path = os.path.join(faulthandler_log_path, str(os.getpid()))
+            faulthandler_log_path = os.path.join(
+                faulthandler_log_path, str(os.getpid())
+            )
             faulthandler_log_file = open(faulthandler_log_path, "w")
             faulthandler.enable(file=faulthandler_log_file)
 
@@ -90,7 +93,10 @@ def main(infile: IO, outfile: IO) -> None:
 
         # Create a Java Gateway
         gateway = py4j.java_gateway.JavaGateway(
-            gateway_parameters=GatewayParameters(auth_token=auth_token, auto_convert=True))
+            gateway_parameters=GatewayParameters(
+                auth_token=auth_token, auto_convert=True
+            )
+        )
         _java_import(gateway)
 
         # Get the JavaObject of Dataset and JavaSparkContext
@@ -98,7 +104,9 @@ def main(infile: IO, outfile: IO) -> None:
         jsc = py4j.java_gateway.JavaObject(java_sc_key, gateway._gateway_client)
 
         # Prepare to create SparkContext and SparkSession
-        sc = SparkContext(conf=SparkConf(_jconf=jsc.sc().conf()), gateway=gateway, jsc=jsc)
+        sc = SparkContext(
+            conf=SparkConf(_jconf=jsc.sc().conf()), gateway=gateway, jsc=jsc
+        )
         spark = SparkSession(sc, jdf.sparkSession())
 
         # Create DataFrame
@@ -109,6 +117,7 @@ def main(infile: IO, outfile: IO) -> None:
 
         if estimator_name == "LogisticRegression":
             from .classification import LogisticRegression
+
             lr = LogisticRegression(**params)
             model: LogisticRegressionModel = lr.fit(df)
             model_cpu = model.cpu()
@@ -131,7 +140,9 @@ def main(infile: IO, outfile: IO) -> None:
     def flush():
         outfile.flush()
         import time
+
         time.sleep(3)
+
     # check end of stream
     if read_int(infile) == SpecialLengths.END_OF_STREAM:
         write_int(SpecialLengths.END_OF_STREAM, outfile)
