@@ -1,5 +1,7 @@
 # Spark Rapids ML (Scala)
 
+**NOTE**: The Scala algorithm is deprecated as of v25.04. 
+
 ### PCA
 
 Comparing to the original PCA training API:
