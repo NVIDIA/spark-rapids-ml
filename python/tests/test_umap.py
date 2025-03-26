@@ -53,7 +53,12 @@ def _load_sparse_data(
     else:
         data_rvs = lambda n: np.random.uniform(0.1, 1.0, n)
     csr_mat = scipy.sparse.random(
-        n_rows, n_cols, density=density, format="csr", dtype=np.float32, data_rvs=data_rvs
+        n_rows,
+        n_cols,
+        density=density,
+        format="csr",
+        dtype=np.float32,
+        data_rvs=data_rvs,
     )
 
     # Convert CSR matrix to SparseVectors
