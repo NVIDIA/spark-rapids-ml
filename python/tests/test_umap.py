@@ -702,6 +702,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
         pytest.param("sqeuclidean", marks=pytest.mark.slow, id="sqeuclidean"),
         pytest.param("minkowski", marks=pytest.mark.slow, id="minkowski"),
         pytest.param("hamming", marks=pytest.mark.slow, id="hamming"),
+        pytest.param("hellinger", marks=pytest.mark.slow, id="hellinger"),
     ],
 )  # Test all metrics if runslow is enabled, otherwise just do a few
 def test_umap_sparse_vector(
@@ -720,9 +721,20 @@ def test_umap_sparse_vector(
         return
 
     use_binary = metric in ["jaccard", "hamming"]
+    data, input_raw_data = _load_sparse_data(n_rows, n_cols, nnz, use_binary)
+
+    if metric == "hellinger":
+        # Hellinger measures the similarity between probability distributions
+        # Normalize each row to sum to 1 to prevent distances from collapsing to zero
+        row_sums = np.array(input_raw_data.sum(axis=1)).flatten()
+        row_sums[row_sums == 0] = 1.0
+        row_sum_diag = scipy.sparse.diags(1.0 / row_sums)
+        input_raw_data = row_sum_diag @ input_raw_data
+
+        # Verify normalization
+        assert np.allclose(np.array(input_raw_data.sum(axis=1)).flatten(), 1.0)
 
     with CleanSparkSession() as spark:
-        data, input_raw_data = _load_sparse_data(n_rows, n_cols, nnz, use_binary)
         df = spark.createDataFrame(data, ["features"])
 
         umap_estimator = UMAP(
