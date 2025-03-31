@@ -41,29 +41,59 @@ from .utils import (
 )
 
 
-def _load_sparse_binary_data(
-    n_rows: int, n_cols: int, nnz: int
+def _load_sparse_data(
+    n_rows: int, n_cols: int, nnz: int, binary: bool = False
 ) -> Tuple[List[Tuple[SparseVector]], csr_matrix]:
-    # TODO: Replace this function by adding to SparseDataGen
-    # Generate binary sparse data compatible with Jaccard, with nnz non-zero values per row.
+    """
+    Generate random binary or real-valued sparse data with approximately nnz non-zeros per row.
+    """
+    density = nnz / n_cols
+    if binary:
+        data_rvs = lambda n: np.ones(n)
+    else:
+        data_rvs = lambda n: np.random.uniform(0.1, 1.0, n)
+    csr_mat = scipy.sparse.random(
+        n_rows,
+        n_cols,
+        density=density,
+        format="csr",
+        dtype=np.float32,
+        data_rvs=data_rvs,
+    )
+
+    # Convert CSR matrix to SparseVectors
     data = []
     for i in range(n_rows):
-        indices = [(i + j) % n_cols for j in range(nnz)]
-        values = [1] * nnz
+        indices = csr_mat.indices[csr_mat.indptr[i] : csr_mat.indptr[i + 1]]
+        values = csr_mat.data[csr_mat.indptr[i] : csr_mat.indptr[i + 1]]
         sparse_vector = SparseVector(n_cols, dict(zip(indices, values)))
         data.append((sparse_vector,))
 
-    csr_data: List[float] = []
-    csr_indices: List[int] = []
-    csr_indptr: List[int] = [0]
-    for row in data:
-        sparse_vector = row[0]
-        csr_data.extend(sparse_vector.values)
-        csr_indices.extend(sparse_vector.indices)
-        csr_indptr.append(csr_indptr[-1] + len(sparse_vector.indices))
-    csr_mat = csr_matrix((csr_data, csr_indices, csr_indptr), shape=(n_rows, n_cols))
-
     return data, csr_mat
+
+
+def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Load either the digits: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html
+    or the iris dataset: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_iris.html
+    and repeat the data to have n_rows rows, and add some gaussian noise.
+    """
+    if dataset == "digits":
+        local_X, local_y = load_digits(return_X_y=True)
+
+    else:  # dataset == "iris"
+        local_X, local_y = load_iris(return_X_y=True)
+
+    local_X = cp.asarray(local_X)
+    local_y = cp.asarray(local_y)
+
+    local_X = local_X.repeat(math.ceil(n_rows / len(local_X)), axis=0)
+    local_y = local_y.repeat(math.ceil(n_rows / len(local_y)), axis=0)
+
+    # Add some gaussian noise
+    local_X += cp.random.standard_normal(local_X.shape, dtype=cp.float32)
+
+    return local_X, local_y
 
 
 def _assert_umap_model(
@@ -93,25 +123,6 @@ def _assert_umap_model(
     assert model.n_cols == input_raw_data.shape[1]
 
 
-def _load_dataset(dataset: str, n_rows: int) -> Tuple[np.ndarray, np.ndarray]:
-    if dataset == "digits":
-        local_X, local_y = load_digits(return_X_y=True)
-
-    else:  # dataset == "iris"
-        local_X, local_y = load_iris(return_X_y=True)
-
-    local_X = cp.asarray(local_X)
-    local_y = cp.asarray(local_y)
-
-    local_X = local_X.repeat(math.ceil(n_rows / len(local_X)), axis=0)
-    local_y = local_y.repeat(math.ceil(n_rows / len(local_y)), axis=0)
-
-    # Add some gaussian noise
-    local_X += cp.random.standard_normal(local_X.shape, dtype=cp.float32)
-
-    return local_X, local_y
-
-
 def _local_umap_trustworthiness(
     local_X: Union[np.ndarray, csr_matrix],
     local_y: np.ndarray,
@@ -121,13 +132,7 @@ def _local_umap_trustworthiness(
 ) -> float:
     from cuml.manifold import UMAP
 
-    if sparse:
-        local_model = UMAP(
-            n_neighbors=n_neighbors, random_state=42, init="random", metric="jaccard"
-        )
-    else:
-        local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
-
+    local_model = UMAP(n_neighbors=n_neighbors, random_state=42, init="random")
     y_train = local_y if supervised else None
     local_model.fit(local_X, y=y_train)
     embedding = local_model.transform(local_X)
@@ -434,7 +439,7 @@ def test_umap_model_persistence(
                 logging.info(err_msg)
                 return
 
-            data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
+            data, input_raw_data = _load_sparse_data(n_rows, n_cols, 30)
             df = spark.createDataFrame(data, ["features"])
         else:
             X, _ = make_blobs(
@@ -533,7 +538,7 @@ def test_umap_chunking(
                 logging.info(err_msg)
                 return
 
-            data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, 30)
+            data, input_raw_data = _load_sparse_data(n_rows, n_cols, 30)
             df = spark.createDataFrame(data, ["features"])
             nbytes = input_raw_data.data.nbytes
         else:
@@ -571,7 +576,11 @@ def test_umap_chunking(
 
         dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=5000)
         loc_umap = _local_umap_trustworthiness(
-            input_raw_data, np.zeros(0), 15, False, sparse_fit
+            local_X=input_raw_data,
+            local_y=np.zeros(0),
+            n_neighbors=15,
+            supervised=False,
+            sparse=sparse_fit,
         )
         trust_diff = loc_umap - dist_umap
 
@@ -669,7 +678,9 @@ def test_umap_build_algo(gpu_number: int) -> None:
         input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
         dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=10000)
-        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), 15, False)
+        loc_umap = _local_umap_trustworthiness(
+            local_X=X, local_y=np.zeros(0), n_neighbors=15, supervised=False
+        )
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.07
@@ -678,7 +689,22 @@ def test_umap_build_algo(gpu_number: int) -> None:
 @pytest.mark.parametrize("n_rows", [3000])
 @pytest.mark.parametrize("n_cols", [64])
 @pytest.mark.parametrize("nnz", [12])
-@pytest.mark.parametrize("metric", ["jaccard", "hamming", "correlation", "cosine"])
+@pytest.mark.parametrize(
+    "metric",
+    [
+        pytest.param("jaccard", id="jaccard"),
+        pytest.param("euclidean", id="euclidean"),
+        pytest.param("correlation", marks=pytest.mark.slow, id="correlation"),
+        pytest.param("cosine", marks=pytest.mark.slow, id="cosine"),
+        pytest.param("chebyshev", marks=pytest.mark.slow, id="chebyshev"),
+        pytest.param("manhattan", marks=pytest.mark.slow, id="manhattan"),
+        pytest.param("canberra", marks=pytest.mark.slow, id="canberra"),
+        pytest.param("sqeuclidean", marks=pytest.mark.slow, id="sqeuclidean"),
+        pytest.param("minkowski", marks=pytest.mark.slow, id="minkowski"),
+        pytest.param("hamming", marks=pytest.mark.slow, id="hamming"),
+        pytest.param("hellinger", marks=pytest.mark.slow, id="hellinger"),
+    ],
+)  # Test all metrics if runslow is enabled, otherwise just do a few
 def test_umap_sparse_vector(
     n_rows: int, n_cols: int, nnz: int, metric: str, gpu_number: int, tmp_path: str
 ) -> None:
@@ -694,8 +720,21 @@ def test_umap_sparse_vector(
         logging.info(err_msg)
         return
 
+    use_binary = metric in ["jaccard", "hamming"]
+    data, input_raw_data = _load_sparse_data(n_rows, n_cols, nnz, use_binary)
+
+    if metric == "hellinger":
+        # Hellinger measures the similarity between probability distributions
+        # Normalize each row to sum to 1 to prevent distances from collapsing to zero
+        row_sums = np.array(input_raw_data.sum(axis=1)).flatten()
+        row_sums[row_sums == 0] = 1.0
+        row_sum_diag = scipy.sparse.diags(1.0 / row_sums)
+        input_raw_data = row_sum_diag @ input_raw_data
+
+        # Verify normalization
+        assert np.allclose(np.array(input_raw_data.sum(axis=1)).flatten(), 1.0)
+
     with CleanSparkSession() as spark:
-        data, input_raw_data = _load_sparse_binary_data(n_rows, n_cols, nnz)
         df = spark.createDataFrame(data, ["features"])
 
         umap_estimator = UMAP(
@@ -840,7 +879,9 @@ def test_umap_precomputed_knn(
         input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
         dist_umap = trustworthiness(input, embedding, n_neighbors=k, batch_size=10000)
-        loc_umap = _local_umap_trustworthiness(X, np.zeros(0), k, False)
+        loc_umap = _local_umap_trustworthiness(
+            local_X=X, local_y=np.zeros(0), n_neighbors=k, supervised=False
+        )
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.07
