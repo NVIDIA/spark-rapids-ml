@@ -42,16 +42,19 @@ from .utils import (
 
 
 def _load_sparse_data(
-    n_rows: int, n_cols: int, nnz: int, binary: bool = False
+    n_rows: int, n_cols: int, nnz: int, binary: bool = False, normalize: bool = False
 ) -> Tuple[List[Tuple[SparseVector]], csr_matrix]:
     """
     Generate random binary or real-valued sparse data with approximately nnz non-zeros per row.
+    If normalize is True, the data is normalized to have unit row sum (e.g., for hellinger distance).
     """
     density = nnz / n_cols
+
     if binary:
         data_rvs = lambda n: np.ones(n)
     else:
         data_rvs = lambda n: np.random.uniform(0.1, 1.0, n)
+
     csr_mat = scipy.sparse.random(
         n_rows,
         n_cols,
@@ -60,6 +63,13 @@ def _load_sparse_data(
         dtype=np.float32,
         data_rvs=data_rvs,
     )
+
+    if normalize:
+        row_sums = np.array(csr_mat.sum(axis=1)).flatten()
+        row_sums[row_sums == 0] = 1.0
+        row_sum_diag = scipy.sparse.diags(1.0 / row_sums)
+        csr_mat = row_sum_diag @ csr_mat
+        assert np.allclose(np.array(csr_mat.sum(axis=1)).flatten(), 1.0)
 
     # Convert CSR matrix to SparseVectors
     data = []
@@ -111,11 +121,15 @@ def _assert_umap_model(
         assert isinstance(raw_data, csr_matrix)
         assert model._sparse_fit
         assert (raw_data != input_raw_data).nnz == 0
-        assert (
-            np.all(raw_data.indices == input_raw_data.indices)
-            and np.all(raw_data.indptr == input_raw_data.indptr)
-            and np.allclose(raw_data.data, input_raw_data.data)
-        )
+        try:
+            assert (
+                np.all(raw_data.indices == input_raw_data.indices)
+                and np.all(raw_data.indptr == input_raw_data.indptr)
+                and np.allclose(raw_data.data, input_raw_data.data)
+            )
+        except AssertionError:
+            # If exact match fails, compare the dense versions, since indices can get reordered if we normalize
+            assert np.array_equal(raw_data.toarray(), input_raw_data.toarray())
     else:
         assert not model._sparse_fit
         assert np.array_equal(raw_data, input_raw_data)
@@ -439,8 +453,8 @@ def test_umap_model_persistence(
                 logging.info(err_msg)
                 return
 
-            data, input_raw_data = _load_sparse_data(n_rows, n_cols, 30)
-            df = spark.createDataFrame(data, ["features"])
+            sparse_vec_data, input_raw_data = _load_sparse_data(n_rows, n_cols, 30)
+            df = spark.createDataFrame(sparse_vec_data, ["features"])
         else:
             X, _ = make_blobs(
                 n_rows,
@@ -538,8 +552,8 @@ def test_umap_chunking(
                 logging.info(err_msg)
                 return
 
-            data, input_raw_data = _load_sparse_data(n_rows, n_cols, 30)
-            df = spark.createDataFrame(data, ["features"])
+            sparse_vec_data, input_raw_data = _load_sparse_data(n_rows, n_cols, 30)
+            df = spark.createDataFrame(sparse_vec_data, ["features"])
             nbytes = input_raw_data.data.nbytes
         else:
             X, _ = make_blobs(
@@ -694,6 +708,7 @@ def test_umap_build_algo(gpu_number: int) -> None:
     [
         pytest.param("jaccard", id="jaccard"),
         pytest.param("euclidean", id="euclidean"),
+        pytest.param("hellinger", id="hellinger"),
         pytest.param("correlation", marks=pytest.mark.slow, id="correlation"),
         pytest.param("cosine", marks=pytest.mark.slow, id="cosine"),
         pytest.param("chebyshev", marks=pytest.mark.slow, id="chebyshev"),
@@ -702,7 +717,6 @@ def test_umap_build_algo(gpu_number: int) -> None:
         pytest.param("sqeuclidean", marks=pytest.mark.slow, id="sqeuclidean"),
         pytest.param("minkowski", marks=pytest.mark.slow, id="minkowski"),
         pytest.param("hamming", marks=pytest.mark.slow, id="hamming"),
-        pytest.param("hellinger", marks=pytest.mark.slow, id="hellinger"),
     ],
 )  # Test all metrics if runslow is enabled, otherwise just do a few
 def test_umap_sparse_vector(
@@ -720,22 +734,15 @@ def test_umap_sparse_vector(
         logging.info(err_msg)
         return
 
+    # Hellinger measures similarity between probability distributions; normalize to prevent distances from collapsing to zero
+    normalize = metric == "hellinger"
     use_binary = metric in ["jaccard", "hamming"]
-    data, input_raw_data = _load_sparse_data(n_rows, n_cols, nnz, use_binary)
-
-    if metric == "hellinger":
-        # Hellinger measures the similarity between probability distributions
-        # Normalize each row to sum to 1 to prevent distances from collapsing to zero
-        row_sums = np.array(input_raw_data.sum(axis=1)).flatten()
-        row_sums[row_sums == 0] = 1.0
-        row_sum_diag = scipy.sparse.diags(1.0 / row_sums)
-        input_raw_data = row_sum_diag @ input_raw_data
-
-        # Verify normalization
-        assert np.allclose(np.array(input_raw_data.sum(axis=1)).flatten(), 1.0)
+    sparse_vec_data, input_raw_data = _load_sparse_data(
+        n_rows, n_cols, nnz, use_binary, normalize
+    )
 
     with CleanSparkSession() as spark:
-        df = spark.createDataFrame(data, ["features"])
+        df = spark.createDataFrame(sparse_vec_data, ["features"])
 
         umap_estimator = UMAP(
             metric=metric, num_workers=gpu_number, random_state=42
