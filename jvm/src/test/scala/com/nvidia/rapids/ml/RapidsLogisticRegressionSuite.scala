@@ -18,11 +18,19 @@ class RapidsLogisticRegressionSuite extends AnyFunSuite {
         (Vectors.dense(3.0, 1.0), 0.0f))
     ).toDF("test_feature", "class")
 
-    val lr = new RapidsLogisticRegression().setFeaturesCol("test_feature").setLabelCol("class")
+    val lr = new RapidsLogisticRegression()
+      .setFeaturesCol("test_feature")
+      .setLabelCol("class")
+      .setMaxIter(23)
+      .setTol(0.03)
+//      .setThreshold(0.51) # failure
 
     val model = lr.fit(df)
 
-
+    assert(model.getFeaturesCol == "test_feature")
+    assert(model.getTol == 0.03)
+    assert(model.getLabelCol == "class")
+    assert(model.getMaxIter == 23)
+//    assert(model.getThreshold == 0.51)
   }
-
 }
