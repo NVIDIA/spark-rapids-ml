@@ -93,14 +93,6 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <configuration>
-                    <!-- Suppress warnings related to internal JDK APIs -->
-                    <javacArgs combine.children="append">
-                        <javacArg>-XDignore.symbol.file</javacArg>
-                    </javacArgs>
-                    <!-- Run compiler in a separate process (helps with memory issues) -->
-                    <fork>true</fork>
-                </configuration>
                 <executions>
                     <execution>
                         <id>scala-compile-first</id>
@@ -118,7 +110,6 @@
             <plugin>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
-                <version>2.2.0</version>
                 <configuration>
                     <!-- JVM arguments passed to test process -->
                     <argLine>-ea -Xmx4g -Xss4m ${extraJavaTestArgs}</argLine>
