@@ -140,9 +140,12 @@ def main(infile: IO, outfile: IO) -> None:
         elif operator_name == "LogisticRegressionModel":
             attributes = utf8_deserializer.loads(infile)
             attributes = json.loads(attributes)  # type: ignore[arg-type]
-            from .classification import LogisticRegressionModel
+            from .classification import LogisticRegression, LogisticRegressionModel
 
+            # Workaround for setting params for corresponding model
+            lr = LogisticRegression(**params)
             lrm = LogisticRegressionModel(*attributes)  # type: ignore[arg-type]
+            lr._copyValues(lrm)
             transformed_df = lrm.transform(df)
             transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
             write_with_length(transformed_df_id, outfile)

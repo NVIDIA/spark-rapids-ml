@@ -35,7 +35,7 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
 
   override def train(dataset: Dataset[_]): RapidsLogisticRegressionModel = {
     val trainedModel = trainOnPython(dataset)
-    val cpuModel = trainedModel.model.asInstanceOf[LogisticRegressionModel]
+    val cpuModel = copyValues(trainedModel.model.asInstanceOf[LogisticRegressionModel])
     val isMultinomial = cpuModel.numClasses != 2
     copyValues(new RapidsLogisticRegressionModel(uid, cpuModel, trainedModel.modelAttributes, isMultinomial))
   }

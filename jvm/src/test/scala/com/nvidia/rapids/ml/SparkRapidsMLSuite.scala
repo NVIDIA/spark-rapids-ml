@@ -74,5 +74,13 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     assert(model.getTol == 0.03)
     assert(model.getLabelCol == "class")
     assert(model.getMaxIter == 23)
+
+    // Transform using CPU model by default
+    model.transform(df).show()
+
+    // Transform using Spark-Rapids-ML model by default
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "true")
+    model.transform(df).show()
+
   }
 }
