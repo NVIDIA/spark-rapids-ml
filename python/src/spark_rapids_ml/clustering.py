@@ -297,8 +297,8 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     ) -> None:
         super().__init__()
         # if user doesn't override this cuML parameter, set it to 1 to match Spark behavior.
-        if not 'n_init' in kwargs:
-            kwargs['n_init']=1
+        if not "n_init" in kwargs:
+            kwargs["n_init"] = 1
 
         self._set_params(**self._input_kwargs)
 
