@@ -345,6 +345,28 @@ def _test_input_setter_getter(est_class: Any) -> None:
         ]
 
 
+def _test_param_setter_getter(
+    est_class: Any, param_name: str, param_value: Any
+) -> None:
+
+    # test init and getter
+    est = est_class(**{param_name: param_value})
+    postfix = param_name[0].upper() + param_name[1:]
+    getter = getattr(est, f"get{postfix}")
+
+    assert getter is not None, f"getter not found for parameter: {param_name}"
+    assert getter() == param_value
+
+    est_default = est_class()
+    setter = getattr(est_default, f"set{postfix}")
+    assert setter is not None, f"setter not found for parameter: {param_name}"
+
+    # test setter and getter
+    setter(param_value)
+    getter = getattr(est_default, f"get{postfix}")
+    assert getter() == param_value
+
+
 def _test_est_copy(
     Estimator: Type[_CumlEstimator],
     input_spark_params: Dict[str, Any],

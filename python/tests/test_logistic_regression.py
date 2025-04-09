@@ -329,6 +329,20 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(LogisticRegression)
 
 
+def test_param_init_setter_getter() -> None:
+    from .test_common_estimator import _test_param_setter_getter
+    from .utils import _get_default_params_from_func
+
+    params = _get_default_params_from_func(SparkLogisticRegression, [])
+    tested_params = {
+        "featuresCol": "my_features_col",
+        "labelCol": "my_label_col",
+        "threshold": 0.2222,
+    }
+    for k, v in tested_params.items():
+        _test_param_setter_getter(LogisticRegression, k, v)
+
+
 def test_lr_copy() -> None:
     from .test_common_estimator import _test_est_copy
 

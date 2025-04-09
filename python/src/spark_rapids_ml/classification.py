@@ -676,17 +676,17 @@ class LogisticRegressionClass(_CumlClass):
             "elasticNetParam": "l1_ratio",
             "tol": "tol",
             "fitIntercept": "fit_intercept",
-            "threshold": None,
-            "thresholds": None,
+            "threshold": "",
+            "thresholds": "",
             "standardization": "standardization",
-            "weightCol": None,
-            "aggregationDepth": None,
+            "weightCol": "",
+            "aggregationDepth": "",
             "family": "",  # family can be 'auto', 'binomial' or 'multinomial', cuml automatically detects num_classes
-            "lowerBoundsOnCoefficients": None,
-            "upperBoundsOnCoefficients": None,
-            "lowerBoundsOnIntercepts": None,
-            "upperBoundsOnIntercepts": None,
-            "maxBlockSizeInMB": None,
+            "lowerBoundsOnCoefficients": "",
+            "upperBoundsOnCoefficients": "",
+            "lowerBoundsOnIntercepts": "",
+            "upperBoundsOnIntercepts": "",
+            "maxBlockSizeInMB": "",
         }
 
     @classmethod
