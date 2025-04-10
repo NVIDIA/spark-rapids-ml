@@ -1004,11 +1004,13 @@ class LogisticRegression(
 
                 logistic_regression = LogisticRegressionMG(
                     handle=params[param_alias.handle],
+                    linesearch_max_iter=20,
                     **init_parameters,
                 )
 
                 logistic_regression.penalty_normalized = False
                 logistic_regression.lbfgs_memory = 10
+                logistic_regression.linesearch_max_iter = 20
 
                 logistic_regression.fit(
                     [(concated, concated_y)],
