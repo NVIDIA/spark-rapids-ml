@@ -48,7 +48,6 @@ class PythonEstimatorRunner(fit: Fit,
   override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
-    println(s"in writeToPython ${fit.name}")
     PythonRDD.writeUTF(PythonRunnerUtils.AUTH_TOKEN, dataOut)
     PythonRDD.writeUTF(fit.name, dataOut)
     PythonRDD.writeUTF(fit.params, dataOut)
