@@ -115,7 +115,7 @@ class KMeansClass(_CumlClass):
             "verbose": False,
             "random_state": 1,
             "init": "scalable-k-means++",
-            "n_init": "warn",  # See https://github.com/rapidsai/cuml/pull/6142 - this needs to be updated to "auto" for cuml 25.04
+            "n_init": "auto",
             "oversampling_factor": 2.0,
             "max_samples_per_batch": 32768,
         }
@@ -296,6 +296,10 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         **kwargs: Any,
     ) -> None:
         super().__init__()
+        # if user doesn't override this cuML parameter, set it to 1 to match Spark behavior.
+        if not "n_init" in kwargs:
+            kwargs["n_init"] = 1
+
         self._set_params(**self._input_kwargs)
 
     def setInitMode(self, value: str) -> "KMeans":

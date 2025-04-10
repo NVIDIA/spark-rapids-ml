@@ -174,7 +174,7 @@ def test_linear_regression_params(
         "l1_ratio": 0.0,
         "max_iter": 100,
         "normalize": True,
-        "solver": "eig",
+        "solver": "auto",
     }
     default_lr = LinearRegression()
     assert_params(default_lr, default_spark_params, default_cuml_params)
