@@ -430,7 +430,7 @@ class _RandomForestEstimator(
                         else:
                             raise err
 
-                    from cuml.fil.fil import TreeliteModel
+                    from cuml.legacy.fil.fil import TreeliteModel
 
                     for tl_handle in all_tl_mod_handles:
                         TreeliteModel.free_treelite_model(tl_handle)
