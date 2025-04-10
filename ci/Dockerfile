@@ -14,10 +14,11 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=11.8.0
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
+ARG CUDA_VERSION=12.1.0
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 # Install packages to build spark-rapids-ml
+RUN chmod 1777 /tmp
 RUN apt update -y \
     && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
     && apt install -y git numactl software-properties-common wget zip \
