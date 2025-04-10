@@ -3,7 +3,7 @@
   Copyright (c) 2025, NVIDIA CORPORATION.
 
   Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
+  You may not use this file except in compliance with the License.
   You may obtain a copy of the License at
 
      http://www.apache.org/licenses/LICENSE-2.0
@@ -30,7 +30,22 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <scala.version>2.13.14</scala.version>
         <scala.binary.version>2.13</scala.binary.version>
-        <spark.version>4.0.0-SNAPSHOT</spark.version>
+        <spark.version>4.1.0-SNAPSHOT</spark.version>
+        <!-- Extra JVM arguments for tests (required for Java 17 module system) -->
+        <extraJavaTestArgs>
+            -XX:+IgnoreUnrecognizedVMOptions
+            --add-opens=java.base/java.lang=ALL-UNNAMED
+            --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+            --add-opens=java.base/java.io=ALL-UNNAMED
+            --add-opens=java.base/java.net=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED
+            --add-opens=java.base/java.util=ALL-UNNAMED
+            --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+            --add-opens=java.base/sun.security.action=ALL-UNNAMED
+            --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+        </extraJavaTestArgs>
     </properties>
 
     <dependencies>
@@ -42,13 +57,13 @@
 
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-connect_2.13</artifactId>
+            <artifactId>spark-sql_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <artifactId>spark-connect_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
 
@@ -58,62 +73,70 @@
             <version>${scala.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- ScalaTest for unit testing -->
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>3.2.19</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
+        <!-- Final name of the built JAR -->
         <finalName>${groupId}.${artifactId}-${version}</finalName>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
 
+        <plugins>
+
+            <!-- Scala Maven Plugin (adds Scala sources before compile phase) -->
             <plugin>
-                <groupId>org.scala-tools</groupId>
-                <artifactId>maven-scala-plugin</artifactId>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>scala-compile-first</id>
+                        <phase>process-resources</phase>
                         <goals>
-                            <goal>compile</goal>
+                            <goal>add-source</goal>  <!-- Add Scala source directories -->
+                            <goal>compile</goal>     <!-- Compile Scala sources -->
                             <goal>testCompile</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
 
+            <!-- ScalaTest Maven Plugin (to run Scala tests) -->
             <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
                 <configuration>
-                    <javacArgs combine.children="append">
-                        <!-- This option is needed to suppress warnings from sun.misc.Unsafe usage -->
-                        <javacArg>-XDignore.symbol.file</javacArg>
-                    </javacArgs>
-                    <fork>true</fork>
+                    <!-- JVM arguments passed to test process -->
+                    <argLine>-ea -Xmx4g -Xss4m ${extraJavaTestArgs}</argLine>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>scala-compile-first</id>
-                        <phase>process-resources</phase>
+                        <id>test</id>
+                        <phase>test</phase> <!-- Bind to Maven's test phase -->
                         <goals>
-                            <goal>add-source</goal>
-                            <goal>compile</goal>
+                            <goal>test</goal> <!-- Goal to run ScalaTest tests -->
                         </goals>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
-    <!-- TODO Remove below repositories after spark has released spark 4.0 officially -->
+
+    <!-- Additional repositories (temporary until Spark 4.1 is released) -->
     <repositories>
         <repository>
             <id>apache-snapshots</id>
             <url>https://repository.apache.org/content/repositories/snapshots/</url>
             <snapshots>
-                <enabled>true</enabled>
+                <enabled>true</enabled> <!-- Enable snapshot versions -->
             </snapshots>
             <releases>
-                <enabled>false</enabled>
+                <enabled>false</enabled> <!-- Do not fetch release versions from here -->
             </releases>
         </repository>
     </repositories>
