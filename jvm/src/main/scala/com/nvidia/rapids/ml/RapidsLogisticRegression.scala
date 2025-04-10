@@ -16,7 +16,7 @@
 
 package com.nvidia.rapids.ml
 
-import org.apache.spark.ml.util.Identifiable
+import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
@@ -29,7 +29,8 @@ import org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
  *
  * @param uid unique ID of the estimator
  */
-class RapidsLogisticRegression(override val uid: String) extends LogisticRegression with RapidsEstimator {
+class RapidsLogisticRegression(override val uid: String) extends LogisticRegression
+  with DefaultParamsWritable with RapidsEstimator {
 
   def this() = this(Identifiable.randomUID("logreg"))
 
@@ -44,4 +45,8 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
    * The estimator name
    */
   override def name: String = "LogisticRegression"
+}
+
+object RapidsLogisticRegression extends DefaultParamsReadable[RapidsLogisticRegression] {
+  override def load(path: String): RapidsLogisticRegression = super.load(path)
 }

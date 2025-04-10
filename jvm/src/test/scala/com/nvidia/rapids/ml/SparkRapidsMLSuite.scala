@@ -16,14 +16,20 @@
 
 package com.nvidia.rapids.ml
 
+import java.io.File
+
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
 
 import org.apache.spark.ml.linalg.Vectors
+import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsUtils}
 import org.apache.spark.sql.SparkSession
 
 class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
   @transient var ss: SparkSession = _
+  @transient var _tempDir: File = _
+
+  protected def tempDir: File = _tempDir
 
   override def beforeEach(): Unit = {
     try {
@@ -36,6 +42,9 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
 //        .config("spark.rapids.memory.gpu.pool", "none") // Disable RMM for unit tests.
         .appName("SparkRapidsML-connect-plugin")
         .getOrCreate()
+
+      _tempDir = RapidsUtils.createTempDir(namePrefix = this.getClass.getName)
+
     } finally {
       super.beforeEach()
     }
@@ -43,6 +52,7 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
 
   override def afterEach(): Unit = {
     try {
+      RapidsUtils.deleteRecursively(_tempDir)
       if (ss != null) {
         ss.stop()
         ss = null
@@ -66,14 +76,33 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
       .setLabelCol("class")
       .setMaxIter(23)
       .setTol(0.03)
-//    .setThreshold(0.51) this is going to fail due to spark-rapids-ml has mapped threshold to None
+    //    .setThreshold(0.51) this is going to fail due to spark-rapids-ml has mapped threshold to None
 
-    val model = lr.fit(df)
+    val path = new File(tempDir, "LogisticRegression").getPath
+    lr.write.overwrite().save(path)
 
-    assert(model.getFeaturesCol == "test_feature")
-    assert(model.getTol == 0.03)
-    assert(model.getLabelCol == "class")
-    assert(model.getMaxIter == 23)
+    val loadedLr = RapidsLogisticRegression.load(path)
+    assert(loadedLr.getFeaturesCol == "test_feature")
+    assert(loadedLr.getTol == 0.03)
+    assert(loadedLr.getLabelCol == "class")
+    assert(loadedLr.getMaxIter == 23)
+
+
+    def check(model: RapidsLogisticRegressionModel): Unit = {
+      assert(model.getFeaturesCol == "test_feature")
+      assert(model.getTol == 0.03)
+      assert(model.getLabelCol == "class")
+      assert(model.getMaxIter == 23)
+    }
+
+    val model = loadedLr.fit(df).asInstanceOf[RapidsLogisticRegressionModel]
+    check(model)
+    model.write.overwrite().save(path)
+    val loadedModel = RapidsLogisticRegressionModel.load(path)
+    check(loadedModel)
+
+    assert(model.uid == loadedModel.uid)
+    assert(model.modelAttributes == loadedModel.modelAttributes)
 
     // Transform using Spark-Rapids-ML model by default
     val dfGpu = model.transform(df)
