@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=12.1.0
+ARG CUDA_VERSION=11.8.0
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 # Install packages to build spark-rapids-ml
