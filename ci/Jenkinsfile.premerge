@@ -1,6 +1,6 @@
 #!/usr/local/env groovy
 /*
- * Copyright (c) 2023-2024, NVIDIA CORPORATION.
+ * Copyright (c) 2023-2025, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import ipp.blossom.*
 
 def githubHelper // blossom github helper
 def TEMP_IMAGE_BUILD = true
-def IMAGE_PREMERGE = "${common.ARTIFACTORY_NAME}/sw-spark-docker/spark-rapids-ml:ubuntu20.04-blossom-ci"
+def IMAGE_PREMERGE = "${common.ARTIFACTORY_NAME}/sw-spark-docker/rapids:ml-ubuntu22-cuda11.8.0-py310"
 def cpuImage = pod.getCPUYAML("${common.ARTIFACTORY_NAME}/sw-spark-docker/spark:rapids-databricks") // tooling image
 def PREMERGE_DOCKERFILE = 'ci/Dockerfile'
 def PREMERGE_TAG
