@@ -28,17 +28,19 @@ import org.apache.spark.sql.execution.python.PythonPlannerRunner
 
 case class Fit(name: String, params: String)
 
+case class TrainedModel(model: Object, modelAttributes: String)
+
 /**
- * PythonRunner is a bridge to launch/manage Python process. And it sends the
- * estimator related message to python process and run.
+ * PythonEstimatorRunner is a bridge to launch and manage Python process. It sends the
+ * estimator-related messages to the python process and runs it.
  *
  * @param fit     the fit information
  * @param dataset input dataset
  */
-class PythonRunner(fit: Fit,
-                   dataset: DataFrame,
-                   func: PythonFunction = PythonRunnerUtils.RAPIDS_PYTHON_FUNC)
-  extends PythonPlannerRunner[Object](func) with AutoCloseable {
+class PythonEstimatorRunner(fit: Fit,
+                            dataset: DataFrame,
+                            func: PythonFunction = PythonRunnerUtils.RAPIDS_PYTHON_FUNC)
+  extends PythonPlannerRunner[TrainedModel](func) with AutoCloseable {
 
   private val datasetKey = PythonRunnerUtils.putNewObjectToPy4j(dataset)
   private val jscKey = PythonRunnerUtils.putNewObjectToPy4j(new JavaSparkContext(dataset.sparkSession.sparkContext))
@@ -46,7 +48,6 @@ class PythonRunner(fit: Fit,
   override protected val workerModule: String = "spark_rapids_ml.connect_plugin"
 
   override protected def writeToPython(dataOut: DataOutputStream, pickler: Pickler): Unit = {
-    println(s"in writeToPython ${fit.name}")
     PythonRDD.writeUTF(PythonRunnerUtils.AUTH_TOKEN, dataOut)
     PythonRDD.writeUTF(fit.name, dataOut)
     PythonRDD.writeUTF(fit.params, dataOut)
@@ -54,10 +55,13 @@ class PythonRunner(fit: Fit,
     PythonRDD.writeUTF(datasetKey, dataOut)
   }
 
-  override protected def receiveFromPython(dataIn: DataInputStream): Object = {
+  override protected def receiveFromPython(dataIn: DataInputStream): TrainedModel = {
     // Read the model target id in py4j server
     val modelTargetId = PythonWorkerUtils.readUTF(dataIn)
-    PythonRunnerUtils.getObjectAndDeref(modelTargetId)
+    val m = PythonRunnerUtils.getObjectAndDeref(modelTargetId)
+
+    val modelAttributes = PythonWorkerUtils.readUTF(dataIn)
+    TrainedModel(m, modelAttributes)
   }
 
   override def close(): Unit = {
