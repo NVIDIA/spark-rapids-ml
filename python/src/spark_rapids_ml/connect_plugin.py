@@ -123,8 +123,8 @@ def main(infile: IO, outfile: IO) -> None:
             model: LogisticRegressionModel = lr.fit(df)
             model_cpu = model.cpu()
             assert model_cpu._java_obj is not None
-            model_targe_id = model_cpu._java_obj._get_object_id().encode("utf-8")
-            write_with_length(model_targe_id, outfile)
+            model_target_id = model_cpu._java_obj._get_object_id().encode("utf-8")
+            write_with_length(model_target_id, outfile)
             # Model attributes
             attributes = [
                 model.coef_,
