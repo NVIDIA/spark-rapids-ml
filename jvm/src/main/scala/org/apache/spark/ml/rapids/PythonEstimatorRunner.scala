@@ -31,8 +31,8 @@ case class Fit(name: String, params: String)
 case class TrainedModel(model: Object, modelAttributes: String)
 
 /**
- * PythonEstimatorRunner is a bridge to launch/manage Python process. And it sends the
- * estimator related message to python process and run.
+ * PythonEstimatorRunner is a bridge to launch and manage Python process. It sends the
+ * estimator-related messages to the python process and runs it.
  *
  * @param fit     the fit information
  * @param dataset input dataset

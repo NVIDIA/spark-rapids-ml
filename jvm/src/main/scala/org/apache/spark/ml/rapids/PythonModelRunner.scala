@@ -29,8 +29,8 @@ import org.apache.spark.sql.execution.python.PythonPlannerRunner
 case class Transform(name: String, params: String, modelAttributes: String)
 
 /**
- * PythonModelRunner is a bridge to launch/manage Python process. And it sends the
- * estimator related message to python process and run.
+ * PythonModelRunner is a bridge to launch and manage Python process. it sends the
+ * model-related messages to the python process and runs it.
  *
  * @param transform the transform information
  * @param dataset   input dataset

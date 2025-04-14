@@ -142,10 +142,8 @@ def main(infile: IO, outfile: IO) -> None:
             attributes = json.loads(attributes)  # type: ignore[arg-type]
             from .classification import LogisticRegression, LogisticRegressionModel
 
-            # Workaround for setting params for corresponding model
-            lr = LogisticRegression(**params)
             lrm = LogisticRegressionModel(*attributes)  # type: ignore[arg-type]
-            lr._copyValues(lrm)
+            lrm._set_params(**params)
             transformed_df = lrm.transform(df)
             transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
             write_with_length(transformed_df_id, outfile)

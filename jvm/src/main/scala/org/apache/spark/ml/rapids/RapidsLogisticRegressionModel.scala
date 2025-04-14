@@ -22,9 +22,10 @@ import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 /**
- * Model produced by RapidsLogisticRegressionModel.
+ * Model produced by RapidsLogisticRegression.
  *
- * RapidsLogisticRegressionModel holds the
+ * RapidsLogisticRegressionModel extends from the Spark LogisticRegressionModel and stores
+ * the model attributes training by spark-rapids-ml python in string format.
  */
 class RapidsLogisticRegressionModel(override val uid: String,
                                     protected override val cpuModel: LogisticRegressionModel,
@@ -39,8 +40,6 @@ class RapidsLogisticRegressionModel(override val uid: String,
 
   /**
    * The model name
-   *
-   * @return
    */
   override def name: String = "LogisticRegressionModel"
 

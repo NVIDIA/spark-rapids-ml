@@ -75,19 +75,19 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     assert(model.getLabelCol == "class")
     assert(model.getMaxIter == 23)
 
-    // Transform using CPU model by default
-    val dfCpu = model.transform(df)
-
     // Transform using Spark-Rapids-ML model by default
-    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "true")
     val dfGpu = model.transform(df)
 
-    // The order of the column is different
-    assert(!(dfCpu.schema.names sameElements dfGpu.schema.names))
-    assert(dfCpu.schema.names.sorted sameElements dfGpu.schema.names.sorted)
+    // Transform using CPU model by disabling "spark.rapids.ml.python.transform.enabled"
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+    val dfCpu = model.transform(df)
 
-    // No exception while collecting data
-    dfCpu.collect()
+    // The order of the column is different
+    assert(!(dfGpu.schema.names sameElements dfCpu.schema.names))
+    assert(dfGpu.schema.names.sorted sameElements dfCpu.schema.names.sorted)
+
+    // No exception while collecting data for both CPU and GPU
     dfGpu.collect()
+    dfCpu.collect()
   }
 }

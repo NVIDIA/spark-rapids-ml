@@ -84,7 +84,7 @@ trait RapidsModel extends Params {
   protected val logger = LogFactory.getLog("Spark-Rapids-ML Plugin")
 
   def transformOnPython(dataset: Dataset[_]): DataFrame = {
-    val usePython = dataset.sparkSession.conf.get("spark.rapids.ml.python.transform.enabled", "false").toBoolean
+    val usePython = dataset.sparkSession.conf.get("spark.rapids.ml.python.transform.enabled", "true").toBoolean
     if (usePython) {
       logger.info("Transform in python")
       // Get the user-defined parameters and pass them to python process as a dictionary
