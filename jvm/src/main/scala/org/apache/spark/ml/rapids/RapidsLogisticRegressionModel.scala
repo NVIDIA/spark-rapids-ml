@@ -38,6 +38,8 @@ class RapidsLogisticRegressionModel(override val uid: String,
   extends LogisticRegressionModel(uid, cpuModel.coefficientMatrix, cpuModel.interceptVector,
     cpuModel.numClasses, isMultinomial) with MLWritable with RapidsModel {
 
+  private[ml] def this() = this("", null, "", false)
+
   override def transform(dataset: Dataset[_]): DataFrame = {
     transformOnPython(dataset)
   }
