@@ -30,7 +30,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <scala.version>2.13.14</scala.version>
         <scala.binary.version>2.13</scala.binary.version>
-        <spark.version>4.1.0-SNAPSHOT</spark.version>
+        <spark.version>4.0.1-SNAPSHOT</spark.version>
         <!-- Extra JVM arguments for tests (required for Java 17 module system) -->
         <extraJavaTestArgs>
             -XX:+IgnoreUnrecognizedVMOptions

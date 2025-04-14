@@ -19,6 +19,7 @@ package com.nvidia.rapids.ml
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
+import org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
 
 /**
  * RapidsLogisticRegression is a JVM wrapper of LogisticRegression in spark-rapids-ml python package.
@@ -32,12 +33,15 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
 
   def this() = this(Identifiable.randomUID("logreg"))
 
-  override def train(dataset: Dataset[_]): LogisticRegressionModel = {
-    trainOnPython(dataset).asInstanceOf[LogisticRegressionModel]
+  override def train(dataset: Dataset[_]): RapidsLogisticRegressionModel = {
+    val trainedModel = trainOnPython(dataset)
+    val cpuModel = copyValues(trainedModel.model.asInstanceOf[LogisticRegressionModel])
+    val isMultinomial = cpuModel.numClasses != 2
+    copyValues(new RapidsLogisticRegressionModel(uid, cpuModel, trainedModel.modelAttributes, isMultinomial))
   }
 
   /**
    * The estimator name
    */
-  override def estimatorName: String = "LogisticRegression"
+  override def name: String = "LogisticRegression"
 }
