@@ -331,11 +331,11 @@ def _concat_with_reserved_gpu_mem(
     array_order: str,
     logger: logging.Logger,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
-    # TODO: check restriction on the array_order
     # TODO: support multiple column and sparse matrix
     # TODO: support row number
 
-    assert array_order == "C"
+    assert array_order == "C", "F order array is currently not supported."
+
     assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
 
     import cupy as cp
@@ -377,7 +377,7 @@ def _concat_with_reserved_gpu_mem(
         np_rows = np_features.shape[0]
 
         cp_features[num_rows_total : num_rows_total + np_rows, :] = cp.array(
-            np_features
+            np_features, order=array_order
         )
         if np_label is not None:
             assert len(np_label) == np_rows

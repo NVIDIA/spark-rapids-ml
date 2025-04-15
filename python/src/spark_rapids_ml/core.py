@@ -735,7 +735,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             inputs = []
             sizes = []
 
-            if gpu_mem_ratio_for_data and support_gpuMemRatioForData:
+            if (
+                gpu_mem_ratio_for_data
+                and support_gpuMemRatioForData
+                and array_order == "C"
+            ):
                 from spark_rapids_ml.utils import _concat_with_reserved_gpu_mem
 
                 gpu_id = _CumlCommon._get_gpu_device(context, is_local)

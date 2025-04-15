@@ -18,7 +18,7 @@ from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from pytest import LogCaptureFixture
+import pytest
 
 from spark_rapids_ml.core import alias
 from spark_rapids_ml.utils import (
@@ -151,7 +151,7 @@ def create_toy_pdf_iter(
     return pdf_iter
 
 
-def test_concat_with_reserved_gpu_mem(caplog: LogCaptureFixture) -> None:
+def test_concat_with_reserved_gpu_mem(caplog: pytest.LogCaptureFixture) -> None:
     """
     TODO: support multi_cols, sparse, row numbers, and 'F' array order
     """
@@ -174,7 +174,14 @@ def test_concat_with_reserved_gpu_mem(caplog: LogCaptureFixture) -> None:
     )
 
     assert isinstance(cp_features, cp.ndarray)
+    assert cp_features.flags["C_CONTIGUOUS"] == True if array_order == "C" else False
+    assert cp_features.flags["F_CONTIGUOUS"] == False if array_order == "C" else True
+    assert (
+        cp_features.flags["OWNDATA"] == False
+    )  # just a view on the reserved gpu memory
+
     assert isinstance(cp_labels, cp.ndarray)
+    assert cp_labels.flags["OWNDATA"] == False  # just a view on the reserved gpu memory
     # assert isinstance(np_row_numbers, np.ndarray)
 
     assert len(cp_features) == len(cp_labels)
