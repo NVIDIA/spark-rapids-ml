@@ -282,7 +282,50 @@ def _concat_and_free(
     return concated
 
 
+def _try_allocate_cp_empty_arrays(
+    gpu_id: int,
+    gpu_mem_ratio_for_data: float,
+    dimension: int,
+    dtype: np.dtype,
+    array_order: str,
+    has_label: bool,
+    logger: logging.Logger,
+) -> Tuple["cp.ndarray", Optional["cp.ndarray"]]:
+    import cupy as cp
+
+    device = cp.cuda.Device(gpu_id)
+    free_mem, total_mem = device.mem_info
+    nbytes_per_row = (dimension + 1 if has_label else 0) * np.dtype(dtype).itemsize
+
+    target_mem = int(free_mem * gpu_mem_ratio_for_data)
+    while target_mem >= 1_000_000:
+        target_n_rows = target_mem // nbytes_per_row
+
+        try:
+            cp_features = cp.empty(
+                shape=(target_n_rows, dimension), dtype=dtype, order=array_order
+            )
+
+            cp_label = cp.empty(shape=target_n_rows, dtype=dtype) if has_label else None
+
+            logger.info(
+                f"Reserved {target_mem / 1_000_000_000} GB GPU memory for training data (dim={dimension}, max_rows={target_n_rows:,}"
+            )
+
+            return (cp_features, cp_label)
+
+        except cp.cuda.memory.OutOfMemoryError:
+            logger.info(f"OOM at {target_mem / 1_000_000_000} GB, reducing...")
+            target_mem = int(target_mem * 0.9)
+        except Exception as e:
+            print("Unexpected error:", e)
+            break
+
+    raise ValueError("Failed to reserve GPU memory for training data.")
+
+
 def _concat_with_reserved_gpu_mem(
+    gpu_id: int,
     pdf_iter: Iterator[pd.DataFrame],
     gpu_mem_ratio_for_data: float,
     array_order: str,
@@ -318,25 +361,18 @@ def _concat_with_reserved_gpu_mem(
         if first_batch:
             first_batch = False
 
-            device = cp.cuda.Device(0)
-            free_mem, total_mem = device.mem_info
-            target_mem = int(free_mem * gpu_mem_ratio_for_data)
-
             dimension = np_features.shape[1]
-            nbytes_per_row = np_features[0].nbytes
-            if np_label is not None:
-                nbytes_per_row += np_label.dtype.itemsize
-
-            target_n_rows = target_mem // nbytes_per_row
-            logger.info(
-                f"Reserved GPU memory for training data: {target_mem / 1_000_000_000} GB GPU memory for dimension {dimension} and maximum n_rows {target_n_rows:,}"
+            dtype = np_features.dtype
+            has_label = True if np_label is not None else False
+            cp_features, cp_label = _try_allocate_cp_empty_arrays(
+                gpu_id,
+                gpu_mem_ratio_for_data,
+                dimension,
+                dtype,
+                array_order,
+                has_label,
+                logger,
             )
-
-            cp_features = cp.empty(
-                shape=(target_n_rows, dimension), dtype=np_features.dtype
-            )
-            if np_label is not None:
-                cp_label = cp.empty(shape=target_n_rows, dtype=np_label.dtype)
 
         np_rows = np_features.shape[0]
 

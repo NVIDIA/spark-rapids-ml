@@ -62,6 +62,7 @@ from scipy.sparse import csr_matrix
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
 from spark_rapids_ml.core import _CumlEstimator, _use_sparse_in_cuml, alias
 from spark_rapids_ml.tuning import CrossValidator
+from spark_rapids_ml.utils import _get_spark_session
 
 from .sparksession import CleanSparkSession
 from .utils import (
@@ -2374,5 +2375,43 @@ def test_sparse_one_gpu_all_zeroes(
         check_sparse_model_preprocess(gpu_model, bdf)
 
         cpu_lr = SparkLogisticRegression(**params)
+        cpu_model = cpu_lr.fit(bdf)
+        compare_model(gpu_model, cpu_model, bdf)
+
+
+@pytest.mark.parametrize("gpuMemRatioForData", ["None", "0.6"])
+def test_gpuMemRatioForData(
+    gpuMemRatioForData: Optional[float],
+    gpu_number: int,
+) -> None:
+    gpu_number = min(gpu_number, 2)
+
+    with CleanSparkSession() as spark:
+        assert (
+            _get_spark_session().conf.get("spark.rapids.ml.gpuMemRatioForData", None)
+            == None
+        )
+
+    conf: Dict[str, Any] = {"spark.rapids.ml.gpuMemRatioForData": gpuMemRatioForData}
+    with CleanSparkSession(conf) as spark:
+
+        assert (
+            _get_spark_session().conf.get("spark.rapids.ml.gpuMemRatioForData")
+            == gpuMemRatioForData
+        )
+
+        data = [
+            Row(label=1.0, features=Vectors.dense([0.0, 0.0, 1.0])),
+            Row(label=1.0, features=Vectors.dense([0.0, 1.0, 0.0])),
+            Row(label=0.0, features=Vectors.dense([1.0, 0.0, 0.0])),
+            Row(label=0.0, features=Vectors.dense([2.0, 0.0, -1.0])),
+        ]
+
+        bdf = spark.createDataFrame(data)
+
+        gpu_lr = LogisticRegression(regParam=0.01)
+        gpu_model = gpu_lr.fit(bdf)
+
+        cpu_lr = SparkLogisticRegression(regParam=0.01)
         cpu_model = cpu_lr.fit(bdf)
         compare_model(gpu_model, cpu_model, bdf)

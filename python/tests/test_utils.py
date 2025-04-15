@@ -153,10 +153,11 @@ def create_toy_pdf_iter(
 
 def test_concat_with_reserved_gpu_mem(caplog: LogCaptureFixture) -> None:
     """
-    TODO: support multi_cols, sparse, and 'F' array order
+    TODO: support multi_cols, sparse, row numbers, and 'F' array order
     """
     array_order = "C"
     gpu_mem_ratio_for_data = 0.1
+    gpu_id = 0
 
     import logging
 
@@ -169,7 +170,7 @@ def test_concat_with_reserved_gpu_mem(caplog: LogCaptureFixture) -> None:
     logger = logging.getLogger("test_utils")
     logger.setLevel(logging.INFO)
     cp_features, cp_labels, np_row_numbers = _concat_with_reserved_gpu_mem(
-        pdf_iter, gpu_mem_ratio_for_data, array_order, logger
+        gpu_id, pdf_iter, gpu_mem_ratio_for_data, array_order, logger
     )
 
     assert isinstance(cp_features, cp.ndarray)
@@ -179,4 +180,6 @@ def test_concat_with_reserved_gpu_mem(caplog: LogCaptureFixture) -> None:
     assert len(cp_features) == len(cp_labels)
     # assert len(cp_labels) == len(np_row_numbers)
 
-    assert "Reserved GPU memory for training data:" in caplog.text
+    assert (
+        "Reserved" in caplog.text and "GB GPU memory for training data" in caplog.text
+    )

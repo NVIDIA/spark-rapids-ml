@@ -738,9 +738,10 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             if gpu_mem_ratio_for_data and support_gpuMemRatioForData:
                 from spark_rapids_ml.utils import _concat_with_reserved_gpu_mem
 
+                gpu_id = _CumlCommon._get_gpu_device(context, is_local)
                 inputs = [
                     _concat_with_reserved_gpu_mem(
-                        pdf_iter, gpu_mem_ratio_for_data, array_order, logger
+                        gpu_id, pdf_iter, gpu_mem_ratio_for_data, array_order, logger
                     )
                 ]
                 sizes = [inputs[0][0].shape[0]]
