@@ -17,9 +17,9 @@
 package com.nvidia.rapids.ml
 
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
-import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
+import org.apache.spark.sql.Dataset
 
 /**
  * RapidsLogisticRegression is a JVM wrapper of LogisticRegression in spark-rapids-ml python package.
@@ -48,5 +48,7 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
 }
 
 object RapidsLogisticRegression extends DefaultParamsReadable[RapidsLogisticRegression] {
+
   override def load(path: String): RapidsLogisticRegression = super.load(path)
+
 }

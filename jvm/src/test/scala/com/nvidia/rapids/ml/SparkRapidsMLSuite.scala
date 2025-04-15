@@ -87,7 +87,6 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     assert(loadedLr.getLabelCol == "class")
     assert(loadedLr.getMaxIter == 23)
 
-
     def check(model: RapidsLogisticRegressionModel): Unit = {
       assert(model.getFeaturesCol == "test_feature")
       assert(model.getTol == 0.03)
