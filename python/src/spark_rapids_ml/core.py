@@ -566,12 +566,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return (True, False)
 
-    def _gpu_mem_ratio_for_data(self) -> Optional[float]:
+    def _support_gpuMemRatioForData(self) -> bool:
         """
-        The ratio of available GPU memory hold for dataset.
-        This helps avoid data copy on GPU.
+        Whether an estimator supports reserving GPU memory for data to avoid extra data copy in concatenating pdf batches.
         """
-        return None
+        return False
 
     def _validate_parameters(self) -> None:
         cls_name = self._pyspark_class()
@@ -672,6 +671,16 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         if cuda_managed_mem_enabled:
             get_logger(cls).info("CUDA managed memory enabled.")
 
+        conf_val = _get_spark_session().conf.get(
+            "spark.rapids.ml.gpuMemRatioForData", None
+        )
+        if conf_val is None or conf_val in {"None", "none"}:
+            gpu_mem_ratio_for_data = None
+        else:
+            gpu_mem_ratio_for_data = float(conf_val)
+            assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
+        support_gpuMemRatioForData = self._support_gpuMemRatioForData()
+
         # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
@@ -702,7 +711,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         use_sparse_array = _use_sparse_in_cuml(dataset)
 
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
-        gpu_mem_ratio_for_data = self._gpu_mem_ratio_for_data()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
             import cupy as cp
@@ -727,7 +735,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             inputs = []
             sizes = []
 
-            if gpu_mem_ratio_for_data:
+            if gpu_mem_ratio_for_data and support_gpuMemRatioForData:
                 from spark_rapids_ml.utils import _concat_with_reserved_gpu_mem
 
                 inputs = [

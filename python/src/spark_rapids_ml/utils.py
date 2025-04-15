@@ -291,7 +291,6 @@ def _concat_with_reserved_gpu_mem(
     # TODO: check restriction on the array_order
     # TODO: support multiple column and sparse matrix
     # TODO: support row number
-    # TODO: support pytest -n 8
 
     assert array_order == "C"
     assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
@@ -330,7 +329,7 @@ def _concat_with_reserved_gpu_mem(
 
             target_n_rows = target_mem // nbytes_per_row
             logger.info(
-                f"Reserved {target_mem / 1000000}MB GPU memory for training dataset with dimension {dimension} and n_rows limit {target_n_rows / 1000000} million"
+                f"Reserved GPU memory for training data: {target_mem / 1_000_000_000} GB GPU memory for dimension {dimension} and maximum n_rows {target_n_rows:,}"
             )
 
             cp_features = cp.empty(
@@ -341,16 +340,12 @@ def _concat_with_reserved_gpu_mem(
 
         np_rows = np_features.shape[0]
 
-        # import debugpy
-        # debugpy.listen(5901)
-        # debugpy.wait_for_client()
-        # debugpy.breakpoint()
-
         cp_features[num_rows_total : num_rows_total + np_rows, :] = cp.array(
             np_features
         )
         if np_label is not None:
             assert len(np_label) == np_rows
+            assert cp_label is not None
             cp_label[num_rows_total : num_rows_total + np_rows] = cp.array(np_label)
 
         num_rows_total += np_features.shape[0]
