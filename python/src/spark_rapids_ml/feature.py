@@ -102,6 +102,17 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
         """
         return self._set_params(outputCol=value)
 
+    def getInputCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
+        """
+        if self.isDefined(self.inputCols):
+            return self.getInputCols()
+        elif self.isDefined(self.inputCol):
+            return self.getInputCol()
+        else:
+            raise RuntimeError("inputCol is not set")
+
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     """

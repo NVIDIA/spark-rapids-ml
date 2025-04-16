@@ -34,6 +34,7 @@ _accelerated_attributes = {
         "RandomForestClassificationModel",
     ],
     "tuning": ["CrossValidator"],
+    "pipeline": ["Pipeline"],
 }
 
 

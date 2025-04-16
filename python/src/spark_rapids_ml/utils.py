@@ -642,3 +642,32 @@ def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
             "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
             "or run on Databricks Runtime."
         ) from exc
+
+
+from pyspark.ml.base import Estimator, Model
+
+
+def setInputOrFeaturesCol(
+    est: Union[Estimator, Model],
+    features_col_value: Union[str, List[str]],
+    label_col_value: Optional[str] = None,
+) -> None:
+    setter = (
+        getattr(est, "setFeaturesCol")
+        if hasattr(est, "setFeaturesCol")
+        else getattr(est, "setInputCol")
+    )
+    setter(features_col_value)
+
+    label_setter = getattr(est, "setLabelCol") if hasattr(est, "setLabelCol") else None
+    if label_setter is not None and label_col_value is not None:
+        label_setter(label_col_value)
+
+
+def getInputOrFeaturesCols(est: Union[Estimator, Model]) -> str:
+    getter = (
+        getattr(est, "getFeaturesCol")
+        if hasattr(est, "getFeaturesCol")
+        else getattr(est, "getInputCol")
+    )
+    return getter()
