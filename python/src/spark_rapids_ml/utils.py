@@ -315,7 +315,7 @@ def _try_allocate_cp_empty_arrays(
             return (cp_features, cp_label)
 
         except cp.cuda.memory.OutOfMemoryError:
-            logger.info(f"OOM at {target_mem / 1_000_000_000} GB, reducing...")
+            logger.warning(f"OOM at {target_mem / 1_000_000_000} GB, reducing...")
             target_mem = int(target_mem * 0.9)
         except Exception as e:
             print("Unexpected error:", e)
