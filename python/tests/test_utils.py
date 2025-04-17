@@ -182,10 +182,8 @@ def test_concat_with_reserved_gpu_mem(caplog: pytest.LogCaptureFixture) -> None:
 
     assert isinstance(cp_labels, cp.ndarray)
     assert cp_labels.flags["OWNDATA"] == False  # just a view on the reserved gpu memory
-    # assert isinstance(np_row_numbers, np.ndarray)
 
     assert len(cp_features) == len(cp_labels)
-    # assert len(cp_labels) == len(np_row_numbers)
 
     assert (
         "Reserved" in caplog.text and "GB GPU memory for training data" in caplog.text
