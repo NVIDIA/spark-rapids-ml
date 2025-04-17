@@ -580,6 +580,11 @@ class RegressionDataGen(DataGenBaseMeta):
 class SparseRegressionDataGen(DataGenBaseMeta):
     """Generate sparse regression dataset using a distributed version of sklearn.datasets.regression,
     including features and labels.
+
+    SparseRegressionDataGen is a non-deterministic data generator that may produce different DataFrames across multiple runs.
+    While setting a random state ensures that the generated DataFrame will vary between runs, it does not guarantee reproducibility of the same output for the same random state.
+    This is because each partition utilizes a combination of the random state and the partition index as its local seed.
+    However, partition indices are not guaranteed to be continuous or deterministic, leading to variability even when the random state is provided.
     """
 
     def __init__(self, argv: List[Any]) -> None:
