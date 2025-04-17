@@ -238,7 +238,7 @@ def test_make_regression(
 )
 @pytest.mark.parametrize(
     "rows, cols",
-    [("1000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
+    [("10000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
 )
 @pytest.mark.parametrize(
     "density_curve, shuffle",
