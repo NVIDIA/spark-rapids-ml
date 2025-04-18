@@ -238,7 +238,7 @@ def test_make_regression(
 )
 @pytest.mark.parametrize(
     "rows, cols",
-    [("10000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
+    [("1000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
 )
 @pytest.mark.parametrize(
     "density_curve, shuffle",
@@ -263,7 +263,7 @@ def test_make_sparse_regression(
     density_curve: str,
     shuffle: str,
     n_chunks: str,
-) -> None:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     SparseRegressionDataGen is a non-deterministic data generator and may produce different DataFrames even when initialized with the same random state.
     For more details, please refer to the class docstring.
@@ -430,6 +430,8 @@ def test_make_sparse_regression(
         if logistic_regression == "True":
             assert np.unique(y).shape[0] == n_classes_num
 
+    return (X, y)
+
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
@@ -495,3 +497,29 @@ def test_make_classification(
         assert (
             np.linalg.matrix_rank(X) == 31 - n_repeated - n_redundant
         ), "Unexpected matrix rank"
+
+
+@pytest.mark.parametrize("use_gpu", ["True", "False"])
+def test_determinism(use_gpu: str) -> None:
+    kargs = {
+        "dtype": "float32",
+        "use_gpu": use_gpu,
+        "redundant_cols": "2",
+        "logistic_regression": "True",
+        "n_classes": "5",
+        "bias": ["0.5", "1.5", "2.5", "3.5", "4.5"],
+        "density": ["0.05", "0.1", "0.2"],
+        "rows": "1000",
+        "cols": "200",
+        "density_curve": "Exponential",
+        "shuffle": "True",
+        "n_chunks": "100",
+    }
+    X_0, y_0 = test_make_sparse_regression(**kargs)
+    X_1, y_1 = test_make_sparse_regression(**kargs)
+
+    assert np.all(y_0 == y_1)
+
+    assert len(X_0) == len(X_1)
+    for i in range(len(X_0)):
+        assert X_0[i] == X_1[i]
