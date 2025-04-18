@@ -24,10 +24,14 @@ from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
 from pyspark.ml.tuning import CrossValidatorModel
 from pyspark.ml.util import DefaultParamsReader
 from pyspark.sql import DataFrame
+from pyspark.sql.connect.plan import LogicalPlan
 
 from .core import _CumlEstimator, _CumlModel
 from .utils import get_logger
 
+from pyspark.sql.connect import proto as spark_pb
+from .proto import relations_pb2 as rapids_pb
+import json
 
 def _gen_avg_and_std_metrics_(
     metrics_all: List[List[float]],
@@ -35,6 +39,28 @@ def _gen_avg_and_std_metrics_(
     avg_metrics = np.mean(metrics_all, axis=0)
     std_metrics = np.std(metrics_all, axis=0)
     return list(avg_metrics), list(std_metrics)
+
+class _CrossValidatorPlan(LogicalPlan):
+
+    def __init__(self, cv_relation: rapids_pb.CrossValidatorRelation):
+        super().__init__(None)
+        self._cv_relation = cv_relation
+
+    def plan(self, session: "SparkConnectClient") -> spark_pb.Relation:
+        plan = self._create_proto_relation()
+        plan.extension.Pack(self._cv_relation)
+        return plan
+
+
+def _extractParams(instance: "Params") -> str:
+    params = {}
+    # TODO: support vector/matrix
+    for k, v in instance._paramMap.items():
+        if instance.isSet(k) and isinstance(v, int | float | str | bool):
+            params[k.name] = v
+
+    import json
+    return json.dumps(params)
 
 
 class CrossValidator(SparkCrossValidator):
@@ -89,7 +115,56 @@ class CrossValidator(SparkCrossValidator):
 
     """
 
+    def __remote_fit(self, dataset: DataFrame) -> "CrossValidatorModel":
+        estimator = self.getEstimator()
+        evaluator = self.getEvaluator()
+        est_param_list = []
+        for param_group in self.getEstimatorParamMaps():
+            est_param_items = []
+            for p, v in param_group.items():
+                tmp_map = {"parent": p.parent, "name": p.name, "value": v}
+                est_param_items.append(tmp_map)
+            est_param_list.append(est_param_items)
+
+        est_param_map_json = json.dumps(est_param_list)
+
+        estimator_name = type(estimator).__name__
+        cv_rel = rapids_pb.CrossValidatorRelation(
+            uid=self.uid,
+            estimator=rapids_pb.MlOperator(
+                name=estimator_name,
+                uid=estimator.uid,
+                type=rapids_pb.MlOperator.OperatorType.OPERATOR_TYPE_ESTIMATOR,
+                params=_extractParams(estimator),
+            ),
+            estimator_param_maps=est_param_map_json,
+            evaluator=rapids_pb.MlOperator(
+                name=type(evaluator).__name__,
+                uid=evaluator.uid,
+                type=rapids_pb.MlOperator.OperatorType.OPERATOR_TYPE_EVALUATOR,
+                params=_extractParams(evaluator),
+            ),
+            dataset=dataset._plan.to_proto(dataset.sparkSession.client).SerializeToString(),
+            params=_extractParams(self),
+        )
+        from pyspark.sql.connect.dataframe import DataFrame as ConnectDataFrame
+        df = ConnectDataFrame(_CrossValidatorPlan(cv_relation=cv_rel), dataset.sparkSession)
+        row = df.collect()
+
+        best_model = None
+        model_id = row[0].best_model_id
+        # TODO support other estimators
+        if estimator_name == "LogisticRegression":
+            from pyspark.ml.classification import LogisticRegressionModel
+            best_model = LogisticRegressionModel(model_id)
+
+        return CrossValidatorModel(best_model)
+
     def _fit(self, dataset: DataFrame) -> "CrossValidatorModel":
+        from pyspark.sql import is_remote
+        if is_remote():
+            return self.__remote_fit(dataset)
+
         est = self.getOrDefault(self.estimator)
         eva = self.getOrDefault(self.evaluator)
 

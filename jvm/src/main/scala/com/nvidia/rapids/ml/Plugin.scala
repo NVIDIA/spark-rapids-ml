@@ -15,6 +15,7 @@
  */
 package com.nvidia.rapids.ml
 
+import org.apache.spark.ml.rapids.RapidsUtils
 import org.apache.spark.sql.connect.plugin.MLBackendPlugin
 
 import java.util.Optional
@@ -26,12 +27,9 @@ import java.util.Optional
 class Plugin extends MLBackendPlugin {
 
   override def transform(mlName: String): Optional[String] = {
-    mlName match {
-      case "org.apache.spark.ml.classification.LogisticRegression" =>
-        Optional.of("com.nvidia.rapids.ml.RapidsLogisticRegression")
-      case "org.apache.spark.ml.classification.LogisticRegressionModel" =>
-        Optional.of("org.apache.spark.ml.rapids.RapidsLogisticRegressionModel")
-      case _ => Optional.empty()
+    RapidsUtils.transform(mlName) match {
+      case Some(v) => Optional.of(v)
+      case None => Optional.empty()
     }
   }
 }
