@@ -520,12 +520,12 @@ class RegressionDataGen(DataGenBaseMeta):
                         if use_cupy:
                             probs_p = cp.asarray(probs)
                             cdf = cp.cumsum(probs_p, axis=1)
-                            anchors = cp.random.random(size=(cdf.shape[0], 1))
+                            anchors = generator_p.rand(cdf.shape[0], 1)
                             y = cp.sum(anchors > cdf, axis=1)
                         else:
                             probs_p = probs
                             cdf = np.cumsum(probs_p, axis=1)
-                            anchors = np.random.random(size=(cdf.shape[0], 1))
+                            anchors = generator_p.rand(cdf.shape[0], 1)
                             y = np.sum(anchors > cdf, axis=1)
                     else:
                         if use_cupy:
@@ -790,7 +790,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     random_state=generator,
                     format="csr",
                     dtype=dtype,
-                    data_rvs=np.random.randn,
                 )
 
                 if sparse_matrix.shape[0] == 0:
@@ -812,7 +811,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                         random_state=generator,
                         format="csr",
                         dtype=dtype,
-                        data_rvs=np.random.randn,
                     )
 
                 # Separate informative and non-informative columns
@@ -822,9 +820,9 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                 informative = sparse_matrix[:, :n_informative]
 
                 if use_cupy:
-                    redundant_mul = np.random.rand(n_informative, redundant_cols)
+                    redundant_mul = generator.rand(n_informative, redundant_cols)
                 else:
-                    redundant_mul = np.random.rand(n_informative, redundant_cols)
+                    redundant_mul = generator.rand(n_informative, redundant_cols)
 
                 redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
@@ -868,12 +866,12 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     if use_cupy:
                         probs_p = cp.asarray(probs)
                         cdf = cp.cumsum(probs_p, axis=1)
-                        anchors = cp.random.random(size=(cdf.shape[0], 1))
+                        anchors = generator_p.rand(cdf.shape[0], 1)
                         y = cp.sum(anchors > cdf, axis=1)
                     else:
                         probs_p = probs
                         cdf = np.cumsum(probs_p, axis=1)
-                        anchors = np.random.random(size=(cdf.shape[0], 1))
+                        anchors = generator_p.rand(cdf.shape[0], 1)
                         y = np.sum(anchors > cdf, axis=1)
                 else:
                     if use_cupy:
