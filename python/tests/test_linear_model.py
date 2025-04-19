@@ -27,6 +27,7 @@ if version.parse(pyspark.__version__) < version.parse("3.4.0"):
 else:
     from pyspark.errors import IllegalArgumentException  # type: ignore
 
+from pyspark.ml import Model
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
@@ -39,6 +40,7 @@ from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql.functions import array, col
 from pyspark.sql.types import DoubleType
 
+from spark_rapids_ml.core import _CumlModel
 from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 from spark_rapids_ml.tuning import CrossValidator
 
@@ -209,8 +211,12 @@ def test_linear_regression_params(
 
     # Unsupported value
     spark_params = {"solver": "l-bfgs"}
-    with pytest.raises(ValueError, match="solver given invalid value l-bfgs"):
-        unsupported_lr = LinearRegression(**spark_params)
+    # need a clean spark session since behavior below is spark config based
+    with CleanSparkSession() as spark:
+        with pytest.raises(
+            ValueError, match="solver given an invalid or unsupported value l-bfgs"
+        ):
+            unsupported_lr = LinearRegression(**spark_params)
 
     # make sure no warning when enabling float64 inputs
     lr_float32 = LinearRegression(float32_inputs=False)
@@ -692,10 +698,12 @@ def test_crossvalidator_linear_regression(
             evaluator=evaluator,
             numFolds=2,
             seed=1,
+            collectSubModels=True,
         )
 
         # without exception
         model: CrossValidatorModel = cv.fit(df)
+        assert all([isinstance(m, _CumlModel) for m in model.subModels[0]])  # type: ignore
 
         spark_cv = SparkCrossValidator(
             estimator=lr,
@@ -737,3 +745,98 @@ def test_parameters_validation() -> None:
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(LinearRegression)
+
+
+@pytest.mark.parametrize("setting_method", ["constructor", "setter"])
+def test_linear_regression_cpu_fallback(setting_method: str) -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+
+        unsupported = [
+            k for k, v in LinearRegression._param_mapping().items() if v is None
+        ]
+        vals_to_try_unsupported = {
+            "weightCol": "weightscol",
+        }
+
+        vals_to_try_unsupported_vals = {
+            "solver": "l-bfgs",  # this one tests value mapping induced fallback
+        }
+
+        assert set(unsupported) == set(vals_to_try_unsupported.keys())
+        # Add weights column to dataframe
+        data = spark.createDataFrame(
+            [
+                (Vectors.dense(1.0, 0.0), 1.0, 1.0),
+                (Vectors.dense(1.0, 1.0), 1.0, 1.0),
+                (Vectors.dense(0.0, 0.0), 0.0, 1.0),
+                (Vectors.dense(0.0, 1.0), 0.0, 1.0),
+            ],
+            ["features", "label", "weightscol"],
+        )
+        # Test constructor params
+        for param, val in {
+            **vals_to_try_unsupported,
+            **vals_to_try_unsupported_vals,
+        }.items():
+            if setting_method == "constructor":
+                gpu_lr = LinearRegression(**{param: val})  # type: ignore
+            else:
+                gpu_lr = LinearRegression()
+                setter_name = "set" + param[0].upper() + param[1:]
+                getattr(gpu_lr, setter_name)(val)  # type: ignore
+            model = gpu_lr.fit(data)
+            getter_name = "get" + param[0].upper() + param[1:]
+            assert getattr(model, getter_name)() == val
+            assert not isinstance(model, _CumlModel) and isinstance(model, Model)
+
+
+def test_cv_cpu_fallback() -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+        from pyspark.ml import Model
+        from pyspark.ml.linalg import Vectors
+
+        from spark_rapids_ml.core import _CumlModel
+
+        data = spark.createDataFrame(
+            [
+                (Vectors.dense(1.0, 0.0), 1.0, 1.0, 1.5),
+                (Vectors.dense(1.0, 1.0), 1.0, 1.0, 1.5),
+                (Vectors.dense(0.0, 0.0), 0.0, 1.0, 1.0),
+                (Vectors.dense(0.0, 1.0), 0.0, 1.0, 1.0),
+            ],
+            ["features", "label", "weightscol1", "weightscol2"],
+        )
+
+        data = data.union(data)
+        data = data.union(data)
+
+        gpu_lr = LinearRegression()
+
+        grid = (
+            ParamGridBuilder()
+            .addGrid(gpu_lr.weightCol, ["weightscol1", "weightscol2"])
+            .build()
+        )
+
+        evaluator = RegressionEvaluator()
+        evaluator.setLabelCol("label")
+
+        cv = CrossValidator(
+            estimator=gpu_lr,
+            estimatorParamMaps=grid,
+            evaluator=evaluator,
+            numFolds=2,
+            seed=1,
+            collectSubModels=True,
+        )
+
+        model = cv.fit(data)
+
+        assert len(model.subModels) == 2  # type: ignore
+        assert len(model.subModels[0]) == 2  # type: ignore
+
+        for fold in range(2):
+            for submodel in model.subModels[fold]:  # type: ignore
+                assert not isinstance(submodel, _CumlModel) and isinstance(
+                    submodel, Model
+                )

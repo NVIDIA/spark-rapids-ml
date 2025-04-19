@@ -1059,7 +1059,6 @@ class DBSCANModel(
         rdd = self._call_cuml_fit_func(
             dataset=dataset,
             partially_collect=False,
-            paramMaps=None,
         )
         rdd = rdd.repartition(default_num_partitions)
 

@@ -99,6 +99,12 @@ class CrossValidator(SparkCrossValidator):
             return super()._fit(dataset)
 
         epm = self.getOrDefault(self.estimatorParamMaps)
+        # fallback if any params are not gpu supported
+        for param_map in epm:
+            est_tmp = est.copy(param_map)
+            if est_tmp._fallback_enabled and est_tmp._cpu_fallback():
+                return super()._fit(dataset)
+
         numModels = len(epm)
         nFolds = self.getOrDefault(self.numFolds)
         metrics_all = [[0.0] * numModels for i in range(nFolds)]
@@ -120,13 +126,13 @@ class CrossValidator(SparkCrossValidator):
             metrics = model._transformEvaluate(datasets[fold][1], eva)
             return fold, metrics, models if collectSubModelsParam else None
 
-        for fold, metrics, subModels in pool.imap_unordered(
+        for fold, metrics, _subModels in pool.imap_unordered(
             inheritable_thread_target(singePassTask), range(nFolds)
         ):
             metrics_all[fold] = metrics
             if collectSubModelsParam:
                 assert subModels is not None
-                subModels[fold] = subModels
+                subModels[fold] = _subModels
 
         metrics, std_metrics = _gen_avg_and_std_metrics_(metrics_all)
 
