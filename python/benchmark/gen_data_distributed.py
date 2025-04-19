@@ -264,16 +264,28 @@ class LowRankMatrixDataGen(DataGenBase):
             )
         )
 
+        global_random_state = params["random_state"]
+
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            partition_index = pyspark.TaskContext().partitionId()
+            my_seed = global_random_state + 100 * partition_index
+
+            use_cupy = use_gpu
+            if use_cupy:
+                try:
+                    import cupy as cp
+                except ImportError:
+                    use_cupy = False
+                    logging.warning("cupy import failed; falling back to numpy.")
+
+            generator_p = (
+                cp.random.default_rng(my_seed)
+                if use_cupy
+                else np.random.default_rng(my_seed)
+            )
+
             for pdf in iter:
-                use_cupy = use_gpu
-                if use_cupy:
-                    try:
-                        import cupy as cp
-                    except ImportError:
-                        use_cupy = False
-                        logging.warning("cupy import failed; falling back to numpy.")
 
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
@@ -289,13 +301,13 @@ class LowRankMatrixDataGen(DataGenBase):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
                     if use_cupy:
                         u, _ = cp.linalg.qr(
-                            cp.random.standard_normal(size=(end_idx - i, n)),
+                            generator_p.standard_normal(size=(end_idx - i, n)),
                             mode="reduced",
                         )
                         data = cp.dot(u, sv_batch_normed).get()
                     else:
                         u, _ = np.linalg.qr(
-                            np.random.standard_normal(size=(end_idx - i, n)),
+                            generator_p.standard_normal(size=(end_idx - i, n)),
                             mode="reduced",
                         )
                         data = np.dot(u, sv_batch_normed)
@@ -530,16 +542,16 @@ class RegressionDataGen(DataGenBaseMeta):
                     else:
                         if use_cupy:
                             prob = 1 / (1 + cp.exp(-y))
-                            y = cp.random.binomial(1, prob)
+                            y = generator_p.binomial(1, prob)
                         else:
                             prob = 1 / (1 + np.exp(-y))
-                            y = np.random.binomial(1, prob)
+                            y = generator_p.binomial(1, prob)
 
                 n_partition_rows = X_p.shape[0]
                 if shuffle:
                     # Row-wise shuffle (partition)
                     if use_cupy:
-                        row_indices = cp.random.permutation(n_partition_rows)
+                        row_indices = generator_p.permutation(n_partition_rows)
                         X_p = X_p[row_indices]
                         y = y[row_indices]
                     else:

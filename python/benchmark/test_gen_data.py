@@ -137,7 +137,7 @@ def test_make_regression(
     logistic_regression: str,
     n_classes: str,
     bias: Union[str, List[str]],
-) -> None:
+) -> tuple[np.ndarray, np.ndarray]:
     input_args = [
         "--num_rows",
         "1000",
@@ -218,6 +218,8 @@ def test_make_regression(
 
         if logistic_regression == "True":
             assert np.unique(y).shape[0] == n_classes_num
+
+    return (X, y)
 
 
 @pytest.mark.parametrize("dtype", ["float64"])
@@ -500,7 +502,7 @@ def test_make_classification(
 
 
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-def test_determinism(use_gpu: str) -> None:
+def test_determinism_SparseRegressionDataGen(use_gpu: str) -> None:
     kargs = {
         "dtype": "float32",
         "use_gpu": use_gpu,
@@ -523,3 +525,23 @@ def test_determinism(use_gpu: str) -> None:
     assert len(X_0) == len(X_1)
     for i in range(len(X_0)):
         assert X_0[i] == X_1[i]
+
+
+@pytest.mark.parametrize("use_gpu", ["True", "False"])
+def test_determinism_RegressionDataGen(use_gpu: str) -> None:
+    kargs = {
+        "dtype": "float32",
+        "low_rank": True,
+        "use_gpu": use_gpu,
+        "logistic_regression": "True",
+        "n_classes": "5",
+        "bias": ["0.5", "1.5", "2.5", "3.5", "4.5"],
+    }
+    X_0, y_0 = test_make_regression(**kargs)
+    X_1, y_1 = test_make_regression(**kargs)
+
+    assert_array_almost_equal(y_0, y_1)
+
+    assert len(X_0) == len(X_1)
+    for i in range(len(X_0)):
+        assert_array_almost_equal(X_0[i], X_1[i])
