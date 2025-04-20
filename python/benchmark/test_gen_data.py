@@ -266,10 +266,6 @@ def test_make_sparse_regression(
     shuffle: str,
     n_chunks: str,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    SparseRegressionDataGen is a non-deterministic data generator and may produce different DataFrames even when initialized with the same random state.
-    For more details, please refer to the class docstring.
-    """
     input_args = [
         "--num_rows",
         rows,
