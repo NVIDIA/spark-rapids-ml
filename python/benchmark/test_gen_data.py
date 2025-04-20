@@ -501,15 +501,37 @@ def test_make_classification(
         ), "Unexpected matrix rank"
 
 
+# @pytest.mark.parametrize(
+#    "use_gpu,n_classes,bias",
+#    [
+#        ("True", "5", ["0.5", "1.5", "2.5", "3.5", "4.5"]),
+#        ("False", "2", ["0.1", "0.2"])
+#    ]
+# )
+# def test_determinism_SparseRegressionDataGen(
+#    use_gpu: str,
+#    n_classes: str,
+#    bias: List[str],
+# ) -> None:
+
+
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-def test_determinism_SparseRegressionDataGen(use_gpu: str) -> None:
+@pytest.mark.parametrize(
+    "n_classes,bias", [("5", ["0.5", "1.5", "2.5", "3.5", "4.5"]), ("2", "0.1")]
+)
+def test_determinism_SparseRegressionDataGen(
+    use_gpu: str,
+    n_classes: str,
+    bias: Union[str, List[str]],
+) -> None:
+
     kargs = {
         "dtype": "float32",
         "use_gpu": use_gpu,
         "redundant_cols": "2",
         "logistic_regression": "True",
-        "n_classes": "5",
-        "bias": ["0.5", "1.5", "2.5", "3.5", "4.5"],
+        "n_classes": n_classes,
+        "bias": bias,
         "density": ["0.05", "0.1", "0.2"],
         "rows": "1000",
         "cols": "200",

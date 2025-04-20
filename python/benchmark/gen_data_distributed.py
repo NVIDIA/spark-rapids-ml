@@ -889,11 +889,11 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     if use_cupy:
                         prob = 1 / (1 + cp.exp(-y_p))
                         del y_p
-                        y = cp.random.binomial(1, prob)
+                        y = generator_p.binomial(1, prob)
                     else:
                         prob = 1 / (1 + np.exp(-y_p))
                         del y_p
-                        y = np.random.binomial(1, prob)
+                        y = generator_p.binomial(1, prob)
             else:
                 y = y_p
 
