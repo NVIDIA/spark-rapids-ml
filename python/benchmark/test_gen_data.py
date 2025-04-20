@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import List, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pytest
@@ -118,19 +118,7 @@ def test_make_low_rank_matrix(dtype: str, use_gpu: str) -> None:
         assert sum(s) - 5 < 0.1, "X rank is not approximately 5"
 
 
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
-@pytest.mark.parametrize("low_rank", [True, False])
-@pytest.mark.parametrize("use_gpu", ["True", "False"])
-@pytest.mark.parametrize(
-    "logistic_regression, n_classes, bias",
-    [
-        ("True", "2", "1.0"),
-        ("True", "5", ["0.5", "1.5", "2.5", "3.5", "4.5"]),
-        ("True", "15", "1.5"),
-        ("False", "0", "1.0"),
-    ],
-)
-def test_make_regression(
+def _func_test_make_regression(
     dtype: str,
     low_rank: bool,
     use_gpu: str,
@@ -222,9 +210,9 @@ def test_make_regression(
     return (X, y)
 
 
-@pytest.mark.parametrize("dtype", ["float64"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("low_rank", [True, False])
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
-@pytest.mark.parametrize("redundant_cols", ["0", "2"])
 @pytest.mark.parametrize(
     "logistic_regression, n_classes, bias",
     [
@@ -234,25 +222,20 @@ def test_make_regression(
         ("False", "0", "1.0"),
     ],
 )
-@pytest.mark.parametrize(
-    "density",
-    ["0.25", ["0.05", "0.1", "0.2"]],
-)
-@pytest.mark.parametrize(
-    "rows, cols",
-    [("1000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
-)
-@pytest.mark.parametrize(
-    "density_curve, shuffle",
-    [
-        ("None", "True"),
-        ("Linear", "False"),
-        ("Exponential", "False"),
-        pytest.param("Exponential", "True", marks=pytest.mark.slow),
-    ],
-)
-@pytest.mark.parametrize("n_chunks", ["100"])
-def test_make_sparse_regression(
+def test_make_regression(
+    dtype: str,
+    low_rank: bool,
+    use_gpu: str,
+    logistic_regression: str,
+    n_classes: str,
+    bias: Union[str, List[str]],
+) -> None:
+    _func_test_make_regression(
+        dtype, low_rank, use_gpu, logistic_regression, n_classes, bias
+    )
+
+
+def _func_test_make_sparse_regression(
     dtype: str,
     use_gpu: str,
     redundant_cols: str,
@@ -431,6 +414,66 @@ def test_make_sparse_regression(
     return (X, y)
 
 
+@pytest.mark.parametrize("dtype", ["float64"])
+@pytest.mark.parametrize("use_gpu", ["True", "False"])
+@pytest.mark.parametrize("redundant_cols", ["0", "2"])
+@pytest.mark.parametrize(
+    "logistic_regression, n_classes, bias",
+    [
+        ("True", "2", "1.0"),
+        ("True", "5", ["0.5", "1.5", "2.5", "3.5", "4.5"]),
+        ("True", "15", "1.5"),
+        ("False", "0", "1.0"),
+    ],
+)
+@pytest.mark.parametrize(
+    "density",
+    ["0.25", ["0.05", "0.1", "0.2"]],
+)
+@pytest.mark.parametrize(
+    "rows, cols",
+    [("1000", "200"), pytest.param("10000", "1000", marks=pytest.mark.slow)],
+)
+@pytest.mark.parametrize(
+    "density_curve, shuffle",
+    [
+        ("None", "True"),
+        ("Linear", "False"),
+        ("Exponential", "False"),
+        pytest.param("Exponential", "True", marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("n_chunks", ["100"])
+def test_make_sparse_regression(
+    dtype: str,
+    use_gpu: str,
+    redundant_cols: str,
+    logistic_regression: str,
+    n_classes: str,
+    bias: Union[str, List[str]],
+    density: Union[str, List[str]],
+    rows: str,
+    cols: str,
+    density_curve: str,
+    shuffle: str,
+    n_chunks: str,
+) -> None:
+    _func_test_make_sparse_regression(
+        dtype,
+        use_gpu,
+        redundant_cols,
+        logistic_regression,
+        n_classes,
+        bias,
+        density,
+        rows,
+        cols,
+        density_curve,
+        shuffle,
+        n_chunks,
+    )
+
+
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("num_rows", [2000, 2001])  # test uneven samples per cluster
 @pytest.mark.parametrize(
@@ -497,20 +540,6 @@ def test_make_classification(
         ), "Unexpected matrix rank"
 
 
-# @pytest.mark.parametrize(
-#    "use_gpu,n_classes,bias",
-#    [
-#        ("True", "5", ["0.5", "1.5", "2.5", "3.5", "4.5"]),
-#        ("False", "2", ["0.1", "0.2"])
-#    ]
-# )
-# def test_determinism_SparseRegressionDataGen(
-#    use_gpu: str,
-#    n_classes: str,
-#    bias: List[str],
-# ) -> None:
-
-
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 @pytest.mark.parametrize(
     "n_classes,bias", [("5", ["0.5", "1.5", "2.5", "3.5", "4.5"]), ("2", "0.1")]
@@ -521,7 +550,7 @@ def test_determinism_SparseRegressionDataGen(
     bias: Union[str, List[str]],
 ) -> None:
 
-    kargs = {
+    kargs: Dict[str, Any] = {
         "dtype": "float32",
         "use_gpu": use_gpu,
         "redundant_cols": "2",
@@ -535,8 +564,8 @@ def test_determinism_SparseRegressionDataGen(
         "shuffle": "True",
         "n_chunks": "100",
     }
-    X_0, y_0 = test_make_sparse_regression(**kargs)
-    X_1, y_1 = test_make_sparse_regression(**kargs)
+    X_0, y_0 = _func_test_make_sparse_regression(**kargs)
+    X_1, y_1 = _func_test_make_sparse_regression(**kargs)
 
     assert np.all(y_0 == y_1)
 
@@ -547,7 +576,7 @@ def test_determinism_SparseRegressionDataGen(
 
 @pytest.mark.parametrize("use_gpu", ["True", "False"])
 def test_determinism_RegressionDataGen(use_gpu: str) -> None:
-    kargs = {
+    kargs: Dict[str, Any] = {
         "dtype": "float32",
         "low_rank": True,
         "use_gpu": use_gpu,
@@ -555,8 +584,8 @@ def test_determinism_RegressionDataGen(use_gpu: str) -> None:
         "n_classes": "5",
         "bias": ["0.5", "1.5", "2.5", "3.5", "4.5"],
     }
-    X_0, y_0 = test_make_regression(**kargs)
-    X_1, y_1 = test_make_regression(**kargs)
+    X_0, y_0 = _func_test_make_regression(**kargs)
+    X_1, y_1 = _func_test_make_regression(**kargs)
 
     assert_array_almost_equal(y_0, y_1)
 
