@@ -1277,6 +1277,9 @@ class LogisticRegression(
 
         return False
 
+    def _support_gpuMemRatioForData(self) -> bool:
+        return True
+
 
 class LogisticRegressionModel(
     LogisticRegressionClass,
