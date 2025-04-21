@@ -774,6 +774,17 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
             partition_index = pyspark.TaskContext().partitionId()
 
+            # Support parameters and library adaptation
+            my_seed = global_random_seed + 100 * partition_index
+            if use_cupy:
+                generator_p = cp.random.RandomState(my_seed)
+            else:
+                generator_p = np.random.RandomState(my_seed)
+
+            import numpy
+
+            numpy.random.seed(my_seed)
+
             # Get #rows in charge
             num_rows_per_partition = 0
             start = -1
@@ -832,10 +843,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     sparse_matrix = sparse_matrix[:, informative_shuffle_indices]
                 informative = sparse_matrix[:, :n_informative]
 
-                if use_cupy:
-                    redundant_mul = generator.rand(n_informative, redundant_cols)
-                else:
-                    redundant_mul = generator.rand(n_informative, redundant_cols)
+                redundant_mul = np.random.rand(n_informative, redundant_cols)
 
                 redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
@@ -846,13 +854,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
             # Sort the csr matrix representation for better indices retrieval
             sparse_matrix.sum_duplicates()
-
-            # Support parameters and library adaptation
-            my_seed = global_random_seed + 100 * partition_index
-            if use_cupy:
-                generator_p = cp.random.RandomState(my_seed)
-            else:
-                generator_p = np.random.RandomState(my_seed)
 
             # Label Calculation
             y = sparse_matrix.dot(ground_truth) + bias
