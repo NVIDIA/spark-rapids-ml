@@ -896,12 +896,12 @@ class _CumlEstimator(Estimator, _CumlCaller):
             using `paramMaps[index]`. `index` values may not be sequential.
         """
 
-        if self._cpu_fallback():
+        if self._use_cpu_fallback():
             return super().fitMultiple(dataset, paramMaps)
 
         if self._enable_fit_multiple_in_single_pass():
             for paramMap in paramMaps:
-                if self._cpu_fallback(paramMap):
+                if self._use_cpu_fallback(paramMap):
                     return super().fitMultiple(dataset, paramMaps)
 
             # reach here if no cpu fallback
@@ -1059,9 +1059,13 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
     def _fit(self, dataset: DataFrame) -> "Model":
         """fit only 1 model"""
-        if self._pyspark_class() and self._fallback_enabled and self._cpu_fallback():
+        if (
+            self._pyspark_class()
+            and self._fallback_enabled
+            and self._use_cpu_fallback()
+        ):
             logger = get_logger(self.__class__)
-            logger.warning("Invoking cpu estimator fit().")
+            logger.warning("Falling back to CPU estimator fit().")
             cpu_class = self._pyspark_class()
             cpu_est = cpu_class(**{p.name: v for p, v in self.extractParamMap().items() if self.isSet(p) and hasattr(cpu_class, p.name)})  # type: ignore
             model = cpu_est.fit(dataset)
@@ -1450,7 +1454,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         """
 
         # this will catch use of unsupported model setters like setThreshold in logistic regression.
-        if self._fallback_enabled and self._cpu_fallback():
+        if self._fallback_enabled and self._use_cpu_fallback():
             return self.cpu().transform(dataset)
         else:
             return self._transform_evaluate_internal(

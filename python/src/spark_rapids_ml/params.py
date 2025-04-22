@@ -687,7 +687,7 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
         value_map = self._get_cuml_mapping_value(k, v)
         self._cuml_params[k] = value_map
 
-    def _cpu_fallback(self, params: Optional[Dict[Param, Any]] = None) -> bool:
+    def _use_cpu_fallback(self, params: Optional[Dict[Param, Any]] = None) -> bool:
         param_mapping = self._param_mapping()
         param_value_mapping = self._param_value_mapping()
         fallback = False

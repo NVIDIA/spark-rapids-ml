@@ -26,6 +26,7 @@ from pyspark.ml.util import DefaultParamsReader
 from pyspark.sql import DataFrame
 
 from .core import _CumlEstimator, _CumlModel
+from .utils import get_logger
 
 
 def _gen_avg_and_std_metrics_(
@@ -102,7 +103,9 @@ class CrossValidator(SparkCrossValidator):
         # fallback if any params are not gpu supported
         for param_map in epm:
             est_tmp = est.copy(param_map)
-            if est_tmp._fallback_enabled and est_tmp._cpu_fallback():
+            if est_tmp._fallback_enabled and est_tmp._use_cpu_fallback():
+                logger = get_logger(self.__class__)
+                logger.warning("Falling back to CPU CrossValidator fit().")
                 return super()._fit(dataset)
 
         numModels = len(epm)
