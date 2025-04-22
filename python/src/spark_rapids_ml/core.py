@@ -91,6 +91,8 @@ if TYPE_CHECKING:
 
 CumlT = Any
 
+_CumlParamMap = Dict[str, Any]
+
 _SinglePdDataFrameBatchType = Tuple[
     pd.DataFrame, Optional[pd.DataFrame], Optional[pd.DataFrame]
 ]
@@ -416,16 +418,6 @@ class _CumlCommon(MLWritable, MLReadable):
                 raise ValueError(f"invalid value for verbose parameter: {verbose}")
 
             cuml_logger.set_level(log_level)
-
-    def _pyspark_class(self) -> Optional[ABCMeta]:
-        """
-        Subclass should override to return corresponding pyspark.ml class
-        Ex. logistic regression should return pyspark.ml.classification.LogisticRegression
-        Return None if no corresponding class in pyspark, e.g. knn
-        """
-        raise NotImplementedError(
-            "pyspark.ml class corresponding to estimator not specified."
-        )
 
 
 class _CumlCaller(_CumlParams, _CumlCommon):
@@ -937,7 +929,15 @@ class _CumlEstimator(Estimator, _CumlCaller):
             using `paramMaps[index]`. `index` values may not be sequential.
         """
 
+        if self._use_cpu_fallback():
+            return super().fitMultiple(dataset, paramMaps)
+
         if self._enable_fit_multiple_in_single_pass():
+            for paramMap in paramMaps:
+                if self._use_cpu_fallback(paramMap):
+                    return super().fitMultiple(dataset, paramMaps)
+
+            # reach here if no cpu fallback
             estimator = self.copy()
 
             def fitMultipleModels() -> List["_CumlModel"]:
@@ -1090,9 +1090,21 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         return models
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+    def _fit(self, dataset: DataFrame) -> "Model":
         """fit only 1 model"""
-        return self._fit_internal(dataset, None)[0]
+        if (
+            self._pyspark_class()
+            and self._fallback_enabled
+            and self._use_cpu_fallback()
+        ):
+            logger = get_logger(self.__class__)
+            logger.warning("Falling back to CPU estimator fit().")
+            cpu_class = self._pyspark_class()
+            cpu_est = cpu_class(**{p.name: v for p, v in self.extractParamMap().items() if self.isSet(p) and hasattr(cpu_class, p.name)})  # type: ignore
+            model = cpu_est.fit(dataset)
+            return model
+        else:
+            return self._fit_internal(dataset, None)[0]
 
     def write(self) -> MLWriter:
         return _CumlEstimatorWriter(self)
@@ -1473,9 +1485,14 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         :py:class:`pyspark.sql.DataFrame`
             transformed dataset
         """
-        return self._transform_evaluate_internal(
-            dataset, schema=self._out_schema(dataset.schema)
-        )
+
+        # this will catch use of unsupported model setters like setThreshold in logistic regression.
+        if self._fallback_enabled and self._use_cpu_fallback():
+            return self.cpu().transform(dataset)
+        else:
+            return self._transform_evaluate_internal(
+                dataset, schema=self._out_schema(dataset.schema)
+            )
 
     def write(self) -> MLWriter:
         return _CumlModelWriter(self)

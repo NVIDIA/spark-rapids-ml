@@ -470,6 +470,18 @@ class LinearRegression(
         """
         return self._set_params(tol=value)
 
+    def setFitIntercept(self, value: bool) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`fitIntercept`.
+        """
+        return self._set_params(fitIntercept=value)
+
+    def setSolver(self, value: str) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`solver`.
+        """
+        return self._set_params(solver=value)
+
     def _pre_process_data(
         self, dataset: DataFrame
     ) -> Tuple[

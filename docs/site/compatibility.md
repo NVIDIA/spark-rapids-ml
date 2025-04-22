@@ -8,18 +8,18 @@ nav_order: 3
 
 The following table shows the currently supported algorithms.  The goal is to expand this over time with support from the underlying RAPIDS cuML libraries.  If you would like support for a specific algorithm, please file a [git issue](https://github.com/NVIDIA/spark-rapids-ml/issues) to help us prioritize.
 
-| Supported Algorithms   | Python | Scala (Deprecated) |
-| :--------------------- | :----: | :---: |
-| CrossValidator         |   √    |       |
-| DBSCAN (*)             |   √    |       |
-| KMeans                 |   √    |       |
-| approx/exact k-NN (*)  |   √    |       |
-| LinearRegression       |   √    |       |
-| LogisticRegression     |   √    |       | 
-| PCA                    |   √    |   √   |
-| RandomForestClassifier |   √    |       |
-| RandomForestRegressor  |   √    |       |
-| UMAP (*)               |   √    |       |
+| Supported Algorithms   | Python |
+| :--------------------- | :----: |
+| CrossValidator         |   √    |
+| DBSCAN (*)             |   √    |
+| KMeans                 |   √    |
+| approx/exact k-NN (*)  |   √    |
+| LinearRegression       |   √    |
+| LogisticRegression     |   √    |
+| PCA                    |   √    |
+| RandomForestClassifier |   √    |
+| RandomForestRegressor  |   √    |
+| UMAP (*)               |   √    |
 
 (*) Notes: 
 - As an alternative to KMeans, we also provide a Spark API for GPU accelerated Density-Based Spatial Clustering of Applications with Noise (DBSCAN), a density based clustering algorithm in the RAPIDS cuML library.

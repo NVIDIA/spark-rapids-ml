@@ -502,7 +502,7 @@ def test_classifier(
         assert spark_lr_model._float32_inputs == float32_inputs
         if float32_inputs is True:
             assert spark_lr_model.dtype == "float32"
-        elif feature_type is "vector":
+        elif feature_type == "vector":
             assert spark_lr_model.dtype == "float64"
         else:
             assert spark_lr_model.dtype == np.dtype(data_type)
@@ -641,6 +641,16 @@ def test_compat(
         assert blor_model.getProbabilityCol() == "newProbability"
 
         assert isinstance(blor_model.coefficients, DenseVector)
+
+        if isinstance(blor_model, SparkLogisticRegressionModel):
+            blor_model.setThreshold(0.2)
+            blor_model.clear(blor_model.threshold)
+        else:
+            with pytest.raises(ValueError):
+                print(blor_model.setThreshold)
+                print(blor_model.setThreshold.__doc__)
+                blor_model.setThreshold(0.2)
+            blor_model.clear(blor_model.threshold)
 
         coef_gnd = (
             [-2.48197058, 2.48197058]
@@ -1318,7 +1328,9 @@ def test_parameters_validation() -> None:
 
         # regParam is mapped to different value in LogisticRegression which should be in
         # charge of validating it.
-        with pytest.raises(ValueError, match="C or regParam given invalid value -1.0"):
+        with pytest.raises(
+            ValueError, match="C or regParam given an invalid or unsupported value -1.0"
+        ):
             LogisticRegression().setRegParam(-1.0).fit(df)
 
 
@@ -2415,3 +2427,61 @@ def test_gpuMemRatioForData(
         cpu_lr = SparkLogisticRegression(regParam=0.01)
         cpu_model = cpu_lr.fit(bdf)
         compare_model(gpu_model, cpu_model, bdf)
+
+
+@pytest.mark.parametrize("setting_method", ["constructor", "setter"])
+def test_logistic_cpu_fallback(setting_method: str) -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+        from pyspark.ml import Model
+        from pyspark.ml.linalg import Matrices, Vectors
+
+        from spark_rapids_ml.core import _CumlModel
+
+        unsupported = [
+            k for k, v in LogisticRegression._param_mapping().items() if v is None
+        ]
+        vals_to_try = {
+            "threshold": 0.1,
+            "thresholds": [0.1, 0.3, 0.1],
+            "weightCol": "weightscol",
+            "lowerBoundsOnCoefficients": Matrices.dense(1, 2, [0.0, 0.0]),
+            "upperBoundsOnCoefficients": Matrices.dense(1, 2, [1.0, 1.0]),
+            "lowerBoundsOnIntercepts": Vectors.dense(0.0),
+            "upperBoundsOnIntercepts": Vectors.dense(1.0),
+        }
+
+        assert set(unsupported) == set(vals_to_try.keys())
+        # Add weights column to both dataframes
+        data_binaryclass = spark.createDataFrame(
+            [
+                Row(label=1.0, features=Vectors.dense(1.0, 0.0), weightscol=1.0),
+                Row(label=1.0, features=Vectors.dense(1.0, 1.0), weightscol=1.0),
+                Row(label=0.0, features=Vectors.dense(0.0, 0.0), weightscol=1.0),
+                Row(label=0.0, features=Vectors.dense(0.0, 1.0), weightscol=1.0),
+            ]
+        )
+        data_multiclass = spark.createDataFrame(
+            [
+                Row(label=0.0, features=Vectors.dense(1.0, 0.0), weightscol=1.0),
+                Row(label=1.0, features=Vectors.dense(1.0, 1.0), weightscol=1.0),
+                Row(label=2.0, features=Vectors.dense(0.0, 0.0), weightscol=1.0),
+                Row(label=2.0, features=Vectors.dense(0.0, 1.0), weightscol=1.0),
+            ]
+        )
+
+        # Test constructor params
+        for param in unsupported:
+            val = vals_to_try[param]
+            if setting_method == "constructor":
+                gpu_lr = LogisticRegression(**{param: val})  # type: ignore
+            else:
+                gpu_lr = LogisticRegression()
+                setter_name = "set" + param[0].upper() + param[1:]
+                getattr(gpu_lr, setter_name)(val)  # type: ignore
+            if param != "thresholds":
+                model = gpu_lr.fit(data_binaryclass)
+            else:
+                model = gpu_lr.fit(data_multiclass)
+            getter_name = "get" + param[0].upper() + param[1:]
+            assert getattr(model, getter_name)() == val
+            assert not isinstance(model, _CumlModel) and isinstance(model, Model)

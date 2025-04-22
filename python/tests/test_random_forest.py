@@ -669,8 +669,13 @@ def test_random_forest_classifier_spark_compat(
         rf = _RandomForestClassifier(
             numTrees=3, maxDepth=2, labelCol="label", seed=42, impurity=impurity
         )
-        rf.setLeafCol("leafId")
-        assert rf.getLeafCol() == "leafId"
+
+        if isinstance(rf, SparkRFClassifier):
+            rf.setLeafCol("leafId")
+            assert rf.getLeafCol() == "leafId"
+        else:
+            with pytest.raises(ValueError):
+                rf.setLeafCol("leafId")
 
         if isinstance(rf, RandomForestClassifier):
             # reduce the number of GPUs for toy dataset to avoid empty partition
@@ -780,7 +785,13 @@ def test_random_forest_regressor_spark_compat(
             rf.num_workers = 1
 
         model = rf.fit(df)
-        model.setLeafCol("leafId")
+
+        if isinstance(model, SparkRFRegressionModel):
+            model.setLeafCol("leafId")
+            assert model.getLeafCol() == "leafId"
+        else:
+            with pytest.raises(ValueError):
+                model.setLeafCol("leafId")
 
         assert np.allclose(model.treeWeights, [1.0, 1.0])
         if isinstance(model, SparkRFRegressionModel):
@@ -791,7 +802,6 @@ def test_random_forest_regressor_spark_compat(
 
         assert model.getBootstrap()
         assert model.getSeed() == 42
-        assert model.getLeafCol() == "leafId"
 
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, -1.0),)], ["features"])
         example = test0.head()
@@ -1037,3 +1047,45 @@ def test_parameters_validation() -> None:
             IllegalArgumentException, match="maxBins given invalid value -1"
         ):
             RandomForestRegressor().setMaxBins(-1).fit(df)
+
+
+@pytest.mark.parametrize("setting_method", ["constructor", "setter"])
+def test_rf_cpu_fallback(setting_method: str) -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+        from pyspark.ml import Model
+        from pyspark.ml.linalg import Vectors
+
+        from spark_rapids_ml.core import _CumlModel
+
+        unsupported = [
+            k for k, v in RandomForestClassifier._param_mapping().items() if v is None
+        ]
+        vals_to_try = {
+            "weightCol": "weightscol",
+            "leafCol": "leaf",
+        }
+
+        assert set(unsupported) == set(vals_to_try.keys())
+        # Add weights column to dataframe
+        data = spark.createDataFrame(
+            [
+                (Vectors.dense(1.0, 0.0), 1.0, 1.0),
+                (Vectors.dense(1.0, 1.0), 1.0, 1.0),
+                (Vectors.dense(0.0, 0.0), 0.0, 1.0),
+                (Vectors.dense(0.0, 1.0), 0.0, 1.0),
+            ],
+            ["features", "label", "weightscol"],
+        )
+        # Test constructor params
+        for param in unsupported:
+            val = vals_to_try[param]
+            if setting_method == "constructor":
+                gpu_rfc = RandomForestClassifier(**{param: val})  # type: ignore
+            else:
+                gpu_rfc = RandomForestClassifier()
+                setter_name = "set" + param[0].upper() + param[1:]
+                getattr(gpu_rfc, setter_name)(val)  # type: ignore
+            model = gpu_rfc.fit(data)
+            getter_name = "get" + param[0].upper() + param[1:]
+            assert getattr(model, getter_name)() == val
+            assert not isinstance(model, _CumlModel) and isinstance(model, Model)
