@@ -680,13 +680,13 @@ class LogisticRegressionClass(_CumlClass):
             "thresholds": None,
             "standardization": "standardization",
             "weightCol": None,
-            "aggregationDepth": None,
+            "aggregationDepth": "",
             "family": "",  # family can be 'auto', 'binomial' or 'multinomial', cuml automatically detects num_classes
             "lowerBoundsOnCoefficients": None,
             "upperBoundsOnCoefficients": None,
             "lowerBoundsOnIntercepts": None,
             "upperBoundsOnIntercepts": None,
-            "maxBlockSizeInMB": None,
+            "maxBlockSizeInMB": "",
         }
 
     @classmethod

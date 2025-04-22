@@ -157,6 +157,7 @@ While the Spark Rapids ML API attempts to mirror the PySpark ML API to minimize 
 - **Unsupported ML Params** - some PySpark ML algorithms have ML Params which do not map directly to their respective cuML implementations.  For these cases, the ML Param default values will be ignored, and if explicitly set by end-user code:
     - a warning will be printed (for non-critical cases that should have minimal impact, e.g. `initSteps`).
     - an exception will be raised (for critical cases that can greatly affect results, e.g. `weightCol`).
+        - this behavior can be changed by setting the Spark config `spark.rapids.ml.cpu.fallback.enabled` (default=`false`) to `true` to cause the corresponding `fit` or `transform` operations to fallback to using baseline CPU Spark MLlib. 
 - **Unsupported methods** - some PySpark ML methods may not map to the underlying cuML implementations, or may not be meaningful for GPUs.  In these cases, an error will be raised if the method is invoked.
 - **cuML parameters** - there may be additional cuML-specific parameters which might be useful for optimizing GPU performance.  These can be supplied to the various class constructors, but they are _not_ exposed via getters and setters to avoid any confusion with the PySpark ML Params.  If needed, they can be observed via the `cuml_params` attribute.
 - **Algorithmic Results** - again, since the GPU implementations are entirely different from their PySpark ML CPU counterparts, there may be slight differences in the produced results.  This can be due to various reasons, including different optimizations, randomized initializations, or algorithm design.  While these differences should be relatively minor, they should still be reviewed in the context of your specific use case to see if they are within acceptable limits.
@@ -211,7 +212,7 @@ A similar `spark_rapids_ml` enabling CLI is included for `pyspark` shell:
 pyspark-rapids --master <master> <other pyspark options>
 ```
 
-For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors.
+For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors, or, in the case of unsupported parameters, if `spark.rapids.ml.cpu.fallback.enabled` is set to `true`, will fallback to baseline Spark MLlib running on CPU.
 
 Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).
 

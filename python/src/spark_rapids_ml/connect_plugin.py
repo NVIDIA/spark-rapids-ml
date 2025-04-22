@@ -123,7 +123,10 @@ def main(infile: IO, outfile: IO) -> None:
 
             lr = LogisticRegression(**params)
             model: LogisticRegressionModel = lr.fit(df)
-            model_cpu = model.cpu()
+            # if cpu fallback was enabled a pyspark.ml model is returned in which case no need to call cpu()
+            model_cpu = (
+                model.cpu() if isinstance(model, LogisticRegressionModel) else model
+            )
             assert model_cpu._java_obj is not None
             model_targe_id = model_cpu._java_obj._get_object_id().encode("utf-8")
             write_with_length(model_targe_id, outfile)

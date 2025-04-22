@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,6 +28,7 @@ from typing import (
 )
 
 from pyspark import SparkContext
+from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
@@ -244,6 +245,17 @@ class _CumlClass(object):
         run on the driver side without rapids dependencies"""
         raise NotImplementedError()
 
+    @abstractmethod
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        """
+        Subclass should override to return corresponding pyspark.ml class
+        Ex. logistic regression should return pyspark.ml.classification.LogisticRegression
+        Return None if no corresponding class in pyspark, e.g. knn
+        """
+        raise NotImplementedError(
+            "pyspark.ml class corresponding to estimator not specified."
+        )
+
 
 class _CumlParams(_CumlClass, HasVerboseParam, Params):
     """
@@ -254,6 +266,66 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
     _cuml_params: Dict[str, Any] = {}
     _num_workers: Optional[int] = None
     _float32_inputs: bool = True
+    _fallback_enabled: bool = False
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.logger = get_logger(self.__class__)
+
+        spark = _get_spark_session()
+        fallback_enabled = spark.conf.get(
+            "spark.rapids.ml.cpu.fallback.enabled", "false"
+        )
+        if fallback_enabled == "false":
+            self._fallback_enabled = False
+        elif fallback_enabled == "true":
+            self._fallback_enabled = True
+        else:
+            raise ValueError(
+                f"unknown value {fallback_enabled} for spark.rapids.ml.cpu.fallback.enabled"
+            )
+        # automatically add/override setters for unsupported params currently left undefined
+        pyspark_class = self._pyspark_class()
+        if pyspark_class:
+            unsupported = [p for p, v in self._param_mapping().items() if v is None]
+            for param in unsupported:
+                setter_name = f"set{param[0].upper()}{param[1:]}"
+
+                # for models, unsupported setters are already defined in our code by including pyspark ml mixins
+                # so only modify those and do not add all unsupported estimator param setters
+                if isinstance(self, Estimator) or (
+                    isinstance(self, Model) and hasattr(self, setter_name)
+                ):
+                    # wrapping setter def in function avoids late closure binding issues with param
+                    def create_gpu_setter(
+                        _param: str,
+                    ) -> Callable[[_CumlParams, Any], _CumlParams]:
+                        def gpu_setter(self: _CumlParams, value: Any) -> _CumlParams:
+                            self._set_params(**{_param: value})
+                            return self
+
+                        return gpu_setter
+
+                    gpu_setter = create_gpu_setter(param)
+                    setattr(self, setter_name, gpu_setter.__get__(self))
+
+                    ## below code adds documentation for 'unsupported' setter and param.
+                    cpu_setter = getattr(pyspark_class, setter_name)
+                    gpu_setter.__annotations__["value"] = cpu_setter.__annotations__[
+                        "value"
+                    ]
+                    gpu_setter.__doc__ = f"""
+                    Sets the value of :py:attr:`{param}`.
+                    This parameter is not supported for GPU acceleration.
+                    If this method is invoked with cpu fallback enabled, fit() and transform() will fallback to cpu,
+                    otherwise, an exception will be raised.
+                    """
+
+                    spark_param = self.getParam(param)
+                    spark_param.doc = (
+                        spark_param.doc
+                        + " This parameter is not supported for GPU acceleration, with fall back to cpu fit() and transform() if set."
+                    )
 
     @property
     def cuml_params(self) -> Dict[str, Any]:
@@ -387,7 +459,7 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
             elif self.hasParam(k):
                 # Param is declared as a Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
-                self._set_cuml_param(k, v, silent=False)
+                self._set_cuml_param(k, v, silent=self._fallback_enabled)
             elif k in self.cuml_params:
                 # cuml param
                 self._cuml_params[k] = v
@@ -568,13 +640,16 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
             try:
                 self._set_cuml_value(cuml_param, spark_value)
             except ValueError:
-                # create more informative message
-                param_ref_str = (
-                    cuml_param + " or " + spark_param
-                    if cuml_param != spark_param
-                    else spark_param
-                )
-                raise ValueError(f"{param_ref_str} given invalid value {spark_value}")
+                if not self._fallback_enabled:
+                    # create more informative message
+                    param_ref_str = (
+                        cuml_param + " or " + spark_param
+                        if cuml_param != spark_param
+                        else spark_param
+                    )
+                    raise ValueError(
+                        f"{param_ref_str} given an invalid or unsupported value {spark_value}"
+                    )
 
     def _get_cuml_mapping_value(self, k: str, v: Any) -> Any:
         value_map = self._param_value_mapping()
@@ -611,6 +686,25 @@ class _CumlParams(_CumlClass, HasVerboseParam, Params):
         """
         value_map = self._get_cuml_mapping_value(k, v)
         self._cuml_params[k] = value_map
+
+    def _use_cpu_fallback(self, params: Optional[Dict[Param, Any]] = None) -> bool:
+        param_mapping = self._param_mapping()
+        param_value_mapping = self._param_value_mapping()
+        fallback = False
+        for param, value in (params if params else self.extractParamMap()).items():
+            if param.name in param_mapping:
+                mapped_param = param_mapping[param.name]
+                if (not mapped_param and (self.isSet(param) or params)) or (
+                    mapped_param
+                    and mapped_param in param_value_mapping
+                    and param_value_mapping[mapped_param](value) is None
+                ):
+                    msg = f"Setting Spark Param '{param.name}' to '{value}' is not supported on GPU.  Will fall back to CPU."
+                    logger = get_logger(self.__class__)
+                    logger.warning(msg)
+                    fallback = True
+
+        return fallback
 
 
 class DictTypeConverters(TypeConverters):
