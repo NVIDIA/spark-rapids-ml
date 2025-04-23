@@ -29,6 +29,8 @@ class Plugin extends MLBackendPlugin {
     mlName match {
       case "org.apache.spark.ml.classification.LogisticRegression" =>
         Optional.of("com.nvidia.rapids.ml.RapidsLogisticRegression")
+      case "org.apache.spark.ml.classification.LogisticRegressionModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsLogisticRegressionModel")
       case _ => Optional.empty()
     }
   }
