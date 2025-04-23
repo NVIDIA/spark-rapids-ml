@@ -67,11 +67,13 @@ LinearRegression
        ~LinearRegression.setElasticNetParam
        ~LinearRegression.setFeaturesCol
        ~LinearRegression.setFeaturesCols
+       ~LinearRegression.setFitIntercept
        ~LinearRegression.setLabelCol
        ~LinearRegression.setLoss
        ~LinearRegression.setMaxIter
        ~LinearRegression.setPredictionCol
        ~LinearRegression.setRegParam
+       ~LinearRegression.setSolver
        ~LinearRegression.setStandardization
        ~LinearRegression.setTol
        ~LinearRegression.write
@@ -144,11 +146,13 @@ LinearRegression
     .. automethod:: setElasticNetParam
     .. automethod:: setFeaturesCol
     .. automethod:: setFeaturesCols
+    .. automethod:: setFitIntercept
     .. automethod:: setLabelCol
     .. automethod:: setLoss
     .. automethod:: setMaxIter
     .. automethod:: setPredictionCol
     .. automethod:: setRegParam
+    .. automethod:: setSolver
     .. automethod:: setStandardization
     .. automethod:: setTol
     .. automethod:: write
