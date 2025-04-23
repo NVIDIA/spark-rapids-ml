@@ -66,7 +66,7 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
       .setLabelCol("class")
       .setMaxIter(23)
       .setTol(0.03)
-    // .setThreshold(0.51)  // this is going to fail due to spark-rapids-ml has mapped threshold to None
+//    .setThreshold(0.51) this is going to fail due to spark-rapids-ml has mapped threshold to None
 
     val model = lr.fit(df)
 
@@ -74,5 +74,20 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     assert(model.getTol == 0.03)
     assert(model.getLabelCol == "class")
     assert(model.getMaxIter == 23)
+
+    // Transform using Spark-Rapids-ML model by default
+    val dfGpu = model.transform(df)
+
+    // Transform using CPU model by disabling "spark.rapids.ml.python.transform.enabled"
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+    val dfCpu = model.transform(df)
+
+    // The order of the column is different
+    assert(!(dfGpu.schema.names sameElements dfCpu.schema.names))
+    assert(dfGpu.schema.names.sorted sameElements dfCpu.schema.names.sorted)
+
+    // No exception while collecting data for both CPU and GPU
+    dfGpu.collect()
+    dfCpu.collect()
   }
 }
