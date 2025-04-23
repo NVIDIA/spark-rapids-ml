@@ -587,11 +587,8 @@ class SparseRegressionDataGen(DataGenBaseMeta):
     """Generate sparse regression dataset using a distributed version of sklearn.datasets.regression,
     including features and labels.
 
-    SparseRegressionDataGen is a deterministic data generator when running in Spark local mode. It produces
-    identical DataFrames when initialized with the same random state. However, in Spark standalone mode, it may occasionally
-    yield different DataFrames even with the same random state. This is because each partition derives its seed from
-    a combination of the provided random state and the partition index. Since partition indices are not guaranteed to be continuous
-    or consistent across runs in standalone mode, this can lead to non-deterministic output despite a fixed random state.
+    SparseRegressionDataGen is a deterministic data generator which produces
+    identical DataFrames when initialized with the same random state and output_num_files.
     """
 
     def __init__(self, argv: List[Any]) -> None:
