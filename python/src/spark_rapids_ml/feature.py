@@ -107,9 +107,9 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
         Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
         """
         if self.isDefined(self.inputCols):
-            return self.getInputCols()
+            return self.getOrDefault(self.inputCols)
         elif self.isDefined(self.inputCol):
-            return self.getInputCol()
+            return self.getOrDefault(self.inputCol)
         else:
             raise RuntimeError("inputCol is not set")
 
