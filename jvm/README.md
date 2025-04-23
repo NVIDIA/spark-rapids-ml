@@ -6,17 +6,6 @@ acceleration for machine learning workloads without requiring changes to the use
 
 ## Environment Setup
 
-- Compile the Spark Rapids ML Connect Plugin
-
-  To compile the plugin, run the following command:
-
-    ``` shell
-    mvn clean package
-    ```
-
-  After compilation, the latest JAR file, `com.nvidia.rapids.ml-<LATEST_VERSION>.jar`, will be
-  available in the `target` directory.
-
 - Install spark-rapids-ml
 
   Follow
@@ -29,6 +18,24 @@ acceleration for machine learning workloads without requiring changes to the use
   from [this site](https://urm.nvidia.com/artifactory/sw-spark-maven-local/org/apache/spark/4.1.0-SNAPSHOT/)
 
   Extract the archive and set the `SPARK_HOME` environment variable to point to the Spark directory.
+
+- Compile the Spark Rapids ML Connect Plugin
+
+  To compile the plugin, run the following command:
+
+    ``` shell
+    mvn clean package -DskipTests
+    ```
+
+  if you would like to compile the plugin and run the unit tests, run the following command:
+
+    ``` shell
+    export PYSPARK_PYTHON=YOUR_PYTHON_PATH_WITH_SPARK_RAPIDS_ML
+    mvn clean package
+    ```
+
+  After compilation, the latest JAR file, `com.nvidia.rapids.ml-<LATEST_VERSION>.jar`, will be
+  available in the `target` directory.
 
 - Install PySpark Connect Client
 
