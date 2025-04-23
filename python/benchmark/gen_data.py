@@ -32,6 +32,7 @@ from sklearn.datasets import (
 )
 
 from benchmark.utils import WithSparkSession, inspect_default_params_from_func, to_bool
+from spark_rapids_ml.utils import get_logger
 
 
 def dtype_to_pyspark_type(dtype: Union[np.dtype, str]) -> str:
@@ -207,6 +208,21 @@ class DataGenBase(DataGen):
     @property
     def args(self) -> Optional[argparse.Namespace]:
         return self.args_
+
+    def getOrDefault(
+        self, args: argparse.Namespace, param_name: str, spark: SparkSession
+    ) -> Any:
+        assert hasattr(args, param_name)
+
+        # Set num_partitions to Spark's default if output_num_files is not provided.
+        if param_name == "output_num_files":
+            if args.output_num_files is None:
+                get_logger(self.__class__).warning(
+                    "--output_num_files is not specified. Using spark.sparkContext.defaultParallelism as the default value."
+                )
+                return spark.sparkContext.defaultParallelism
+
+        return getattr(args, param_name)
 
 
 class DefaultDataGen(DataGenBase):

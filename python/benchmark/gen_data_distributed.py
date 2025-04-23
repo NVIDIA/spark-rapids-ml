@@ -56,9 +56,12 @@ from sklearn.datasets._samples_generator import _generate_hypercube
 from sklearn.utils import shuffle as util_shuffle
 
 from benchmark.utils import inspect_default_params_from_func
+from spark_rapids_ml.utils import get_logger
 
 if TYPE_CHECKING:
     import cupy
+
+import argparse
 
 
 class DataGenBaseMeta(DataGenBase):
@@ -113,12 +116,9 @@ class BlobsDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # Produce partition seeds for reproducibility.
         random.seed(params["random_state"])
@@ -217,12 +217,9 @@ class LowRankMatrixDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         n = min(rows, cols)
         np.random.seed(params["random_state"])
@@ -359,12 +356,9 @@ class RegressionDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # Retrieve input params or set to defaults.
         seed = params["random_state"]
@@ -639,12 +633,9 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         rows = self.num_rows
         cols = self.num_cols
         orig_cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # Retrieve input params or set to defaults.
         seed = params["random_state"]
@@ -987,12 +978,9 @@ class ClassificationDataGen(DataGenBase):
 
         n_samples = self.num_rows
         n_features = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # For detailed parameter descriptions, see below:
         # https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html
