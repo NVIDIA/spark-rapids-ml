@@ -1562,6 +1562,17 @@ class ApproximateNearestNeighborsModel(
                         error_msg = f"cagra with ivf_pq build_algo expects intermediate_graph_degree ({intermediate_graph_degree}) to be smaller than 256"
                         raise ValueError(error_msg)
                     else:
+                        from cuvs.neighbors import cagra
+
+                        if nn_object == cagra and (
+                            "build_algo" not in index_params
+                            or index_params["build_algo"] == "ivf_pq"
+                        ):
+                            logger.error(
+                                f"The 'cagra' algorithm is being used with 'build_algo' 'ivf_pq', which may lead to instability. "
+                                "Consider using 'build_algo=nn_descent' as a more reliable alternative."
+                            )
+
                         raise e
 
             logger.info(
