@@ -155,6 +155,17 @@ class _NearestNeighborsCumlParams(
         self._set_params(idCol=value)
         return self
 
+    def getInputCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
+        """
+        if self.isDefined(self.inputCols):
+            return self.getOrDefault(self.inputCols)
+        elif self.isDefined(self.inputCol):
+            return self.getOrDefault(self.inputCol)
+        else:
+            raise RuntimeError("inputCol is not set")
+
     def _ensureIdCol(self, df: DataFrame) -> DataFrame:
         """
         Ensure an id column exists in the input dataframe. Add the column if not exists.
