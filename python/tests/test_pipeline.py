@@ -402,3 +402,35 @@ def test_example_random_forest(
     all_scalar_colum: bool = True,
 ) -> None:
     test_example_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+
+
+from spark_rapids_ml.clustering import DBSCAN, DBSCANModel
+from spark_rapids_ml.umap import UMAP, UMAPModel
+
+
+@pytest.mark.parametrize(
+    "PipelineEst,Est,Model,algo_params",
+    [
+        (
+            Pipeline,
+            UMAP,
+            UMAPModel,
+            {"n_components": 1},
+        ),
+        (
+            Pipeline,
+            DBSCAN,
+            DBSCANModel,
+            {"eps": 0.01, "min_samples": 1},
+        ),
+    ],
+)
+def test_example_non_spark_algo(
+    PipelineEst: Type,
+    Est: Type,
+    Model: Type,
+    algo_params: Dict[str, Any],
+    caplog: pytest.LogCaptureFixture,
+    all_scalar_colum: bool = True,
+) -> None:
+    test_example_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
