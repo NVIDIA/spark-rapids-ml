@@ -802,7 +802,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     random_state=generator,
                     format="csr",
                     dtype=dtype,
-                    data_rvs=np.random.randn
+                    data_rvs=np.random.randn,
                 )
 
                 if sparse_matrix.shape[0] == 0:
@@ -824,6 +824,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                         random_state=generator,
                         format="csr",
                         dtype=dtype,
+                        data_rvs=np.random.randn,
                     )
 
                 # Separate informative and non-informative columns
