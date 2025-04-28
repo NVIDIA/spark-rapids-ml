@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from pyspark import keyword_only
 from pyspark.ml.base import Estimator
@@ -56,6 +56,7 @@ class Pipeline(SparkPipeline):
     def _fit(self, dataset: DataFrame) -> "SparkPipelineModel":
         stages = self.getStages()
 
+        revised_stages = []  # (i, vec_assembler)
         for i in range(len(stages)):
 
             if not self._isGPUEstimator(stages[i]):
@@ -67,17 +68,27 @@ class Pipeline(SparkPipeline):
                 and self._allScalar(dataset, stages[i - 1].getInputCols())  # type: ignore
             ):
 
-                self._setInputCols(stages[i], stages[i - 1].getInputCols())  # type: ignore
+                revised_stages.append((i, stages[i - 1]))
+
+                self._setEitherColsOrCol(stages[i], stages[i - 1].getInputCols())  # type: ignore
                 stages[i - 1] = NoOpTransformer()
                 logger = get_logger(stages[i].__class__)
                 logger.info(
                     "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
                 )
 
-        return super(Pipeline, self)._fit(dataset)
+        res_df = super(Pipeline, self)._fit(dataset)
+
+        for i, vec_assembler in revised_stages:
+            stages[i - 1] = vec_assembler
+            self._setEitherColsOrCol(stages[i], vec_assembler.getOutputCol())
+
+        return res_df
 
     @staticmethod
-    def _setInputCols(gpu_est: _CumlEstimator, input_cols: List[str]) -> None:
+    def _setEitherColsOrCol(
+        gpu_est: _CumlEstimator, input_cols: Union[List[str], str]
+    ) -> None:
         assert Pipeline._isGPUEstimator(gpu_est)
         if isinstance(gpu_est, SparkCrossValidator):
             gpu_est = gpu_est.getOrDefault(gpu_est.estimator)

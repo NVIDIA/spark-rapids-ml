@@ -659,6 +659,19 @@ def setInputOrFeaturesCol(
     )
     setter(features_col_value)
 
+    # clear to keep only one of cols and col set
+    if isinstance(features_col_value, str):
+        for col_name in {"featuresCols", "inputCols"}:
+            if est.hasParam(col_name):
+                est.clear(getattr(est, col_name))
+    else:
+        assert isinstance(features_col_value, List) and all(
+            isinstance(x, str) for x in features_col_value
+        )
+        for col_name in {"featuresCol", "inputCol"}:
+            if est.hasParam(col_name):
+                est.clear(getattr(est, col_name))
+
     label_setter = getattr(est, "setLabelCol") if hasattr(est, "setLabelCol") else None
     if label_setter is not None and label_col_value is not None:
         label_setter(label_col_value)
