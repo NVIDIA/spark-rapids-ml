@@ -14,13 +14,18 @@
 # limitations under the License.
 #
 
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+
+if TYPE_CHECKING:
+    from pyspark.ml._typing import PipelineStage
 
 import numpy as np
 import pyspark.ml.functions as MLF
 import pyspark.sql.functions as SQLF
 import pytest
 from pyspark.ml import Pipeline as SparkPipeline
+from pyspark.ml import PipelineModel as SparkPipelineModel
+from pyspark.ml.base import Estimator, Transformer
 from pyspark.ml.classification import LogisticRegression as SparkLogisticRegression
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
@@ -36,6 +41,7 @@ from spark_rapids_ml.classification import (
 from spark_rapids_ml.core import _CumlEstimator
 from spark_rapids_ml.pipeline import NoOpTransformer, Pipeline
 from spark_rapids_ml.tuning import CrossValidator
+from spark_rapids_ml.utils import getInputOrFeaturesCols, setInputOrFeaturesCol
 
 from .utils import array_equal, create_pyspark_dataframe, make_classification_dataset
 
@@ -77,6 +83,32 @@ def create_toy_dataframe(
     return (df, feature_cols, label_col)  # type: ignore
 
 
+def check_two_stage_pipeline(
+    pipeline: SparkPipeline,
+    pipeline_model: SparkPipelineModel,
+    assembler: VectorAssembler,
+    Est: Type,
+    Model: Type,
+) -> None:
+    assert len(pipeline.getStages()) == 2
+    assert len(pipeline_model.stages) == 2
+
+    def check_va_stage(t_stage: "PipelineStage") -> None:
+        assert isinstance(t_stage, VectorAssembler)
+        assert t_stage == assembler
+        assert t_stage.getInputCols() == assembler.getInputCols()
+        assert t_stage.getOutputCol() == assembler.getOutputCol()
+
+    check_va_stage(pipeline.getStages()[0])
+    check_va_stage(pipeline_model.stages[0])
+
+    assert isinstance(pipeline.getStages()[1], Est)
+    assert getInputOrFeaturesCols(pipeline.getStages()[1]) == assembler.getOutputCol()
+
+    assert isinstance(pipeline_model.stages[1], Model)
+    assert getInputOrFeaturesCols(pipeline_model.stages[1]) == assembler.getOutputCol()
+
+
 @pytest.mark.parametrize(
     "PipelineEst,Est,Model",
     [
@@ -110,25 +142,13 @@ def test_example(
     pipeline = PipelineEst(stages=[assembler, est])
     pipeline_model = pipeline.fit(df)
 
-    assert len(pipeline_model.stages) == 2
     info_msg = "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
     if PipelineEst is Pipeline and all_scalar_colum and isinstance(est, _CumlEstimator):
         assert info_msg in caplog.text
-
-        assert isinstance(pipeline_model.stages[0], NoOpTransformer)
-        assert isinstance(pipeline_model.stages[1], Model)
-
-        pipeline_est_model = pipeline_model.stages[1]
-        assert pipeline_est_model.getFeaturesCol() == input_cols
-
     else:
         assert info_msg not in caplog.text
 
-        assert isinstance(pipeline_model.stages[0], VectorAssembler)
-        assert isinstance(pipeline_model.stages[1], Model)
-
-        pipeline_est_model = pipeline_model.stages[1]  # type: ignore
-        assert pipeline_est_model.getFeaturesCol() == "features"
+    check_two_stage_pipeline(pipeline, pipeline_model, assembler, Est, Model)
 
     # ensure model correctness
     spark_lr = SparkLogisticRegression(**algo_params)  # type: ignore
@@ -137,8 +157,7 @@ def test_example(
 
     from .test_logistic_regression import compare_model
 
-    pipeline_est_model.setFeaturesCol("features")
-    compare_model(pipeline_est_model, spark_model, df_udt, y_true_col=label_col)
+    compare_model(pipeline_model.stages[1], spark_model, df_udt, y_true_col=label_col)
 
 
 def test_mixed_columns(caplog: pytest.LogCaptureFixture) -> None:
@@ -232,10 +251,8 @@ def test_compat_cv(
     info_msg = "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
     if PipelineEst == Pipeline and isinstance(lr, _CumlEstimator):
         assert info_msg in caplog.text
-        assert isinstance(pipeline_model.stages[0], NoOpTransformer)
     else:
         assert info_msg not in caplog.text
-        assert isinstance(pipeline_model.stages[0], VectorAssembler)
 
 
 from pyspark.ml.clustering import KMeans as SparkKmeans
@@ -251,7 +268,7 @@ from spark_rapids_ml.clustering import KMeans, KMeansModel
         (SparkPipeline, SparkKmeans, SparkKMeansModel, {"maxIter": 10}),
     ],
 )
-def test_example_est(
+def test_compat_est(
     PipelineEst: Type,
     Est: Type,
     Model: Type,
@@ -263,36 +280,24 @@ def test_example_est(
     from .conftest import _spark
 
     (df, input_cols, label_col) = create_toy_dataframe(_spark, all_scalar_colum)
-    assembler = VectorAssembler(inputCols=input_cols, outputCol="features")
+    output_col = "features"
+    assembler = VectorAssembler(inputCols=input_cols, outputCol=output_col)
 
     est = Est(**algo_params)
-
-    from spark_rapids_ml.utils import getInputOrFeaturesCols, setInputOrFeaturesCol
 
     setInputOrFeaturesCol(est, "features", label_col)
 
     pipeline = PipelineEst(stages=[assembler, est])
     pipeline_model = pipeline.fit(df)
 
-    assert len(pipeline_model.stages) == 2
     info_msg = "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
     if PipelineEst is Pipeline and all_scalar_colum and isinstance(est, _CumlEstimator):
         assert info_msg in caplog.text
 
-        assert isinstance(pipeline_model.stages[0], NoOpTransformer)
-        assert isinstance(pipeline_model.stages[1], Model)
-
-        pipeline_est_model = pipeline_model.stages[1]
-        assert getInputOrFeaturesCols(pipeline_est_model) == input_cols
-
     else:
         assert info_msg not in caplog.text
 
-        assert isinstance(pipeline_model.stages[0], VectorAssembler)
-        assert isinstance(pipeline_model.stages[1], Model)
-
-        pipeline_est_model = pipeline_model.stages[1]  # type: ignore
-        assert getInputOrFeaturesCols(pipeline_est_model) == "features"
+    check_two_stage_pipeline(pipeline, pipeline_model, assembler, Est, Model)
 
 
 from pyspark.ml.feature import PCA as SparkPCA
@@ -308,7 +313,7 @@ from spark_rapids_ml.feature import PCA, PCAModel
         (SparkPipeline, SparkPCA, SparkPCAModel, {"k": 1}),
     ],
 )
-def test_example_pca(
+def test_compat_pca(
     PipelineEst: Type,
     Est: Type,
     Model: Type,
@@ -316,7 +321,7 @@ def test_example_pca(
     caplog: pytest.LogCaptureFixture,
     all_scalar_colum: bool = True,
 ) -> None:
-    test_example_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+    test_compat_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
 
 
 from pyspark.ml.regression import LinearRegression as SparkLinearRegression
@@ -337,7 +342,7 @@ from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
         ),
     ],
 )
-def test_example_linear_regression(
+def test_compat_linear_regression(
     PipelineEst: Type,
     Est: Type,
     Model: Type,
@@ -345,7 +350,7 @@ def test_example_linear_regression(
     caplog: pytest.LogCaptureFixture,
     all_scalar_colum: bool = True,
 ) -> None:
-    test_example_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+    test_compat_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
 
 
 from pyspark.ml.classification import (
@@ -393,7 +398,7 @@ from spark_rapids_ml.regression import (
         ),
     ],
 )
-def test_example_random_forest(
+def test_compat_random_forest(
     PipelineEst: Type,
     Est: Type,
     Model: Type,
@@ -401,7 +406,7 @@ def test_example_random_forest(
     caplog: pytest.LogCaptureFixture,
     all_scalar_colum: bool = True,
 ) -> None:
-    test_example_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+    test_compat_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
 
 
 from spark_rapids_ml.clustering import DBSCAN, DBSCANModel
@@ -425,7 +430,7 @@ from spark_rapids_ml.umap import UMAP, UMAPModel
         ),
     ],
 )
-def test_example_non_spark_algo(
+def test_non_spark_algo(
     PipelineEst: Type,
     Est: Type,
     Model: Type,
@@ -433,4 +438,9 @@ def test_example_non_spark_algo(
     caplog: pytest.LogCaptureFixture,
     all_scalar_colum: bool = True,
 ) -> None:
-    test_example_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+    test_compat_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+
+
+# def test_three_stages(
+# ) -> None:
+#     vec_assembler,gpu_logistic,cpu_gbdt

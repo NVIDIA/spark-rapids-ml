@@ -18,11 +18,13 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from pyspark import keyword_only
 from pyspark.ml.base import Estimator
+from pyspark.ml.base import Transformer
 from pyspark.ml.base import Transformer as CPUTransformer
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.pipeline import Pipeline as SparkPipeline
 from pyspark.ml.pipeline import PipelineModel as SparkPipelineModel
 from pyspark.ml.tuning import CrossValidator as SparkCrossValidator
+from pyspark.ml.tuning import CrossValidatorModel as SparkCrossValidatorModel
 from pyspark.sql import DataFrame
 
 from spark_rapids_ml.core import _CumlEstimator
@@ -48,6 +50,33 @@ class NoOpTransformer(VectorAssembler):
 
 
 class Pipeline(SparkPipeline):
+    """
+    A customized Spark ML Pipeline optimized for GPU-based estimators.
+
+    This subclass of `SparkPipeline` bypasses the `VectorAssembler` stage when the following conditions are met:
+    - The pipeline contains exactly two stages.
+    - The first stage is a `VectorAssembler`.
+    - The second stage is a GPU-based estimator (checked via `_isGPUEstimator`).
+    - The input columns to the assembler exist in the dataset and are all scalar.
+
+    When these conditions are met, the pipeline skips the `VectorAssembler` transformation during fitting,
+    and instead injects the scalar columns directly into the GPU estimator to improve performance
+    on the Spark Rapids ML runtime. After fitting, compatibility is restored by reassigning the original
+    `VectorAssembler` to the pipeline and pipeline model.
+
+    Parameters
+    ----------
+    stages : Optional[List[PipelineStage]], default=None
+        A list of pipeline stages. If provided, should contain a `VectorAssembler` followed by a GPU estimator
+        to trigger the GPU-specific optimization.
+
+    Notes
+    -----
+    - If the optimization conditions are not met, the pipeline behaves exactly like a standard `SparkPipeline`.
+    - This class is primarily intended for use with Spark Rapids ML, where GPU-based estimators benefit
+      from bypassing unnecessary CPU preprocessing.
+    """
+
     @keyword_only
     def __init__(self, *, stages: Optional[List["PipelineStage"]] = None):
         kwargs = self._input_kwargs
@@ -56,52 +85,58 @@ class Pipeline(SparkPipeline):
     def _fit(self, dataset: DataFrame) -> "SparkPipelineModel":
         stages = self.getStages()
 
-        revised_stages = []  # (i, vec_assembler)
-        for i in range(len(stages)):
+        if (
+            len(stages) != 2
+            or not isinstance(stages[0], VectorAssembler)
+            or not self._isGPUEstimator(stages[1])
+            or not self._colsValid(dataset, stages[0].getInputCols())
+        ):
+            return super(Pipeline, self)._fit(dataset)
 
-            if not self._isGPUEstimator(stages[i]):
-                continue
+        # revise pipeline
+        va_stage = stages[0]
+        est_stage = stages[1]
 
-            if (
-                i > 0
-                and isinstance(stages[i - 1], VectorAssembler)
-                and self._allScalar(dataset, stages[i - 1].getInputCols())  # type: ignore
-            ):
+        stages[0] = NoOpTransformer()
+        self._setEitherColsOrCol(est_stage, va_stage.getInputCols())  # type: ignore
 
-                revised_stages.append((i, stages[i - 1]))
+        logger = get_logger(est_stage.__class__)
+        logger.info(
+            "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
+        )
 
-                self._setEitherColsOrCol(stages[i], stages[i - 1].getInputCols())  # type: ignore
-                stages[i - 1] = NoOpTransformer()
-                logger = get_logger(stages[i].__class__)
-                logger.info(
-                    "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
-                )
+        # get fit model
+        p_model = super(Pipeline, self)._fit(dataset)
 
-        res_df = super(Pipeline, self)._fit(dataset)
+        # ensure compatibility
+        stages[0] = va_stage
+        self._setEitherColsOrCol(est_stage, va_stage.getOutputCol())
 
-        for i, vec_assembler in revised_stages:
-            stages[i - 1] = vec_assembler
-            self._setEitherColsOrCol(stages[i], vec_assembler.getOutputCol())
+        p_model.stages[0] = va_stage
+        self._setEitherColsOrCol(p_model.stages[1], va_stage.getOutputCol())
 
-        return res_df
+        return p_model
 
     @staticmethod
     def _setEitherColsOrCol(
-        gpu_est: _CumlEstimator, input_cols: Union[List[str], str]
+        pstage: Union[Estimator, Transformer], input_col: Union[List[str], str]
     ) -> None:
-        assert Pipeline._isGPUEstimator(gpu_est)
-        if isinstance(gpu_est, SparkCrossValidator):
-            gpu_est = gpu_est.getOrDefault(gpu_est.estimator)
+        if isinstance(pstage, SparkCrossValidator) or isinstance(
+            pstage, SparkCrossValidatorModel
+        ):
+            pstage = pstage.getOrDefault(pstage.estimator)
 
         from spark_rapids_ml.utils import setInputOrFeaturesCol
 
-        setInputOrFeaturesCol(gpu_est, input_cols)
+        setInputOrFeaturesCol(pstage, input_col)
 
     @staticmethod
-    def _allScalar(dataset: DataFrame, inputCols: List[str]) -> bool:
+    def _colsValid(dataset: DataFrame, inputCols: List[str]) -> bool:
         from pyspark.sql.types import NumericType
 
         for col_name in inputCols:
+            if col_name not in dataset.columns:
+                return False
             if not isinstance(dataset.schema[col_name].dataType, NumericType):
                 return False
         return True
@@ -109,11 +144,8 @@ class Pipeline(SparkPipeline):
     @staticmethod
     def _isGPUEstimator(est: Any) -> bool:
 
-        if isinstance(est, _CumlEstimator):
-            return True
-
         if isinstance(est, SparkCrossValidator):
             actual_est = est.getOrDefault(est.estimator)
             return isinstance(actual_est, _CumlEstimator)
-
-        return False
+        else:
+            return isinstance(est, _CumlEstimator)

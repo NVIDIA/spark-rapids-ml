@@ -644,40 +644,42 @@ def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
         ) from exc
 
 
-from pyspark.ml.base import Estimator, Model
+from pyspark.ml.base import Estimator, Transformer
 
 
 def setInputOrFeaturesCol(
-    est: Union[Estimator, Model],
+    pstage: Union[Estimator, Transformer],
     features_col_value: Union[str, List[str]],
     label_col_value: Optional[str] = None,
 ) -> None:
     setter = (
-        getattr(est, "setFeaturesCol")
-        if hasattr(est, "setFeaturesCol")
-        else getattr(est, "setInputCol")
+        getattr(pstage, "setFeaturesCol")
+        if hasattr(pstage, "setFeaturesCol")
+        else getattr(pstage, "setInputCol")
     )
     setter(features_col_value)
 
     # clear to keep only one of cols and col set
     if isinstance(features_col_value, str):
         for col_name in {"featuresCols", "inputCols"}:
-            if est.hasParam(col_name):
-                est.clear(getattr(est, col_name))
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
     else:
         assert isinstance(features_col_value, List) and all(
             isinstance(x, str) for x in features_col_value
         )
         for col_name in {"featuresCol", "inputCol"}:
-            if est.hasParam(col_name):
-                est.clear(getattr(est, col_name))
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
 
-    label_setter = getattr(est, "setLabelCol") if hasattr(est, "setLabelCol") else None
+    label_setter = (
+        getattr(pstage, "setLabelCol") if hasattr(pstage, "setLabelCol") else None
+    )
     if label_setter is not None and label_col_value is not None:
         label_setter(label_col_value)
 
 
-def getInputOrFeaturesCols(est: Union[Estimator, Model]) -> str:
+def getInputOrFeaturesCols(est: Union[Estimator, Transformer]) -> str:
     getter = (
         getattr(est, "getFeaturesCol")
         if hasattr(est, "getFeaturesCol")
