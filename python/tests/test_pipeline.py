@@ -439,8 +439,3 @@ def test_non_spark_algo(
     all_scalar_colum: bool = True,
 ) -> None:
     test_compat_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
-
-
-# def test_three_stages(
-# ) -> None:
-#     vec_assembler,gpu_logistic,cpu_gbdt
