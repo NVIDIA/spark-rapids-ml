@@ -1534,6 +1534,7 @@ def compare_model(
     unit_tol: float = 1e-4,
     total_tol: float = 0.0,
     accuracy_and_probability_only: bool = False,
+    y_true_col: str = "label",
 ) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
     gpu_res = gpu_model.transform(df_test).collect()
 
@@ -1542,7 +1543,7 @@ def compare_model(
     # compare accuracy
     gpu_pred = [row["prediction"] for row in gpu_res]
     cpu_pred = [row["prediction"] for row in cpu_res]
-    ytest_true = [row["label"] for row in df_test.select(["label"]).collect()]
+    ytest_true = [row[y_true_col] for row in df_test.select([y_true_col]).collect()]
     from sklearn.metrics import accuracy_score
 
     gpu_acc = accuracy_score(ytest_true, gpu_pred)

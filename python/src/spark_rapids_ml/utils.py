@@ -642,3 +642,47 @@ def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
             "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
             "or run on Databricks Runtime."
         ) from exc
+
+
+from pyspark.ml.base import Estimator, Transformer
+
+
+def setInputOrFeaturesCol(
+    pstage: Union[Estimator, Transformer],
+    features_col_value: Union[str, List[str]],
+    label_col_value: Optional[str] = None,
+) -> None:
+    setter = (
+        getattr(pstage, "setFeaturesCol")
+        if hasattr(pstage, "setFeaturesCol")
+        else getattr(pstage, "setInputCol")
+    )
+    setter(features_col_value)
+
+    # clear to keep only one of cols and col set
+    if isinstance(features_col_value, str):
+        for col_name in {"featuresCols", "inputCols"}:
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
+    else:
+        assert isinstance(features_col_value, List) and all(
+            isinstance(x, str) for x in features_col_value
+        )
+        for col_name in {"featuresCol", "inputCol"}:
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
+
+    label_setter = (
+        getattr(pstage, "setLabelCol") if hasattr(pstage, "setLabelCol") else None
+    )
+    if label_setter is not None and label_col_value is not None:
+        label_setter(label_col_value)
+
+
+def getInputOrFeaturesCols(est: Union[Estimator, Transformer]) -> str:
+    getter = (
+        getattr(est, "getFeaturesCol")
+        if hasattr(est, "getFeaturesCol")
+        else getattr(est, "getInputCol")
+    )
+    return getter()
