@@ -22,7 +22,7 @@ function get_metadata_attribute() {
   /usr/share/google/get_metadata_value "attributes/${attribute_name}" || echo -n "${default_value}"
 }
 
-RAPIDS_VERSION=$(get_metadata_attribute rapids-version 25.2.0)
+RAPIDS_VERSION=$(get_metadata_attribute rapids-version 25.4.0)
 
 
 # install cudf and cuml

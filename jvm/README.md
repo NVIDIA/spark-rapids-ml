@@ -9,7 +9,7 @@ acceleration for machine learning workloads without requiring changes to the use
 - Install spark-rapids-ml
 
   Follow
-  the [installation guide](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-25.02/python/README.md#installation)
+  the [installation guide](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-25.04/python/README.md#installation)
   to install the spark-rapids-ml package on the server side.
 
 - Setup Spark
