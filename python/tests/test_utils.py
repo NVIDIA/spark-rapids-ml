@@ -154,7 +154,7 @@ def create_toy_pdf_iter(
 
 @pytest.mark.parametrize("multi_col_names", [None, ["c1", "c2"]])
 def test_concat_with_reserved_gpu_mem(
-    multi_col_names: bool, caplog: pytest.LogCaptureFixture
+    multi_col_names: Optional[List[str]], caplog: pytest.LogCaptureFixture
 ) -> None:
     """
     TODO: support sparse, row numbers, and 'F' array order
