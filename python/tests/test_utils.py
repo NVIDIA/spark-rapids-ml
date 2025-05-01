@@ -126,6 +126,7 @@ def test_clean_sparksession() -> None:
 def create_toy_pdf_iter(
     features_col: Union[str, List[str]], label_col: str
 ) -> Iterator[pd.DataFrame]:
+
     if isinstance(features_col, str):
         pdf1 = pd.DataFrame(
             {features_col: [(1.0, 1.0), (2.0, 2.0)], label_col: [1.0, 1.0]}
@@ -151,9 +152,12 @@ def create_toy_pdf_iter(
     return pdf_iter
 
 
-def test_concat_with_reserved_gpu_mem(caplog: pytest.LogCaptureFixture) -> None:
+@pytest.mark.parametrize("multi_col_names", [None, ["c1", "c2"]])
+def test_concat_with_reserved_gpu_mem(
+    multi_col_names: bool, caplog: pytest.LogCaptureFixture
+) -> None:
     """
-    TODO: support multi_cols, sparse, row numbers, and 'F' array order
+    TODO: support sparse, row numbers, and 'F' array order
     """
     array_order = "C"
     gpu_mem_ratio_for_data = 0.1
@@ -165,12 +169,13 @@ def test_concat_with_reserved_gpu_mem(caplog: pytest.LogCaptureFixture) -> None:
 
     from spark_rapids_ml.utils import _concat_with_reserved_gpu_mem
 
-    pdf_iter = create_toy_pdf_iter(features_col=alias.data, label_col=alias.label)
+    features_col = alias.data if multi_col_names is None else multi_col_names
+    pdf_iter = create_toy_pdf_iter(features_col, label_col=alias.label)
 
     logger = logging.getLogger("test_utils")
     logger.setLevel(logging.INFO)
     cp_features, cp_labels, np_row_numbers = _concat_with_reserved_gpu_mem(
-        gpu_id, pdf_iter, gpu_mem_ratio_for_data, array_order, logger
+        gpu_id, pdf_iter, gpu_mem_ratio_for_data, array_order, multi_col_names, logger
     )
 
     assert isinstance(cp_features, cp.ndarray)

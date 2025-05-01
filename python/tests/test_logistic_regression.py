@@ -2428,6 +2428,7 @@ def test_gpuMemRatioForData(
 
         gpu_fit_df = bdf
         gpu_features_col: Union[List[str], str] = "features"
+        gpu_label_col: str = "label"
         if feature_type == "multi_cols":
             X_train = np.array([r.features.toArray() for r in data])
             y_train = np.array([r.label for r in data])
@@ -2437,7 +2438,12 @@ def test_gpuMemRatioForData(
             )
             gpu_features_col = features_col
 
-        gpu_lr = LogisticRegression(regParam=0.01, featuresCol=gpu_features_col)
+            assert label_col is not None
+            gpu_label_col = label_col
+
+        gpu_lr = LogisticRegression(
+            regParam=0.01, featuresCol=gpu_features_col, labelCol=gpu_label_col
+        )
         gpu_model = gpu_lr.fit(gpu_fit_df)
 
         cpu_lr = SparkLogisticRegression(regParam=0.01)
