@@ -329,9 +329,10 @@ def _concat_with_reserved_gpu_mem(
     pdf_iter: Iterator[pd.DataFrame],
     gpu_mem_ratio_for_data: float,
     array_order: str,
+    multi_col_names: Optional[List[str]],
     logger: logging.Logger,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
-    # TODO: support multiple column and sparse matrix
+    # TODO: support sparse matrix
     # TODO: support row number
 
     assert array_order == "C", "F order array is currently not supported."
@@ -350,9 +351,12 @@ def _concat_with_reserved_gpu_mem(
 
     for pdf in pdf_iter:
         # dense vector
-        np_features = np.array(
-            list(pdf[alias.data]), order=array_order
-        )  #  type: ignore
+        if multi_col_names:
+            np_features: np.ndarray = np.array(pdf[multi_col_names], order=array_order)  # type: ignore
+        else:
+            np_features = np.array(
+                list(pdf[alias.data]), order=array_order
+            )  #  type: ignore
         np_label = pdf[alias.label].values if alias.label in pdf.columns else None
         np_row_number = (
             pdf[alias.row_number].values if alias.row_number in pdf.columns else None
