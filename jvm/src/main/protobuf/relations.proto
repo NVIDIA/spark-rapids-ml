@@ -1,0 +1,58 @@
+syntax = 'proto3';
+
+// Must set the package into spark.connect if importing spark/connect/relations.proto
+// package spark.connect;
+package com.nvidia.rapids.ml.proto;
+
+option java_multiple_files = true;
+option java_package = "com.nvidia.rapids.ml.proto";
+option java_generate_equals_and_hash = true;
+
+message TuningRelation {
+  oneof relation_type {
+    CrossValidatorRelation cv = 1;
+  }
+}
+
+message CrossValidatorRelation {
+  // (Required) Unique id of the ML operator
+  string uid = 1;
+  // (Required) the estimator info
+  MlOperator estimator = 2;
+  // (Required) the estimator parameter maps info
+  string estimator_param_maps = 3;
+  // (Required) the evaluator info
+  MlOperator evaluator = 4;
+  // parameters of CrossValidator
+  optional string params = 5;
+  // Can't use Relation directly due to shading issue in spark connect
+  optional bytes dataset = 6;
+}
+
+// MLOperator represents the ML operators like (Estimator, Transformer or Evaluator)
+message MlOperator {
+  // (Required) The qualified name of the ML operator.
+  string name = 1;
+
+  // (Required) Unique id of the ML operator
+  string uid = 2;
+
+  // (Required) Represents what the ML operator is
+  OperatorType type = 3;
+
+  // (Optional) parameters of the operator which is a json string
+  optional string params = 4;
+
+  enum OperatorType {
+    OPERATOR_TYPE_UNSPECIFIED = 0;
+    // ML estimator
+    OPERATOR_TYPE_ESTIMATOR = 1;
+    // ML transformer (non-model)
+    OPERATOR_TYPE_TRANSFORMER = 2;
+    // ML evaluator
+    OPERATOR_TYPE_EVALUATOR = 3;
+    // ML model
+    OPERATOR_TYPE_MODEL = 4;
+  }
+
+}

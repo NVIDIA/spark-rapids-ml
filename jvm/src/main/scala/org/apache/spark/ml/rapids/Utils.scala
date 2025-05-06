@@ -26,17 +26,119 @@ import scala.sys.process.Process
 
 import py4j.GatewayServer.GatewayServerBuilder
 import org.apache.spark.api.python.SimplePythonFunction
-import org.apache.spark.ml.param.{ParamPair, Params}
+import org.apache.spark.ml.Model
+import org.apache.spark.ml.classification.LogisticRegressionModel
+import org.apache.spark.ml.param.{ParamMap, ParamPair, Params}
+import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel}
+import org.apache.spark.ml.util.MetaAlgorithmReadWrite
+import org.apache.spark.util.ArrayImplicits.SparkArrayOps
 import org.apache.spark.util.Utils
+import org.json4s.{DefaultFormats, JObject, JString}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
 object RapidsUtils {
 
-  def getUserDefinedParams(instance: Params): String = {
-    compact(render(instance.paramMap.toSeq.map { case ParamPair(p, v) =>
-      p.name -> parse(p.jsonEncode(v))
-    }.toList))
+  def transform(name: String): Option[String] = {
+    name match {
+      case "org.apache.spark.ml.classification.LogisticRegression" =>
+        Some("com.nvidia.rapids.ml.RapidsLogisticRegression")
+      case "org.apache.spark.ml.classification.LogisticRegressionModel" =>
+        Some("org.apache.spark.ml.rapids.RapidsLogisticRegressionModel")
+      case _ => None
+    }
+  }
+
+  // Just copy the user defined parameters
+  def copyParams[T <: Params, S <: Params](src: S, to: T): T = {
+    src.extractParamMap().toSeq.foreach { p =>
+      val name = p.param.name
+      if (to.hasParam(name) && src.isSet(p.param)) {
+        to.set(to.getParam(name), p.value)
+      }
+    }
+    to
+  }
+
+  def createModel(name: String, uid: String, src: Params, trainedModel: TrainedModel): Model[_] = {
+    if (name.contains("LogisticRegression")) {
+      val cpuModel = copyParams(src, trainedModel.model.asInstanceOf[LogisticRegressionModel])
+      val isMultinomial = cpuModel.numClasses != 2
+      copyParams(src, new RapidsLogisticRegressionModel(uid, cpuModel, trainedModel.modelAttributes, isMultinomial))
+    } else {
+      throw new RuntimeException(s"$name Not supported")
+    }
+  }
+
+  def extractParamMap(cv: CrossValidator, parameters: String): Array[ParamMap] = {
+    val evaluator = cv.getEvaluator
+    val estimator = cv.getEstimator
+    val uidToParams = Map(evaluator.uid -> evaluator) ++ MetaAlgorithmReadWrite.getUidMap(estimator)
+    val paraMap = parse(parameters)
+
+    implicit val format = DefaultFormats
+    paraMap.extract[Seq[Seq[Map[String, String]]]].map {
+        pMap =>
+          val paramPairs = pMap.map { pInfo: Map[String, String] =>
+            val est = uidToParams(pInfo("parent"))
+            val param = est.getParam(pInfo("name"))
+              val value = param.jsonDecode(pInfo("value"))
+              param -> value
+            }
+          ParamMap(paramPairs: _*)
+      }.toArray
+  }
+
+  def setParams(
+                 instance: Params,
+                 parameters: String): Unit = {
+    implicit val format = DefaultFormats
+    val paramsToSet = parse(parameters)
+    paramsToSet match {
+      case JObject(pairs) =>
+        pairs.foreach { case (paramName, jsonValue) =>
+          val param = instance.getParam(paramName)
+          val value = param.jsonDecode(compact(render(jsonValue)))
+          instance.set(param, value)
+        }
+      case _ =>
+        throw new IllegalArgumentException(
+          s"Cannot recognize JSON metadata: ${parameters}.")
+    }
+  }
+
+  def createCrossValidatorModel(uid: String, model: Model[_]): CrossValidatorModel = {
+    new CrossValidatorModel(uid, model, Array.empty[Double])
+  }
+
+  def getUserDefinedParams(instance: Params,
+                           skipParams: List[String] = List.empty,
+                           extra: Map[String, String] = Map.empty): String = {
+    compact(render(
+      instance.paramMap.toSeq
+        .filter { case ParamPair(p, _) => !skipParams.contains(p.name) }
+        .map { case ParamPair(p, v) =>
+          p.name -> parse(p.jsonEncode(v))
+        }.toList ++ extra.map { case (k, v) => k -> JString(v) }.toList
+    ))
+  }
+
+  def getEstimatorParamMapsJson(estimatorParamMaps: Array[ParamMap]): String = {
+    compact(render(
+      estimatorParamMaps.map { paramMap =>
+        paramMap.toSeq.map { case ParamPair(p, v) =>
+          Map("parent" -> JString(p.parent),
+            "name" -> JString(p.name),
+            "value" -> parse(p.jsonEncode(v)))
+        }
+      }.toImmutableArraySeq
+    ))
+  }
+
+  def getJson(params: Map[String, String] = Map.empty): String = {
+    compact(render(
+      params.map { case (k, v) => k -> parse(v) }.toList
+    ))
   }
 
   def createTempDir(namePrefix: String = "spark"): File = {

@@ -17,8 +17,8 @@
 package com.nvidia.rapids.ml
 
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
-import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
-import org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
+import org.apache.spark.ml.classification.LogisticRegression
+import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsUtils}
 import org.apache.spark.sql.Dataset
 
 /**
@@ -36,9 +36,7 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
 
   override def train(dataset: Dataset[_]): RapidsLogisticRegressionModel = {
     val trainedModel = trainOnPython(dataset)
-    val cpuModel = copyValues(trainedModel.model.asInstanceOf[LogisticRegressionModel])
-    val isMultinomial = cpuModel.numClasses != 2
-    copyValues(new RapidsLogisticRegressionModel(uid, cpuModel, trainedModel.modelAttributes, isMultinomial))
+    RapidsUtils.createModel(name, uid, this, trainedModel).asInstanceOf[RapidsLogisticRegressionModel]
   }
 
   /**
