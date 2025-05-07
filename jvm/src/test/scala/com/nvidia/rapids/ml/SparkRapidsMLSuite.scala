@@ -22,7 +22,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
 
 import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsUtils}
+import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsRandomForestClassificationModel, RapidsUtils}
 import org.apache.spark.sql.SparkSession
 
 class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
@@ -98,6 +98,62 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     check(model)
     model.write.overwrite().save(path)
     val loadedModel = RapidsLogisticRegressionModel.load(path)
+    check(loadedModel)
+
+    assert(model.uid == loadedModel.uid)
+    assert(model.modelAttributes == loadedModel.modelAttributes)
+
+    // Transform using Spark-Rapids-ML model by default
+    val dfGpu = model.transform(df)
+
+    // Transform using CPU model by disabling "spark.rapids.ml.python.transform.enabled"
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+    val dfCpu = model.transform(df)
+
+    // The order of the column is different
+    assert(!(dfGpu.schema.names sameElements dfCpu.schema.names))
+    assert(dfGpu.schema.names.sorted sameElements dfCpu.schema.names.sorted)
+
+    // No exception while collecting data for both CPU and GPU
+    dfGpu.collect()
+    dfCpu.collect()
+  }
+
+  test("RapidsRandomForestClassifier") {
+    val df = ss.createDataFrame(
+      Seq(
+        (Vectors.dense(1.0, 2.0), 1.0f),
+        (Vectors.dense(1.0, 3.0), 1.0f),
+        (Vectors.dense(2.0, 1.0), 0.0f),
+        (Vectors.dense(3.0, 1.0), 0.0f))
+    ).toDF("test_feature", "class")
+
+    val rfc = new RapidsRandomForestClassifier()
+      .setFeaturesCol("test_feature")
+      .setLabelCol("class")
+      .setMaxDepth(4)
+      .setMaxBins(7)
+
+    val path = new File(tempDir, "RapidsRandomForestClassifier").getPath
+    rfc.write.overwrite().save(path)
+
+    val loadedRfc = RapidsRandomForestClassifier.load(path)
+    assert(loadedRfc.getFeaturesCol == "test_feature")
+    assert(loadedRfc.getMaxDepth == 4)
+    assert(loadedRfc.getLabelCol == "class")
+    assert(loadedRfc.getMaxBins == 7)
+
+    def check(model: RapidsRandomForestClassificationModel): Unit = {
+      assert(model.getFeaturesCol == "test_feature")
+      assert(model.getMaxDepth == 4)
+      assert(model.getLabelCol == "class")
+      assert(model.getMaxBins == 7)
+    }
+
+    val model = loadedRfc.fit(df).asInstanceOf[RapidsRandomForestClassificationModel]
+    check(model)
+    model.write.overwrite().save(path)
+    val loadedModel = RapidsRandomForestClassificationModel.load(path)
     check(loadedModel)
 
     assert(model.uid == loadedModel.uid)
