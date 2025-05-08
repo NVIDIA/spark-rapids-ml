@@ -325,7 +325,7 @@ def test_kmeans(
     n_cols = data_shape[1]
     n_clusters = 4
     tol = 1.0e-20
-    seed = 42  # This does not guarantee deterministic centers in 25.02.
+    seed = 42  # This does not guarantee deterministic centers in 25.04.
     cluster_std = 1.0
     tolerance = 0.001
 
@@ -517,3 +517,44 @@ def test_parameters_validation() -> None:
             IllegalArgumentException, match="maxIter given invalid value -1"
         ):
             KMeans().setMaxIter(-1).fit(df)
+
+
+@pytest.mark.parametrize("setting_method", ["constructor", "setter"])
+def test_kmeans_cpu_fallback(setting_method: str) -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+        from pyspark.ml import Model
+        from pyspark.ml.linalg import Vectors
+
+        from spark_rapids_ml.core import _CumlModel
+
+        unsupported = [k for k, v in KMeans._param_mapping().items() if v is None]
+        vals_to_try = {
+            "distanceMeasure": "euclidean",
+            "weightCol": "weightscol",
+        }
+
+        assert set(unsupported) == set(vals_to_try.keys())
+        # Add weights column to dataframe
+        data = spark.createDataFrame(
+            [
+                (Vectors.dense(1.0, 0.0), 1.0),
+                (Vectors.dense(1.0, 1.0), 1.0),
+                (Vectors.dense(0.0, 0.0), 1.0),
+                (Vectors.dense(0.0, 1.0), 1.0),
+            ],
+            ["features", "weightscol"],
+        )
+
+        # Test constructor params
+        for param in unsupported:
+            val = vals_to_try[param]
+            if setting_method == "constructor":
+                gpu_kmeans = KMeans(**{param: val})  # type: ignore
+            else:
+                gpu_kmeans = KMeans()
+                setter_name = "set" + param[0].upper() + param[1:]
+                getattr(gpu_kmeans, setter_name)(val)  # type: ignore
+            model = gpu_kmeans.fit(data)
+            getter_name = "get" + param[0].upper() + param[1:]
+            assert getattr(model, getter_name)() == val
+            assert not isinstance(model, _CumlModel) and isinstance(model, Model)

@@ -15,9 +15,10 @@
 #
 
 ARG CUDA_VERSION=11.8.0
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 # Install packages to build spark-rapids-ml
+RUN chmod 1777 /tmp
 RUN apt update -y \
     && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
     && apt install -y git numactl software-properties-common wget zip \
@@ -37,6 +38,6 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     && conda config --set solver libmamba
 
 # install cuML
-ARG CUML_VER=25.02
+ARG CUML_VER=25.04
 RUN conda install -y -c rapidsai -c conda-forge -c nvidia cuml=$CUML_VER cuvs=$CUML_VER python=3.10 cuda-version=11.8 numpy~=1.0 \
     && conda clean --all -f -y

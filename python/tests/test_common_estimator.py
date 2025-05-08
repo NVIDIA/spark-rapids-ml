@@ -112,6 +112,9 @@ class _SparkRapidsMLDummyParams(_CumlParams):
             k=4,
         )
 
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        return None
+
 
 class SparkRapidsMLDummy(
     SparkRapidsMLDummyClass,
@@ -237,9 +240,6 @@ class SparkRapidsMLDummy(
         assert result.model_attribute_a == 1024
         assert result.model_attribute_b == "hello dummy"
         return SparkRapidsMLDummyModel._from_row(result)
-
-    def _pyspark_class(self) -> Optional[ABCMeta]:
-        return None
 
 
 class SparkRapidsMLDummyModel(

@@ -27,15 +27,13 @@ If you already have a Databricks account, you can run the example notebooks on a
       spark.task.resource.gpu.amount 0.125
       spark.databricks.delta.preview.enabled true
       spark.python.worker.reuse true
-      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-24.10.1.jar:/databricks/spark/python
+      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-25.04.0.jar:/databricks/spark/python
       spark.sql.execution.arrow.maxRecordsPerBatch 100000
-      spark.rapids.memory.gpu.minAllocFraction 0.0001
       spark.plugins com.nvidia.spark.SQLPlugin
       spark.locality.wait 0s
       spark.sql.cache.serializer com.nvidia.spark.ParquetCachedBatchSerializer
-      spark.rapids.memory.gpu.pooling.enabled false
+      spark.rapids.memory.gpu.pool NONE
       spark.rapids.sql.explain ALL
-      spark.rapids.memory.gpu.reserve 20
       spark.sql.execution.sortBeforeRepartition false
       spark.rapids.sql.python.gpu.enabled true
       spark.rapids.memory.pinnedPool.size 2G

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,6 +90,8 @@ if TYPE_CHECKING:
     from pyspark.ml._typing import ParamMap
 
 CumlT = Any
+
+_CumlParamMap = Dict[str, Any]
 
 _SinglePdDataFrameBatchType = Tuple[
     pd.DataFrame, Optional[pd.DataFrame], Optional[pd.DataFrame]
@@ -417,16 +419,6 @@ class _CumlCommon(MLWritable, MLReadable):
 
             cuml_logger.set_level(log_level)
 
-    def _pyspark_class(self) -> Optional[ABCMeta]:
-        """
-        Subclass should override to return corresponding pyspark.ml class
-        Ex. logistic regression should return pyspark.ml.classification.LogisticRegression
-        Return None if no corresponding class in pyspark, e.g. knn
-        """
-        raise NotImplementedError(
-            "pyspark.ml class corresponding to estimator not specified."
-        )
-
 
 class _CumlCaller(_CumlParams, _CumlCommon):
     """
@@ -566,6 +558,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         """
         return (True, False)
 
+    def _support_gpuMemRatioForData(self) -> bool:
+        """
+        Whether an estimator supports reserving GPU memory for data to avoid extra data copy in concatenating pdf batches.
+        """
+        return False
+
     def _validate_parameters(self) -> None:
         cls_name = self._pyspark_class()
 
@@ -665,6 +663,16 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         if cuda_managed_mem_enabled:
             get_logger(cls).info("CUDA managed memory enabled.")
 
+        conf_val = _get_spark_session().conf.get(
+            "spark.rapids.ml.gpuMemRatioForData", None
+        )
+        if conf_val is None or conf_val in {"None", "none"}:
+            gpu_mem_ratio_for_data = None
+        else:
+            gpu_mem_ratio_for_data = float(conf_val)
+            assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
+        support_gpuMemRatioForData = self._support_gpuMemRatioForData()
+
         # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
@@ -719,27 +727,49 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             inputs = []
             sizes = []
 
-            for pdf in pdf_iter:
-                sizes.append(pdf.shape[0])
-                if multi_col_names:
-                    features = np.array(pdf[multi_col_names], order=array_order)
-                elif use_sparse_array:
-                    # sparse vector
-                    features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
-                else:
-                    # dense vector
-                    features = np.array(list(pdf[alias.data]), order=array_order)
+            if (
+                gpu_mem_ratio_for_data
+                and support_gpuMemRatioForData
+                and array_order == "C"
+            ):
+                from spark_rapids_ml.utils import _concat_with_reserved_gpu_mem
 
-                # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
-                # invoking cupy array on the list
-                if cuda_managed_mem_enabled and use_sparse_array is False:
-                    features = cp.array(features)
+                gpu_id = _CumlCommon._get_gpu_device(context, is_local)
+                inputs = [
+                    _concat_with_reserved_gpu_mem(
+                        gpu_id,
+                        pdf_iter,
+                        gpu_mem_ratio_for_data,
+                        array_order,
+                        multi_col_names,
+                        logger,
+                    )
+                ]
+                sizes = [inputs[0][0].shape[0]]
+            else:
+                for pdf in pdf_iter:
+                    sizes.append(pdf.shape[0])
+                    if multi_col_names:
+                        features = np.array(pdf[multi_col_names], order=array_order)
+                    elif use_sparse_array:
+                        # sparse vector
+                        features = _read_csr_matrix_from_unwrapped_spark_vec(pdf)
+                    else:
+                        # dense vector
+                        features = np.array(list(pdf[alias.data]), order=array_order)
 
-                label = pdf[alias.label] if alias.label in pdf.columns else None
-                row_number = (
-                    pdf[alias.row_number] if alias.row_number in pdf.columns else None
-                )
-                inputs.append((features, label, row_number))
+                    # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
+                    # invoking cupy array on the list
+                    if cuda_managed_mem_enabled and use_sparse_array is False:
+                        features = cp.array(features)
+
+                    label = pdf[alias.label] if alias.label in pdf.columns else None
+                    row_number = (
+                        pdf[alias.row_number]
+                        if alias.row_number in pdf.columns
+                        else None
+                    )
+                    inputs.append((features, label, row_number))
 
             if cuda_managed_mem_enabled and use_sparse_array is True:
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
@@ -904,7 +934,15 @@ class _CumlEstimator(Estimator, _CumlCaller):
             using `paramMaps[index]`. `index` values may not be sequential.
         """
 
+        if self._use_cpu_fallback():
+            return super().fitMultiple(dataset, paramMaps)
+
         if self._enable_fit_multiple_in_single_pass():
+            for paramMap in paramMaps:
+                if self._use_cpu_fallback(paramMap):
+                    return super().fitMultiple(dataset, paramMaps)
+
+            # reach here if no cpu fallback
             estimator = self.copy()
 
             def fitMultipleModels() -> List["_CumlModel"]:
@@ -1057,9 +1095,21 @@ class _CumlEstimator(Estimator, _CumlCaller):
 
         return models
 
-    def _fit(self, dataset: DataFrame) -> "_CumlModel":
+    def _fit(self, dataset: DataFrame) -> "Model":
         """fit only 1 model"""
-        return self._fit_internal(dataset, None)[0]
+        if (
+            self._pyspark_class()
+            and self._fallback_enabled
+            and self._use_cpu_fallback()
+        ):
+            logger = get_logger(self.__class__)
+            logger.warning("Falling back to CPU estimator fit().")
+            cpu_class = self._pyspark_class()
+            cpu_est = cpu_class(**{p.name: v for p, v in self.extractParamMap().items() if self.isSet(p) and hasattr(cpu_class, p.name)})  # type: ignore
+            model = cpu_est.fit(dataset)
+            return model
+        else:
+            return self._fit_internal(dataset, None)[0]
 
     def write(self) -> MLWriter:
         return _CumlEstimatorWriter(self)
@@ -1440,9 +1490,14 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         :py:class:`pyspark.sql.DataFrame`
             transformed dataset
         """
-        return self._transform_evaluate_internal(
-            dataset, schema=self._out_schema(dataset.schema)
-        )
+
+        # this will catch use of unsupported model setters like setThreshold in logistic regression.
+        if self._fallback_enabled and self._use_cpu_fallback():
+            return self.cpu().transform(dataset)
+        else:
+            return self._transform_evaluate_internal(
+                dataset, schema=self._out_schema(dataset.schema)
+            )
 
     def write(self) -> MLWriter:
         return _CumlModelWriter(self)

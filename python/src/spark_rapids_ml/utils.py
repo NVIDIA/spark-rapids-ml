@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,19 @@
 import inspect
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 if TYPE_CHECKING:
     import cudf
@@ -245,6 +257,9 @@ def _concat_and_free(
     """
     import cupyx
 
+    if len(array_list) == 1:
+        return array_list[0]
+
     if isinstance(array_list[0], scipy.sparse.csr_matrix):
         concated = scipy.sparse.vstack(array_list)
     elif isinstance(array_list[0], cupyx.scipy.sparse.csr_matrix):
@@ -265,6 +280,119 @@ def _concat_and_free(
         array_module.concatenate(array_list, out=concated)
     del array_list[:]
     return concated
+
+
+def _try_allocate_cp_empty_arrays(
+    gpu_id: int,
+    gpu_mem_ratio_for_data: float,
+    dimension: int,
+    dtype: np.dtype,
+    array_order: str,
+    has_label: bool,
+    logger: logging.Logger,
+) -> Tuple["cp.ndarray", Optional["cp.ndarray"]]:
+    import cupy as cp
+
+    device = cp.cuda.Device(gpu_id)
+    free_mem, total_mem = device.mem_info
+    nbytes_per_row = (dimension + 1 if has_label else 0) * np.dtype(dtype).itemsize
+
+    target_mem = int(free_mem * gpu_mem_ratio_for_data)
+    while target_mem >= 1_000_000:
+        target_n_rows = target_mem // nbytes_per_row
+
+        try:
+            cp_features = cp.empty(
+                shape=(target_n_rows, dimension), dtype=dtype, order=array_order
+            )
+
+            cp_label = cp.empty(shape=target_n_rows, dtype=dtype) if has_label else None
+
+            logger.info(
+                f"Reserved {target_mem / 1_000_000_000} GB GPU memory for training data (dim={dimension}, max_rows={target_n_rows:,}"
+            )
+
+            return (cp_features, cp_label)
+
+        except cp.cuda.memory.OutOfMemoryError:
+            logger.warning(f"OOM at {target_mem / 1_000_000_000} GB, reducing...")
+            target_mem = int(target_mem * 0.9)
+        except Exception as e:
+            print("Unexpected error:", e)
+            break
+
+    raise ValueError("Failed to reserve GPU memory for training data.")
+
+
+def _concat_with_reserved_gpu_mem(
+    gpu_id: int,
+    pdf_iter: Iterator[pd.DataFrame],
+    gpu_mem_ratio_for_data: float,
+    array_order: str,
+    multi_col_names: Optional[List[str]],
+    logger: logging.Logger,
+) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
+    # TODO: support sparse matrix
+    # TODO: support row number
+
+    assert array_order == "C", "F order array is currently not supported."
+
+    assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
+
+    import cupy as cp
+
+    from spark_rapids_ml.core import alias
+
+    first_batch = True
+    num_rows_total = 0
+
+    cp_label = None
+    out_row_number = None
+
+    for pdf in pdf_iter:
+        # dense vector
+        if multi_col_names:
+            np_features: np.ndarray = np.array(pdf[multi_col_names], order=array_order)  # type: ignore
+        else:
+            np_features = np.array(
+                list(pdf[alias.data]), order=array_order
+            )  #  type: ignore
+        np_label = pdf[alias.label].values if alias.label in pdf.columns else None
+        np_row_number = (
+            pdf[alias.row_number].values if alias.row_number in pdf.columns else None
+        )
+
+        if first_batch:
+            first_batch = False
+
+            dimension = np_features.shape[1]
+            dtype = np_features.dtype
+            has_label = True if np_label is not None else False
+            cp_features, cp_label = _try_allocate_cp_empty_arrays(
+                gpu_id,
+                gpu_mem_ratio_for_data,
+                dimension,
+                dtype,
+                array_order,
+                has_label,
+                logger,
+            )
+
+        np_rows = np_features.shape[0]
+
+        cp_features[num_rows_total : num_rows_total + np_rows, :] = cp.array(
+            np_features, order=array_order
+        )
+        if np_label is not None:
+            assert len(np_label) == np_rows
+            assert cp_label is not None
+            cp_label[num_rows_total : num_rows_total + np_rows] = cp.array(np_label)
+
+        num_rows_total += np_features.shape[0]
+
+    out_features = cp_features[0:num_rows_total]
+    out_label = None if cp_label is None else cp_label[0:num_rows_total]
+    return (out_features, out_label, out_row_number)
 
 
 def cudf_to_cuml_array(gdf: Union["cudf.DataFrame", "cudf.Series"], order: str = "F"):  # type: ignore
@@ -518,3 +646,47 @@ def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
             "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
             "or run on Databricks Runtime."
         ) from exc
+
+
+from pyspark.ml.base import Estimator, Transformer
+
+
+def setInputOrFeaturesCol(
+    pstage: Union[Estimator, Transformer],
+    features_col_value: Union[str, List[str]],
+    label_col_value: Optional[str] = None,
+) -> None:
+    setter = (
+        getattr(pstage, "setFeaturesCol")
+        if hasattr(pstage, "setFeaturesCol")
+        else getattr(pstage, "setInputCol")
+    )
+    setter(features_col_value)
+
+    # clear to keep only one of cols and col set
+    if isinstance(features_col_value, str):
+        for col_name in {"featuresCols", "inputCols"}:
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
+    else:
+        assert isinstance(features_col_value, List) and all(
+            isinstance(x, str) for x in features_col_value
+        )
+        for col_name in {"featuresCol", "inputCol"}:
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
+
+    label_setter = (
+        getattr(pstage, "setLabelCol") if hasattr(pstage, "setLabelCol") else None
+    )
+    if label_setter is not None and label_col_value is not None:
+        label_setter(label_col_value)
+
+
+def getInputOrFeaturesCols(est: Union[Estimator, Transformer]) -> str:
+    getter = (
+        getattr(est, "getFeaturesCol")
+        if hasattr(est, "getFeaturesCol")
+        else getattr(est, "getInputCol")
+    )
+    return getter()

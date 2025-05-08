@@ -207,7 +207,7 @@ class LinearRegressionClass(_CumlClass):
                 "squared_loss": "squared_loss",
             }.get(x, None),
             "solver": lambda x: {
-                "auto": "eig",
+                "auto": "auto",
                 "normal": "eig",
                 "l-bfgs": None,
                 "eig": "eig",
@@ -222,7 +222,7 @@ class LinearRegressionClass(_CumlClass):
             "normalize": False,
             "verbose": False,
             "alpha": 0.0001,
-            "solver": "eig",
+            "solver": "auto",  # in cuml 25.04 default was changed to auto which is mapped to eig internally in cuml
             "loss": "squared_loss",
             "l1_ratio": 0.15,
             "max_iter": 1000,
@@ -469,6 +469,18 @@ class LinearRegression(
         Sets the value of :py:attr:`tol`.
         """
         return self._set_params(tol=value)
+
+    def setFitIntercept(self, value: bool) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`fitIntercept`.
+        """
+        return self._set_params(fitIntercept=value)
+
+    def setSolver(self, value: str) -> "LinearRegression":
+        """
+        Sets the value of :py:attr:`solver`.
+        """
+        return self._set_params(solver=value)
 
     def _pre_process_data(
         self, dataset: DataFrame
