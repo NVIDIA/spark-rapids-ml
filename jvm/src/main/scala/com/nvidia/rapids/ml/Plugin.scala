@@ -31,6 +31,10 @@ class Plugin extends MLBackendPlugin {
         Optional.of("com.nvidia.rapids.ml.RapidsLogisticRegression")
       case "org.apache.spark.ml.classification.LogisticRegressionModel" =>
         Optional.of("org.apache.spark.ml.rapids.RapidsLogisticRegressionModel")
+      case "org.apache.spark.ml.classification.RandomForestClassifier" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsRandomForestClassifier")
+      case "org.apache.spark.ml.classification.RandomForestClassificationModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel")
       case _ => Optional.empty()
     }
   }

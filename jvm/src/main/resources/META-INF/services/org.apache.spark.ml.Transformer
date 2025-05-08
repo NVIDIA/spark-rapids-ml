@@ -19,3 +19,4 @@
 
 # Spark Connect ML uses ServiceLoader to find out the supported Spark Ml models.
 org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
+org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel

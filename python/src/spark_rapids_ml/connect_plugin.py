@@ -150,10 +150,51 @@ def main(infile: IO, outfile: IO) -> None:
             transformed_df = lrm.transform(df)
             transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
             write_with_length(transformed_df_id, outfile)
+
+        elif operator_name == "RandomForestClassifier":
+            from .classification import (
+                RandomForestClassificationModel,
+                RandomForestClassifier,
+            )
+
+            rfc = RandomForestClassifier(**params)
+            rfc_model = rfc.fit(df)
+            # if cpu fallback was enabled a pyspark.ml model is returned in which case no need to call cpu()
+            rfc_model_cpu = (
+                rfc_model.cpu()
+                if isinstance(rfc_model, RandomForestClassificationModel)
+                else rfc_model
+            )
+            assert rfc_model_cpu._java_obj is not None
+            model_target_id = rfc_model_cpu._java_obj._get_object_id().encode("utf-8")
+            write_with_length(model_target_id, outfile)
+
+            # Model attributes
+            attributes = [
+                rfc_model.n_cols,
+                rfc_model.dtype,
+                rfc_model._treelite_model,
+                rfc_model._model_json,
+                rfc_model._num_classes,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "RandomForestClassificationModel":
+            attributes = utf8_deserializer.loads(infile)
+            attributes = json.loads(attributes)  # type: ignore[arg-type]
+            from .classification import RandomForestClassificationModel
+
+            rfcm = RandomForestClassificationModel(*attributes)  # type: ignore[arg-type]
+            rfcm._set_params(**params)
+            transformed_df = rfcm.transform(df)
+            transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
+            write_with_length(transformed_df_id, outfile)
+
         else:
             raise RuntimeError(f"Unsupported estimator: {operator_name}")
 
     except BaseException as e:
+        print(f"spark-rapids-ml exception: {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:
