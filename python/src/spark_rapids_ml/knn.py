@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -154,6 +154,17 @@ class _NearestNeighborsCumlParams(
         """
         self._set_params(idCol=value)
         return self
+
+    def getInputCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
+        """
+        if self.isDefined(self.inputCols):
+            return self.getOrDefault(self.inputCols)
+        elif self.isDefined(self.inputCol):
+            return self.getOrDefault(self.inputCol)
+        else:
+            raise RuntimeError("inputCol is not set")
 
     def _ensureIdCol(self, df: DataFrame) -> DataFrame:
         """
@@ -1562,6 +1573,17 @@ class ApproximateNearestNeighborsModel(
                         error_msg = f"cagra with ivf_pq build_algo expects intermediate_graph_degree ({intermediate_graph_degree}) to be smaller than 256"
                         raise ValueError(error_msg)
                     else:
+                        from cuvs.neighbors import cagra
+
+                        if nn_object == cagra and (
+                            "build_algo" not in index_params
+                            or index_params["build_algo"] == "ivf_pq"
+                        ):
+                            logger.error(
+                                f"The 'cagra' algorithm is being used with 'build_algo' 'ivf_pq', which may lead to instability. "
+                                "Consider using 'build_algo=nn_descent' as a more reliable alternative."
+                            )
+
                         raise e
 
             logger.info(

@@ -1534,6 +1534,7 @@ def compare_model(
     unit_tol: float = 1e-4,
     total_tol: float = 0.0,
     accuracy_and_probability_only: bool = False,
+    y_true_col: str = "label",
 ) -> Tuple[LogisticRegressionModel, SparkLogisticRegressionModel]:
     gpu_res = gpu_model.transform(df_test).collect()
 
@@ -1542,7 +1543,7 @@ def compare_model(
     # compare accuracy
     gpu_pred = [row["prediction"] for row in gpu_res]
     cpu_pred = [row["prediction"] for row in cpu_res]
-    ytest_true = [row["label"] for row in df_test.select(["label"]).collect()]
+    ytest_true = [row[y_true_col] for row in df_test.select([y_true_col]).collect()]
     from sklearn.metrics import accuracy_score
 
     gpu_acc = accuracy_score(ytest_true, gpu_pred)
@@ -2391,9 +2392,13 @@ def test_sparse_one_gpu_all_zeroes(
         compare_model(gpu_model, cpu_model, bdf)
 
 
-@pytest.mark.parametrize("gpuMemRatioForData", ["None", "0.6"])
+@pytest.mark.parametrize(
+    "gpuMemRatioForData,feature_type",
+    [("None", "vector"), ("0.6", "vector"), ("0.6", "multi_cols")],
+)
 def test_gpuMemRatioForData(
     gpuMemRatioForData: Optional[float],
+    feature_type: str,
     gpu_number: int,
 ) -> None:
     gpu_number = min(gpu_number, 2)
@@ -2421,12 +2426,35 @@ def test_gpuMemRatioForData(
 
         bdf = spark.createDataFrame(data)
 
-        gpu_lr = LogisticRegression(regParam=0.01)
-        gpu_model = gpu_lr.fit(bdf)
+        gpu_fit_df = bdf
+        gpu_features_col: Union[List[str], str] = "features"
+        gpu_label_col: str = "label"
+        if feature_type == "multi_cols":
+            X_train = np.array([r.features.toArray() for r in data])
+            y_train = np.array([r.label for r in data])
+
+            gpu_fit_df, features_col, label_col = create_pyspark_dataframe(
+                spark, feature_type, X_train.dtype, X_train, y_train
+            )
+            gpu_features_col = features_col
+
+            assert label_col is not None
+            gpu_label_col = label_col
+
+        gpu_lr = LogisticRegression(
+            regParam=0.01, featuresCol=gpu_features_col, labelCol=gpu_label_col
+        )
+        gpu_model = gpu_lr.fit(gpu_fit_df)
 
         cpu_lr = SparkLogisticRegression(regParam=0.01)
         cpu_model = cpu_lr.fit(bdf)
-        compare_model(gpu_model, cpu_model, bdf)
+
+        assert array_equal(
+            gpu_model.coefficientMatrix.toArray(), cpu_model.coefficientMatrix.toArray()
+        )
+        assert array_equal(
+            gpu_model.interceptVector.toArray(), cpu_model.interceptVector.toArray()
+        )
 
 
 @pytest.mark.parametrize("setting_method", ["constructor", "setter"])
