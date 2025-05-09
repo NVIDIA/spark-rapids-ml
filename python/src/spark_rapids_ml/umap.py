@@ -1433,7 +1433,11 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
                 (
                     embedding[i, :]
                     if isinstance(embedding, np.ndarray)
-                    else embedding.iloc[i, :]
+                    else (
+                        [embedding.iloc[i]]
+                        if isinstance(embedding, pd.Series)
+                        else embedding.iloc[i, :]
+                    )
                 )
                 for i in range(embedding.shape[0])
             ]

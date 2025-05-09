@@ -325,7 +325,7 @@ def test_kmeans(
     n_cols = data_shape[1]
     n_clusters = 4
     tol = 1.0e-20
-    seed = 42  # This does not guarantee deterministic centers in 25.02.
+    seed = 42  # This does not guarantee deterministic centers in 25.04.
     cluster_std = 1.0
     tolerance = 0.001
 

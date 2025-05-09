@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -101,6 +101,17 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
         Sets the value of :py:attr:`outputCol`
         """
         return self._set_params(outputCol=value)
+
+    def getInputCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
+        """
+        if self.isDefined(self.inputCols):
+            return self.getOrDefault(self.inputCols)
+        elif self.isDefined(self.inputCol):
+            return self.getOrDefault(self.inputCol)
+        else:
+            raise RuntimeError("inputCol is not set")
 
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):

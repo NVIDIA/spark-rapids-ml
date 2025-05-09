@@ -329,9 +329,10 @@ def _concat_with_reserved_gpu_mem(
     pdf_iter: Iterator[pd.DataFrame],
     gpu_mem_ratio_for_data: float,
     array_order: str,
+    multi_col_names: Optional[List[str]],
     logger: logging.Logger,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
-    # TODO: support multiple column and sparse matrix
+    # TODO: support sparse matrix
     # TODO: support row number
 
     assert array_order == "C", "F order array is currently not supported."
@@ -350,9 +351,12 @@ def _concat_with_reserved_gpu_mem(
 
     for pdf in pdf_iter:
         # dense vector
-        np_features = np.array(
-            list(pdf[alias.data]), order=array_order
-        )  #  type: ignore
+        if multi_col_names:
+            np_features: np.ndarray = np.array(pdf[multi_col_names], order=array_order)  # type: ignore
+        else:
+            np_features = np.array(
+                list(pdf[alias.data]), order=array_order
+            )  #  type: ignore
         np_label = pdf[alias.label].values if alias.label in pdf.columns else None
         np_row_number = (
             pdf[alias.row_number].values if alias.row_number in pdf.columns else None
@@ -642,3 +646,47 @@ def _get_unwrap_udt_fn() -> Callable[[Union[Column, str]], Column]:
             "Cannot import pyspark `unwrap_udt` function. Please install pyspark>=3.4 "
             "or run on Databricks Runtime."
         ) from exc
+
+
+from pyspark.ml.base import Estimator, Transformer
+
+
+def setInputOrFeaturesCol(
+    pstage: Union[Estimator, Transformer],
+    features_col_value: Union[str, List[str]],
+    label_col_value: Optional[str] = None,
+) -> None:
+    setter = (
+        getattr(pstage, "setFeaturesCol")
+        if hasattr(pstage, "setFeaturesCol")
+        else getattr(pstage, "setInputCol")
+    )
+    setter(features_col_value)
+
+    # clear to keep only one of cols and col set
+    if isinstance(features_col_value, str):
+        for col_name in {"featuresCols", "inputCols"}:
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
+    else:
+        assert isinstance(features_col_value, List) and all(
+            isinstance(x, str) for x in features_col_value
+        )
+        for col_name in {"featuresCol", "inputCol"}:
+            if pstage.hasParam(col_name):
+                pstage.clear(getattr(pstage, col_name))
+
+    label_setter = (
+        getattr(pstage, "setLabelCol") if hasattr(pstage, "setLabelCol") else None
+    )
+    if label_setter is not None and label_col_value is not None:
+        label_setter(label_col_value)
+
+
+def getInputOrFeaturesCols(est: Union[Estimator, Transformer]) -> str:
+    getter = (
+        getattr(est, "getFeaturesCol")
+        if hasattr(est, "getFeaturesCol")
+        else getattr(est, "getInputCol")
+    )
+    return getter()
