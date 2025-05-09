@@ -1,5 +1,5 @@
-# Copyright (c) 2007-2024 The scikit-learn developers. All rights reserved.
-# Modifications copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2007-2025 The scikit-learn developers. All rights reserved.
+# Modifications copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,9 +56,12 @@ from sklearn.datasets._samples_generator import _generate_hypercube
 from sklearn.utils import shuffle as util_shuffle
 
 from benchmark.utils import inspect_default_params_from_func
+from spark_rapids_ml.utils import get_logger
 
 if TYPE_CHECKING:
     import cupy
+
+import argparse
 
 
 class DataGenBaseMeta(DataGenBase):
@@ -113,12 +116,9 @@ class BlobsDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # Produce partition seeds for reproducibility.
         random.seed(params["random_state"])
@@ -217,12 +217,9 @@ class LowRankMatrixDataGen(DataGenBase):
 
         rows = self.num_rows
         cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         n = min(rows, cols)
         np.random.seed(params["random_state"])
@@ -264,16 +261,28 @@ class LowRankMatrixDataGen(DataGenBase):
             )
         )
 
+        global_random_state = params["random_state"]
+
         # UDF for distributed generation of U and the resultant product U*S*V.T
         def make_matrix_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            partition_index = pyspark.TaskContext().partitionId()
+            my_seed = global_random_state + 100 * partition_index
+
+            use_cupy = use_gpu
+            if use_cupy:
+                try:
+                    import cupy as cp
+                except ImportError:
+                    use_cupy = False
+                    logging.warning("cupy import failed; falling back to numpy.")
+
+            generator_p = (
+                cp.random.default_rng(my_seed)
+                if use_cupy
+                else np.random.default_rng(my_seed)
+            )
+
             for pdf in iter:
-                use_cupy = use_gpu
-                if use_cupy:
-                    try:
-                        import cupy as cp
-                    except ImportError:
-                        use_cupy = False
-                        logging.warning("cupy import failed; falling back to numpy.")
 
                 partition_index = pdf.iloc[0][0]
                 n_partition_rows = partition_sizes[partition_index]
@@ -289,13 +298,13 @@ class LowRankMatrixDataGen(DataGenBase):
                     end_idx = min(i + maxRecordsPerBatch, n_partition_rows)
                     if use_cupy:
                         u, _ = cp.linalg.qr(
-                            cp.random.standard_normal(size=(end_idx - i, n)),
+                            generator_p.standard_normal(size=(end_idx - i, n)),
                             mode="reduced",
                         )
                         data = cp.dot(u, sv_batch_normed).get()
                     else:
                         u, _ = np.linalg.qr(
-                            np.random.standard_normal(size=(end_idx - i, n)),
+                            generator_p.standard_normal(size=(end_idx - i, n)),
                             mode="reduced",
                         )
                         data = np.dot(u, sv_batch_normed)
@@ -347,12 +356,9 @@ class RegressionDataGen(DataGenBaseMeta):
 
         rows = self.num_rows
         cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # Retrieve input params or set to defaults.
         seed = params["random_state"]
@@ -520,26 +526,26 @@ class RegressionDataGen(DataGenBaseMeta):
                         if use_cupy:
                             probs_p = cp.asarray(probs)
                             cdf = cp.cumsum(probs_p, axis=1)
-                            anchors = cp.random.random(size=(cdf.shape[0], 1))
+                            anchors = generator_p.rand(cdf.shape[0], 1)
                             y = cp.sum(anchors > cdf, axis=1)
                         else:
                             probs_p = probs
                             cdf = np.cumsum(probs_p, axis=1)
-                            anchors = np.random.random(size=(cdf.shape[0], 1))
+                            anchors = generator_p.rand(cdf.shape[0], 1)
                             y = np.sum(anchors > cdf, axis=1)
                     else:
                         if use_cupy:
                             prob = 1 / (1 + cp.exp(-y))
-                            y = cp.random.binomial(1, prob)
+                            y = generator_p.binomial(1, prob)
                         else:
                             prob = 1 / (1 + np.exp(-y))
-                            y = np.random.binomial(1, prob)
+                            y = generator_p.binomial(1, prob)
 
                 n_partition_rows = X_p.shape[0]
                 if shuffle:
                     # Row-wise shuffle (partition)
                     if use_cupy:
-                        row_indices = cp.random.permutation(n_partition_rows)
+                        row_indices = generator_p.permutation(n_partition_rows)
                         X_p = X_p[row_indices]
                         y = y[row_indices]
                     else:
@@ -580,6 +586,9 @@ class RegressionDataGen(DataGenBaseMeta):
 class SparseRegressionDataGen(DataGenBaseMeta):
     """Generate sparse regression dataset using a distributed version of sklearn.datasets.regression,
     including features and labels.
+
+    SparseRegressionDataGen is a deterministic data generator which produces
+    identical DataFrames when initialized with the same random state and output_num_files.
     """
 
     def __init__(self, argv: List[Any]) -> None:
@@ -621,12 +630,9 @@ class SparseRegressionDataGen(DataGenBaseMeta):
         rows = self.num_rows
         cols = self.num_cols
         orig_cols = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # Retrieve input params or set to defaults.
         seed = params["random_state"]
@@ -756,6 +762,17 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
             partition_index = pyspark.TaskContext().partitionId()
 
+            # Support parameters and library adaptation
+            my_seed = global_random_seed + 100 * partition_index
+            if use_cupy:
+                generator_p = cp.random.RandomState(my_seed)
+            else:
+                generator_p = np.random.RandomState(my_seed)
+
+            import numpy
+
+            numpy.random.seed(my_seed)
+
             # Get #rows in charge
             num_rows_per_partition = 0
             start = -1
@@ -816,10 +833,7 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     sparse_matrix = sparse_matrix[:, informative_shuffle_indices]
                 informative = sparse_matrix[:, :n_informative]
 
-                if use_cupy:
-                    redundant_mul = np.random.rand(n_informative, redundant_cols)
-                else:
-                    redundant_mul = np.random.rand(n_informative, redundant_cols)
+                redundant_mul = np.random.rand(n_informative, redundant_cols)
 
                 redundants = informative.dot(redundant_mul)
                 sparse_matrix = sp.sparse.hstack([sparse_matrix, redundants]).tocsr()
@@ -830,13 +844,6 @@ class SparseRegressionDataGen(DataGenBaseMeta):
 
             # Sort the csr matrix representation for better indices retrieval
             sparse_matrix.sum_duplicates()
-
-            # Support parameters and library adaptation
-            my_seed = global_random_seed + 100 * partition_index
-            if use_cupy:
-                generator_p = cp.random.RandomState(my_seed)
-            else:
-                generator_p = np.random.RandomState(my_seed)
 
             # Label Calculation
             y = sparse_matrix.dot(ground_truth) + bias
@@ -863,22 +870,22 @@ class SparseRegressionDataGen(DataGenBaseMeta):
                     if use_cupy:
                         probs_p = cp.asarray(probs)
                         cdf = cp.cumsum(probs_p, axis=1)
-                        anchors = cp.random.random(size=(cdf.shape[0], 1))
+                        anchors = generator_p.rand(cdf.shape[0], 1)
                         y = cp.sum(anchors > cdf, axis=1)
                     else:
                         probs_p = probs
                         cdf = np.cumsum(probs_p, axis=1)
-                        anchors = np.random.random(size=(cdf.shape[0], 1))
+                        anchors = generator_p.rand(cdf.shape[0], 1)
                         y = np.sum(anchors > cdf, axis=1)
                 else:
                     if use_cupy:
                         prob = 1 / (1 + cp.exp(-y_p))
                         del y_p
-                        y = cp.random.binomial(1, prob)
+                        y = generator_p.binomial(1, prob)
                     else:
                         prob = 1 / (1 + np.exp(-y_p))
                         del y_p
-                        y = np.random.binomial(1, prob)
+                        y = generator_p.binomial(1, prob)
             else:
                 y = y_p
 
@@ -970,12 +977,9 @@ class ClassificationDataGen(DataGenBase):
 
         n_samples = self.num_rows
         n_features = self.num_cols
-        assert self.args is not None
-        num_partitions = self.args.output_num_files
 
-        # Set num_partitions to Spark's default if output_num_files is not provided.
-        if num_partitions is None:
-            num_partitions = spark.sparkContext.defaultParallelism
+        assert self.args is not None
+        num_partitions = self.getOrDefault(self.args, "output_num_files", spark)
 
         # For detailed parameter descriptions, see below:
         # https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_classification.html
