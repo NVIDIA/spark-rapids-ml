@@ -16,8 +16,6 @@
 
 package org.apache.spark.ml.rapids
 
-import com.nvidia.rapids.ml.RapidsModel
-
 import org.apache.hadoop.fs.Path
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.classification.LogisticRegressionModel
@@ -32,7 +30,7 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsLogisticRegressionModel(override val uid: String,
-                                    protected override val cpuModel: LogisticRegressionModel,
+                                    protected[ml] override val cpuModel: LogisticRegressionModel,
                                     override val modelAttributes: String,
                                     private val isMultinomial: Boolean)
   extends LogisticRegressionModel(uid, cpuModel.coefficientMatrix, cpuModel.interceptVector,
