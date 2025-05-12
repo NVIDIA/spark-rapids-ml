@@ -16,7 +16,6 @@
 
 package org.apache.spark.ml.rapids
 
-import com.nvidia.rapids.ml.RapidsModel
 import org.apache.hadoop.fs.Path
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.classification.RandomForestClassificationModel
@@ -31,7 +30,7 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsRandomForestClassificationModel(override val uid: String,
-                                            protected override val cpuModel: RandomForestClassificationModel,
+                                            protected[ml] override val cpuModel: RandomForestClassificationModel,
                                             override val modelAttributes: String)
   extends RandomForestClassificationModel(uid, cpuModel.trees, cpuModel.numFeatures,
     cpuModel.numClasses) with MLWritable with RapidsModel {
@@ -52,8 +51,6 @@ class RapidsRandomForestClassificationModel(override val uid: String,
       new RapidsRandomForestClassificationModel(uid, cpuModel, modelAttributes), extra)
   }
 
-  override def write: MLWriter =
-    new RapidsRandomForestClassificationModel.RapidsRandomForestClassificationModelWriter(this)
 }
 
 object RapidsRandomForestClassificationModel extends MLReadable[RapidsRandomForestClassificationModel] {
@@ -61,24 +58,6 @@ object RapidsRandomForestClassificationModel extends MLReadable[RapidsRandomFore
   override def read: MLReader[RapidsRandomForestClassificationModel] = new RapidsRandomForestClassificationModelReader
 
   override def load(path: String): RapidsRandomForestClassificationModel = super.load(path)
-
-  private class RapidsRandomForestClassificationModelWriter(instance: RapidsRandomForestClassificationModel)
-    extends MLWriter with Logging {
-
-    override protected def saveImpl(path: String): Unit = {
-      val writer = instance.cpuModel.write
-      if (shouldOverwrite) {
-        writer.overwrite()
-      }
-      optionMap.foreach { case (k, v) => writer.option(k, v) }
-      writer.save(path)
-
-      val attributesPath = new Path(path, "attributes").toString
-      sparkSession.createDataFrame(
-        Seq(Tuple2(instance.uid, instance.modelAttributes))
-      ).write.parquet(attributesPath)
-    }
-  }
 
   private class RapidsRandomForestClassificationModelReader extends MLReader[RapidsRandomForestClassificationModel] {
 

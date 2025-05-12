@@ -17,11 +17,9 @@
 package com.nvidia.rapids.ml
 
 import org.apache.commons.logging.LogFactory
-import org.apache.spark.ml.Model
 import org.apache.spark.ml.param.Params
-import org.apache.spark.ml.rapids.{Fit, PythonModelRunner, PythonEstimatorRunner, RapidsUtils, TrainedModel, Transform}
+import org.apache.spark.ml.rapids.{Fit, PythonEstimatorRunner, RapidsUtils, TrainedModel}
 import org.apache.spark.sql.Dataset
-import org.apache.spark.sql.DataFrame
 
 /** Implementation of the automatic-resource-management pattern */
 object Arm {
@@ -40,6 +38,7 @@ trait RapidsEstimator extends Params {
 
   /**
    * The estimator name
+   *
    * @return
    */
   def name: String
@@ -59,48 +58,6 @@ trait RapidsEstimator extends Params {
 
     logger.info(s"Finished $name training.")
     trainedModel
-  }
-
-}
-
-trait RapidsModel extends Params {
-
-  /**
-   * The attributes of the corresponding spark-rapids-ml model, it has been
-   * encoded to json format. We don't need to access it
-   */
-  protected val modelAttributes: String
-
-  /**
-   * The correspond CPU model which can be used to transform directly.
-   */
-  protected val cpuModel: Model[_]
-
-  /**
-   * The model name
-   */
-  def name: String
-
-  protected val logger = LogFactory.getLog("Spark-Rapids-ML Plugin")
-
-  def transformOnPython(dataset: Dataset[_]): DataFrame = {
-    val usePython = dataset.sparkSession.conf.get("spark.rapids.ml.python.transform.enabled", "true").toBoolean
-    if (usePython) {
-      logger.info("Transform in python")
-      // Get the user-defined parameters and pass them to python process as a dictionary
-      val params = RapidsUtils.getUserDefinedParams(this)
-
-      val runner = new PythonModelRunner(
-        Transform(name, params, modelAttributes),
-        dataset.toDF)
-
-      Arm.withResource(runner) { _ =>
-        runner.runInPython(useDaemon = false)
-      }
-    } else {
-      logger.info(s"Transform using CPU $name")
-      cpuModel.transform(dataset)
-    }
   }
 
 }
