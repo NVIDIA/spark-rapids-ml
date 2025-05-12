@@ -22,7 +22,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
 
 import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsRandomForestClassificationModel, RapidsUtils}
+import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsPCAModel, RapidsRandomForestClassificationModel, RapidsUtils}
 import org.apache.spark.sql.SparkSession
 
 class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
@@ -174,4 +174,55 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     dfGpu.collect()
     dfCpu.collect()
   }
+
+  test("RapidsPCA") {
+    val df = ss.createDataFrame(
+      Seq(
+        Tuple1(Vectors.dense(0.0, 1.0, 0.0, 7.0, 0.0)),
+         Tuple1(Vectors.dense(2.0, 0.0, 3.0, 4.0, 5.0)),
+        Tuple1(Vectors.dense(4.0, 0.0, 0.0, 6.0, 7.0)),
+      )).toDF("test_feature")
+
+    val pca = new RapidsPCA()
+      .setInputCol("test_feature")
+      .setOutputCol("pca_feature")
+      .setK(1)
+
+    val path = new File(tempDir, "RapidsPCA").getPath
+    pca.write.overwrite().save(path)
+
+    val loadedPca = RapidsPCA.load(path)
+    assert(loadedPca.getInputCol == "test_feature")
+    assert(loadedPca.getOutputCol == "pca_feature")
+    assert(loadedPca.getK == 1)
+
+    def check(model: RapidsPCAModel): Unit = {
+      assert(model.getInputCol == "test_feature")
+      assert(model.getOutputCol == "pca_feature")
+      assert(model.getK == 1)
+    }
+
+    val model = loadedPca.fit(df)
+    check(model)
+    model.write.overwrite().save(path)
+    val loadedModel = RapidsPCAModel.load(path)
+    check(loadedModel)
+
+    assert(model.uid == loadedModel.uid)
+    assert(model.modelAttributes == loadedModel.modelAttributes)
+
+    // Transform using Spark-Rapids-ML model by default
+    val dfGpu = model.transform(df)
+
+    // Transform using CPU model by disabling "spark.rapids.ml.python.transform.enabled"
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+    val dfCpu = model.transform(df)
+
+    assert(dfGpu.schema.names.sorted sameElements dfCpu.schema.names.sorted)
+
+    // No exception while collecting data for both CPU and GPU
+    dfGpu.collect()
+    dfCpu.collect()
+  }
+
 }

@@ -26,6 +26,7 @@ import py4j
 from py4j.java_gateway import GatewayParameters, java_import
 from pyspark import SparkConf, SparkContext
 from pyspark.accumulators import _accumulatorRegistry
+from pyspark.ml import Model
 from pyspark.serializers import (
     SpecialLengths,
     UTF8Deserializer,
@@ -116,40 +117,49 @@ def main(infile: IO, outfile: IO) -> None:
         print(f"Running {operator_name} with parameters: {params}")
         params = json.loads(params)
 
-        if operator_name == "LogisticRegression":
-            from .classification import LogisticRegression, LogisticRegressionModel
-
-            lr = LogisticRegression(**params)
-            model: LogisticRegressionModel = lr.fit(df)
+        def fit(ESTIMATOR_TYPE: type, MODEL_TYPE: type):  # type: ignore[no-untyped-def]
+            """Fit a model"""
+            estimator = ESTIMATOR_TYPE(**params)
+            model = estimator.fit(df)
             # if cpu fallback was enabled a pyspark.ml model is returned in which case no need to call cpu()
             model_cpu = (
-                model.cpu() if isinstance(model, LogisticRegressionModel) else model
+                model.cpu()  # type: ignore[attr-defined]
+                if isinstance(model, MODEL_TYPE)
+                else model  # type: ignore[syntax]
             )
             assert model_cpu._java_obj is not None
             model_target_id = model_cpu._java_obj._get_object_id().encode("utf-8")
             write_with_length(model_target_id, outfile)
-            # Model attributes
+            return model
+
+        def transform(MODEL_TYPE: type) -> DataFrame:
+            attributes = utf8_deserializer.loads(infile)
+            attributes = json.loads(attributes)  # type: ignore[arg-type]
+
+            model = MODEL_TYPE(*attributes)  # type: ignore[arg-type]
+            model._set_params(**params)
+            return model.transform(df)
+
+        if operator_name == "LogisticRegression":
+            from .classification import LogisticRegression, LogisticRegressionModel
+
+            lr_model = fit(LogisticRegression, LogisticRegressionModel)
             attributes = [
-                model.coef_,
-                model.intercept_,
-                model.classes_,
-                model.n_cols,
-                model.dtype,
-                model.num_iters,
-                model.objective,
+                lr_model.coef_,
+                lr_model.intercept_,
+                lr_model.classes_,
+                lr_model.n_cols,
+                lr_model.dtype,
+                lr_model.num_iters,
+                lr_model.objective,
             ]
             write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
 
         elif operator_name == "LogisticRegressionModel":
-            attributes = utf8_deserializer.loads(infile)
-            attributes = json.loads(attributes)  # type: ignore[arg-type]
-            from .classification import LogisticRegression, LogisticRegressionModel
+            from .classification import LogisticRegressionModel
 
-            lrm = LogisticRegressionModel(*attributes)  # type: ignore[arg-type]
-            lrm._set_params(**params)
-            transformed_df = lrm.transform(df)
-            transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
-            write_with_length(transformed_df_id, outfile)
+            transformed_df = transform(LogisticRegressionModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
         elif operator_name == "RandomForestClassifier":
             from .classification import (
@@ -157,18 +167,7 @@ def main(infile: IO, outfile: IO) -> None:
                 RandomForestClassifier,
             )
 
-            rfc = RandomForestClassifier(**params)
-            rfc_model = rfc.fit(df)
-            # if cpu fallback was enabled a pyspark.ml model is returned in which case no need to call cpu()
-            rfc_model_cpu = (
-                rfc_model.cpu()
-                if isinstance(rfc_model, RandomForestClassificationModel)
-                else rfc_model
-            )
-            assert rfc_model_cpu._java_obj is not None
-            model_target_id = rfc_model_cpu._java_obj._get_object_id().encode("utf-8")
-            write_with_length(model_target_id, outfile)
-
+            rfc_model = fit(RandomForestClassifier, RandomForestClassificationModel)
             # Model attributes
             attributes = [
                 rfc_model.n_cols,
@@ -180,15 +179,31 @@ def main(infile: IO, outfile: IO) -> None:
             write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
 
         elif operator_name == "RandomForestClassificationModel":
-            attributes = utf8_deserializer.loads(infile)
-            attributes = json.loads(attributes)  # type: ignore[arg-type]
             from .classification import RandomForestClassificationModel
 
-            rfcm = RandomForestClassificationModel(*attributes)  # type: ignore[arg-type]
-            rfcm._set_params(**params)
-            transformed_df = rfcm.transform(df)
-            transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
-            write_with_length(transformed_df_id, outfile)
+            transformed_df = transform(RandomForestClassificationModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
+        elif operator_name == "PCA":
+            from .feature import PCA, PCAModel
+
+            pca_model = fit(PCA, PCAModel)
+            # Model attributes
+            attributes = [
+                pca_model.mean_,
+                pca_model.components_,
+                pca_model.explained_variance_ratio_,
+                pca_model.singular_values_,
+                pca_model.n_cols,
+                pca_model.dtype,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "PCAModel":
+            from .feature import PCAModel
+
+            transformed_df = transform(PCAModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
         else:
             raise RuntimeError(f"Unsupported estimator: {operator_name}")
