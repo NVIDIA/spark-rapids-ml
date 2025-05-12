@@ -15,6 +15,7 @@
 #
 
 import math
+import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
@@ -644,7 +645,8 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
         assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
 
 
-def test_umap_build_algo(gpu_number: int) -> None:
+@pytest.mark.parametrize("metric", ["l2", "euclidean", "cosine", "l1"])
+def test_umap_build_algo(gpu_number: int, metric: str) -> None:
 
     n_rows = 10000
     n_cols = 10
@@ -681,23 +683,37 @@ def test_umap_build_algo(gpu_number: int) -> None:
             random_state=random_state,
             build_algo=build_algo,
             build_kwds=build_kwds,
+            metric=metric,
         ).setFeaturesCol("features")
 
-        umap_model = umap.fit(df)
+        # TODO: cuml nn_descent currently relies on the RAFT implementation (only supports L2/euclidean);
+        # once they move to cuvs, it should also support cosine
+        if metric not in ["l2", "euclidean"]:
+            try:
+                umap.fit(df)
+                assert False, f"Metric '{metric}' should throw an error with nn_descent"
+            except Exception:
+                assert f"NotImplementedError: Metric '{metric}' not supported" in str(
+                    traceback.format_exc()
+                )
+        else:
+            umap_model = umap.fit(df)
 
-        _assert_umap_model(umap_model, X.get())
+            _assert_umap_model(umap_model, X.get())
 
-        pdf = umap_model.transform(df).toPandas()
-        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
-        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+            pdf = umap_model.transform(df).toPandas()
+            embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+            input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
-        dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=10000)
-        loc_umap = _local_umap_trustworthiness(
-            local_X=X, local_y=np.zeros(0), n_neighbors=15, supervised=False
-        )
-        trust_diff = loc_umap - dist_umap
+            dist_umap = trustworthiness(
+                input, embedding, n_neighbors=15, batch_size=10000
+            )
+            loc_umap = _local_umap_trustworthiness(
+                local_X=X, local_y=np.zeros(0), n_neighbors=15, supervised=False
+            )
+            trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.07
+            assert trust_diff <= 0.07
 
 
 @pytest.mark.parametrize("n_rows", [3000])

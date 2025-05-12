@@ -694,7 +694,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         Distance metric to use. Supported distances are ['l1', 'cityblock', 'taxicab', 'manhattan', 'euclidean',
         'l2', 'sqeuclidean', 'canberra', 'minkowski', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger',
         'hamming', 'jaccard']. Metrics that take arguments (such as minkowski) can have arguments passed via the
-        metric_kwds dictionary.
+        metric_kwds dictionary. Note: the 'nn_descent' build_algo (which relies on RAFT's nn_descent implementation)
+        currently only supports L2/Euclidean distance.
 
     metric_kwds : dict (optional, default=None)
         Additional keyword arguments for the metric function. If the metric function takes additional arguments,
