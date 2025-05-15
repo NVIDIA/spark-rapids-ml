@@ -35,6 +35,14 @@ class Plugin extends MLBackendPlugin {
         Optional.of("com.nvidia.rapids.ml.RapidsRandomForestClassifier")
       case "org.apache.spark.ml.classification.RandomForestClassificationModel" =>
         Optional.of("org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel")
+      case "org.apache.spark.ml.feature.PCA" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsPCA")
+      case "org.apache.spark.ml.feature.PCAModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsPCAModel")
+      case "org.apache.spark.ml.regression.RandomForestRegressor" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsRandomForestRegressor")
+      case "org.apache.spark.ml.regression.RandomForestRegressionModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsRandomForestRegressionModel")
       case _ => Optional.empty()
     }
   }
