@@ -184,6 +184,28 @@ def main(infile: IO, outfile: IO) -> None:
             transformed_df = transform(RandomForestClassificationModel)
             write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
+        elif operator_name == "RandomForestRegressor":
+            from .regression import (
+                RandomForestRegressionModel,
+                RandomForestRegressor,
+            )
+
+            rfc_model = fit(RandomForestRegressor, RandomForestRegressionModel)
+            # Model attributes
+            attributes = [
+                rfc_model.n_cols,
+                rfc_model.dtype,
+                rfc_model._treelite_model,
+                rfc_model._model_json,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "RandomForestRegressionModel":
+            from .regression import RandomForestRegressionModel
+
+            transformed_df = transform(RandomForestRegressionModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
         elif operator_name == "PCA":
             from .feature import PCA, PCAModel
 
