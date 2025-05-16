@@ -22,3 +22,4 @@ com.nvidia.rapids.ml.RapidsLogisticRegression
 com.nvidia.rapids.ml.RapidsRandomForestClassifier
 com.nvidia.rapids.ml.RapidsPCA
 com.nvidia.rapids.ml.RapidsRandomForestRegressor
+com.nvidia.rapids.ml.RapidsLinearRegression
