@@ -17,12 +17,10 @@
 package com.nvidia.rapids.ml
 
 import java.io.File
-
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
-
 import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.rapids.{RapidsLogisticRegressionModel, RapidsPCAModel, RapidsRandomForestClassificationModel, RapidsRandomForestRegressionModel, RapidsUtils}
+import org.apache.spark.ml.rapids.{RapidsLinearRegressionModel, RapidsLogisticRegressionModel, RapidsPCAModel, RapidsRandomForestClassificationModel, RapidsRandomForestRegressionModel, RapidsUtils}
 import org.apache.spark.sql.SparkSession
 
 class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
@@ -260,6 +258,61 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     check(model)
     model.write.overwrite().save(path)
     val loadedModel = RapidsRandomForestRegressionModel.load(path)
+    check(loadedModel)
+
+    assert(model.uid == loadedModel.uid)
+    assert(model.modelAttributes == loadedModel.modelAttributes)
+
+    // Transform using Spark-Rapids-ML model by default
+    val dfGpu = model.transform(df)
+
+    // Transform using CPU model by disabling "spark.rapids.ml.python.transform.enabled"
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+    val dfCpu = model.transform(df)
+
+    assert(dfGpu.schema.names.sorted sameElements dfCpu.schema.names.sorted)
+
+    // No exception while collecting data for both CPU and GPU
+    dfGpu.collect()
+    dfCpu.collect()
+  }
+
+  test("RapidsLinearRegression") {
+    val df = ss.createDataFrame(
+      Seq(
+        (Vectors.dense(1.0, 2.0), 1.0f),
+        (Vectors.dense(1.0, 3.0), 1.0f),
+        (Vectors.dense(2.0, 1.0), 0.0f),
+        (Vectors.dense(3.0, 1.0), 0.0f))
+    ).toDF("test_feature", "value")
+
+    val rfc = new RapidsLinearRegression()
+      .setFeaturesCol("test_feature")
+      .setLabelCol("value")
+      .setMaxIter(7)
+      .setTol(0.00003)
+
+
+    val path = new File(tempDir, "RapidsLinearRegression").getPath
+    rfc.write.overwrite().save(path)
+
+    val loadedRfc = RapidsLinearRegression.load(path)
+    assert(loadedRfc.getFeaturesCol == "test_feature")
+    assert(loadedRfc.getMaxIter == 7)
+    assert(loadedRfc.getLabelCol == "value")
+    assert(loadedRfc.getTol == 0.00003)
+
+    def check(model: RapidsLinearRegressionModel): Unit = {
+      assert(model.getFeaturesCol == "test_feature")
+      assert(model.getMaxIter == 7)
+      assert(model.getLabelCol == "value")
+      assert(model.getTol == 0.00003)
+    }
+
+    val model = loadedRfc.fit(df).asInstanceOf[RapidsLinearRegressionModel]
+    check(model)
+    model.write.overwrite().save(path)
+    val loadedModel = RapidsLinearRegressionModel.load(path)
     check(loadedModel)
 
     assert(model.uid == loadedModel.uid)
