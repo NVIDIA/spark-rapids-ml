@@ -227,6 +227,25 @@ def main(infile: IO, outfile: IO) -> None:
             transformed_df = transform(PCAModel)
             write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
+        elif operator_name == "LinearRegression":
+            from .regression import LinearRegression, LinearRegressionModel
+
+            linear_model = fit(LinearRegression, LinearRegressionModel)
+            # Model attributes
+            attributes = [
+                linear_model.coef_,
+                linear_model.intercept_,
+                linear_model.n_cols,
+                linear_model.dtype,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "LinearRegressionModel":
+            from .regression import LinearRegressionModel
+
+            transformed_df = transform(LinearRegressionModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
         else:
             raise RuntimeError(f"Unsupported estimator: {operator_name}")
 

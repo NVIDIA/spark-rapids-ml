@@ -22,3 +22,4 @@ org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
 org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel
 org.apache.spark.ml.rapids.RapidsPCAModel
 org.apache.spark.ml.rapids.RapidsRandomForestRegressionModel
+org.apache.spark.ml.rapids.RapidsLinearRegressionModel

@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.Model
 import org.apache.spark.ml.param.Params
-import org.apache.spark.ml.util.{MLWritable, MLWriter}
+import org.apache.spark.ml.util.{GeneralMLWriter, MLWritable, MLWriter}
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 trait RapidsModel extends MLWritable with Params {
@@ -68,7 +68,8 @@ trait RapidsModel extends MLWritable with Params {
   override def write: MLWriter = new RapidsModelWriter(this)
 }
 
-class RapidsModelWriter(instance: RapidsModel) extends MLWriter with Logging {
+class RapidsModelWriter(instance: RapidsModel) extends
+  GeneralMLWriter(instance.asInstanceOf[Model[_]]) with Logging {
 
   override protected def saveImpl(path: String): Unit = {
     val writer = instance.cpuModel.asInstanceOf[MLWritable].write
