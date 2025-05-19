@@ -47,6 +47,10 @@ class Plugin extends MLBackendPlugin {
         Optional.of("com.nvidia.rapids.ml.RapidsLinearRegression")
       case "org.apache.spark.ml.regression.LinearRegressionModel" =>
         Optional.of("org.apache.spark.ml.rapids.RapidsLinearRegressionModel")
+      case "org.apache.spark.ml.clustering.KMeans" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsKMeans")
+      case "org.apache.spark.ml.clustering.KMeansModel" =>
+        Optional.of("org.apache.spark.ml.clustering.rapids.RapidsKMeansModel")
       case _ => Optional.empty()
     }
   }

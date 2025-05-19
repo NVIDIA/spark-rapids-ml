@@ -16,9 +16,11 @@
 
 package com.nvidia.rapids.ml
 
+
 import java.io.File
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
+import org.apache.spark.ml.clustering.rapids.RapidsKMeansModel
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.rapids.{RapidsLinearRegressionModel, RapidsLogisticRegressionModel, RapidsPCAModel, RapidsRandomForestClassificationModel, RapidsRandomForestRegressionModel, RapidsUtils}
 import org.apache.spark.sql.SparkSession
@@ -286,7 +288,7 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
         (Vectors.dense(3.0, 1.0), 0.0f))
     ).toDF("test_feature", "value")
 
-    val rfc = new RapidsLinearRegression()
+    val rlr = new RapidsLinearRegression()
       .setFeaturesCol("test_feature")
       .setLabelCol("value")
       .setMaxIter(7)
@@ -294,13 +296,13 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
 
 
     val path = new File(tempDir, "RapidsLinearRegression").getPath
-    rfc.write.overwrite().save(path)
+    rlr.write.overwrite().save(path)
 
-    val loadedRfc = RapidsLinearRegression.load(path)
-    assert(loadedRfc.getFeaturesCol == "test_feature")
-    assert(loadedRfc.getMaxIter == 7)
-    assert(loadedRfc.getLabelCol == "value")
-    assert(loadedRfc.getTol == 0.00003)
+    val loadedRlr = RapidsLinearRegression.load(path)
+    assert(loadedRlr.getFeaturesCol == "test_feature")
+    assert(loadedRlr.getMaxIter == 7)
+    assert(loadedRlr.getLabelCol == "value")
+    assert(loadedRlr.getTol == 0.00003)
 
     def check(model: RapidsLinearRegressionModel): Unit = {
       assert(model.getFeaturesCol == "test_feature")
@@ -309,7 +311,7 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
       assert(model.getTol == 0.00003)
     }
 
-    val model = loadedRfc.fit(df).asInstanceOf[RapidsLinearRegressionModel]
+    val model = loadedRlr.fit(df).asInstanceOf[RapidsLinearRegressionModel]
     check(model)
     model.write.overwrite().save(path)
     val loadedModel = RapidsLinearRegressionModel.load(path)
@@ -332,4 +334,60 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     dfCpu.collect()
   }
 
+  test("RapidsKMeans") {
+    val df = ss.createDataFrame(
+      Seq(
+        Tuple1(Vectors.dense(0.0, 0.0)),
+        Tuple1(Vectors.dense(1.0, 1.0)),
+        Tuple1(Vectors.dense(9.0, 8.0)),
+        Tuple1(Vectors.dense(8.0, 9.0)))
+    ).toDF("test_feature")
+
+    val kmeans = new RapidsKMeans()
+      .setFeaturesCol("test_feature")
+      .setK(2)
+      .setMaxIter(7)
+      .setTol(0.00003)
+
+
+    val path = new File(tempDir, "RapidsKmeans").getPath
+    kmeans.write.overwrite().save(path)
+
+    val loadedRKmeans = RapidsKMeans.load(path)
+    assert(loadedRKmeans.getFeaturesCol == "test_feature")
+    assert(loadedRKmeans.getK == 2)
+    assert(loadedRKmeans.getMaxIter == 7)
+    assert(loadedRKmeans.getTol == 0.00003)
+
+    def check(model: RapidsKMeansModel): Unit = {
+      assert(model.getFeaturesCol == "test_feature")
+      assert(model.getMaxIter == 7)
+      assert(model.getK == 2)
+      assert(model.getTol == 0.00003)
+      assert(model.clusterCenters(0) == Vectors.dense(8.5, 8.5))
+      assert(model.clusterCenters(1) == Vectors.dense(0.5, 0.5))
+    }
+
+    val model = loadedRKmeans.fit(df)
+    check(model)
+    model.write.overwrite().save(path)
+    val loadedModel = RapidsKMeansModel.load(path)
+    check(loadedModel)
+
+    assert(model.uid == loadedModel.uid)
+    assert(model.modelAttributes == loadedModel.modelAttributes)
+
+    // Transform using Spark-Rapids-ML model by default
+    val dfGpu = model.transform(df)
+
+    // Transform using CPU model by disabling "spark.rapids.ml.python.transform.enabled"
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+    val dfCpu = model.transform(df)
+
+    assert(dfGpu.schema.names.sorted sameElements dfCpu.schema.names.sorted)
+
+    // No exception while collecting data for both CPU and GPU
+    dfGpu.collect()
+    dfCpu.collect()
+  }
 }
