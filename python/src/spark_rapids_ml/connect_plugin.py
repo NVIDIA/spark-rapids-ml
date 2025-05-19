@@ -246,6 +246,24 @@ def main(infile: IO, outfile: IO) -> None:
             transformed_df = transform(LinearRegressionModel)
             write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
+        elif operator_name == "KMeans":
+            from .clustering import KMeans, KMeansModel
+
+            kmeans_model = fit(KMeans, KMeansModel)
+            # Model attributes
+            attributes = [
+                kmeans_model.cluster_centers_,
+                kmeans_model.n_cols,
+                kmeans_model.dtype,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "KMeansModel":
+            from .clustering import KMeansModel
+
+            transformed_df = transform(KMeansModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
         else:
             raise RuntimeError(f"Unsupported estimator: {operator_name}")
 
