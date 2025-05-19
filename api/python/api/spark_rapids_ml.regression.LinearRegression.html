@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>LinearRegression &#8212; spark-rapids-ml 25.02.0 documentation</title>
+    <title>LinearRegression &#8212; spark-rapids-ml 25.04.0 documentation</title>
   
   
   
@@ -124,7 +124,7 @@
   
   
   
-    <p class="title logo__title">spark-rapids-ml 25.02.0 documentation</p>
+    <p class="title logo__title">spark-rapids-ml 25.04.0 documentation</p>
   
 </a></div>
     
@@ -377,8 +377,8 @@ PySpark Pipeline and PySpark ML meta algorithms like
 </ul>
 <p>LinearRegression automatically supports most of the parameters from both
 <a class="reference external" href="https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.regression.LinearRegression.html#pyspark.ml.regression.LinearRegression" title="(in PySpark vmaster)"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearRegression</span></code></a>,
-<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v25.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v25.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v25.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
-and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v25.02)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
+<a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.LinearRegression" title="(in cuml v25.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.LinearRegression</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Ridge" title="(in cuml v25.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Ridge</span></code></a>, <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.Lasso" title="(in cuml v25.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.Lasso</span></code></a>
+and <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/api/#cuml.ElasticNet" title="(in cuml v25.04)"><code class="xref py py-class docutils literal notranslate"><span class="pre">cuml.ElasticNet</span></code></a>. And it will automatically map pyspark parameters
 to cuML parameters.</p>
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -591,20 +591,26 @@ they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setFeaturesCols" title="spark_rapids_ml.regression.LinearRegression.setFeaturesCols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFeaturesCols</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.featuresCols" title="spark_rapids_ml.regression.LinearRegression.featuresCols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">featuresCols</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setLabelCol" title="spark_rapids_ml.regression.LinearRegression.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setFitIntercept" title="spark_rapids_ml.regression.LinearRegression.setFitIntercept"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setFitIntercept</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.fitIntercept" title="spark_rapids_ml.regression.LinearRegression.fitIntercept"><code class="xref py py-attr docutils literal notranslate"><span class="pre">fitIntercept</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setLabelCol" title="spark_rapids_ml.regression.LinearRegression.setLabelCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLabelCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.labelCol" title="spark_rapids_ml.regression.LinearRegression.labelCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setLoss" title="spark_rapids_ml.regression.LinearRegression.setLoss"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLoss</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setLoss" title="spark_rapids_ml.regression.LinearRegression.setLoss"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setLoss</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.loss" title="spark_rapids_ml.regression.LinearRegression.loss"><code class="xref py py-attr docutils literal notranslate"><span class="pre">loss</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setMaxIter" title="spark_rapids_ml.regression.LinearRegression.setMaxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMaxIter</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setMaxIter" title="spark_rapids_ml.regression.LinearRegression.setMaxIter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setMaxIter</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.maxIter" title="spark_rapids_ml.regression.LinearRegression.maxIter"><code class="xref py py-attr docutils literal notranslate"><span class="pre">maxIter</span></code></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setPredictionCol" title="spark_rapids_ml.regression.LinearRegression.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setPredictionCol" title="spark_rapids_ml.regression.LinearRegression.setPredictionCol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setPredictionCol</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.predictionCol" title="spark_rapids_ml.regression.LinearRegression.predictionCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">predictionCol</span></code></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setRegParam" title="spark_rapids_ml.regression.LinearRegression.setRegParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRegParam</span></code></a>(value)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setRegParam" title="spark_rapids_ml.regression.LinearRegression.setRegParam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setRegParam</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.regParam" title="spark_rapids_ml.regression.LinearRegression.regParam"><code class="xref py py-attr docutils literal notranslate"><span class="pre">regParam</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setSolver" title="spark_rapids_ml.regression.LinearRegression.setSolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setSolver</span></code></a>(value)</p></td>
+<td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.solver" title="spark_rapids_ml.regression.LinearRegression.solver"><code class="xref py py-attr docutils literal notranslate"><span class="pre">solver</span></code></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.setStandardization" title="spark_rapids_ml.regression.LinearRegression.setStandardization"><code class="xref py py-obj docutils literal notranslate"><span class="pre">setStandardization</span></code></a>(value)</p></td>
 <td><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.standardization" title="spark_rapids_ml.regression.LinearRegression.standardization"><code class="xref py py-attr docutils literal notranslate"><span class="pre">standardization</span></code></a>.</p></td>
@@ -952,6 +958,12 @@ a default value.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegression.setFitIntercept">
+<span class="sig-name descname"><span class="pre">setFitIntercept</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression" title="spark_rapids_ml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegression.setFitIntercept" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.fitIntercept" title="spark_rapids_ml.regression.LinearRegression.fitIntercept"><code class="xref py py-attr docutils literal notranslate"><span class="pre">fitIntercept</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegression.setLabelCol">
 <span class="sig-name descname"><span class="pre">setLabelCol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">P</span></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegression.setLabelCol" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.labelCol" title="spark_rapids_ml.regression.LinearRegression.labelCol"><code class="xref py py-attr docutils literal notranslate"><span class="pre">labelCol</span></code></a>.</p>
@@ -979,6 +991,12 @@ a default value.</p>
 <dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegression.setRegParam">
 <span class="sig-name descname"><span class="pre">setRegParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression" title="spark_rapids_ml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegression.setRegParam" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.regParam" title="spark_rapids_ml.regression.LinearRegression.regParam"><code class="xref py py-attr docutils literal notranslate"><span class="pre">regParam</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spark_rapids_ml.regression.LinearRegression.setSolver">
+<span class="sig-name descname"><span class="pre">setSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression" title="spark_rapids_ml.regression.LinearRegression"><span class="pre">LinearRegression</span></a></span></span><a class="headerlink" href="#spark_rapids_ml.regression.LinearRegression.setSolver" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets the value of <a class="reference internal" href="#spark_rapids_ml.regression.LinearRegression.solver" title="spark_rapids_ml.regression.LinearRegression.solver"><code class="xref py py-attr docutils literal notranslate"><span class="pre">solver</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1168,11 +1186,13 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setElasticNetParam"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setElasticNetParam()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setFeaturesCol"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setFeaturesCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setFeaturesCols"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setFeaturesCols()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setFitIntercept"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setFitIntercept()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setLabelCol"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setLabelCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setLoss"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setLoss()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setMaxIter"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setMaxIter()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setPredictionCol"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setPredictionCol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setRegParam"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setRegParam()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setSolver"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setSolver()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setStandardization"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setStandardization()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.setTol"><code class="docutils literal notranslate"><span class="pre">LinearRegression.setTol()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#spark_rapids_ml.regression.LinearRegression.write"><code class="docutils literal notranslate"><span class="pre">LinearRegression.write()</span></code></a></li>
@@ -1222,7 +1242,7 @@ uses <code class="xref py py-func docutils literal notranslate"><span class="pre
 
   <p class="copyright">
     
-      © Copyright 2024, NVIDIA.
+      © Copyright 2025, NVIDIA.
       <br/>
     
   </p>
