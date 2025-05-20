@@ -23,7 +23,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark, is_remote
 
 
 class BenchmarkRandomForestClassifier(BenchmarkBase):
@@ -71,7 +71,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         params = self.class_params
         print(f"Passing {params} to RandomForestClassifier")
 
-        if self.args.num_gpus > 0:
+        if self.args.num_gpus > 0 and not is_remote():
             from spark_rapids_ml.classification import RandomForestClassifier
 
             rfc = RandomForestClassifier(
@@ -84,13 +84,16 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
             )
 
             rfc = SparkRandomForestClassifier(**params)  # type: ignore[assignment]
-            benchmark_string = "Spark ML RandomForestClassifier"
+            if is_remote():
+                benchmark_string = "remote Spark ML RandomForestClassifier"
+            else:
+                benchmark_string = "Spark ML RandomForestClassifier"
 
         rfc.setFeaturesCol(features_col)
         rfc.setLabelCol(label_col)
 
         model, training_time = with_benchmark(
-            f"{benchmark_string} training:", lambda: rfc.fit(train_df)
+            f"{benchmark_string} training", lambda: rfc.fit(train_df)
         )
 
         eval_df = train_df if transform_df is None else transform_df
@@ -104,7 +107,7 @@ class BenchmarkRandomForestClassifier(BenchmarkBase):
         # run a simple dummy computation to trigger transform. count is short
         # circuited due to pandas_udf used internally
         _, transform_time = with_benchmark(
-            f"{benchmark_string} transform:",
+            f"{benchmark_string} transform",
             lambda: df_with_preds.agg(sum(prediction_col)).collect(),
         )
 
@@ -172,7 +175,7 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
         params = self.class_params
         print(f"Passing {params} to RandomForestRegressor")
 
-        if self.args.num_gpus > 0:
+        if self.args.num_gpus > 0 and not is_remote():
             from spark_rapids_ml.regression import RandomForestRegressor
 
             rf = RandomForestRegressor(
@@ -185,13 +188,16 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
             )
 
             rf = SparkRandomForestRegressor(**params)  # type: ignore[assignment]
-            benchmark_string = "Spark ML RandomForestRegressor"
+            if is_remote():
+                benchmark_string = "remote Spark ML RandomForestRegressor"
+            else:
+                benchmark_string = "Spark ML RandomForestRegressor"
 
         rf.setFeaturesCol(features_col)
         rf.setLabelCol(label_col)
 
         model, training_time = with_benchmark(
-            f"{benchmark_string} training:", lambda: rf.fit(train_df)
+            f"{benchmark_string} training", lambda: rf.fit(train_df)
         )
 
         eval_df = train_df if transform_df is None else transform_df
@@ -204,7 +210,7 @@ class BenchmarkRandomForestRegressor(BenchmarkBase):
         # run a simple dummy computation to trigger transform. count is short
         # circuited due to pandas_udf used internally
         _, transform_time = with_benchmark(
-            f"{benchmark_string} transform:",
+            f"{benchmark_string} transform",
             lambda: df_with_preds.agg(sum(prediction_col)).collect(),
         )
 

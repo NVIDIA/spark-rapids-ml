@@ -26,6 +26,7 @@ class WithSparkSession(object):
         builder = SparkSession.builder
         for conf in confs:
             key, value = (conf.split("=")[0], "=".join(conf.split("=")[1:]))
+            print(key, value)
             builder = builder.config(key, value)
         self.spark = builder.getOrCreate()
         self.shutdown = shutdown
@@ -72,3 +73,10 @@ def inspect_default_params_from_func(
 
 def to_bool(literal: str) -> bool:
     return bool(strtobool(literal))
+
+def is_remote() -> bool:
+    try:
+        from pyspark.sql.utils import is_remote
+        return is_remote()
+    except:
+        return False

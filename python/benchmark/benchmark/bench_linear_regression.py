@@ -20,7 +20,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import sum
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark, is_remote
 
 
 class BenchmarkLinearRegression(BenchmarkBase):
@@ -46,23 +46,26 @@ class BenchmarkLinearRegression(BenchmarkBase):
         params = self.class_params
         print(f"Passing {params} to LinearRegression")
 
-        if self.args.num_gpus > 0:
+        if self.args.num_gpus > 0 and not is_remote():
             from spark_rapids_ml.regression import LinearRegression
 
             lr = LinearRegression(
                 num_workers=self.args.num_gpus, verbose=self.args.verbose, **params
             )
-            benchmark_string = "Spark Rapids ML LinearRegression training"
+            benchmark_string = "Spark Rapids ML LinearRegression"
         else:
             from pyspark.ml.regression import LinearRegression as SparkLinearRegression
 
             lr = SparkLinearRegression(**params)  # type: ignore[assignment]
-            benchmark_string = "Spark ML LinearRegression training"
+            if is_remote():
+                benchmark_string = "remote Spark ML LinearRegression"
+            else:
+                benchmark_string = "Spark ML LinearRegression"
 
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
 
-        model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
+        model, fit_time = with_benchmark(benchmark_string + " training", lambda: lr.fit(train_df))
 
         # placeholder try block till hasSummary is supported in gpu model
         try:
@@ -82,7 +85,7 @@ class BenchmarkLinearRegression(BenchmarkBase):
         # run a simple dummy computation to trigger transform. count is short
         # circuited due to pandas_udf used internally
         _, transform_time = with_benchmark(
-            "Spark ML LinearRegression transform",
+            benchmark_string + " transform",
             lambda: df_with_preds.agg(sum(prediction_col)).collect(),
         )
 

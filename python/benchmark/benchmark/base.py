@@ -27,7 +27,7 @@ from pyspark.ml.functions import array_to_vector
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col
 
-from .utils import WithSparkSession, to_bool, with_benchmark
+from .utils import WithSparkSession, to_bool, with_benchmark, is_remote
 
 # disable mlflow autologging if in the environment (e.g. Databricks)
 # due to observed heavy resource usage
@@ -200,7 +200,7 @@ class BenchmarkBase:
         features_col = features_col[0] if len(features_col) == 1 else features_col  # type: ignore
 
         selected_cols = []
-        if self._args.num_gpus == 0:
+        if self._args.num_gpus == 0 or is_remote():
             # convert to vector for CPU Spark, since it only supports vector feature types
             if label_col in df.schema.names:
                 selected_cols.append(col(label_col))

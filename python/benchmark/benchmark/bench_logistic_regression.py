@@ -22,7 +22,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark
+from .utils import inspect_default_params_from_func, with_benchmark, is_remote
 
 
 class BenchmarkLogisticRegression(BenchmarkBase):
@@ -61,11 +61,11 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         params = self.class_params
         print(f"Passing {params} to LogisticRegression")
 
-        if self.args.num_gpus > 0:
+        if self.args.num_gpus > 0 and not is_remote():
             from spark_rapids_ml.classification import LogisticRegression
 
             lr = LogisticRegression(num_workers=self.args.num_gpus, **params)
-            benchmark_string = "Spark Rapids ML LogisticRegression training"
+            benchmark_string = "Spark Rapids ML LogisticRegression"
 
         else:
             from pyspark.ml.classification import (
@@ -73,20 +73,25 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             )
 
             lr = SparkLogisticRegression(**params)  # type: ignore[assignment]
-            benchmark_string = "Spark ML LogisticRegression training"
+            if is_remote():
+                benchmark_string = "remote Spark ML LogisticRegression"
+            else:
+                benchmark_string = "Spark ML LogisticRegression"
 
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
 
-        model, fit_time = with_benchmark(benchmark_string, lambda: lr.fit(train_df))
+        model, fit_time = with_benchmark(benchmark_string + " training", lambda: lr.fit(train_df))
 
         # placeholder try block till hasSummary is supported in gpu model
         if model.hasSummary:
             print(f"total iterations: {model.summary.totalIterations}")
             print(f"objective history: {model.summary.objectiveHistory}")
-        else:
+        elif not is_remote():
             print(f"total iterations: {model.num_iters}")
             print("model does not have hasSummary attribute")
+        else:
+            print("remote model does not have hasSummary attribute")
 
         eval_df = train_df if transform_df is None else transform_df
 
@@ -100,7 +105,7 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         # run a simple dummy computation to trigger transform. count is short
         # circuited due to pandas_udf used internally
         _, transform_time = with_benchmark(
-            "Spark ML LogisticRegression transform",
+            benchmark_string + " transform",
             lambda: eval_df_with_preds.agg(sum(prediction_col)).collect(),
         )
 
