@@ -380,7 +380,8 @@ but can reasonably be set to any integer value in the range 2 to 100.</p>
 <dt><strong>metric</strong><span class="classifier">str (optional, default=’euclidean’)</span></dt><dd><p>Distance metric to use. Supported distances are [‘l1’, ‘cityblock’, ‘taxicab’, ‘manhattan’, ‘euclidean’,
 ‘l2’, ‘sqeuclidean’, ‘canberra’, ‘minkowski’, ‘chebyshev’, ‘linf’, ‘cosine’, ‘correlation’, ‘hellinger’,
 ‘hamming’, ‘jaccard’]. Metrics that take arguments (such as minkowski) can have arguments passed via the
-metric_kwds dictionary.</p>
+metric_kwds dictionary. Note: the ‘nn_descent’ build_algo (which relies on RAFT’s nn_descent implementation)
+currently only supports L2/Euclidean distance.</p>
 </dd>
 <dt><strong>metric_kwds</strong><span class="classifier">dict (optional, default=None)</span></dt><dd><p>Additional keyword arguments for the metric function. If the metric function takes additional arguments,
 they should be passed in this dictionary.</p>
