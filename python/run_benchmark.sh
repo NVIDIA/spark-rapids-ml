@@ -106,6 +106,7 @@ density=${density:-0.1}
 # gen_data_root=/tmp/data
 gen_data_script=${gen_data_script:-./benchmark/gen_data_distributed.py}
 gen_data_root=${gen_data_root:-/tmp/distributed}
+gen_data=${gen_data:-true}
 
 # if num_rows=1m => output_files=50, scale linearly
 output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
@@ -148,7 +149,7 @@ fi
 spark_rapids_confs=""
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=24.10.1
+SPARK_RAPIDS_VERSION=25.04.0
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
@@ -161,11 +162,10 @@ spark_rapids_confs=$(
 cat <<EOF 
 --spark_confs spark.executorEnv.PYTHONPATH=${rapids_jar} \
 --spark_confs spark.sql.files.minPartitionNum=${num_gpus} \
---spark_confs spark.rapids.memory.gpu.minAllocFraction=0.0001 \
+--spark_confs spark.rapids.memory.gpu.pool=NONE \
 --spark_confs spark.plugins=com.nvidia.spark.SQLPlugin \
 --spark_confs spark.locality.wait=0s \
 --spark_confs spark.sql.cache.serializer=com.nvidia.spark.ParquetCachedBatchSerializer \
---spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
 --spark_confs spark.rapids.sql.explain=ALL \
 --spark_confs spark.sql.execution.sortBeforeRepartition=false \
 --spark_confs spark.rapids.sql.format.parquet.reader.type=MULTITHREADED \

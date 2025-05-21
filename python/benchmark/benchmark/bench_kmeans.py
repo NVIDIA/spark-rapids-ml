@@ -27,7 +27,7 @@ from pyspark.sql.functions import array, col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark, is_remote
+from .utils import inspect_default_params_from_func, is_remote, with_benchmark
 
 
 class BenchmarkKMeans(BenchmarkBase):
@@ -149,7 +149,8 @@ class BenchmarkKMeans(BenchmarkBase):
                     return df
 
                 train_df, prepare_time = with_benchmark(
-                    benchmark_string + " prepare dataset:", lambda: gpu_cache_df(train_df)
+                    benchmark_string + " prepare dataset:",
+                    lambda: gpu_cache_df(train_df),
                 )
 
             params = self.class_params
@@ -171,7 +172,8 @@ class BenchmarkKMeans(BenchmarkBase):
             transformed_df = gpu_model.setPredictionCol(output_col).transform(train_df)
             # count doesn't trigger compute so do something not too compute intensive
             _, transform_time = with_benchmark(
-                benchmark_string + " transform:", lambda: transformed_df.agg(sum(output_col)).collect()
+                benchmark_string + " transform:",
+                lambda: transformed_df.agg(sum(output_col)).collect(),
             )
 
             total_time = round(time.time() - func_start_time, 2)
@@ -221,7 +223,8 @@ class BenchmarkKMeans(BenchmarkBase):
                     return df
 
                 vector_df, prepare_time = with_benchmark(
-                    benchmark_string + " prepare dataset", lambda: cpu_cache_df(vector_df)
+                    benchmark_string + " prepare dataset",
+                    lambda: cpu_cache_df(vector_df),
                 )
 
             params = self.class_params

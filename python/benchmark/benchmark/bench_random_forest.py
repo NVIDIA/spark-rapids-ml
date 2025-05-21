@@ -23,7 +23,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark, is_remote
+from .utils import inspect_default_params_from_func, is_remote, with_benchmark
 
 
 class BenchmarkRandomForestClassifier(BenchmarkBase):

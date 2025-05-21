@@ -22,7 +22,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, sum
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark, is_remote
+from .utils import inspect_default_params_from_func, is_remote, with_benchmark
 
 
 class BenchmarkLogisticRegression(BenchmarkBase):
@@ -81,7 +81,9 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         lr.setFeaturesCol(features_col)
         lr.setLabelCol(label_name)
 
-        model, fit_time = with_benchmark(benchmark_string + " training", lambda: lr.fit(train_df))
+        model, fit_time = with_benchmark(
+            benchmark_string + " training", lambda: lr.fit(train_df)
+        )
 
         # placeholder try block till hasSummary is supported in gpu model
         if model.hasSummary:

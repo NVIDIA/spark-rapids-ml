@@ -25,7 +25,7 @@ from pyspark.sql.functions import col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark, is_remote
+from .utils import inspect_default_params_from_func, is_remote, with_benchmark
 
 
 class BenchmarkPCA(BenchmarkBase):
@@ -147,7 +147,8 @@ class BenchmarkPCA(BenchmarkBase):
                     return df
 
                 train_df, prepare_time = with_benchmark(
-                    benchmark_string + " prepare session and dataset", lambda: gpu_cache_df(train_df)
+                    benchmark_string + " prepare session and dataset",
+                    lambda: gpu_cache_df(train_df),
                 )
 
             params = self.class_params
@@ -211,7 +212,7 @@ class BenchmarkPCA(BenchmarkBase):
                 benchmark_string = "remote Spark ML PCA"
             else:
                 benchmark_string = "Spark ML PCA"
-            
+
             assert num_gpus <= 0
             if is_array_col:
                 vector_df = train_df.select(
@@ -234,7 +235,8 @@ class BenchmarkPCA(BenchmarkBase):
                     return df
 
                 vector_df, prepare_time = with_benchmark(
-                    benchmark_string + " prepare dataset", lambda: cpu_cache_df(vector_df)
+                    benchmark_string + " prepare dataset",
+                    lambda: cpu_cache_df(vector_df),
                 )
 
             output_col = "pca_features"

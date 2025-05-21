@@ -74,9 +74,12 @@ def inspect_default_params_from_func(
 def to_bool(literal: str) -> bool:
     return bool(strtobool(literal))
 
+
 def is_remote() -> bool:
     try:
-        from pyspark.sql.utils import is_remote
+        # pyspark.sql.utils.is_remote is not available in older versions of pyspark in which case remote is not supported
+        from pyspark.sql.utils import is_remote  # type: ignore
+
         return is_remote()
     except:
         return False
