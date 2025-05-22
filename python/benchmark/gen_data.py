@@ -549,17 +549,7 @@ python gen_data_distributed.py [regression|blobs|low_rank_matrix|default|classif
             writer = dataframe.write
             if args.overwrite:
                 writer = writer.mode("overwrite")
-                writer.parquet(path)
-            else:
-                from pyspark.sql.utils import AnalysisException
-                try:
-                    writer.parquet(path)
-                except AnalysisException as e:
-                    if "already exists" in str(e):
-                        print(f"Warning: File {path} already exists, skipping.  Delete if you wish to regenerate.")
-                    else:
-                        raise e
-
+            writer.parquet(path)
 
         if args.train_fraction is not None:
             train_df, eval_df = df.randomSplit(

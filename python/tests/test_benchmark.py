@@ -28,7 +28,7 @@ import pytest
 from pyspark.sql import DataFrame
 from sklearn.datasets import make_blobs
 
-from benchmark.bench_nearest_neighbors import NearestNeighborsBenchmarkClasses
+from benchmark.utils_knn import CPUNearestNeighborsModel
 from spark_rapids_ml.core import alias
 
 from .sparksession import CleanSparkSession
@@ -95,7 +95,7 @@ def test_cpunn_withid() -> None:
         df = spark.range(len(X)).select("id", spark_func("id").alias("features"))
 
         mg_model = (
-            NearestNeighborsBenchmarkClasses.CPUNearestNeighborsModel(df)
+            CPUNearestNeighborsModel(df)
             .setInputCol("features")
             .setIdCol("id")
             .setK(n_neighbors)
@@ -129,9 +129,7 @@ def test_cpunn_noid() -> None:
         df = df.select(array(df.columns).alias("features"))
 
         mg_model = (
-            NearestNeighborsBenchmarkClasses.CPUNearestNeighborsModel(df)
-            .setInputCol("features")
-            .setK(n_neighbors)
+            CPUNearestNeighborsModel(df).setInputCol("features").setK(n_neighbors)
         )
 
         df_withid, _, knn_df = mg_model.kneighbors(df)
