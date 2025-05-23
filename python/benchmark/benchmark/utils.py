@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ class WithSparkSession(object):
         builder = SparkSession.builder
         for conf in confs:
             key, value = (conf.split("=")[0], "=".join(conf.split("=")[1:]))
+            print(key, value)
             builder = builder.config(key, value)
         self.spark = builder.getOrCreate()
         self.shutdown = shutdown
@@ -72,3 +73,13 @@ def inspect_default_params_from_func(
 
 def to_bool(literal: str) -> bool:
     return bool(strtobool(literal))
+
+
+def is_remote() -> bool:
+    try:
+        # pyspark.sql.utils.is_remote is not available in older versions of pyspark in which case remote is not supported
+        from pyspark.sql.utils import is_remote  # type: ignore
+
+        return is_remote()
+    except:
+        return False

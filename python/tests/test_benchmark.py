@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import pytest
 from pyspark.sql import DataFrame
 from sklearn.datasets import make_blobs
 
-from benchmark.bench_nearest_neighbors import CPUNearestNeighborsModel
+from benchmark.utils_knn import CPUNearestNeighborsModel
 from spark_rapids_ml.core import alias
 
 from .sparksession import CleanSparkSession

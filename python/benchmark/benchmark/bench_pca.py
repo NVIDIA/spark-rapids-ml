@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ from pyspark.sql.functions import col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark
+from .utils import inspect_default_params_from_func, is_remote, with_benchmark
 
 
 class BenchmarkPCA(BenchmarkBase):
@@ -133,8 +133,10 @@ class BenchmarkPCA(BenchmarkBase):
         if not is_single_col:
             input_cols = [c for c in train_df.schema.names]
 
-        if num_gpus > 0:
+        if num_gpus > 0 and not is_remote():
             from spark_rapids_ml.feature import PCA
+
+            benchmark_string = "Spark Rapids ML PCA"
 
             assert num_cpus <= 0
             if not no_cache:
@@ -145,7 +147,8 @@ class BenchmarkPCA(BenchmarkBase):
                     return df
 
                 train_df, prepare_time = with_benchmark(
-                    "prepare session and dataset", lambda: gpu_cache_df(train_df)
+                    benchmark_string + " prepare session and dataset",
+                    lambda: gpu_cache_df(train_df),
                 )
 
             params = self.class_params
@@ -159,7 +162,7 @@ class BenchmarkPCA(BenchmarkBase):
             )
 
             gpu_model, fit_time = with_benchmark(
-                "gpu fit", lambda: gpu_pca.fit(train_df)
+                benchmark_string + " fit", lambda: gpu_pca.fit(train_df)
             )
 
             def gpu_transform(df: DataFrame) -> DataFrame:
@@ -170,11 +173,11 @@ class BenchmarkPCA(BenchmarkBase):
                 return transformed_df
 
             transformed_df, transform_time = with_benchmark(
-                "gpu transform", lambda: gpu_transform(train_df)
+                benchmark_string + " transform", lambda: gpu_transform(train_df)
             )
 
             total_time = round(time.time() - func_start_time, 2)
-            print(f"gpu total took: {total_time} sec")
+            print(f"{benchmark_string} total took: {total_time} sec")
 
             # spark ml does not remove the mean in the transformed features, so do that here
             # needed for scoring
@@ -202,8 +205,13 @@ class BenchmarkPCA(BenchmarkBase):
 
             pc_for_scoring = gpu_model.pc.toArray()
 
-        if num_cpus > 0:
+        if num_cpus > 0 or is_remote():
             from pyspark.ml.feature import PCA as SparkPCA
+
+            if is_remote():
+                benchmark_string = "remote Spark ML PCA"
+            else:
+                benchmark_string = "Spark ML PCA"
 
             assert num_gpus <= 0
             if is_array_col:
@@ -227,7 +235,8 @@ class BenchmarkPCA(BenchmarkBase):
                     return df
 
                 vector_df, prepare_time = with_benchmark(
-                    "prepare dataset", lambda: cpu_cache_df(vector_df)
+                    benchmark_string + " prepare dataset",
+                    lambda: cpu_cache_df(vector_df),
                 )
 
             output_col = "pca_features"
@@ -238,7 +247,7 @@ class BenchmarkPCA(BenchmarkBase):
             cpu_pca = SparkPCA(**params).setInputCol(first_col).setOutputCol(output_col)
 
             cpu_model, fit_time = with_benchmark(
-                "cpu fit", lambda: cpu_pca.fit(vector_df)
+                benchmark_string + " fit", lambda: cpu_pca.fit(vector_df)
             )
 
             def cpu_transform(df: DataFrame) -> None:
@@ -249,11 +258,11 @@ class BenchmarkPCA(BenchmarkBase):
                 return transformed_df
 
             transformed_df, transform_time = with_benchmark(
-                "cpu transform", lambda: cpu_transform(vector_df)
+                benchmark_string + " transform", lambda: cpu_transform(vector_df)
             )
 
             total_time = round(time.time() - func_start_time, 2)
-            print(f"cpu total took: {total_time} sec")
+            print(f"{benchmark_string} total took: {total_time} sec")
 
             # spark ml does not remove the mean in the transformed features, so do that here
             # needed for scoring
