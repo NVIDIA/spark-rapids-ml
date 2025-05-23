@@ -185,15 +185,35 @@ def test_sparse_int64_standardization(float32_inputs: bool) -> None:
 
 
 @pytest.mark.parametrize("float32_inputs", [True, False])
-def test_sparse_large_int32(float32_inputs: bool) -> None:
+@pytest.mark.parametrize("beyond_limit", [True, False])
+def test_sparse_large_int32(float32_inputs: bool, beyond_limit: bool) -> None:
     """
     test large nnz representable by int32
     """
+
+    if beyond_limit:
+        n_rows = int(1e7)
+        n_cols = 1800
+        density = 0.1
+
+        expected_nnz = n_rows * n_cols * density
+        assert (
+            expected_nnz > LogisticRegression._nnz_limit_for_int32()
+            and expected_nnz < np.iinfo("int32").max
+        )
+    else:
+        n_rows = int(1e7)
+        n_cols = 900
+        density = 0.1
+
+        expected_nnz = n_rows * n_cols * density
+        assert expected_nnz <= LogisticRegression._nnz_limit_for_int32()
+
     test_sparse_large(
         multi_gpus=False,
         standardization=True,
         float32_inputs=float32_inputs,
-        n_rows=int(1e7),
-        n_cols=1800,
-        density=0.1,
+        n_rows=n_rows,
+        n_cols=n_cols,
+        density=density,
     )
