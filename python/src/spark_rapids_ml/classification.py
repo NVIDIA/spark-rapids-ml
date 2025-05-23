@@ -946,6 +946,15 @@ class LogisticRegression(
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
 
+    @staticmethod
+    def _nnz_limit_for_int32() -> int:
+        """
+        Use int32 index dtype for sparse logistic regression when the number of nonzeros (nnz) is less than or equal to the threshold.
+        Switch to int64 indexing when nnz exceeds the threshold.
+        This helps avoid potential overflow in CUDA kernels that compute offsets when the data size is too large.
+        """
+        return 1_000_000_000
+
     def _get_cuml_fit_func(
         self,
         dataset: DataFrame,
@@ -960,6 +969,7 @@ class LogisticRegression(
 
         logger = get_logger(self.__class__)
         float32_input = self._float32_inputs
+        nnz_limit_for_int32 = LogisticRegression._nnz_limit_for_int32()
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -982,6 +992,12 @@ class LogisticRegression(
             is_sparse = isinstance(concated, scipy.sparse.csr_matrix) or isinstance(
                 concated, cupyx.scipy.sparse.csr_matrix
             )
+
+            if is_sparse:
+                assert (
+                    concated.shape[0] < np.iinfo(np.int32).max
+                    and concated.shape[1] < np.iinfo(np.int32).max
+                ), "cuML requires the data shape per GPU to be representable within the limits of int32. To resolve this, consider using more GPUs to reduce the per-GPU data size, or work with a smaller dataset."
 
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
@@ -1064,6 +1080,9 @@ class LogisticRegression(
                 logistic_regression.penalty_normalized = False
                 logistic_regression.lbfgs_memory = 10
                 logistic_regression.linesearch_max_iter = 20
+
+                if is_sparse and concated.nnz > nnz_limit_for_int32:
+                    logistic_regression._convert_index = np.int64
 
                 logistic_regression.fit(
                     [(concated, concated_y)],
