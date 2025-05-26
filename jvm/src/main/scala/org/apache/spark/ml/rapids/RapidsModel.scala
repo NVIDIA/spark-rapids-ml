@@ -25,7 +25,6 @@ import org.apache.spark.ml.linalg.VectorUDT
 import org.apache.spark.ml.param.Params
 import org.apache.spark.ml.param.shared.HasFeaturesCol
 import org.apache.spark.ml.util.{GeneralMLWriter, MLWritable, MLWriter}
-import org.apache.spark.sql.types.ArrayType
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 trait RapidsModel extends MLWritable with Params with HasFeaturesCol {
@@ -37,11 +36,6 @@ trait RapidsModel extends MLWritable with Params with HasFeaturesCol {
   protected[ml] val modelAttributes: String
 
   /**
-   * The correspond CPU model which can be used to transform directly.
-   */
-  protected[ml] val cpuModel: Model[_]
-
-  /**
    * The model name
    */
   def name: String
@@ -50,7 +44,8 @@ trait RapidsModel extends MLWritable with Params with HasFeaturesCol {
 
   protected val logger = LogFactory.getLog("Spark-Rapids-ML Plugin")
 
-  def transformOnPython(dataset: Dataset[_]): DataFrame = {
+  def transformOnPython(dataset: Dataset[_],
+                        cpuTransformFunc: Dataset[_] => DataFrame): DataFrame = {
     val usePython = dataset.sparkSession.conf.get("spark.rapids.ml.python.transform.enabled", "true").toBoolean
     val isVector = dataset.schema(featureName).dataType.isInstanceOf[VectorUDT]
     if (!isVector && !usePython) {
@@ -72,18 +67,20 @@ trait RapidsModel extends MLWritable with Params with HasFeaturesCol {
       }
     } else {
       logger.info(s"Transform using CPU $name")
-      cpuModel.transform(dataset)
+      cpuTransformFunc(dataset)
     }
   }
 
   override def write: MLWriter = new RapidsModelWriter(this)
+
+  def cpu: Model[_]
 }
 
 class RapidsModelWriter(instance: RapidsModel) extends
   GeneralMLWriter(instance.asInstanceOf[Model[_]]) with Logging {
 
   override protected def saveImpl(path: String): Unit = {
-    val writer = instance.cpuModel.asInstanceOf[MLWritable].write
+    val writer = instance.cpu.asInstanceOf[MLWritable].write
     if (shouldOverwrite) {
       writer.overwrite()
     }

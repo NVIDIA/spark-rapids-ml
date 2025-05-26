@@ -17,10 +17,9 @@
 package org.apache.spark.ml.rapids
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.internal.Logging
-import org.apache.spark.ml.classification.RandomForestClassificationModel
+import org.apache.spark.ml.classification.{DecisionTreeClassificationModel, RandomForestClassificationModel}
 import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable, MLWriter}
+import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable}
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 /**
@@ -30,15 +29,17 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsRandomForestClassificationModel(override val uid: String,
-                                            protected[ml] override val cpuModel: RandomForestClassificationModel,
+                                            private val _trees: Array[DecisionTreeClassificationModel],
+                                            override val numFeatures: Int,
+                                            override val numClasses: Int,
                                             override val modelAttributes: String)
-  extends RandomForestClassificationModel(uid, cpuModel.trees, cpuModel.numFeatures,
-    cpuModel.numClasses) with MLWritable with RapidsModel {
+  extends RandomForestClassificationModel(uid, _trees, numFeatures, numClasses)
+    with MLWritable with RapidsModel {
 
-  private[ml] def this() = this("", null, "")
+  private[ml] def this() = this("", null, 1, 1, "")
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    transformOnPython(dataset)
+    transformOnPython(dataset, super.transform)
   }
 
   /**
@@ -47,10 +48,13 @@ class RapidsRandomForestClassificationModel(override val uid: String,
   override def name: String = "RandomForestClassificationModel"
 
   override def copy(extra: ParamMap): RapidsRandomForestClassificationModel = {
-    copyValues(
-      new RapidsRandomForestClassificationModel(uid, cpuModel, modelAttributes), extra)
+    copyValues(new RapidsRandomForestClassificationModel(uid, _trees, numFeatures,
+      numClasses, modelAttributes), extra)
   }
 
+  override def cpu: RandomForestClassificationModel = {
+    copyValues(new RandomForestClassificationModel(uid, _trees, numFeatures, numClasses))
+  }
 }
 
 object RapidsRandomForestClassificationModel extends MLReadable[RapidsRandomForestClassificationModel] {
@@ -66,7 +70,7 @@ object RapidsRandomForestClassificationModel extends MLReadable[RapidsRandomFore
       val attributesPath = new Path(path, "attributes").toString
       val row = sparkSession.read.parquet(attributesPath).first()
       val model = new RapidsRandomForestClassificationModel(row.getString(0),
-        cpuModel, row.getString(1))
+        cpuModel.trees, cpuModel.numFeatures, cpuModel.numClasses, row.getString(1))
       cpuModel.paramMap.toSeq.foreach(p => model.set(p.param.name, p.value))
       model
     }

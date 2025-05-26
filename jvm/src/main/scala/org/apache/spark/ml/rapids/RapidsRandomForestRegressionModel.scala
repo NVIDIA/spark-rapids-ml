@@ -18,7 +18,7 @@ package org.apache.spark.ml.rapids
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.ml.regression.RandomForestRegressionModel
+import org.apache.spark.ml.regression.{DecisionTreeRegressionModel, RandomForestRegressionModel}
 import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable}
 import org.apache.spark.sql.{DataFrame, Dataset}
 
@@ -29,15 +29,16 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsRandomForestRegressionModel(override val uid: String,
-                                        protected[ml] override val cpuModel: RandomForestRegressionModel,
+                                        private val _trees: Array[DecisionTreeRegressionModel],
+                                        override val numFeatures: Int,
                                         override val modelAttributes: String)
-  extends RandomForestRegressionModel(uid, cpuModel.trees, cpuModel.numFeatures)
+  extends RandomForestRegressionModel(uid, _trees, numFeatures)
     with MLWritable with RapidsModel {
 
-  private[ml] def this() = this("", null, "")
+  private[ml] def this() = this("", null, 1, "")
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    transformOnPython(dataset)
+    transformOnPython(dataset, super.transform)
   }
 
   /**
@@ -47,9 +48,12 @@ class RapidsRandomForestRegressionModel(override val uid: String,
 
   override def copy(extra: ParamMap): RapidsRandomForestRegressionModel = {
     copyValues(
-      new RapidsRandomForestRegressionModel(uid, cpuModel, modelAttributes), extra)
+      new RapidsRandomForestRegressionModel(uid, _trees, numFeatures, modelAttributes), extra)
   }
 
+  override def cpu: RandomForestRegressionModel = {
+    copyValues(new RandomForestRegressionModel(uid, _trees, numFeatures))
+  }
 }
 
 object RapidsRandomForestRegressionModel extends MLReadable[RapidsRandomForestRegressionModel] {
@@ -64,8 +68,8 @@ object RapidsRandomForestRegressionModel extends MLReadable[RapidsRandomForestRe
       val cpuModel = RandomForestRegressionModel.load(path)
       val attributesPath = new Path(path, "attributes").toString
       val row = sparkSession.read.parquet(attributesPath).first()
-      val model = new RapidsRandomForestRegressionModel(row.getString(0),
-        cpuModel, row.getString(1))
+      val model = new RapidsRandomForestRegressionModel(row.getString(0), cpuModel.trees,
+        cpuModel.numFeatures, row.getString(1))
       cpuModel.paramMap.toSeq.foreach(p => model.set(p.param.name, p.value))
       model
     }
