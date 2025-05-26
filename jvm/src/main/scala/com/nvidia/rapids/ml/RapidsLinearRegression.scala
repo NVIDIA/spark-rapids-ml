@@ -20,6 +20,7 @@ import org.apache.spark.ml.rapids.RapidsLinearRegressionModel
 import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
 /**
  * RapidsLinearRegression is a JVM wrapper of LinearRegression in spark-rapids-ml python package.
@@ -39,6 +40,9 @@ class RapidsLinearRegression(override val uid: String) extends LinearRegression
     val cpuModel = copyValues(trainedModel.model.asInstanceOf[LinearRegressionModel])
     copyValues(new RapidsLinearRegressionModel(uid, cpuModel, trainedModel.modelAttributes))
   }
+
+  // Override this function to allow feature to be array
+  override def transformSchema(schema: StructType): StructType = schema
 
   /**
    * The estimator name

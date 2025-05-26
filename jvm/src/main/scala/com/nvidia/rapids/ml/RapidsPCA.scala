@@ -20,6 +20,7 @@ import org.apache.spark.ml.feature.{PCA, PCAModel}
 import org.apache.spark.ml.rapids.RapidsPCAModel
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
 /**
  * RapidsPCA is a JVM wrapper of PCA in spark-rapids-ml python package.
@@ -39,6 +40,9 @@ class RapidsPCA(override val uid: String) extends PCA with DefaultParamsWritable
     val cpuModel = copyValues(trainedModel.model.asInstanceOf[PCAModel])
     copyValues(new RapidsPCAModel(uid, cpuModel, trainedModel.modelAttributes))
   }
+
+  // Override this function to allow feature to be array
+  override def transformSchema(schema: StructType): StructType = schema
 
   /**
    * The estimator name
