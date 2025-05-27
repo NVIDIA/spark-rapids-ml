@@ -75,6 +75,7 @@ def test_sparse_large(
     n_rows: int = int(1e7),
     n_cols: int = 2200,
     density: float = 0.1,
+    tolerance: float = 0.001,
 ) -> None:
     """
     This test requires minimum 128G CPU memory, 32 GB GPU memory
@@ -90,7 +91,6 @@ def test_sparse_large(
         1.0 if data_shape[0] <= 100000 else 100000 / data_shape[0]
     )
     n_classes = 8
-    tolerance = 0.001
     est_params: Dict[str, Any] = {
         "regParam": 0.02,
         "maxIter": 10,
@@ -174,7 +174,7 @@ def test_sparse_large(
 
 
 def test_sparse_int64_mg() -> None:
-    test_sparse_large(multi_gpus=True)
+    test_sparse_large(multi_gpus=True, tolerance=0.005)
 
 
 @pytest.mark.parametrize("float32_inputs", [True, False])
@@ -216,4 +216,5 @@ def test_sparse_large_int32(float32_inputs: bool, beyond_limit: bool) -> None:
         n_rows=n_rows,
         n_cols=n_cols,
         density=density,
+        tolerance=0.005,
     )

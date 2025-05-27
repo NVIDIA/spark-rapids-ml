@@ -208,16 +208,27 @@ class PartitionDescriptor:
     """
 
     def __init__(
-        self, m: int, n: int, rank: int, parts_rank_size: List[Tuple[int, int]]
+        self,
+        m: int,
+        n: int,
+        rank: int,
+        parts_rank_size: List[Tuple[int, int]],
+        partition_max_nnz: Optional[int] = None,
     ) -> None:
         super().__init__()
         self.m = m
         self.n = n
         self.rank = rank
         self.parts_rank_size = parts_rank_size
+        self.partition_max_nnz = partition_max_nnz
 
     @classmethod
-    def build(cls, partition_rows: List[int], total_cols: int) -> "PartitionDescriptor":
+    def build(
+        cls,
+        partition_rows: List[int],
+        total_cols: int,
+        partition_nnz: Optional[int] = None,
+    ) -> "PartitionDescriptor":
         context = BarrierTaskContext.get()
         if context is None:
             # safety check.
@@ -230,11 +241,18 @@ class PartitionDescriptor:
         import json
 
         rank_size = [(rank, size) for size in partition_rows]
-        messages = context.allGather(message=json.dumps(rank_size))
-        parts_rank_size = [item for pair in messages for item in json.loads(pair)]
+        if partition_nnz is None:
+            messages = context.allGather(message=json.dumps(rank_size))
+            parts_rank_size = [item for pair in messages for item in json.loads(pair)]
+            partition_max_nnz = None
+        else:
+            messages = context.allGather(message=json.dumps([rank_size, partition_nnz]))
+            parts_rank_size = [item for msg in messages for item in json.loads(msg)[0]]
+            partition_max_nnz = max([json.loads(msg)[1] for msg in messages])
+
         total_rows = sum(pair[1] for pair in parts_rank_size)
 
-        return cls(total_rows, total_cols, rank, parts_rank_size)
+        return cls(total_rows, total_cols, rank, parts_rank_size, partition_max_nnz)
 
 
 def _concat_and_free(

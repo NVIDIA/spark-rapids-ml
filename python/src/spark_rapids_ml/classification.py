@@ -1002,6 +1002,7 @@ class LogisticRegression(
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
                 params[param_alias.num_cols],
+                concated.nnz if is_sparse else None,
             )
 
             # Use cupy to standardize dataset as a workaround to gain better numeric stability
@@ -1081,7 +1082,7 @@ class LogisticRegression(
                 logistic_regression.lbfgs_memory = 10
                 logistic_regression.linesearch_max_iter = 20
 
-                if is_sparse and concated.nnz > nnz_limit_for_int32:
+                if is_sparse and pdesc.partition_max_nnz > nnz_limit_for_int32:  # type: ignore
                     logistic_regression._convert_index = np.int64
 
                 logistic_regression.fit(
