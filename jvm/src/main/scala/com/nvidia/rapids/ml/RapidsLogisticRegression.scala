@@ -20,6 +20,7 @@ import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, I
 import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.rapids.RapidsLogisticRegressionModel
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
 /**
  * RapidsLogisticRegression is a JVM wrapper of LogisticRegression in spark-rapids-ml python package.
@@ -40,6 +41,9 @@ class RapidsLogisticRegression(override val uid: String) extends LogisticRegress
     val isMultinomial = cpuModel.numClasses != 2
     copyValues(new RapidsLogisticRegressionModel(uid, cpuModel, trainedModel.modelAttributes, isMultinomial))
   }
+
+  // Override this function to allow feature to be array
+  override def transformSchema(schema: StructType): StructType = schema
 
   /**
    * The estimator name

@@ -20,6 +20,7 @@ import org.apache.spark.ml.clustering.rapids.RapidsKMeansModel
 import org.apache.spark.ml.clustering.{KMeans, KMeansModel}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
 /**
  * RapidsKMeans is a JVM wrapper of KMeans in spark-rapids-ml python package.
@@ -39,6 +40,9 @@ class RapidsKMeans(override val uid: String) extends KMeans with DefaultParamsWr
     val cpuModel = copyValues(trainedModel.model.asInstanceOf[KMeansModel])
     copyValues(new RapidsKMeansModel(uid, cpuModel, trainedModel.modelAttributes))
   }
+
+  // Override this function to allow feature to be array
+  override def transformSchema(schema: StructType): StructType = schema
 
   /**
    * The estimator name

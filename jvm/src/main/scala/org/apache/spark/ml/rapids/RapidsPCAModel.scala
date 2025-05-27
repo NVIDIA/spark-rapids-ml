@@ -50,6 +50,8 @@ class RapidsPCAModel(override val uid: String,
     newModel
   }
 
+  override def featureName: String = getInputCol
+
 }
 
 
