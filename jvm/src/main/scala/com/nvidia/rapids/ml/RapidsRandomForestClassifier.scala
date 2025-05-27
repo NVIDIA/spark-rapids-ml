@@ -20,6 +20,7 @@ import org.apache.spark.ml.classification.{RandomForestClassificationModel, Rand
 import org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
 /**
  * RapidsRandomForestClassifier is a JVM wrapper of RandomForestClassifier in spark-rapids-ml python package.
@@ -39,6 +40,9 @@ class RapidsRandomForestClassifier(override val uid: String) extends RandomFores
     val cpuModel = copyValues(trainedModel.model.asInstanceOf[RandomForestClassificationModel])
     copyValues(new RapidsRandomForestClassificationModel(uid, cpuModel, trainedModel.modelAttributes))
   }
+
+  // Override this function to allow feature to be array
+  override def transformSchema(schema: StructType): StructType = schema
 
   /**
    * The estimator name

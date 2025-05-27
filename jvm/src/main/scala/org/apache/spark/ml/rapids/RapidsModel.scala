@@ -21,11 +21,14 @@ import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.Model
+import org.apache.spark.ml.linalg.VectorUDT
 import org.apache.spark.ml.param.Params
+import org.apache.spark.ml.param.shared.HasFeaturesCol
 import org.apache.spark.ml.util.{GeneralMLWriter, MLWritable, MLWriter}
+import org.apache.spark.sql.types.ArrayType
 import org.apache.spark.sql.{DataFrame, Dataset}
 
-trait RapidsModel extends MLWritable with Params {
+trait RapidsModel extends MLWritable with Params with HasFeaturesCol {
 
   /**
    * The attributes of the corresponding spark-rapids-ml model, it has been
@@ -43,10 +46,18 @@ trait RapidsModel extends MLWritable with Params {
    */
   def name: String
 
+  def featureName: String = getFeaturesCol
+
   protected val logger = LogFactory.getLog("Spark-Rapids-ML Plugin")
 
   def transformOnPython(dataset: Dataset[_]): DataFrame = {
     val usePython = dataset.sparkSession.conf.get("spark.rapids.ml.python.transform.enabled", "true").toBoolean
+    val isVector = dataset.schema(featureName).dataType.isInstanceOf[VectorUDT]
+    if (!isVector && !usePython) {
+      throw new IllegalArgumentException("Please enable spark.rapids.ml.python.transform.enabled to " +
+        "transform dataset in python for non-vector input.")
+    }
+
     if (usePython) {
       logger.info("Transform in python")
       // Get the user-defined parameters and pass them to python process as a dictionary

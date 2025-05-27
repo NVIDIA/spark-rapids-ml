@@ -24,6 +24,7 @@ import org.apache.spark.ml.clustering.rapids.RapidsKMeansModel
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.rapids.{RapidsLinearRegressionModel, RapidsLogisticRegressionModel, RapidsPCAModel, RapidsRandomForestClassificationModel, RapidsRandomForestRegressionModel, RapidsUtils}
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.ArrayType
 
 class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
   @transient var ss: SparkSession = _
@@ -364,8 +365,8 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
       assert(model.getMaxIter == 7)
       assert(model.getK == 2)
       assert(model.getTol == 0.00003)
-      assert(model.clusterCenters(0) == Vectors.dense(8.5, 8.5))
-      assert(model.clusterCenters(1) == Vectors.dense(0.5, 0.5))
+      assert(Seq(Vectors.dense(8.5, 8.5), Vectors.dense(0.5, 0.5)).contains(model.clusterCenters(0)))
+      assert(Seq(Vectors.dense(8.5, 8.5), Vectors.dense(0.5, 0.5)).contains(model.clusterCenters(1)))
     }
 
     val model = loadedRKmeans.fit(df)
@@ -389,5 +390,36 @@ class SparkRapidsMLSuite extends AnyFunSuite with BeforeAndAfterEach {
     // No exception while collecting data for both CPU and GPU
     dfGpu.collect()
     dfCpu.collect()
+  }
+
+  test("array input") {
+    val df = ss.createDataFrame(Seq(
+      (1.0f, Seq(1.0, 3.0)),
+      (0.0f, Seq(2.0, 1.0)),
+      (0.0f, Seq(3.0, 1.0)),
+    )).toDF("value", "test_feature")
+
+    assert(df.schema("test_feature").dataType.isInstanceOf[ArrayType])
+
+    val rfc = new RapidsRandomForestRegressor()
+      .setFeaturesCol("test_feature")
+      .setLabelCol("value")
+      .setMaxDepth(4)
+      .setMaxBins(7)
+
+    val model = rfc.fit(df)
+    val dfGpu = model.transform(df)
+    // transform on Array input without any issue.
+    dfGpu.collect()
+
+    df.sparkSession.conf.set("spark.rapids.ml.python.transform.enabled", "false")
+
+    val thrown = intercept[IllegalArgumentException] {
+      model.transform(df).collect()
+    }
+
+    assert(thrown.getMessage.contains("Please enable spark.rapids.ml.python.transform.enabled " +
+      "to transform dataset in python for non-vector input"))
+
   }
 }

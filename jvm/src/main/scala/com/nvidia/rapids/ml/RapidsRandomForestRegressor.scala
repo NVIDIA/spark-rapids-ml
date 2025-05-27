@@ -20,6 +20,7 @@ import org.apache.spark.ml.rapids.RapidsRandomForestRegressionModel
 import org.apache.spark.ml.regression.{RandomForestRegressionModel, RandomForestRegressor}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
 /**
  * RapidsRandomForestRegressor is a JVM wrapper of RandomForestRegressor in spark-rapids-ml python package.
@@ -39,6 +40,9 @@ class RapidsRandomForestRegressor(override val uid: String) extends RandomForest
     val cpuModel = copyValues(trainedModel.model.asInstanceOf[RandomForestRegressionModel])
     copyValues(new RapidsRandomForestRegressionModel(uid, cpuModel, trainedModel.modelAttributes))
   }
+
+  // Override this function to allow feature to be array
+  override def transformSchema(schema: StructType): StructType = schema
 
   /**
    * The estimator name
