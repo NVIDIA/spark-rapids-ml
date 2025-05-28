@@ -16,8 +16,8 @@
 
 package com.nvidia.rapids.ml
 
-import org.apache.spark.ml.rapids.RapidsLinearRegressionModel
-import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
+import org.apache.spark.ml.rapids.{ModelHelper, RapidsLinearRegressionModel}
+import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -37,8 +37,9 @@ class RapidsLinearRegression(override val uid: String) extends LinearRegression
 
   override def train(dataset: Dataset[_]): RapidsLinearRegressionModel = {
     val trainedModel = trainOnPython(dataset)
-    val cpuModel = copyValues(trainedModel.model.asInstanceOf[LinearRegressionModel])
-    copyValues(new RapidsLinearRegressionModel(uid, cpuModel, trainedModel.modelAttributes))
+    val (coef, intercept, scale) = ModelHelper.createLinearRegressionModel(trainedModel.modelAttributes)
+    copyValues(new RapidsLinearRegressionModel(uid, coef, intercept, scale,
+      trainedModel.modelAttributes))
   }
 
   // Override this function to allow feature to be array

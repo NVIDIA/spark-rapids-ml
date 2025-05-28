@@ -19,15 +19,16 @@ package org.apache.spark.ml.rapids
 import java.security.SecureRandom
 import java.util.Base64
 import java.io.File
-
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 import scala.sys.process.Process
-
 import py4j.GatewayServer.GatewayServerBuilder
 import org.apache.spark.api.python.SimplePythonFunction
+import org.apache.spark.ml.linalg
+import org.apache.spark.ml.linalg.{DenseVector, Vectors}
 import org.apache.spark.ml.param.{ParamPair, Params}
 import org.apache.spark.util.Utils
+import org.json4s.{DefaultFormats, JArray}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
 

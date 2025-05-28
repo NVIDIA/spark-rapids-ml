@@ -21,6 +21,7 @@ import org.apache.spark.ml.clustering.KMeansModel
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.rapids.{RapidsModel, RapidsModelWriter}
 import org.apache.spark.ml.util.{GeneralMLWriter, MLReadable, MLReader}
+import org.apache.spark.mllib.clustering.{KMeansModel => MLlibKMeansModel}
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 /**
@@ -30,14 +31,14 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsKMeansModel(override val uid: String,
-                        protected[ml] override val cpuModel: KMeansModel,
+                        override private[clustering] val parentModel: MLlibKMeansModel,
                         override val modelAttributes: String)
-  extends KMeansModel(uid, cpuModel.parentModel) with RapidsModel {
+  extends KMeansModel(uid, parentModel) with RapidsModel {
 
   private[ml] def this() = this("", null, null)
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    transformOnPython(dataset)
+    transformOnPython(dataset, super.transform)
   }
 
   /**
@@ -47,14 +48,16 @@ class RapidsKMeansModel(override val uid: String,
 
   override def copy(extra: ParamMap): RapidsKMeansModel = {
     val newModel = copyValues(
-      new RapidsKMeansModel(uid, cpuModel, modelAttributes), extra)
+      new RapidsKMeansModel(uid, parentModel, modelAttributes), extra)
     newModel
   }
 
   override def write: GeneralMLWriter = new RapidsModelWriter(this)
 
+  override def cpu: KMeansModel = {
+    copyValues(new KMeansModel(uid, parentModel))
+  }
 }
-
 
 object RapidsKMeansModel extends MLReadable[RapidsKMeansModel] {
 
@@ -69,7 +72,7 @@ object RapidsKMeansModel extends MLReadable[RapidsKMeansModel] {
       val attributesPath = new Path(path, "attributes").toString
       val row = sparkSession.read.parquet(attributesPath).first()
       val model = new RapidsKMeansModel(row.getString(0),
-        cpuModel, row.getString(1))
+        cpuModel.parentModel, row.getString(1))
       cpuModel.paramMap.toSeq.foreach(p => model.set(p.param.name, p.value))
       model
     }

@@ -17,7 +17,8 @@
 package com.nvidia.rapids.ml
 
 import org.apache.spark.ml.clustering.rapids.RapidsKMeansModel
-import org.apache.spark.ml.clustering.{KMeans, KMeansModel}
+import org.apache.spark.ml.clustering.KMeans
+import org.apache.spark.ml.rapids.ModelHelper
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -37,8 +38,8 @@ class RapidsKMeans(override val uid: String) extends KMeans with DefaultParamsWr
 
   override def fit(dataset: Dataset[_]): RapidsKMeansModel = {
     val trainedModel = trainOnPython(dataset)
-    val cpuModel = copyValues(trainedModel.model.asInstanceOf[KMeansModel])
-    copyValues(new RapidsKMeansModel(uid, cpuModel, trainedModel.modelAttributes))
+    val parentModel = ModelHelper.createKMeansModel(trainedModel.modelAttributes)
+    copyValues(new RapidsKMeansModel(uid, parentModel, trainedModel.modelAttributes))
   }
 
   // Override this function to allow feature to be array

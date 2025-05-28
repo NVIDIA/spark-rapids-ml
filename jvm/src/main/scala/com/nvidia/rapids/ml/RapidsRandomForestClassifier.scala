@@ -16,8 +16,8 @@
 
 package com.nvidia.rapids.ml
 
-import org.apache.spark.ml.classification.{RandomForestClassificationModel, RandomForestClassifier}
-import org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel
+import org.apache.spark.ml.classification.RandomForestClassifier
+import org.apache.spark.ml.rapids.{RapidsRandomForestClassificationModel, ModelHelper}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -37,8 +37,10 @@ class RapidsRandomForestClassifier(override val uid: String) extends RandomFores
 
   override def train(dataset: Dataset[_]): RapidsRandomForestClassificationModel = {
     val trainedModel = trainOnPython(dataset)
-    val cpuModel = copyValues(trainedModel.model.asInstanceOf[RandomForestClassificationModel])
-    copyValues(new RapidsRandomForestClassificationModel(uid, cpuModel, trainedModel.modelAttributes))
+    val (trees, numFeatures, numClasses) = ModelHelper.createRandomForestClassificationModel(
+      trainedModel.modelAttributes, getImpurity, uid)
+    copyValues(new RapidsRandomForestClassificationModel(uid, trees, numFeatures, numClasses,
+      trainedModel.modelAttributes))
   }
 
   // Override this function to allow feature to be array

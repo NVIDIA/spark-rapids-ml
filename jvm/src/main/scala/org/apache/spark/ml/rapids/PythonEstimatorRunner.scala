@@ -28,7 +28,7 @@ import org.apache.spark.sql.execution.python.PythonPlannerRunner
 
 case class Fit(name: String, params: String)
 
-case class TrainedModel(model: Object, modelAttributes: String)
+case class TrainedModel(modelAttributes: String)
 
 /**
  * PythonEstimatorRunner is a bridge to launch and manage Python process. It sends the
@@ -56,12 +56,8 @@ class PythonEstimatorRunner(fit: Fit,
   }
 
   override protected def receiveFromPython(dataIn: DataInputStream): TrainedModel = {
-    // Read the model target id in py4j server
-    val modelTargetId = PythonWorkerUtils.readUTF(dataIn)
-    val m = PythonRunnerUtils.getObjectAndDeref(modelTargetId)
-
     val modelAttributes = PythonWorkerUtils.readUTF(dataIn)
-    TrainedModel(m, modelAttributes)
+    TrainedModel(modelAttributes)
   }
 
   override def close(): Unit = {
