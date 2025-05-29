@@ -38,6 +38,14 @@
 ARG CUDA_VERSION=11.5.2
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
+# ubuntu22
+RUN sed -i -e 's|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
+           -e 's|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g' \
+           /etc/apt/sources.list
+# ubuntu24+
+RUN find /etc/apt/sources.list.d/ -name '*.sources' -exec sed -i \
+           -e "s|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g" \
+           -e "s|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g" {} +
 # Install packages to build spark-rapids-ml jars
 RUN apt update -y && \
     DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk wget git zip
