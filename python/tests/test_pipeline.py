@@ -466,19 +466,24 @@ def test_handleinvalid(handleInvalid: str, caplog: pytest.LogCaptureFixture) -> 
     assert info_msg not in caplog.text
 
 
-def test_compact_linear_regression_with_unsupported_gpu_param():
-    from .conftest import _spark
-    (df, input_cols, label_col) = create_toy_dataframe(_spark, all_scalar_columns=True)
+def test_compact_linear_regression_with_unsupported_gpu_param() -> None:
+    from .sparksession import CleanSparkSession
 
-    assembler = VectorAssembler(outputCol="features",
-                                inputCols=["f1", "f2", "f3"])
-    algo_params = {
-        "labelCol": "regression_label",
-        "featuresCol": input_cols,
-        "solver": "l-bfgs"
-    }
-    est = LinearRegression(**algo_params)
-    pipeline = Pipeline(stages=[assembler, est])
-    model = pipeline.fit(df)
-    assert isinstance(model.stages[1], SparkLinearRegression)
+    conf = {"spark.rapids.ml.cpu.fallback.enabled": True}
 
+    with CleanSparkSession(conf) as spark:
+        (df, input_cols, label_col) = create_toy_dataframe(
+            spark, all_scalar_columns=True
+        )
+        features_col = "features"
+
+        assembler = VectorAssembler(outputCol=features_col, inputCols=input_cols)
+        algo_params: Dict[str, Any] = {
+            "labelCol": label_col,
+            "featuresCol": features_col,
+            "solver": "l-bfgs",
+        }
+        est = LinearRegression(**algo_params)
+        pipeline = Pipeline(stages=[assembler, est])
+        model = pipeline.fit(df)
+        assert isinstance(model.stages[1], SparkLinearRegressionModel)
