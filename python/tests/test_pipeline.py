@@ -464,3 +464,21 @@ def test_handleinvalid(handleInvalid: str, caplog: pytest.LogCaptureFixture) -> 
 
     info_msg = "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
     assert info_msg not in caplog.text
+
+
+def test_compact_linear_regression_with_unsupported_gpu_param():
+    from .conftest import _spark
+    (df, input_cols, label_col) = create_toy_dataframe(_spark, all_scalar_columns=True)
+
+    assembler = VectorAssembler(outputCol="features",
+                                inputCols=["f1", "f2", "f3"])
+    algo_params = {
+        "labelCol": "regression_label",
+        "featuresCol": input_cols,
+        "solver": "l-bfgs"
+    }
+    est = LinearRegression(**algo_params)
+    pipeline = Pipeline(stages=[assembler, est])
+    model = pipeline.fit(df)
+    assert isinstance(model.stages[1], SparkLinearRegression)
+
