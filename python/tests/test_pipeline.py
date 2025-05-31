@@ -439,3 +439,28 @@ def test_non_spark_algo(
     all_scalar_colum: bool = True,
 ) -> None:
     test_compat_est(PipelineEst, Est, Model, algo_params, caplog, all_scalar_colum)
+
+
+@pytest.mark.parametrize("handleInvalid", ["skip", "keep"])
+def test_handleinvalid(handleInvalid: str, caplog: pytest.LogCaptureFixture) -> None:
+    from .conftest import _spark
+
+    (df, input_cols, label_col) = create_toy_dataframe(_spark, all_scalar_columns=True)
+    assembler = VectorAssembler(
+        inputCols=input_cols, outputCol="features", handleInvalid=handleInvalid
+    )
+
+    algo_params: Dict[str, Any] = {
+        "featuresCol": "features",
+        "labelCol": label_col,
+        "maxIter": 10,
+        "regParam": 0.001,
+    }
+
+    est = GPULogisticRegression(**algo_params)
+
+    pipeline = Pipeline(stages=[assembler, est])
+    pipeline_model = pipeline.fit(df)
+
+    info_msg = "Spark Rapids ML pipeline bypasses VectorAssembler for GPU-based estimators to achieve optimal performance."
+    assert info_msg not in caplog.text
