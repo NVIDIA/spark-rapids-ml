@@ -549,10 +549,10 @@ class _RandomForestModel(
 
     if not TYPE_CHECKING:
 
-        @property  # type: ignore
-        def getNumTrees(self) -> int:  # type: ignore
-            """Number of trees in ensemble."""  # type: ignore
-            return self.getOrDefault("numTrees")  # type: ignore
+        @property
+        def getNumTrees(self) -> int:
+            """Number of trees in ensemble."""
+            return self.getOrDefault("numTrees")
 
     @property
     def toDebugString(self) -> str:
