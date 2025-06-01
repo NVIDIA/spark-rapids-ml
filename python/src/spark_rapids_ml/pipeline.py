@@ -88,6 +88,7 @@ class Pipeline(SparkPipeline):
         if (
             len(stages) != 2
             or not isinstance(stages[0], VectorAssembler)
+            or stages[0].getHandleInvalid() != "error"
             or not self._isGPUEstimator(stages[1])
             or not self._colsValid(dataset, stages[0].getInputCols())
         ):
