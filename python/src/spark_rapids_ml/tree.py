@@ -547,10 +547,12 @@ class _RandomForestModel(
         """Estimate the importance of each feature."""
         return self.cpu().featureImportances
 
-    @property
-    def getNumTrees(self) -> int:
-        """Number of trees in ensemble."""
-        return self.getOrDefault("numTrees")
+    if not TYPE_CHECKING:
+
+        @property
+        def getNumTrees(self) -> int:
+            """Number of trees in ensemble."""
+            return self.getOrDefault("numTrees")
 
     @property
     def toDebugString(self) -> str:
