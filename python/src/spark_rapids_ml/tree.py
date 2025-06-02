@@ -547,6 +547,8 @@ class _RandomForestModel(
         """Estimate the importance of each feature."""
         return self.cpu().featureImportances
 
+    # This is a temporary fix for mypy error: incompatible with definition in base class '_RandomForestParams'
+    # TODO: refactor the code to eliminate the need for this type ignore
     if not TYPE_CHECKING:
 
         @property

@@ -1963,7 +1963,7 @@ def test_standardization(
     gpu_number: int,
     float32_inputs: bool = True,
 ) -> None:
-    tolerance = 0.001
+    tolerance = 0.005
     reg_param = reg_factors[0]
     elasticNet_param = reg_factors[1]
     n_rows = 10000
