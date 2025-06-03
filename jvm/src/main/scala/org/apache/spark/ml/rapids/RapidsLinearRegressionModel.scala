@@ -17,6 +17,7 @@
 package org.apache.spark.ml.rapids
 
 import org.apache.hadoop.fs.Path
+import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.regression.LinearRegressionModel
 import org.apache.spark.ml.util.{GeneralMLWriter, MLReadable, MLReader}
@@ -29,15 +30,16 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsLinearRegressionModel(override val uid: String,
-                                  protected[ml] override val cpuModel: LinearRegressionModel,
+                                  override val coefficients: Vector,
+                                  override val intercept: Double,
+                                  override val scale: Double,
                                   override val modelAttributes: String)
-  extends LinearRegressionModel(uid, cpuModel.coefficients, cpuModel.intercept, cpuModel.scale)
-    with RapidsModel {
+  extends LinearRegressionModel(uid, coefficients, intercept, scale) with RapidsModel {
 
-  private[ml] def this() = this("", null, "")
+  private[ml] def this() = this("", null, 1.0, 1.0, "")
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    transformOnPython(dataset)
+    transformOnPython(dataset, super.transform)
   }
 
   /**
@@ -47,7 +49,11 @@ class RapidsLinearRegressionModel(override val uid: String,
 
   override def copy(extra: ParamMap): RapidsLinearRegressionModel = {
     copyValues(
-      new RapidsLinearRegressionModel(uid, cpuModel, modelAttributes), extra)
+      new RapidsLinearRegressionModel(uid, coefficients, intercept, scale, modelAttributes), extra)
+  }
+
+  override def cpu: LinearRegressionModel = {
+    copyValues(new LinearRegressionModel(uid, coefficients, intercept, scale))
   }
 
   override def write: GeneralMLWriter = new RapidsModelWriter(this)
@@ -65,8 +71,8 @@ object RapidsLinearRegressionModel extends MLReadable[RapidsLinearRegressionMode
       val cpuModel = LinearRegressionModel.load(path)
       val attributesPath = new Path(path, "attributes").toString
       val row = sparkSession.read.parquet(attributesPath).first()
-      val model = new RapidsLinearRegressionModel(row.getString(0),
-        cpuModel, row.getString(1))
+      val model = new RapidsLinearRegressionModel(row.getString(0), cpuModel.coefficients,
+        cpuModel.intercept, cpuModel.scale, row.getString(1))
       cpuModel.paramMap.toSeq.foreach(p => model.set(p.param.name, p.value))
       model
     }

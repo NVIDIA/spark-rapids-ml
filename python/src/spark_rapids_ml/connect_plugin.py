@@ -26,7 +26,6 @@ import py4j
 from py4j.java_gateway import GatewayParameters, java_import
 from pyspark import SparkConf, SparkContext
 from pyspark.accumulators import _accumulatorRegistry
-from pyspark.ml import Model
 from pyspark.serializers import (
     SpecialLengths,
     UTF8Deserializer,
@@ -117,21 +116,6 @@ def main(infile: IO, outfile: IO) -> None:
         print(f"Running {operator_name} with parameters: {params}")
         params = json.loads(params)
 
-        def fit(ESTIMATOR_TYPE: type, MODEL_TYPE: type):  # type: ignore[no-untyped-def]
-            """Fit a model"""
-            estimator = ESTIMATOR_TYPE(**params)
-            model = estimator.fit(df)
-            # if cpu fallback was enabled a pyspark.ml model is returned in which case no need to call cpu()
-            model_cpu = (
-                model.cpu()  # type: ignore[attr-defined]
-                if isinstance(model, MODEL_TYPE)
-                else model  # type: ignore[syntax]
-            )
-            assert model_cpu._java_obj is not None
-            model_target_id = model_cpu._java_obj._get_object_id().encode("utf-8")
-            write_with_length(model_target_id, outfile)
-            return model
-
         def transform(MODEL_TYPE: type) -> DataFrame:
             attributes = utf8_deserializer.loads(infile)
             attributes = json.loads(attributes)  # type: ignore[arg-type]
@@ -141,9 +125,9 @@ def main(infile: IO, outfile: IO) -> None:
             return model.transform(df)
 
         if operator_name == "LogisticRegression":
-            from .classification import LogisticRegression, LogisticRegressionModel
+            from .classification import LogisticRegression
 
-            lr_model = fit(LogisticRegression, LogisticRegressionModel)
+            lr_model = LogisticRegression(**params).fit(df)
             attributes = [
                 lr_model.coef_,
                 lr_model.intercept_,
@@ -162,12 +146,9 @@ def main(infile: IO, outfile: IO) -> None:
             write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
         elif operator_name == "RandomForestClassifier":
-            from .classification import (
-                RandomForestClassificationModel,
-                RandomForestClassifier,
-            )
+            from .classification import RandomForestClassifier
 
-            rfc_model = fit(RandomForestClassifier, RandomForestClassificationModel)
+            rfc_model = RandomForestClassifier(**params).fit(df)
             # Model attributes
             attributes = [
                 rfc_model.n_cols,
@@ -185,12 +166,9 @@ def main(infile: IO, outfile: IO) -> None:
             write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
         elif operator_name == "RandomForestRegressor":
-            from .regression import (
-                RandomForestRegressionModel,
-                RandomForestRegressor,
-            )
+            from .regression import RandomForestRegressor
 
-            rfc_model = fit(RandomForestRegressor, RandomForestRegressionModel)
+            rfc_model = RandomForestRegressor(**params).fit(df)
             # Model attributes
             attributes = [
                 rfc_model.n_cols,
@@ -207,9 +185,9 @@ def main(infile: IO, outfile: IO) -> None:
             write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
 
         elif operator_name == "PCA":
-            from .feature import PCA, PCAModel
+            from .feature import PCA
 
-            pca_model = fit(PCA, PCAModel)
+            pca_model = PCA(**params).fit(df)
             # Model attributes
             attributes = [
                 pca_model.mean_,
@@ -230,7 +208,7 @@ def main(infile: IO, outfile: IO) -> None:
         elif operator_name == "LinearRegression":
             from .regression import LinearRegression, LinearRegressionModel
 
-            linear_model = fit(LinearRegression, LinearRegressionModel)
+            linear_model = LinearRegression(**params).fit(df)
             # Model attributes
             attributes = [
                 linear_model.coef_,
@@ -249,7 +227,7 @@ def main(infile: IO, outfile: IO) -> None:
         elif operator_name == "KMeans":
             from .clustering import KMeans, KMeansModel
 
-            kmeans_model = fit(KMeans, KMeansModel)
+            kmeans_model = KMeans(**params).fit(df)
             # Model attributes
             attributes = [
                 kmeans_model.cluster_centers_,
