@@ -545,7 +545,10 @@ class _RandomForestModel(
     @property
     def featureImportances(self) -> Vector:
         """Estimate the importance of each feature."""
-        return self.cpu().featureImportances
+
+        raise ValueError(
+            "'featureImportances' is not yet not supported in Spark Rapids ML"
+        )
 
     # This is a temporary fix for mypy error: incompatible with definition in base class '_RandomForestParams'
     # TODO: refactor the code to eliminate the need for this type ignore

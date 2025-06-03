@@ -698,13 +698,14 @@ def test_random_forest_classifier_spark_compat(
 
         model.setRawPredictionCol("newRawPrediction")
         assert model.getRawPredictionCol() == "newRawPrediction"
-        featureImportances = model.featureImportances
         assert np.allclose(model.treeWeights, [1.0, 1.0, 1.0])
         if isinstance(rf, SparkRFClassifier):
+            featureImportances = model.featureImportances
             assert featureImportances == Vectors.sparse(2, {0: 1.0})
         else:
             # TODO: investigate difference
-            assert featureImportances == Vectors.sparse(2, {})
+            with pytest.raises(ValueError):
+                featureImportances = model.featureImportances
 
         test0 = spark.createDataFrame([(Vectors.dense(-1.0, 0.0),)], ["features"])
         example = test0.head()
@@ -748,7 +749,8 @@ def test_random_forest_classifier_spark_compat(
         model.save(model_path)
         model2 = _RandomForestClassificationModel.load(model_path)
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
-        assert model.featureImportances == model2.featureImportances
+        if isinstance(model, SparkRFClassificationModel):
+            assert model.featureImportances == model2.featureImportances
 
 
 @pytest.mark.compat
@@ -798,7 +800,8 @@ def test_random_forest_regressor_spark_compat(
             assert model.featureImportances == Vectors.sparse(2, {1: 1.0})
         else:
             # need to investigate
-            assert model.featureImportances == Vectors.sparse(2, {})
+            with pytest.raises(ValueError):
+                assert model.featureImportances == Vectors.sparse(2, {})
 
         assert model.getBootstrap()
         assert model.getSeed() == 42
@@ -838,7 +841,8 @@ def test_random_forest_regressor_spark_compat(
         model.save(model_path)
         model2 = _RandomForestRegressionModel.load(model_path)
 
-        assert model.featureImportances == model2.featureImportances
+        if isinstance(model, SparkRFClassificationModel):
+            assert model.featureImportances == model2.featureImportances
         assert model.transform(test0).take(1) == model2.transform(test0).take(1)
 
 
