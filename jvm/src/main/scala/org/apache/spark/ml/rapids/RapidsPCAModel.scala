@@ -18,8 +18,9 @@ package org.apache.spark.ml.rapids
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.ml.feature.PCAModel
+import org.apache.spark.ml.linalg.{DenseMatrix, DenseVector}
 import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.ml.util.{MLReadable, MLReader}
+import org.apache.spark.ml.util.{MLReadable, MLReader, MLWriter}
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 /**
@@ -29,14 +30,15 @@ import org.apache.spark.sql.{DataFrame, Dataset}
  * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsPCAModel(override val uid: String,
-                     protected[ml] override val cpuModel: PCAModel,
+                     override val pc: DenseMatrix,
+                     override val explainedVariance: DenseVector,
                      override val modelAttributes: String)
-  extends PCAModel(uid, cpuModel.pc, cpuModel.explainedVariance) with RapidsModel {
+  extends PCAModel(uid, pc, explainedVariance) with RapidsModel {
 
-  private[ml] def this() = this("", null, null)
+  private[ml] def this() = this("", null, null, "")
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    transformOnPython(dataset)
+    transformOnPython(dataset, super.transform)
   }
 
   /**
@@ -45,13 +47,17 @@ class RapidsPCAModel(override val uid: String,
   override def name: String = "PCAModel"
 
   override def copy(extra: ParamMap): RapidsPCAModel = {
-    val newModel = copyValues(
-      new RapidsPCAModel(uid, cpuModel, modelAttributes), extra)
-    newModel
+    copyValues(
+      new RapidsPCAModel(uid, pc, explainedVariance, modelAttributes), extra)
   }
 
   override def featureName: String = getInputCol
 
+  override def write: MLWriter = super.write
+
+  override def cpu: PCAModel = {
+    copyValues(new PCAModel(uid, pc, explainedVariance))
+  }
 }
 
 
@@ -68,9 +74,10 @@ object RapidsPCAModel extends MLReadable[RapidsPCAModel] {
       val attributesPath = new Path(path, "attributes").toString
       val row = sparkSession.read.parquet(attributesPath).first()
       val model = new RapidsPCAModel(row.getString(0),
-        cpuModel, row.getString(1))
+        cpuModel.pc, cpuModel.explainedVariance, row.getString(1))
       cpuModel.paramMap.toSeq.foreach(p => model.set(p.param.name, p.value))
       model
     }
   }
+
 }

@@ -16,8 +16,8 @@
 
 package com.nvidia.rapids.ml
 
-import org.apache.spark.ml.feature.{PCA, PCAModel}
-import org.apache.spark.ml.rapids.RapidsPCAModel
+import org.apache.spark.ml.feature.PCA
+import org.apache.spark.ml.rapids.{ModelHelper, RapidsPCAModel}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -37,8 +37,8 @@ class RapidsPCA(override val uid: String) extends PCA with DefaultParamsWritable
 
   override def fit(dataset: Dataset[_]): RapidsPCAModel = {
     val trainedModel = trainOnPython(dataset)
-    val cpuModel = copyValues(trainedModel.model.asInstanceOf[PCAModel])
-    copyValues(new RapidsPCAModel(uid, cpuModel, trainedModel.modelAttributes))
+    val (pc, explainedVariance) = ModelHelper.createPCAModel(trainedModel.modelAttributes)
+    copyValues(new RapidsPCAModel(uid, pc, explainedVariance, trainedModel.modelAttributes))
   }
 
   // Override this function to allow feature to be array
