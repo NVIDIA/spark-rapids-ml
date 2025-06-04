@@ -397,13 +397,7 @@ def test_lr_model_copy() -> None:
             _test_model_copy(gpu_model, cpu_model, p)
 
 
-@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
-@pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
-@pytest.mark.parametrize("data_type", [np.float32, np.float64])
-@pytest.mark.parametrize("max_record_batch", [100, 10000])
-@pytest.mark.slow
-def test_classifier(
+def _func_test_classifier(
     fit_intercept: bool,
     feature_type: str,
     data_shape: Tuple[int, int],
@@ -541,6 +535,32 @@ def test_classifier(
         assert array_equal(spark_probs, cu_probs, tolerance)
 
         return spark_lr
+
+
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("feature_type", ["array", "multi_cols", "vector"])
+@pytest.mark.parametrize("data_shape", [(2000, 8)], ids=idfn)
+@pytest.mark.parametrize("data_type", [np.float32, np.float64])
+@pytest.mark.parametrize("max_record_batch", [100, 10000])
+@pytest.mark.slow
+def test_classifier(
+    fit_intercept: bool,
+    feature_type: str,
+    data_shape: Tuple[int, int],
+    data_type: np.dtype,
+    max_record_batch: int,
+    gpu_number: int,
+    n_classes: int = 2,
+) -> None:
+    _func_test_classifier(
+        fit_intercept,
+        feature_type,
+        data_shape,
+        data_type,
+        max_record_batch,
+        gpu_number,
+        n_classes,
+    )
 
 
 LogisticRegressionType = TypeVar(
@@ -1127,7 +1147,7 @@ def test_multiclass(
 ) -> None:
     tolerance = 0.005
 
-    test_classifier(
+    _func_test_classifier(
         fit_intercept=fit_intercept,
         feature_type=feature_type,
         data_shape=data_shape,
@@ -1164,7 +1184,7 @@ def test_quick(
     reg_param = reg_factors[0]
     elasticNet_param = reg_factors[1]
 
-    lr = test_classifier(
+    lr = _func_test_classifier(
         fit_intercept=fit_intercept,
         feature_type=feature_type,
         data_shape=data_shape,
@@ -1817,7 +1837,7 @@ def test_quick_sparse(
     reg_param = reg_factors[0]
     elasticNet_param = reg_factors[1]
 
-    lr = test_classifier(
+    lr = _func_test_classifier(
         fit_intercept=fit_intercept,
         feature_type=feature_type,
         data_shape=data_shape,
