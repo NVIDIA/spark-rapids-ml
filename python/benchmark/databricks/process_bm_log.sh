@@ -14,4 +14,4 @@
 # limitations under the License.
 
 
-grep -oe '\(==* algo:.*==\|fit:........\|fit_time...........\|training::........\|parameters\)' $1
+grep -oe '\(==* algo:.*==\|fit:........\|training:........\|parameters\)' $1
