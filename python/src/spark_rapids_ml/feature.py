@@ -415,6 +415,9 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
             pca = CumlPCAMG(output_type="numpy", **cuml_alg_params)
 
+            # need this to revert a change in cuML targeting sklearn compat.
+            pca.n_features_in_ = None
+
             # Compatible with older cuml versions (before 23.02)
             pca._n_components = pca.n_components
             pca.n_components_ = pca.n_components
