@@ -17,7 +17,7 @@
 ARG CUDA_VERSION=11.8.0
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
-ARG CUML_VERSION=25.04
+ARG CUML_VERSION=25.06
 
 # ubuntu22
 RUN sed -i -e 's|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
