@@ -753,6 +753,8 @@ class LinearRegressionModel(
 
             for i in range(len(coefs)):
                 lr = LinearRegressionMG(output_type="numpy", copy_X=False)
+                # need this to revert a change in cuML targeting sklearn compat.
+                lr.n_features_in_ = None
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )

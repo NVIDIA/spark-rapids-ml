@@ -384,6 +384,7 @@ class _RandomForestEstimator(
             else:
                 from cuml import RandomForestRegressor as cuRf
 
+            import treelite
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
@@ -394,7 +395,7 @@ class _RandomForestEstimator(
                 rf.fit(X, y, convert_dtype=False)
 
                 # serialized_model is Dictionary type
-                serialized_model = rf._get_serialized_model()
+                serialized_model = rf._serialize_treelite_bytes()
                 pickled_model = pickle.dumps(serialized_model)
                 msg = base64.b64encode(pickled_model).decode("utf-8")
                 trees = rf.get_json()
@@ -413,12 +414,12 @@ class _RandomForestEstimator(
                         mod_jsons.append(data["model_json"])
 
                     all_tl_mod_handles = [
-                        rf._tl_handle_from_bytes(i) for i in mod_bytes
+                        treelite.Model.deserialize_bytes(i) for i in mod_bytes
                     ]
 
                     # tree concatenation raises a non-user friendly error if some workers didn't get all label values
                     try:
-                        rf._concatenate_treelite_handle(all_tl_mod_handles)
+                        treelite.Model.concatenate(all_tl_mod_handles)
                     except RuntimeError as err:
                         import traceback
 
@@ -430,12 +431,7 @@ class _RandomForestEstimator(
                         else:
                             raise err
 
-                    from cuml.legacy.fil.fil import TreeliteModel
-
-                    for tl_handle in all_tl_mod_handles:
-                        TreeliteModel.free_treelite_model(tl_handle)
-
-                    final_model_bytes = pickle.dumps(rf._get_serialized_model())
+                    final_model_bytes = pickle.dumps(rf._serialize_treelite_bytes())
                     final_model = base64.b64encode(final_model_bytes).decode("utf-8")
                     result = {
                         "treelite_model": final_model,
@@ -656,12 +652,15 @@ class _RandomForestModel(
     ]:
         treelite_model = self._treelite_model
         is_classification = self._is_classification()
+        dtype = self.dtype
 
         def _construct_rf() -> CumlT:
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
             else:
                 from cuml import RandomForestRegressor as cuRf
+
+            import treelite
 
             rfs = []
             treelite_models = (
@@ -670,7 +669,13 @@ class _RandomForestModel(
             for m in treelite_models:
                 model = pickle.loads(base64.b64decode(m))
                 rf = cuRf()
-                rf._concatenate_treelite_handle([rf._tl_handle_from_bytes(model)])
+                # need this to revert a change in cuML targeting sklearn compat.
+                rf.n_features_in_ = None
+                rf.treelite_serialized_bytes = treelite.Model.concatenate(
+                    [treelite.Model.deserialize_bytes(model)]
+                ).serialize_bytes()
+                rf.dtype = np.dtype(dtype)
+
                 rfs.append(rf)
 
             return rfs

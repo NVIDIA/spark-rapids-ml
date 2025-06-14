@@ -1491,6 +1491,8 @@ class LogisticRegressionModel(
 
             for i in range(num_models):
                 lr = LogisticRegressionMG(output_type="cupy")
+                # need this to revert a change in cuML targeting sklearn compat.
+                lr.n_features_in_ = None
                 lr.n_cols = n_cols
                 lr.dtype = np.dtype(dtype)
 
@@ -1504,7 +1506,7 @@ class LogisticRegressionModel(
 
                 lr.classes_ = input_to_cuml_array(
                     np.array(classes_, order="F").astype(dtype)
-                ).array
+                ).array.to_output(output_type="numpy")
                 lr._num_classes = len(lr.classes_)
 
                 lr.loss = "sigmoid" if lr._num_classes <= 2 else "softmax"

@@ -1416,6 +1416,8 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
                 )
 
             internal_model = CumlUMAP(**cuml_alg_params)
+            # need this to revert a change in cuML targeting sklearn compat.
+            internal_model.n_features_in_ = None
             internal_model.embedding_ = cp.array(embedding).data
             internal_model._raw_data = raw_data_cuml
             internal_model.sparse_fit = sparse_fit

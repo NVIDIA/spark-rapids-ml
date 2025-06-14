@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,4 +14,4 @@
 # limitations under the License.
 
 
-grep -oe '\(==* algo:.*==\|fit:........\|fit_time...........\|training::........\|parameters\)' $1
+grep -oe '\(==* algo:.*==\|fit:........\|training:........\|parameters\)' $1

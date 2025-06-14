@@ -649,7 +649,8 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 def test_umap_build_algo(gpu_number: int, metric: str) -> None:
 
     n_rows = 10000
-    n_cols = 10
+    # cuml 25.06 UMAP is unstable for low dimensions
+    n_cols = 100
     random_state = 42
 
     X, _ = make_blobs(
@@ -688,7 +689,7 @@ def test_umap_build_algo(gpu_number: int, metric: str) -> None:
 
         # TODO: cuml nn_descent currently relies on the RAFT implementation (only supports L2/euclidean);
         # once they move to cuvs, it should also support cosine
-        if metric not in ["l2", "euclidean"]:
+        if metric not in ["l2", "euclidean", "cosine"]:
             try:
                 umap.fit(df)
                 assert False, f"Metric '{metric}' should throw an error with nn_descent"
