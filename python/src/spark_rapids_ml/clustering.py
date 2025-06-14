@@ -491,6 +491,8 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
+            # need this to revert a change in cuML targeting sklearn compat.
+            kmeans.n_features_in_ = None
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_features_in_ = n_cols
