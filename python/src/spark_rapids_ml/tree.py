@@ -419,7 +419,9 @@ class _RandomForestEstimator(
 
                     # tree concatenation raises a non-user friendly error if some workers didn't get all label values
                     try:
-                        treelite.Model.concatenate(all_tl_mod_handles)
+                        rf._deserialize_from_treelite(
+                            treelite.Model.concatenate(all_tl_mod_handles)
+                        )
                     except RuntimeError as err:
                         import traceback
 
@@ -671,9 +673,7 @@ class _RandomForestModel(
                 rf = cuRf()
                 # need this to revert a change in cuML targeting sklearn compat.
                 rf.n_features_in_ = None
-                rf.treelite_serialized_bytes = treelite.Model.concatenate(
-                    [treelite.Model.deserialize_bytes(model)]
-                ).serialize_bytes()
+                rf._deserialize_from_treelite(treelite.Model.deserialize_bytes(model))
                 rf.dtype = np.dtype(dtype)
 
                 rfs.append(rf)
