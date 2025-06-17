@@ -466,6 +466,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             input_datatype = dataset.schema[input_col].dataType
             first_record = dataset.first()
 
+            dimension = len(first_record[input_col])  # type: ignore
+
             if isinstance(input_datatype, ArrayType):
                 # Array type
                 if (
@@ -508,6 +510,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     assert use_sparse is False or (
                         use_sparse is None and first_vectorudt_type is DenseVector
                     )
+
+                    if dimension > 10_000:
+                        get_logger(self.__class__).warning(
+                            "Spark RAPIDS ML converts sparse vectors to dense format for algorithms that do not natively support sparse input in cuML. This conversion can cause the data size per GPU to exceed Arrow’s maximum supported size (MAX_INT). If Arrow raises an exception, consider reducing the number of rows or the vector dimensionality per GPU."
+                        )
+
                     select_cols.append(
                         vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
                     )
@@ -516,8 +524,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
-
-            dimension = len(first_record[input_col])  # type: ignore
 
         elif input_cols is not None:
             # if self._float32_inputs is False and if any columns are double type, convert all to double type
