@@ -40,7 +40,6 @@ from spark_rapids_ml.metrics import EvalMetricInfo
 from spark_rapids_ml.params import _CumlClass, _CumlParams
 from spark_rapids_ml.utils import PartitionDescriptor
 
-from .sparksession import CleanSparkSession
 from .utils import assert_params, get_default_cuml_parameters
 
 
@@ -730,6 +729,7 @@ def test_handle_param_spark_confs() -> None:
     Test _handle_param_spark_confs method that reads Spark configuration values
     for parameters when they are not set in the constructor.
     """
+    from .sparksession import CleanSparkSession
 
     # Test case 1: Parameters are set in constructor (should not be overridden by Spark confs)
     with CleanSparkSession(
