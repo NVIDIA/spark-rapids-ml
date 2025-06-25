@@ -295,6 +295,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         # if user doesn't override this cuML parameter, set it to 1 to match Spark behavior.
         if not "n_init" in kwargs:
@@ -766,6 +767,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 

@@ -689,3 +689,25 @@ def reconstruct_knn_df(
 
     knn_df = knn_df.sort(f"query_{row_identifier_col}")
     return knn_df
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    # Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        for est in [NearestNeighbors(), ApproximateNearestNeighbors()]:
+
+            # Parameters should be picked up from Spark confs, except for float32_inputs which is not supported
+            assert est._input_kwargs["verbose"] == 5
+            assert "float32_inputs" not in est._input_kwargs
+            assert est._input_kwargs["num_workers"] == 3

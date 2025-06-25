@@ -327,6 +327,7 @@ class NearestNeighbors(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
@@ -1114,6 +1115,7 @@ class ApproximateNearestNeighbors(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         assert algorithm in {
             "ivfflat",
