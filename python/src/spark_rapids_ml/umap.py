@@ -898,6 +898,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         ] = None,  # will enable SparseVector inputs if first row is sparse (for any metric).
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(

@@ -431,6 +431,7 @@ class LinearRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 
@@ -992,6 +993,7 @@ class RandomForestRegressor(
         max_batch_size: int = 4096,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__(**self._input_kwargs)
 
     def _is_classification(self) -> bool:

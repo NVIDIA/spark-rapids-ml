@@ -207,6 +207,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 
