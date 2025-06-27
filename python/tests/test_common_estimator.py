@@ -20,7 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import numpy as np
 import pandas as pd
 import pytest
-from pyspark import Row, SparkConf, TaskContext
+from pyspark import Row, SparkConf, TaskContext, keyword_only
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCols, HasOutputCols
 from pyspark.sql import DataFrame
@@ -127,6 +127,7 @@ class SparkRapidsMLDummy(
     PySpark estimator of CumlDummy
     """
 
+    @keyword_only
     def __init__(
         self,
         m: int = 0,
@@ -135,8 +136,8 @@ class SparkRapidsMLDummy(
         runtime_check: bool = True,
         **kwargs: Any,
     ) -> None:
-        #
-
+        # Call the method that handles Spark confs
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**kwargs)
         self.m = m
@@ -721,3 +722,109 @@ def test_stage_level_scheduling() -> None:
             else:
                 # Starting from 3.5.1+, stage-level scheduling is working for Yarn and K8s
                 assert not dummy._skip_stage_level_scheduling("3.5.1", conf)
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    from .sparksession import CleanSparkSession
+
+    # Test case 1: Parameters are set in constructor (should not be overridden by Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "3",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "4",
+        }
+    ) as spark:
+        # Create estimator with parameters in constructor
+        est = SparkRapidsMLDummy(verbose=1, float32_inputs=True, num_workers=2)
+
+        # Parameters should remain as set in constructor, not overridden by Spark confs
+        assert est._input_kwargs["verbose"] == 1
+        assert est._input_kwargs["float32_inputs"] is True
+        assert est._input_kwargs["num_workers"] == 2
+
+    # Test case 2: Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        est = SparkRapidsMLDummy()
+
+        # Parameters should be picked up from Spark confs
+        assert est._input_kwargs["verbose"] == 5
+        assert est._input_kwargs["float32_inputs"] is False
+        assert est._input_kwargs["num_workers"] == 3
+
+    # Test case 3: Mixed case - some parameters set in constructor, others not
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "4",
+            "spark.rapids.ml.float32_inputs": "true",
+            "spark.rapids.ml.num_workers": "5",
+        }
+    ) as spark:
+        # Create estimator with only some parameters set
+        est = SparkRapidsMLDummy(verbose=2)  # Only verbose set in constructor
+
+        # verbose should remain as set in constructor
+        assert est._input_kwargs["verbose"] == 2
+        # float32_inputs and num_workers should be picked up from Spark confs
+        assert est._input_kwargs["float32_inputs"] is True
+        assert est._input_kwargs["num_workers"] == 5
+
+    # Test case 4: Invalid values in Spark confs should raise errors
+    with CleanSparkSession({"spark.rapids.ml.verbose": "invalid_value"}) as spark:
+
+        with pytest.raises(
+            ValueError, match="Invalid value for spark.rapids.ml.verbose"
+        ):
+            est = SparkRapidsMLDummy()
+
+    with CleanSparkSession(
+        {"spark.rapids.ml.float32_inputs": "invalid_value"}
+    ) as spark:
+
+        with pytest.raises(
+            ValueError, match="Invalid value for spark.rapids.ml.float32_inputs"
+        ):
+            est = SparkRapidsMLDummy()
+
+    with CleanSparkSession(
+        {"spark.rapids.ml.num_workers": "0"}  # Must be > 0
+    ) as spark:
+
+        with pytest.raises(
+            ValueError, match="Invalid value for spark.rapids.ml.num_workers"
+        ):
+            est = SparkRapidsMLDummy()
+
+    # Test case 5: Boolean values for verbose parameter
+    with CleanSparkSession({"spark.rapids.ml.verbose": "true"}) as spark:
+        est = SparkRapidsMLDummy()
+        assert est._input_kwargs["verbose"] is True
+
+    with CleanSparkSession({"spark.rapids.ml.verbose": "false"}) as spark:
+        est = SparkRapidsMLDummy()
+        assert est._input_kwargs["verbose"] is False
+
+    # Test case 6: Case insensitive boolean values
+    with CleanSparkSession(
+        {"spark.rapids.ml.verbose": "TRUE", "spark.rapids.ml.float32_inputs": "FALSE"}
+    ) as spark:
+        est = SparkRapidsMLDummy()
+        assert est._input_kwargs["verbose"] is True
+        assert est._input_kwargs["float32_inputs"] is False
+
+    # Test case 7: No Spark confs set (should not add any parameters)
+    with CleanSparkSession() as spark:
+        est = SparkRapidsMLDummy()
+        # Should not have added any new parameters
+        assert est._input_kwargs == {}

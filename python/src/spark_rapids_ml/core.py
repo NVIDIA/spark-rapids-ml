@@ -908,6 +908,54 @@ class _CumlEstimator(Estimator, _CumlCaller):
         """
         raise NotImplementedError()
 
+    def _handle_param_spark_confs(self) -> None:
+        """
+        Some parameters can be set globally in spark confs if they are not set in the constructor.
+        This is the only way to set such parameters in Spark Connect.
+        These are handled here by inserting the values into input_kwargs.
+        """
+        conf = _get_spark_session().conf
+        kwargs = self._input_kwargs
+
+        _verbose = conf.get("spark.rapids.ml.verbose", None)
+        if "verbose" not in kwargs and _verbose is not None:
+            _verbose = _verbose.lower()
+            try:
+                __verbose = int(_verbose)
+                assert __verbose >= 0 and __verbose <= 6
+            except:
+                try:
+                    assert _verbose == "true" or _verbose == "false"
+                    __verbose = True if (_verbose == "true") else False
+                except:
+                    raise ValueError(
+                        f"Invalid value for spark.rapids.ml.verbose which should be a boolean or an integer between 0 and 6: {_verbose}"
+                    )
+            kwargs["verbose"] = __verbose
+
+        _float32_inputs = conf.get("spark.rapids.ml.float32_inputs", None)
+        if "float32_inputs" not in kwargs and _float32_inputs is not None:
+            _float32_inputs = _float32_inputs.lower()
+            try:
+                assert _float32_inputs == "true" or _float32_inputs == "false"
+                __float32_inputs = True if (_float32_inputs == "true") else False
+                kwargs["float32_inputs"] = __float32_inputs
+            except:
+                raise ValueError(
+                    f"Invalid value for spark.rapids.ml.float32_inputs which should be a boolean: {_float32_inputs}"
+                )
+
+        _num_workers = conf.get("spark.rapids.ml.num_workers", None)
+        if "num_workers" not in kwargs and _num_workers is not None:
+            try:
+                __num_workers = int(_num_workers)
+                assert __num_workers > 0
+                kwargs["num_workers"] = __num_workers
+            except:
+                raise ValueError(
+                    f"Invalid value for spark.rapids.ml.num_workers which should be an integer greater than 0: {_num_workers}"
+                )
+
     def _enable_fit_multiple_in_single_pass(self) -> bool:
         """flag to indicate if fitMultiple in a single pass is supported.
         If not, fallback to super().fitMultiple"""

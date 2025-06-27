@@ -488,6 +488,7 @@ class RandomForestClassifier(
         max_batch_size: int = 4096,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__(**self._input_kwargs)
 
     def _pre_process_label(
@@ -939,6 +940,7 @@ class LogisticRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_cuml_reg_params()
         self._set_params(**self._input_kwargs)
