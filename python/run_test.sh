@@ -28,10 +28,10 @@ fi
 python -m spark_rapids_ml tests_no_import_change/test_no_import_change.py 0.2
 # runs on cpu
 python tests_no_import_change/test_no_import_change.py 0.2
-# runs on gpu with spark-submit
-spark-rapids-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
+# runs on gpu with spark-submit (note: local[1] for spark-rapids-submit hangs probably due to barrier rdd timer threads. TBD root cause)
+spark-rapids-submit --master local[1,1,1024] tests_no_import_change/test_no_import_change.py 0.2
 # runs on cpu with spark-submit
-spark-submit --master local[1] tests_no_import_change/test_no_import_change.py 0.2
+spark-submit --master local[1,1,1024] tests_no_import_change/test_no_import_change.py 0.2
 
 
 # calculate pytest parallelism by following https://github.com/NVIDIA/spark-rapids/tree/main/integration_tests/run_pyspark_from_build.sh
