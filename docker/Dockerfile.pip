@@ -32,7 +32,7 @@ RUN find /etc/apt/sources.list.d/ -name '*.sources' -exec sed -i \
            -e "s|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g" {} +
 # Install packages to build spark-rapids-ml
 RUN apt-get update -y \
-    && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
+    && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-17-jdk \
     && rm -rf /var/lib/apt/lists
 
 RUN apt-get update -y \
@@ -59,7 +59,7 @@ RUN pip install --no-cache-dir pyspark==${PYSPARK_VERSION} "scikit-learn>=1.2.1"
     numpydoc pydata-sphinx-theme pylint pytest "sphinx<6.0" "twine>=4.0.0"
 
 # Config JAVA_HOME
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-$ARCH
+ENV JAVA_HOME /usr/lib/jvm/java-1.17.0-openjdk-$ARCH
 
 ### END OF CACHE ###
 

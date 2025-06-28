@@ -28,12 +28,12 @@ RUN find /etc/apt/sources.list.d/ -name '*.sources' -exec sed -i \
 # Install packages to build spark-rapids-ml
 RUN chmod 1777 /tmp
 RUN apt update -y \
-    && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
-    && apt install -y git numactl software-properties-common wget zip \
+    && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-17-jdk \
+    && apt install -y git numactl software-properties-common wget zip maven \
     && rm -rf /var/lib/apt/lists
 
 # Config JAVA_HOME
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-1.17.0-openjdk-amd64
 
 # Install conda
 ENV PATH="/root/miniconda3/bin:${PATH}"
