@@ -52,3 +52,6 @@ pyspark-rapids = "spark_rapids_ml.pyspark_rapids:main_cli"
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"spark_rapids_ml.jars" = ["*.jar"]
