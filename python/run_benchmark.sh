@@ -56,7 +56,7 @@
 
 
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-cuda_version=${cuda_version:-11}
+cuda_version=${cuda_version:-12}
 
 cluster_type=${1:-gpu}
 remote_host=sc://${remote_host:-localhost}
