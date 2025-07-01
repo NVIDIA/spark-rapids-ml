@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=12.9.112.9.1
+ARG CUDA_VERSION=12.9.1
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 ARG CUML_VERSION=25.06
