@@ -17,11 +17,11 @@ This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-
 
 For simplicity, the following instructions just use Spark local mode, assuming a server with at least one GPU.
 
-First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 12.9.1:
+First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 12.0.1:
 ```bash
 conda create -n rapids-25.06 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=25.06 cuvs=25.06 python=3.10 cuda-version=12.9.1 numpy~=1.0
+    cuml=25.06 cuvs=25.06 python=3.10 cuda-version=12.0.1 numpy~=1.0
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.

@@ -35,7 +35,7 @@
 #
 ###
 
-ARG CUDA_VERSION=12.9.1
+ARG CUDA_VERSION=12.0.1
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
 # ubuntu22
