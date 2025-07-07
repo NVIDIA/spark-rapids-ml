@@ -11,16 +11,16 @@ If you already have a Databricks account, you can run the example notebooks on a
   ```bash
   export WS_SAVE_DIR="/path/to/directory/in/workspace"
   databricks workspace mkdirs ${WS_SAVE_DIR} --profile ${PROFILE}
-  databricks workspace import --format AUTO --file init-pip-cuda-11.8.sh ${WS_SAVE_DIR}/init-pip-cuda-11.8.sh --profile ${PROFILE}
+  databricks workspace import --format AUTO --file init-pip-cuda-12.0.sh ${WS_SAVE_DIR}/init-pip-cuda-12.0.sh --profile ${PROFILE}
   ```
   **Note**: the init script does the following on each Spark node:
-  - updates the CUDA runtime to 11.8 (required for Spark Rapids ML dependencies).
+  - updates the CUDA runtime to 12.0 (required for Spark Rapids ML dependencies).
   - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
   - installs various `cuXX` dependencies via pip.
   - if the cluster environment variable `SPARK_RAPIDS_ML_NO_IMPORT_ENABLED=1` is define (see below), the init script also modifies a Databricks notebook kernel startup script to enable no-import change UX for the cluster.  See [no-import-change](../README.md#no-import-change).
 - Create a cluster using **Databricks 13.3 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
   - **Init Scripts**
-    - add the workspace path to the uploaded init script `${WS_SAVE_DIR}/init-pip-cuda-11.8.sh` as set above (but substitute variables manually in the form).
+    - add the workspace path to the uploaded init script `${WS_SAVE_DIR}/init-pip-cuda-12.0.sh` as set above (but substitute variables manually in the form).
   - **Spark**
     - **Spark config**
       ```
