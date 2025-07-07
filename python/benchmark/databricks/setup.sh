@@ -60,7 +60,7 @@ popd
 # create workspace directory
 databricks workspace mkdirs ${INIT_SCRIPT_DIR} --profile ${DB_PROFILE} ${DB_OVERWRITE}
 # point cpu and gpu cluster init scripts to new files and upload
-for init_script in init-pip-cuda-11.8.sh init-cpu.sh
+for init_script in init-pip-cuda-12.0.sh init-cpu.sh
 do
 # NOTE: on linux delete the .bu after -i
     if base64 --help | grep '\-w'; then
