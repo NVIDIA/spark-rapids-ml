@@ -366,7 +366,7 @@ class _UMAPCumlParams(
         "build_kwds",
         (
             f"Build algorithm argument {{'nnd_graph_degree': 64, 'nnd_intermediate_graph_degree': 128, 'nnd_max_iterations': 20,"
-            f" 'nnd_termination_threshold': 0.0001, 'nnd_return_distances': True, 'nnd_n_clusters': 1}} Note that nnd_n_clusters > 1"
+            f" 'nnd_termination_threshold': 0.0001, 'nnd_n_clusters': 1, 'nnd_overlap_factor': 2}} Note that nnd_n_clusters > 1"
             f" will result in batch-building with NN Descent."
         ),
         typeConverter=DictTypeConverters._toDict,
@@ -787,7 +787,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     build_kwds : dict (optional, default=None)
         Build algorithm argument {'nnd_graph_degree': 64, 'nnd_intermediate_graph_degree': 128, 'nnd_max_iterations': 20,
-        'nnd_termination_threshold': 0.0001, 'nnd_return_distances': True, 'nnd_n_clusters': 1} Note that nnd_n_clusters > 1
+        'nnd_termination_threshold': 0.0001, 'nnd_n_clusters': 1, 'nnd_overlap_factor': 2} Note that nnd_n_clusters > 1
         will result in batch-building with NN Descent.
 
     sample_fraction : float (optional, default=1.0)
