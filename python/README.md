@@ -9,6 +9,7 @@ This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-
   - [Jupyter Notebooks](#jupyter-notebooks)
 - [API Compatibility](#api-compatibility)
 - [CLIs Enabling No Package Import Change](#clis-enabling-no-package-import-change)
+- [Spark Rapids ML Connect Plugin](#spark-rapids-ml-connect-plugin)
 - [API Documentation](#api-documentation)
 
 ---
@@ -215,6 +216,9 @@ pyspark-rapids --master <master> <other pyspark options>
 For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors, or, in the case of unsupported parameters, if `spark.rapids.ml.cpu.fallback.enabled` is set to `true`, will fallback to baseline Spark MLlib running on CPU.
 
 Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).
+
+## Spark Rapids ML Connect Plugin
+Another way to use Spark Rapids ML no-code change acceleration of Spark MLlib applications is over Spark Connect, via the [Spark Rapids ML Connect Plugin](../jvm).  A prebuilt plugin jar compatible with Spark Connect 4.0 is bundled with the `spark-rapids-ml` pip package.   See the getting-started [guide](../jvm/README.md) for more information.
 
 ## API Documentation
 

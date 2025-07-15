@@ -675,8 +675,8 @@ def test_umap_build_algo(gpu_number: int, metric: str) -> None:
             "nnd_intermediate_graph_degree": 128,
             "nnd_max_iterations": 40,
             "nnd_termination_threshold": 0.0001,
-            "nnd_return_distances": True,
             "nnd_n_clusters": 5,
+            "nnd_overlap_factor": 2,
         }
 
         umap = UMAP(
