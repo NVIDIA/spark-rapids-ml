@@ -488,6 +488,7 @@ class RandomForestClassifier(
         max_batch_size: int = 4096,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__(**self._input_kwargs)
 
     def _pre_process_label(
@@ -939,12 +940,22 @@ class LogisticRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_cuml_reg_params()
         self._set_params(**self._input_kwargs)
 
     def _fit_array_order(self) -> _ArrayOrder:
         return "C"
+
+    @staticmethod
+    def _nnz_limit_for_int32() -> int:
+        """
+        Use int32 index dtype for sparse logistic regression when the number of nonzeros (nnz) is less than or equal to the threshold.
+        Switch to int64 indexing when nnz exceeds the threshold.
+        This helps avoid potential overflow in CUDA kernels that compute offsets when the data size is too large.
+        """
+        return 1_000_000_000
 
     def _get_cuml_fit_func(
         self,
@@ -960,6 +971,7 @@ class LogisticRegression(
 
         logger = get_logger(self.__class__)
         float32_input = self._float32_inputs
+        nnz_limit_for_int32 = LogisticRegression._nnz_limit_for_int32()
 
         def _logistic_regression_fit(
             dfs: FitInputType,
@@ -983,9 +995,16 @@ class LogisticRegression(
                 concated, cupyx.scipy.sparse.csr_matrix
             )
 
+            if is_sparse:
+                assert (
+                    concated.shape[0] < np.iinfo(np.int32).max
+                    and concated.shape[1] < np.iinfo(np.int32).max
+                ), "cuML requires the data shape per GPU to be representable within the limits of int32. To resolve this, consider using more GPUs to reduce the per-GPU data size, or work with a smaller dataset."
+
             pdesc = PartitionDescriptor.build(
                 [concated.shape[0]],
                 params[param_alias.num_cols],
+                concated.nnz if is_sparse else None,
             )
 
             # Use cupy to standardize dataset as a workaround to gain better numeric stability
@@ -1064,6 +1083,9 @@ class LogisticRegression(
                 logistic_regression.penalty_normalized = False
                 logistic_regression.lbfgs_memory = 10
                 logistic_regression.linesearch_max_iter = 20
+
+                if is_sparse and pdesc.partition_max_nnz > nnz_limit_for_int32:  # type: ignore
+                    logistic_regression._convert_index = np.int64
 
                 logistic_regression.fit(
                     [(concated, concated_y)],
@@ -1471,6 +1493,8 @@ class LogisticRegressionModel(
 
             for i in range(num_models):
                 lr = LogisticRegressionMG(output_type="cupy")
+                # need this to revert a change in cuML targeting sklearn compat.
+                lr.n_features_in_ = None
                 lr.n_cols = n_cols
                 lr.dtype = np.dtype(dtype)
 
@@ -1484,7 +1508,7 @@ class LogisticRegressionModel(
 
                 lr.classes_ = input_to_cuml_array(
                     np.array(classes_, order="F").astype(dtype)
-                ).array
+                ).array.to_output(output_type="numpy")
                 lr._num_classes = len(lr.classes_)
 
                 lr.loss = "sigmoid" if lr._num_classes <= 2 else "softmax"

@@ -431,6 +431,7 @@ class LinearRegression(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 
@@ -753,6 +754,8 @@ class LinearRegressionModel(
 
             for i in range(len(coefs)):
                 lr = LinearRegressionMG(output_type="numpy", copy_X=False)
+                # need this to revert a change in cuML targeting sklearn compat.
+                lr.n_features_in_ = None
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )
@@ -990,6 +993,7 @@ class RandomForestRegressor(
         max_batch_size: int = 4096,
         **kwargs: Any,
     ):
+        self._handle_param_spark_confs()
         super().__init__(**self._input_kwargs)
 
     def _is_classification(self) -> bool:

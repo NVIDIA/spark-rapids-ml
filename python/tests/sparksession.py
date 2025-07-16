@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class CleanSparkSession:
         return self.spark
 
     def __exit__(self, *args: Any) -> None:
-        pass
+        self._reset_spark_session_conf()
 
     def _set_all_confs(self, conf: Dict[str, Any]) -> None:
         newconf = _default_conf.copy()

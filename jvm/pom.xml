@@ -21,7 +21,7 @@
 
     <groupId>com.nvidia.rapids</groupId>
     <artifactId>ml</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>25.06.0</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -30,7 +30,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <scala.version>2.13.14</scala.version>
         <scala.binary.version>2.13</scala.binary.version>
-        <spark.version>4.0.1-SNAPSHOT</spark.version>
+        <spark.version>4.0.0</spark.version>
         <!-- Extra JVM arguments for tests (required for Java 17 module system) -->
         <extraJavaTestArgs>
             -XX:+IgnoreUnrecognizedVMOptions
@@ -127,17 +127,4 @@
         </plugins>
     </build>
 
-    <!-- Additional repositories (temporary until Spark 4.1 is released) -->
-    <repositories>
-        <repository>
-            <id>apache-snapshots</id>
-            <url>https://repository.apache.org/content/repositories/snapshots/</url>
-            <snapshots>
-                <enabled>true</enabled> <!-- Enable snapshot versions -->
-            </snapshots>
-            <releases>
-                <enabled>false</enabled> <!-- Do not fetch release versions from here -->
-            </releases>
-        </repository>
-    </repositories>
 </project>

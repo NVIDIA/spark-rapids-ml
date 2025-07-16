@@ -366,7 +366,7 @@ class _UMAPCumlParams(
         "build_kwds",
         (
             f"Build algorithm argument {{'nnd_graph_degree': 64, 'nnd_intermediate_graph_degree': 128, 'nnd_max_iterations': 20,"
-            f" 'nnd_termination_threshold': 0.0001, 'nnd_return_distances': True, 'nnd_n_clusters': 1}} Note that nnd_n_clusters > 1"
+            f" 'nnd_termination_threshold': 0.0001, 'nnd_n_clusters': 1, 'nnd_overlap_factor': 2}} Note that nnd_n_clusters > 1"
             f" will result in batch-building with NN Descent."
         ),
         typeConverter=DictTypeConverters._toDict,
@@ -694,7 +694,8 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         Distance metric to use. Supported distances are ['l1', 'cityblock', 'taxicab', 'manhattan', 'euclidean',
         'l2', 'sqeuclidean', 'canberra', 'minkowski', 'chebyshev', 'linf', 'cosine', 'correlation', 'hellinger',
         'hamming', 'jaccard']. Metrics that take arguments (such as minkowski) can have arguments passed via the
-        metric_kwds dictionary.
+        metric_kwds dictionary. Note: the 'nn_descent' build_algo (which relies on RAFT's nn_descent implementation)
+        currently only supports L2/Euclidean distance.
 
     metric_kwds : dict (optional, default=None)
         Additional keyword arguments for the metric function. If the metric function takes additional arguments,
@@ -786,7 +787,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
     build_kwds : dict (optional, default=None)
         Build algorithm argument {'nnd_graph_degree': 64, 'nnd_intermediate_graph_degree': 128, 'nnd_max_iterations': 20,
-        'nnd_termination_threshold': 0.0001, 'nnd_return_distances': True, 'nnd_n_clusters': 1} Note that nnd_n_clusters > 1
+        'nnd_termination_threshold': 0.0001, 'nnd_n_clusters': 1, 'nnd_overlap_factor': 2} Note that nnd_n_clusters > 1
         will result in batch-building with NN Descent.
 
     sample_fraction : float (optional, default=1.0)
@@ -897,6 +898,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         ] = None,  # will enable SparseVector inputs if first row is sparse (for any metric).
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(
@@ -1415,6 +1417,8 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
                 )
 
             internal_model = CumlUMAP(**cuml_alg_params)
+            # need this to revert a change in cuML targeting sklearn compat.
+            internal_model.n_features_in_ = None
             internal_model.embedding_ = cp.array(embedding).data
             internal_model._raw_data = raw_data_cuml
             internal_model.sparse_fit = sparse_fit

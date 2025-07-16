@@ -295,6 +295,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         # if user doesn't override this cuML parameter, set it to 1 to match Spark behavior.
         if not "n_init" in kwargs:
@@ -491,6 +492,8 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
+            # need this to revert a change in cuML targeting sklearn compat.
+            kmeans.n_features_in_ = None
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_features_in_ = n_cols
@@ -764,6 +767,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 

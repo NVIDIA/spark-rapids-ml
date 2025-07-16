@@ -88,6 +88,7 @@ class Pipeline(SparkPipeline):
         if (
             len(stages) != 2
             or not isinstance(stages[0], VectorAssembler)
+            or stages[0].getHandleInvalid() != "error"
             or not self._isGPUEstimator(stages[1])
             or not self._colsValid(dataset, stages[0].getInputCols())
         ):
@@ -145,7 +146,14 @@ class Pipeline(SparkPipeline):
     def _isGPUEstimator(est: Any) -> bool:
 
         if isinstance(est, SparkCrossValidator):
-            actual_est = est.getOrDefault(est.estimator)
-            return isinstance(actual_est, _CumlEstimator)
-        else:
-            return isinstance(est, _CumlEstimator)
+            est = est.getOrDefault(est.estimator)
+
+        # CPU estimator
+        if not isinstance(est, _CumlEstimator):
+            return False
+
+        # GPU estimator but will fallback
+        if est._pyspark_class() and est._fallback_enabled and est._use_cpu_fallback():
+            return False
+
+        return True

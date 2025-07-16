@@ -116,44 +116,137 @@ def main(infile: IO, outfile: IO) -> None:
         print(f"Running {operator_name} with parameters: {params}")
         params = json.loads(params)
 
-        if operator_name == "LogisticRegression":
-            from .classification import LogisticRegression, LogisticRegressionModel
+        def transform(MODEL_TYPE: type) -> DataFrame:
+            attributes = utf8_deserializer.loads(infile)
+            attributes = json.loads(attributes)  # type: ignore[arg-type]
 
-            lr = LogisticRegression(**params)
-            model: LogisticRegressionModel = lr.fit(df)
-            # if cpu fallback was enabled a pyspark.ml model is returned in which case no need to call cpu()
-            model_cpu = (
-                model.cpu() if isinstance(model, LogisticRegressionModel) else model
-            )
-            assert model_cpu._java_obj is not None
-            model_target_id = model_cpu._java_obj._get_object_id().encode("utf-8")
-            write_with_length(model_target_id, outfile)
-            # Model attributes
+            model = MODEL_TYPE(*attributes)  # type: ignore[arg-type]
+            model._set_params(**params)
+            return model.transform(df)
+
+        if operator_name == "LogisticRegression":
+            from .classification import LogisticRegression
+
+            lr_model = LogisticRegression(**params).fit(df)
             attributes = [
-                model.coef_,
-                model.intercept_,
-                model.classes_,
-                model.n_cols,
-                model.dtype,
-                model.num_iters,
-                model.objective,
+                lr_model.coef_,
+                lr_model.intercept_,
+                lr_model.classes_,
+                lr_model.n_cols,
+                lr_model.dtype,
+                lr_model.num_iters,
+                lr_model.objective,
             ]
             write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
 
         elif operator_name == "LogisticRegressionModel":
-            attributes = utf8_deserializer.loads(infile)
-            attributes = json.loads(attributes)  # type: ignore[arg-type]
-            from .classification import LogisticRegression, LogisticRegressionModel
+            from .classification import LogisticRegressionModel
 
-            lrm = LogisticRegressionModel(*attributes)  # type: ignore[arg-type]
-            lrm._set_params(**params)
-            transformed_df = lrm.transform(df)
-            transformed_df_id = transformed_df._jdf._target_id.encode("utf-8")
-            write_with_length(transformed_df_id, outfile)
+            transformed_df = transform(LogisticRegressionModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
+        elif operator_name == "RandomForestClassifier":
+            from .classification import RandomForestClassifier
+
+            rfc_model = RandomForestClassifier(**params).fit(df)
+            # Model attributes
+            attributes = [
+                rfc_model.n_cols,
+                rfc_model.dtype,
+                rfc_model._treelite_model,
+                rfc_model._model_json,
+                rfc_model._num_classes,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "RandomForestClassificationModel":
+            from .classification import RandomForestClassificationModel
+
+            transformed_df = transform(RandomForestClassificationModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
+        elif operator_name == "RandomForestRegressor":
+            from .regression import RandomForestRegressor
+
+            rfc_model = RandomForestRegressor(**params).fit(df)
+            # Model attributes
+            attributes = [
+                rfc_model.n_cols,
+                rfc_model.dtype,
+                rfc_model._treelite_model,
+                rfc_model._model_json,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "RandomForestRegressionModel":
+            from .regression import RandomForestRegressionModel
+
+            transformed_df = transform(RandomForestRegressionModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
+        elif operator_name == "PCA":
+            from .feature import PCA
+
+            pca_model = PCA(**params).fit(df)
+            # Model attributes
+            attributes = [
+                pca_model.mean_,
+                pca_model.components_,
+                pca_model.explained_variance_ratio_,
+                pca_model.singular_values_,
+                pca_model.n_cols,
+                pca_model.dtype,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "PCAModel":
+            from .feature import PCAModel
+
+            transformed_df = transform(PCAModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
+        elif operator_name == "LinearRegression":
+            from .regression import LinearRegression, LinearRegressionModel
+
+            linear_model = LinearRegression(**params).fit(df)
+            # Model attributes
+            attributes = [
+                linear_model.coef_,
+                linear_model.intercept_,
+                linear_model.n_cols,
+                linear_model.dtype,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "LinearRegressionModel":
+            from .regression import LinearRegressionModel
+
+            transformed_df = transform(LinearRegressionModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
+        elif operator_name == "KMeans":
+            from .clustering import KMeans, KMeansModel
+
+            kmeans_model = KMeans(**params).fit(df)
+            # Model attributes
+            attributes = [
+                kmeans_model.cluster_centers_,
+                kmeans_model.n_cols,
+                kmeans_model.dtype,
+            ]
+            write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
+
+        elif operator_name == "KMeansModel":
+            from .clustering import KMeansModel
+
+            transformed_df = transform(KMeansModel)
+            write_with_length(transformed_df._jdf._target_id.encode("utf-8"), outfile)
+
         else:
             raise RuntimeError(f"Unsupported estimator: {operator_name}")
 
     except BaseException as e:
+        print(f"spark-rapids-ml exception: {e}")
         handle_worker_exception(e, outfile)
         sys.exit(-1)
     finally:

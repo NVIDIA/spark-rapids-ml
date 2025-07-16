@@ -9,6 +9,7 @@ This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-
   - [Jupyter Notebooks](#jupyter-notebooks)
 - [API Compatibility](#api-compatibility)
 - [CLIs Enabling No Package Import Change](#clis-enabling-no-package-import-change)
+- [Spark Rapids ML Connect Plugin](#spark-rapids-ml-connect-plugin)
 - [API Documentation](#api-documentation)
 
 ---
@@ -19,9 +20,9 @@ For simplicity, the following instructions just use Spark local mode, assuming a
 
 First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 11.8:
 ```bash
-conda create -n rapids-25.04 \
+conda create -n rapids-25.06 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=25.04 cuvs=25.04 python=3.10 cuda-version=11.8 numpy~=1.0
+    cuml=25.06 cuvs=25.06 python=3.10 cuda-version=11.8 numpy~=1.0
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -30,7 +31,7 @@ conda create -n rapids-25.04 \
 
 Once you have the conda environment, activate it and install the required packages.
 ```bash
-conda activate rapids-25.04
+conda activate rapids-25.06
 
 ## for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
@@ -215,6 +216,9 @@ pyspark-rapids --master <master> <other pyspark options>
 For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors, or, in the case of unsupported parameters, if `spark.rapids.ml.cpu.fallback.enabled` is set to `true`, will fallback to baseline Spark MLlib running on CPU.
 
 Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).
+
+## Spark Rapids ML Connect Plugin
+Another way to use Spark Rapids ML no-code change acceleration of Spark MLlib applications is over Spark Connect, via the [Spark Rapids ML Connect Plugin](../jvm).  A prebuilt plugin jar compatible with Spark Connect 4.0 is bundled with the `spark-rapids-ml` pip package.   See the getting-started [guide](../jvm/README.md) for more information.
 
 ## API Documentation
 

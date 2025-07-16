@@ -15,6 +15,7 @@
 #
 
 import math
+import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cupy as cp
@@ -644,10 +645,12 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
         assert np.abs(n_rows * sample_fraction - raw_data.shape[0]) <= threshold
 
 
-def test_umap_build_algo(gpu_number: int) -> None:
+@pytest.mark.parametrize("metric", ["l2", "euclidean", "cosine", "l1"])
+def test_umap_build_algo(gpu_number: int, metric: str) -> None:
 
     n_rows = 10000
-    n_cols = 10
+    # cuml 25.06 UMAP is unstable for low dimensions
+    n_cols = 100
     random_state = 42
 
     X, _ = make_blobs(
@@ -672,8 +675,8 @@ def test_umap_build_algo(gpu_number: int) -> None:
             "nnd_intermediate_graph_degree": 128,
             "nnd_max_iterations": 40,
             "nnd_termination_threshold": 0.0001,
-            "nnd_return_distances": True,
             "nnd_n_clusters": 5,
+            "nnd_overlap_factor": 2,
         }
 
         umap = UMAP(
@@ -681,23 +684,37 @@ def test_umap_build_algo(gpu_number: int) -> None:
             random_state=random_state,
             build_algo=build_algo,
             build_kwds=build_kwds,
+            metric=metric,
         ).setFeaturesCol("features")
 
-        umap_model = umap.fit(df)
+        # TODO: cuml nn_descent currently relies on the RAFT implementation (only supports L2/euclidean);
+        # once they move to cuvs, it should also support cosine
+        if metric not in ["l2", "euclidean", "cosine"]:
+            try:
+                umap.fit(df)
+                assert False, f"Metric '{metric}' should throw an error with nn_descent"
+            except Exception:
+                assert f"NotImplementedError: Metric '{metric}' not supported" in str(
+                    traceback.format_exc()
+                )
+        else:
+            umap_model = umap.fit(df)
 
-        _assert_umap_model(umap_model, X.get())
+            _assert_umap_model(umap_model, X.get())
 
-        pdf = umap_model.transform(df).toPandas()
-        embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
-        input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
+            pdf = umap_model.transform(df).toPandas()
+            embedding = cp.asarray(pdf["embedding"].to_list()).astype(cp.float32)
+            input = cp.asarray(pdf["features"].to_list()).astype(cp.float32)
 
-        dist_umap = trustworthiness(input, embedding, n_neighbors=15, batch_size=10000)
-        loc_umap = _local_umap_trustworthiness(
-            local_X=X, local_y=np.zeros(0), n_neighbors=15, supervised=False
-        )
-        trust_diff = loc_umap - dist_umap
+            dist_umap = trustworthiness(
+                input, embedding, n_neighbors=15, batch_size=10000
+            )
+            loc_umap = _local_umap_trustworthiness(
+                local_X=X, local_y=np.zeros(0), n_neighbors=15, supervised=False
+            )
+            trust_diff = loc_umap - dist_umap
 
-        assert trust_diff <= 0.07
+            assert trust_diff <= 0.07
 
 
 @pytest.mark.parametrize("n_rows", [3000])
@@ -892,3 +909,25 @@ def test_umap_precomputed_knn(
         trust_diff = loc_umap - dist_umap
 
         assert trust_diff <= 0.07
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    # Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        est = UMAP()
+
+        # Parameters should be picked up from Spark confs, except for float32_inputs which is not supported
+        assert est._input_kwargs["verbose"] == 5
+        assert "float32_inputs" not in est._input_kwargs
+        assert est._input_kwargs["num_workers"] == 3

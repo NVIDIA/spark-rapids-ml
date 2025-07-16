@@ -16,32 +16,31 @@
 
 package org.apache.spark.ml.rapids
 
-import com.nvidia.rapids.ml.RapidsModel
-
 import org.apache.hadoop.fs.Path
-import org.apache.spark.internal.Logging
 import org.apache.spark.ml.classification.LogisticRegressionModel
+import org.apache.spark.ml.linalg.{Matrix, Vector}
 import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable, MLWriter}
+import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable}
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 /**
  * Model produced by RapidsLogisticRegression.
  *
  * RapidsLogisticRegressionModel extends from the Spark LogisticRegressionModel and stores
- * the model attributes training by spark-rapids-ml python in string format.
+ * the model attributes trained by spark-rapids-ml python in string format.
  */
 class RapidsLogisticRegressionModel(override val uid: String,
-                                    protected override val cpuModel: LogisticRegressionModel,
-                                    override val modelAttributes: String,
-                                    private val isMultinomial: Boolean)
-  extends LogisticRegressionModel(uid, cpuModel.coefficientMatrix, cpuModel.interceptVector,
-    cpuModel.numClasses, isMultinomial) with MLWritable with RapidsModel {
+                                    override val coefficientMatrix: Matrix,
+                                    override val interceptVector: Vector,
+                                    override val numClasses: Int,
+                                    override val modelAttributes: String)
+  extends LogisticRegressionModel(uid, coefficientMatrix, interceptVector,
+    numClasses, numClasses != 2) with MLWritable with RapidsModel {
 
-  private[ml] def this() = this("", null, "", false)
+  private[ml] def this() = this("", null, null, 2, null)
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    transformOnPython(dataset)
+    transformOnPython(dataset, super.transform)
   }
 
   /**
@@ -51,13 +50,16 @@ class RapidsLogisticRegressionModel(override val uid: String,
 
   override def copy(extra: ParamMap): RapidsLogisticRegressionModel = {
     val newModel = copyValues(
-      new RapidsLogisticRegressionModel(uid, cpuModel, modelAttributes, isMultinomial), extra)
+      new RapidsLogisticRegressionModel(uid, coefficientMatrix, interceptVector,
+        numClasses, modelAttributes), extra)
     newModel.setSummary(trainingSummary).setParent(parent)
     newModel
   }
 
-  override def write: MLWriter =
-    new RapidsLogisticRegressionModel.RapidsLogisticRegressionModelWriter(this)
+  override def cpu: LogisticRegressionModel = {
+    copyValues(
+      new LogisticRegressionModel(uid, coefficientMatrix, interceptVector, numClasses, numClasses != 2))
+  }
 }
 
 object RapidsLogisticRegressionModel extends MLReadable[RapidsLogisticRegressionModel] {
@@ -66,24 +68,6 @@ object RapidsLogisticRegressionModel extends MLReadable[RapidsLogisticRegression
 
   override def load(path: String): RapidsLogisticRegressionModel = super.load(path)
 
-  private class RapidsLogisticRegressionModelWriter(instance: RapidsLogisticRegressionModel)
-    extends MLWriter with Logging {
-
-    override protected def saveImpl(path: String): Unit = {
-      val writer = instance.cpuModel.write
-      if (shouldOverwrite) {
-        writer.overwrite()
-      }
-      optionMap.foreach { case (k, v) => writer.option(k, v) }
-      writer.save(path)
-
-      val attributesPath = new Path(path, "attributes").toString
-      sparkSession.createDataFrame(
-          Seq(Tuple3(instance.uid, instance.isMultinomial, instance.modelAttributes))
-        ).write.parquet(attributesPath)
-    }
-  }
-
   private class RapidsLogisticRegressionModelReader extends MLReader[RapidsLogisticRegressionModel] {
 
     override def load(path: String): RapidsLogisticRegressionModel = {
@@ -91,7 +75,7 @@ object RapidsLogisticRegressionModel extends MLReadable[RapidsLogisticRegression
       val attributesPath = new Path(path, "attributes").toString
       val row = sparkSession.read.parquet(attributesPath).first()
       val model = new RapidsLogisticRegressionModel(row.getString(0),
-        cpuModel, row.getString(2), row.getBoolean(1))
+        cpuModel.coefficientMatrix, cpuModel.interceptVector, cpuModel.numClasses, row.getString(1))
       cpuModel.paramMap.toSeq.foreach(p => model.set(p.param.name, p.value))
       model
     }

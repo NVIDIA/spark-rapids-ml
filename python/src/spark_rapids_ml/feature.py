@@ -207,6 +207,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 
@@ -414,6 +415,9 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
             pca = CumlPCAMG(output_type="numpy", **cuml_alg_params)
+
+            # need this to revert a change in cuML targeting sklearn compat.
+            pca.n_features_in_ = None
 
             # Compatible with older cuml versions (before 23.02)
             pca._n_components = pca.n_components

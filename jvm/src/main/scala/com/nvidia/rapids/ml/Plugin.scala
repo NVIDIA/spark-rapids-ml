@@ -31,6 +31,26 @@ class Plugin extends MLBackendPlugin {
         Optional.of("com.nvidia.rapids.ml.RapidsLogisticRegression")
       case "org.apache.spark.ml.classification.LogisticRegressionModel" =>
         Optional.of("org.apache.spark.ml.rapids.RapidsLogisticRegressionModel")
+      case "org.apache.spark.ml.classification.RandomForestClassifier" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsRandomForestClassifier")
+      case "org.apache.spark.ml.classification.RandomForestClassificationModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsRandomForestClassificationModel")
+      case "org.apache.spark.ml.feature.PCA" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsPCA")
+      case "org.apache.spark.ml.feature.PCAModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsPCAModel")
+      case "org.apache.spark.ml.regression.RandomForestRegressor" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsRandomForestRegressor")
+      case "org.apache.spark.ml.regression.RandomForestRegressionModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsRandomForestRegressionModel")
+      case "org.apache.spark.ml.regression.LinearRegression" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsLinearRegression")
+      case "org.apache.spark.ml.regression.LinearRegressionModel" =>
+        Optional.of("org.apache.spark.ml.rapids.RapidsLinearRegressionModel")
+      case "org.apache.spark.ml.clustering.KMeans" =>
+        Optional.of("com.nvidia.rapids.ml.RapidsKMeans")
+      case "org.apache.spark.ml.clustering.KMeansModel" =>
+        Optional.of("org.apache.spark.ml.clustering.rapids.RapidsKMeansModel")
       case _ => Optional.empty()
     }
   }

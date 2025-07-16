@@ -19,3 +19,8 @@
 
 # Spark Connect ML uses ServiceLoader to find out the supported Spark Ml estimators.
 com.nvidia.rapids.ml.RapidsLogisticRegression
+com.nvidia.rapids.ml.RapidsRandomForestClassifier
+com.nvidia.rapids.ml.RapidsPCA
+com.nvidia.rapids.ml.RapidsRandomForestRegressor
+com.nvidia.rapids.ml.RapidsLinearRegression
+com.nvidia.rapids.ml.RapidsKMeans
