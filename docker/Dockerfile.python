@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=11.8.0
+ARG CUDA_VERSION=12.0.1
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 ARG CUML_VERSION=25.06
@@ -47,7 +47,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linu
 
 # install cuML
 
-RUN conda install -y -c rapidsai -c conda-forge -c nvidia python=3.10 cuda-version=11.8 cuml=$CUML_VERSION numpy~=1.0 \
+RUN conda install -y -c rapidsai -c conda-forge -c nvidia python=3.10 cuda-version=12.0 cuml=$CUML_VERSION numpy~=1.0 \
     && conda clean --all -f -y
 
 # install python dependencies
