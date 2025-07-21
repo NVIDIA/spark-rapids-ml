@@ -37,11 +37,11 @@ ENV JAVA_HOME /usr/lib/jvm/java-1.17.0-openjdk-amd64
 
 # Install conda
 ENV PATH="/root/miniconda3/bin:${PATH}"
+ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS="yes"
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
     && mkdir /root/.conda \
     && bash Miniconda3-latest-Linux-x86_64.sh -b \
     && rm -f Miniconda3-latest-Linux-x86_64.sh \
-    && conda tos accept --override-channels -c conda-forge -c defaults \
     && conda init && conda update -n base conda \
     && conda install -n base conda-libmamba-solver \
     && conda config --set solver libmamba
