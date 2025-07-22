@@ -1,4 +1,4 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -712,3 +712,61 @@ def test_handle_param_spark_confs() -> None:
             assert est._input_kwargs["verbose"] == 5
             assert "float32_inputs" not in est._input_kwargs
             assert est._input_kwargs["num_workers"] == 3
+
+
+def _func_generate_wide_sparse_dataset(spark_confs: dict[str, str] = {}) -> Tuple[DataFrame, DataFrame]:
+    import random
+
+    from pyspark.ml.feature import FeatureHasher
+
+    with CleanSparkSession(spark_confs) as spark:
+        data = [
+            (
+                i,
+                round(
+                    random.uniform(1.0, 10.0), 1
+                ),  # real: random float between 1.0 and 10.0
+                random.choice([True, False]),  # bool: random boolean
+                str(i % 10),  # stringNum: string of numbers 0-9
+                random.choice(
+                    ["foo", "bar", "baz"]
+                ),  # string: random choice among "foo", "bar", "baz"
+                float(i % 2),  # clicked: alternates between 0.0 and 1.0
+            )
+            for i in range(10000)  # Generate data_size rows
+        ]
+        dataFrame = spark.createDataFrame(
+            data, ["id", "real", "bool", "stringNum", "string", "clicked"]
+        )
+
+        hasher = FeatureHasher(
+            inputCols=["real", "bool", "stringNum", "string"], outputCol="features"
+        )
+
+        # Normalize each feature to have unit standard deviation.
+        df_sparse = hasher.transform(dataFrame)
+
+        train_data, test_data = df_sparse.randomSplit([0.7, 0.3], seed=123)
+
+        return (train_data, test_data)
+
+
+def test_arrow_total_size_limit_knn_sparse(caplog: LogCaptureFixture) -> None:
+
+    train_data, test_data = _func_generate_wide_sparse_dataset(
+        spark_confs={"spark.sql.execution.arrow.maxRecordsPerBatch": "10000"}
+    )
+
+    # Fit the NearestNeighbors model and make predictions
+    knn = NearestNeighbors(num_workers=1).setInputCol("features").setIdCol("id")
+    knn_model = knn.fit(train_data)
+    (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
+    data_df.show()
+    query_df.show()
+    try:
+        knn_df.show()
+    except Exception:
+        assert (
+            "If Arrow raises an exception, consider reducing the number of rows or the vector dimensionality per GPU."
+            in caplog.text
+        )
