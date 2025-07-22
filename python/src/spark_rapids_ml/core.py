@@ -466,6 +466,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             input_datatype = dataset.schema[input_col].dataType
             first_record = dataset.first()
 
+            dimension = len(first_record[input_col])  # type: ignore
+
             if isinstance(input_datatype, ArrayType):
                 # Array type
                 if (
@@ -508,6 +510,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     assert use_sparse is False or (
                         use_sparse is None and first_vectorudt_type is DenseVector
                     )
+
                     select_cols.append(
                         vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
                     )
@@ -516,8 +519,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
-
-            dimension = len(first_record[input_col])  # type: ignore
 
         elif input_cols is not None:
             # if self._float32_inputs is False and if any columns are double type, convert all to double type
@@ -546,6 +547,16 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         else:
             # should never get here
             raise Exception("Unable to determine input column(s).")
+
+        max_records_per_batch = _get_spark_session().conf.get(
+            "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+        )
+        max_records_per_batch = int(max_records_per_batch)
+        
+        if max_records_per_batch * dimension > 2_147_483_647:  # INT32_MAX
+            raise ValueError(
+                "Spark RAPIDS ML detects arrow batch size is larger than MAX_INT. Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
+            )
 
         return select_cols, input_cols, dimension, feature_type
 
