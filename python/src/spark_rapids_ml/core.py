@@ -420,6 +420,37 @@ class _CumlCommon(MLWritable, MLReadable):
             cuml_logger.set_level(log_level)
 
 
+def _validate_arrow_batch(
+    selected_cols: List[Column], feature_dimension: int, unwrapped_sparse: bool = False
+) -> None:
+    """
+    Validate the total number of values in an arrow batch.
+    """
+
+    # Get all the column names in selected_cols as strings
+    # selected_col_names = [str(getattr(col, "name", None)) if getattr(col, "name", None) is not None else None for col in selected_cols]
+    selected_col_names = [col._jc.toString() for col in selected_cols]
+
+    row_dimension = 4 if unwrapped_sparse else feature_dimension
+
+    for col_name in selected_col_names:
+        if alias.label in col_name:
+            row_dimension += 1
+
+        if alias.row_number in col_name:
+            row_dimension += 1
+
+    max_records_per_batch = _get_spark_session().conf.get(
+        "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
+    )
+
+    assert max_records_per_batch is not None
+    if int(max_records_per_batch) * row_dimension > 2_147_483_647:  # INT32_MAX
+        error_msg = f"Spark RAPIDS ML detects spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and #values per row = {row_dimension}. Total number of values in an arrow batch is larger than MAX_INT. Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
+
+        raise ValueError(error_msg)
+
+
 class _CumlCaller(_CumlParams, _CumlCommon):
     """
     This class is responsible for calling cuml function (e.g. fit or kneighbor) on pyspark dataframe,
@@ -548,16 +579,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             # should never get here
             raise Exception("Unable to determine input column(s).")
 
-        max_records_per_batch = _get_spark_session().conf.get(
-            "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
-        )
-
-        assert max_records_per_batch is not None
-        if int(max_records_per_batch) * dimension > 2_147_483_647:  # INT32_MAX
-            raise ValueError(
-                f"Spark RAPIDS ML detects arrow batch size is larger than MAX_INT (spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and dimension = {dimension}). Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
-            )
-
         return select_cols, input_cols, dimension, feature_type
 
     def _require_nccl_ucx(self) -> Tuple[bool, bool]:
@@ -657,6 +678,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         cls = self.__class__
 
         select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
+
+        _validate_arrow_batch(select_cols, dimension, _use_sparse_in_cuml(dataset))
 
         num_workers = self.num_workers
 
@@ -1452,6 +1475,8 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         """Internal API to support transform and evaluation in a single pass"""
         dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
+
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
@@ -1467,7 +1492,6 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         array_order = self._transform_array_order()
 
-        use_sparse_array = _use_sparse_in_cuml(dataset)
         concate_pdf_batches = self._concate_pdf_batches()
 
         cuda_managed_mem_enabled = (

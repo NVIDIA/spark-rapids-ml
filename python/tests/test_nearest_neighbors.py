@@ -753,7 +753,7 @@ def _func_generate_wide_sparse_dataset(
 
 
 @pytest.mark.parametrize("max_records_per_batch", [1000, 10000])
-def test_arrow_total_size_limit_knn_sparse(
+def test_validate_arrow_batch(
     max_records_per_batch: int, caplog: LogCaptureFixture
 ) -> None:
 
@@ -763,7 +763,7 @@ def test_arrow_total_size_limit_knn_sparse(
     with CleanSparkSession(spark_confs) as spark:
         train_data, test_data = _func_generate_wide_sparse_dataset(spark)
 
-        # dimension is 262144
+        # dimension is 262144, plus query_item label col and row_number col
         first_row = train_data.first()
         assert first_row is not None
         dimension = first_row["features"].size
@@ -773,9 +773,11 @@ def test_arrow_total_size_limit_knn_sparse(
         knn_model = knn.fit(train_data)
 
         if max_records_per_batch * dimension > 2_147_483_647:  # INT32_MAX
+            error_msg = f"Spark RAPIDS ML detects spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and #values per row = {dimension + 2}. Total number of values in an arrow batch is larger than MAX_INT. Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
+
             with pytest.raises(
                 ValueError,
-                match="Spark RAPIDS ML detects arrow batch size is larger than MAX_INT",
+                match=error_msg,
             ):
                 (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
         else:
