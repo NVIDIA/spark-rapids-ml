@@ -80,6 +80,7 @@ from .utils import (
     _get_spark_session,
     _is_local,
     _is_standalone_or_localcluster,
+    _validate_arrow_batch,
     dtype_to_pyspark_type,
     get_logger,
 )
@@ -420,37 +421,6 @@ class _CumlCommon(MLWritable, MLReadable):
             cuml_logger.set_level(log_level)
 
 
-def _validate_arrow_batch(
-    selected_cols: List[Column], feature_dimension: int, unwrapped_sparse: bool = False
-) -> None:
-    """
-    Validate the total number of values in an arrow batch.
-    """
-
-    # Get all the column names in selected_cols as strings
-    # selected_col_names = [str(getattr(col, "name", None)) if getattr(col, "name", None) is not None else None for col in selected_cols]
-    selected_col_names = [col._jc.toString() for col in selected_cols]
-
-    row_dimension = 4 if unwrapped_sparse else feature_dimension
-
-    for col_name in selected_col_names:
-        if alias.label in col_name:
-            row_dimension += 1
-
-        if alias.row_number in col_name:
-            row_dimension += 1
-
-    max_records_per_batch = _get_spark_session().conf.get(
-        "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
-    )
-
-    assert max_records_per_batch is not None
-    if int(max_records_per_batch) * row_dimension > 2_147_483_647:  # INT32_MAX
-        error_msg = f"Spark RAPIDS ML detects spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and #values per row = {row_dimension}. Total number of values in an arrow batch is larger than MAX_INT. Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
-
-        raise ValueError(error_msg)
-
-
 class _CumlCaller(_CumlParams, _CumlCommon):
     """
     This class is responsible for calling cuml function (e.g. fit or kneighbor) on pyspark dataframe,
@@ -679,7 +649,13 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
         select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
 
-        _validate_arrow_batch(select_cols, dimension, _use_sparse_in_cuml(dataset))
+        _validate_arrow_batch(
+            select_cols,
+            4 if _use_sparse_in_cuml(dataset) else dimension,
+            alias.label,
+            alias.row_number,
+            get_logger(self.__class__),
+        )
 
         num_workers = self.num_workers
 
@@ -1476,6 +1452,18 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
 
         use_sparse_array = _use_sparse_in_cuml(dataset)
+        if use_sparse_array:
+            feature_cols_dimension = 4
+        else:
+            feature_cols_dimension = len(dataset.first()[select_cols[0]])  # type: ignore
+
+        _validate_arrow_batch(
+            select_cols,
+            feature_cols_dimension,
+            alias.label,
+            alias.row_number,
+            get_logger(self.__class__),
+        )
 
         is_local = _is_local(_get_spark_session().sparkContext)
 

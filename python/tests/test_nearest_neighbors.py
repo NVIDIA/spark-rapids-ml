@@ -20,7 +20,7 @@ import pytest
 from _pytest.logging import LogCaptureFixture
 from pyspark.ml.linalg import VectorUDT
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import LongType, StructField, StructType
+from pyspark.sql.types import FloatType, LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
@@ -33,6 +33,7 @@ from spark_rapids_ml.knn import (
 
 from .sparksession import CleanSparkSession
 from .utils import (
+    _func_generate_wide_sparse_dataset,
     array_equal,
     assert_params,
     create_pyspark_dataframe,
@@ -714,44 +715,6 @@ def test_handle_param_spark_confs() -> None:
             assert est._input_kwargs["num_workers"] == 3
 
 
-def _func_generate_wide_sparse_dataset(
-    spark: SparkSession,
-) -> Tuple[DataFrame, DataFrame]:
-    import random
-
-    from pyspark.ml.feature import FeatureHasher
-
-    data = [
-        (
-            i,
-            round(
-                random.uniform(1.0, 10.0), 1
-            ),  # real: random float between 1.0 and 10.0
-            random.choice([True, False]),  # bool: random boolean
-            str(i % 10),  # stringNum: string of numbers 0-9
-            random.choice(
-                ["foo", "bar", "baz"]
-            ),  # string: random choice among "foo", "bar", "baz"
-            float(i % 2),  # clicked: alternates between 0.0 and 1.0
-        )
-        for i in range(10000)  # Generate data_size rows
-    ]
-    dataFrame = spark.createDataFrame(
-        data, ["id", "real", "bool", "stringNum", "string", "clicked"]
-    )
-
-    hasher = FeatureHasher(
-        inputCols=["real", "bool", "stringNum", "string"], outputCol="features"
-    )
-
-    # Normalize each feature to have unit standard deviation.
-    df_sparse = hasher.transform(dataFrame)
-
-    train_data, test_data = df_sparse.randomSplit([0.7, 0.3], seed=123)
-
-    return (train_data, test_data)
-
-
 @pytest.mark.parametrize("max_records_per_batch", [1000, 10000])
 def test_validate_arrow_batch(
     max_records_per_batch: int, caplog: LogCaptureFixture
@@ -772,13 +735,11 @@ def test_validate_arrow_batch(
         knn = NearestNeighbors(num_workers=1).setInputCol("features").setIdCol("id")
         knn_model = knn.fit(train_data)
 
-        if max_records_per_batch * dimension > 2_147_483_647:  # INT32_MAX
-            error_msg = f"Spark RAPIDS ML detects spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and #values per row = {dimension + 2}. Total number of values in an arrow batch is larger than MAX_INT. Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
+        # Test kneighbors - should work regardless of batch size, but may log warnings
+        (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
 
-            with pytest.raises(
-                ValueError,
-                match=error_msg,
-            ):
-                (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
-        else:
-            (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
+        # Check for warning message if batch size exceeds limit
+        total_dimension = dimension + 2  # query_item_label and row_number
+        if max_records_per_batch * total_dimension > 2_147_483_647:  # INT32_MAX
+            warning_msg = f"Spark RAPIDS ML detected spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and number of values per row = {total_dimension}."
+            assert warning_msg in caplog.text
