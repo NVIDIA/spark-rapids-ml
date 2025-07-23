@@ -551,11 +551,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         max_records_per_batch = _get_spark_session().conf.get(
             "spark.sql.execution.arrow.maxRecordsPerBatch", "10000"
         )
-        max_records_per_batch = int(max_records_per_batch)
-        
-        if max_records_per_batch * dimension > 2_147_483_647:  # INT32_MAX
+
+        assert max_records_per_batch is not None
+        if int(max_records_per_batch) * dimension > 2_147_483_647:  # INT32_MAX
             raise ValueError(
-                "Spark RAPIDS ML detects arrow batch size is larger than MAX_INT. Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
+                f"Spark RAPIDS ML detects arrow batch size is larger than MAX_INT (spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and dimension = {dimension}). Please reduce the value of spark.sql.execution.arrow.maxRecordsPerBatch."
             )
 
         return select_cols, input_cols, dimension, feature_type
