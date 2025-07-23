@@ -19,7 +19,7 @@ import pandas as pd
 import pytest
 from _pytest.logging import LogCaptureFixture
 from pyspark.ml.linalg import VectorUDT
-from pyspark.sql import DataFrame
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
@@ -714,59 +714,69 @@ def test_handle_param_spark_confs() -> None:
             assert est._input_kwargs["num_workers"] == 3
 
 
-def _func_generate_wide_sparse_dataset(spark_confs: dict[str, str] = {}) -> Tuple[DataFrame, DataFrame]:
+def _func_generate_wide_sparse_dataset(
+    spark: SparkSession,
+) -> Tuple[DataFrame, DataFrame]:
     import random
 
     from pyspark.ml.feature import FeatureHasher
 
-    with CleanSparkSession(spark_confs) as spark:
-        data = [
-            (
-                i,
-                round(
-                    random.uniform(1.0, 10.0), 1
-                ),  # real: random float between 1.0 and 10.0
-                random.choice([True, False]),  # bool: random boolean
-                str(i % 10),  # stringNum: string of numbers 0-9
-                random.choice(
-                    ["foo", "bar", "baz"]
-                ),  # string: random choice among "foo", "bar", "baz"
-                float(i % 2),  # clicked: alternates between 0.0 and 1.0
-            )
-            for i in range(10000)  # Generate data_size rows
-        ]
-        dataFrame = spark.createDataFrame(
-            data, ["id", "real", "bool", "stringNum", "string", "clicked"]
+    data = [
+        (
+            i,
+            round(
+                random.uniform(1.0, 10.0), 1
+            ),  # real: random float between 1.0 and 10.0
+            random.choice([True, False]),  # bool: random boolean
+            str(i % 10),  # stringNum: string of numbers 0-9
+            random.choice(
+                ["foo", "bar", "baz"]
+            ),  # string: random choice among "foo", "bar", "baz"
+            float(i % 2),  # clicked: alternates between 0.0 and 1.0
         )
-
-        hasher = FeatureHasher(
-            inputCols=["real", "bool", "stringNum", "string"], outputCol="features"
-        )
-
-        # Normalize each feature to have unit standard deviation.
-        df_sparse = hasher.transform(dataFrame)
-
-        train_data, test_data = df_sparse.randomSplit([0.7, 0.3], seed=123)
-
-        return (train_data, test_data)
-
-
-def test_arrow_total_size_limit_knn_sparse(caplog: LogCaptureFixture) -> None:
-
-    train_data, test_data = _func_generate_wide_sparse_dataset(
-        spark_confs={"spark.sql.execution.arrow.maxRecordsPerBatch": "10000"}
+        for i in range(10000)  # Generate data_size rows
+    ]
+    dataFrame = spark.createDataFrame(
+        data, ["id", "real", "bool", "stringNum", "string", "clicked"]
     )
 
-    # Fit the NearestNeighbors model and make predictions
-    knn = NearestNeighbors(num_workers=1).setInputCol("features").setIdCol("id")
-    knn_model = knn.fit(train_data)
-    (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
-    data_df.show()
-    query_df.show()
-    try:
-        knn_df.show()
-    except Exception:
-        assert (
-            "If Arrow raises an exception, consider reducing the number of rows or the vector dimensionality per GPU."
-            in caplog.text
-        )
+    hasher = FeatureHasher(
+        inputCols=["real", "bool", "stringNum", "string"], outputCol="features"
+    )
+
+    # Normalize each feature to have unit standard deviation.
+    df_sparse = hasher.transform(dataFrame)
+
+    train_data, test_data = df_sparse.randomSplit([0.7, 0.3], seed=123)
+
+    return (train_data, test_data)
+
+
+@pytest.mark.parametrize("max_records_per_batch", [1000, 10000])
+def test_arrow_total_size_limit_knn_sparse(
+    max_records_per_batch: int, caplog: LogCaptureFixture
+) -> None:
+
+    spark_confs = {
+        "spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)
+    }
+    with CleanSparkSession(spark_confs) as spark:
+        train_data, test_data = _func_generate_wide_sparse_dataset(spark)
+
+        # dimension is 262144
+        first_row = train_data.first()
+        assert first_row is not None
+        dimension = first_row["features"].size
+
+        # Fit the NearestNeighbors model and make predictions
+        knn = NearestNeighbors(num_workers=1).setInputCol("features").setIdCol("id")
+        knn_model = knn.fit(train_data)
+
+        if max_records_per_batch * dimension > 2_147_483_647:  # INT32_MAX
+            with pytest.raises(
+                ValueError,
+                match="Spark RAPIDS ML detects arrow batch size is larger than MAX_INT",
+            ):
+                (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
+        else:
+            (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
