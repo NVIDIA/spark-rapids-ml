@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import logging
 from collections import namedtuple
 from functools import lru_cache
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
@@ -24,7 +25,7 @@ import pyspark
 from pyspark.ml import Estimator, Model
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.linalg import Vectors
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import array
 from pyspark.sql.types import Row
 from sklearn.datasets import make_classification, make_regression
@@ -258,3 +259,42 @@ def get_toy_model(EstimatorCLS: Callable, spark: SparkSession) -> Model:
 
     model = est.fit(train_df)
     return model
+
+
+def _func_generate_wide_sparse_dataset(
+    spark: SparkSession,
+) -> Tuple[DataFrame, DataFrame]:
+    import random
+
+    from pyspark.ml.feature import FeatureHasher
+
+    data = [
+        (
+            i,
+            round(
+                random.uniform(1.0, 10.0), 1
+            ),  # real: random float between 1.0 and 10.0
+            random.choice([True, False]),  # bool: random boolean
+            str(i % 10),  # stringNum: string of numbers 0-9
+            random.choice(
+                ["foo", "bar", "baz"]
+            ),  # string: random choice among "foo", "bar", "baz"
+            float(i % 2),  # clicked: alternates between 0.0 and 1.0
+            random.choice([0, 1]),  # label: random binary classification label
+        )
+        for i in range(10000)  # Generate data_size rows
+    ]
+    dataFrame = spark.createDataFrame(
+        data, ["id", "real", "bool", "stringNum", "string", "clicked", "label"]
+    )
+
+    hasher = FeatureHasher(
+        inputCols=["real", "bool", "stringNum", "string"], outputCol="features"
+    )
+
+    # Normalize each feature to have unit standard deviation.
+    df_sparse = hasher.transform(dataFrame)
+
+    train_data, test_data = df_sparse.randomSplit([0.7, 0.3], seed=123)
+
+    return (train_data, test_data)
