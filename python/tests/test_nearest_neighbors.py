@@ -724,15 +724,19 @@ def test_validate_arrow_batch(
         "spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)
     }
     with CleanSparkSession(spark_confs) as spark:
-        train_data, test_data = _func_generate_wide_sparse_dataset(spark)
+        train_data, test_data = _func_generate_wide_sparse_dataset(
+            spark, num_rows=20000
+        )
+        num_rows_train = train_data.count()
 
         # dimension is 262144, plus query_item label col and row_number col
         first_row = train_data.first()
         assert first_row is not None
         dimension = first_row["features"].size
+        assert dimension > 220_000
 
         # Fit the NearestNeighbors model and make predictions
-        knn = NearestNeighbors(num_workers=1).setInputCol("features").setIdCol("id")
+        knn = NearestNeighbors(num_workers=1, verbose=True).setInputCol("features")
         knn_model = knn.fit(train_data)
 
         # Test kneighbors - should work regardless of batch size, but may log warnings
@@ -740,6 +744,8 @@ def test_validate_arrow_batch(
 
         # Check for warning message if batch size exceeds limit
         total_dimension = dimension + 2  # query_item_label and row_number
+        warning_msg = f"Spark RAPIDS ML detected spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and number of values per row = {total_dimension}."
         if max_records_per_batch * total_dimension > 2_147_483_647:  # INT32_MAX
-            warning_msg = f"Spark RAPIDS ML detected spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and number of values per row = {total_dimension}."
             assert warning_msg in caplog.text
+        else:
+            assert warning_msg not in caplog.text
