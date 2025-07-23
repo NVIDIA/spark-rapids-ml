@@ -263,6 +263,8 @@ def get_toy_model(EstimatorCLS: Callable, spark: SparkSession) -> Model:
 
 def _func_generate_wide_sparse_dataset(
     spark: SparkSession,
+    num_rows: int = 10000,
+    train_split: float = 0.7,
 ) -> Tuple[DataFrame, DataFrame]:
     import random
 
@@ -282,7 +284,7 @@ def _func_generate_wide_sparse_dataset(
             float(i % 2),  # clicked: alternates between 0.0 and 1.0
             random.choice([0, 1]),  # label: random binary classification label
         )
-        for i in range(10000)  # Generate data_size rows
+        for i in range(num_rows)  # Generate data_size rows
     ]
     dataFrame = spark.createDataFrame(
         data, ["id", "real", "bool", "stringNum", "string", "clicked", "label"]
@@ -295,6 +297,8 @@ def _func_generate_wide_sparse_dataset(
     # Normalize each feature to have unit standard deviation.
     df_sparse = hasher.transform(dataFrame)
 
-    train_data, test_data = df_sparse.randomSplit([0.7, 0.3], seed=123)
+    train_data, test_data = df_sparse.randomSplit(
+        [train_split, 1 - train_split], seed=123
+    )
 
     return (train_data, test_data)

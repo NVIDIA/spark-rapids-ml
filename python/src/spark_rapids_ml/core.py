@@ -1454,6 +1454,10 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         use_sparse_array = _use_sparse_in_cuml(dataset)
         if use_sparse_array:
             feature_cols_dimension = 4
+        elif input_is_multi_cols:
+            _, input_cols = self._get_input_columns()
+            assert input_cols is not None
+            feature_cols_dimension = len(input_cols)
         else:
             feature_cols_dimension = len(dataset.first()[select_cols[0]])  # type: ignore
 
