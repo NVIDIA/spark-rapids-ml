@@ -490,7 +490,7 @@ def _func_test_classifier(
         spark_lr_model: LogisticRegressionModel = spark_lr.fit(train_df)
 
         # test coefficients and intercepts
-        assert spark_lr_model.n_cols == cu_lr.n_cols
+        assert spark_lr_model.n_cols == cu_lr.n_features_in_
 
         # test float32_inputs
         assert spark_lr_model._float32_inputs == float32_inputs

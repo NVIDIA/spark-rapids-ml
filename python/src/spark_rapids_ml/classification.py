@@ -1080,9 +1080,9 @@ class LogisticRegression(
                     **init_parameters,
                 )
 
-                logistic_regression.penalty_normalized = False
-                logistic_regression.lbfgs_memory = 10
-                logistic_regression.linesearch_max_iter = 20
+                logistic_regression.solver_model.penalty_normalized = False
+                logistic_regression.solver_model.lbfgs_memory = 10
+                logistic_regression.solver_model.linesearch_max_iter = 20
 
                 if is_sparse and pdesc.partition_max_nnz > nnz_limit_for_int32:  # type: ignore
                     logistic_regression._convert_index = np.int64

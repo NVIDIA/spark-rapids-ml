@@ -85,6 +85,7 @@ def test_params(default_params: bool) -> None:
             "metric_expanded",
             "metric_params",
             "output_type",
+            "n_jobs",
         ],
     )
 
