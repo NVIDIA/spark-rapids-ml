@@ -434,6 +434,16 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         super().__init__()
         self._initialize_cuml_params()
 
+        import os
+
+        log_level = os.environ.get("SPARK_RAPIDS_ML_LOG_LEVEL")
+        if log_level is not None:
+            if isinstance(log_level, str) and log_level.isdigit():
+                verbose_value = int(log_level)
+                self._set_params(**{"verbose": int(log_level)})
+            else:
+                self._set_params(**{"verbose": log_level})
+
     @abstractmethod
     def _out_schema(self) -> Union[StructType, str]:
         """

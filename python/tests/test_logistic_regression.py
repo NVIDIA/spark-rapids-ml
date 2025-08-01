@@ -330,6 +330,14 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
     _test_input_setter_getter(LogisticRegression)
 
 
+def test_spark_rapids_ml_log_level() -> None:
+    import os
+
+    os.environ["SPARK_RAPIDS_ML_LOG_LEVEL"] = "2"
+    lr = LogisticRegression()
+    assert lr.cuml_params["verbose"] == 2
+
+
 def test_lr_copy() -> None:
     from .test_common_estimator import _test_est_copy
 
