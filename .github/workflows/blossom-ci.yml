@@ -63,7 +63,7 @@ jobs:
     runs-on: vulnerability-scan
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: NVIDIA/spark-rapids-common/checkout@main
         with:
           repository: ${{ fromJson(needs.Authorization.outputs.args).repo }}
           ref: ${{ fromJson(needs.Authorization.outputs.args).ref }}
