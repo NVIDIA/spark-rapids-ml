@@ -441,6 +441,7 @@ def _func_test_classifier(
     cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C, l1_ratio=l1_ratio)
     cu_lr.solver_model.penalty_normalized = False
     cu_lr.solver_model.lbfgs_memory = 10
+    cu_lr.solver_model.linesearch_max_iter = 20
     cu_lr.fit(X_train, y_train)
 
     spark_conf.update(

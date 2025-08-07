@@ -557,7 +557,11 @@ def ann_algorithm_test_func(
                         )
 
         assert len(reconstructed_collect) == len(knn_df_collect)
-        if algorithm != "ivfpq" and not (algorithm == "ivfflat" and algoParams == None):
+        if (
+            algorithm != "ivfpq"
+            and not (algorithm == "ivfflat" and algoParams == None)
+            and (not algoParams or algoParams.get("build_algo") != "ivf_pq")
+        ):
             # it is fine to skip ivfpq as long as other algorithms assert the same results of approxSimilarityJoin and kneighbors.
             # Also skip ivfflat when algoParams == None. Ivfflat probes only 1/50 of the clusters, leading to unstable results.
             # ivfpq shows non-deterministic distances due to kmeans initialization uses GPU memory runtime values.
