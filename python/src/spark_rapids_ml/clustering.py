@@ -113,7 +113,7 @@ class KMeansClass(_CumlClass):
             "max_iter": 300,
             "tol": 0.0001,
             "verbose": False,
-            "random_state": 1,
+            "random_state": None,
             "init": "scalable-k-means++",
             "n_init": "auto",
             "oversampling_factor": 2.0,
@@ -506,7 +506,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _transform_internal(
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
-            res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
+            res = list(kmeans.predict(df).to_numpy())
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal, None

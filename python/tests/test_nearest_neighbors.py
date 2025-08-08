@@ -68,6 +68,7 @@ def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
             "metric_expanded",
             "metric_params",
             "output_type",
+            "n_jobs",
         ],
     )
     assert cuml_params == NearestNeighbors()._get_cuml_params_default()
