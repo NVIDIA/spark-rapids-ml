@@ -46,4 +46,4 @@ def main_cli() -> None:
         + " ".join(sys.argv[i:])
     )
 
-    subprocess.run(command_line, shell=True)
+    subprocess.run(command_line, shell=True, check=True)

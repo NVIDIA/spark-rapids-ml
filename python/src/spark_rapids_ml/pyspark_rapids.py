@@ -41,4 +41,4 @@ def main_cli() -> None:
     command_line = "pyspark " + " ".join(sys.argv[1:])
     env = dict(os.environ)
     env["PYTHONSTARTUP"] = f"{spark_rapids_ml.__path__[0]}/install.py"
-    subprocess.run(command_line, shell=True, env=env)
+    subprocess.run(command_line, shell=True, env=env, check=True)

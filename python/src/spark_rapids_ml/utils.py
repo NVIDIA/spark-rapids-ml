@@ -96,7 +96,7 @@ def _get_spark_session() -> SparkSession:
 
 def _is_local(sc: SparkContext) -> bool:
     """Whether it is Spark local mode"""
-    return sc._jsc.sc().isLocal()  # type: ignore
+    return sc._jsc.sc().isLocal() or sc.getConf().get("spark.master").startswith("local-cluster")  # type: ignore
 
 
 def _is_standalone_or_localcluster(conf: SparkConf) -> bool:
