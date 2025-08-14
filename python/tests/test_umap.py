@@ -649,7 +649,7 @@ def test_umap_sample_fraction(gpu_number: int) -> None:
 def test_umap_build_algo(gpu_number: int, metric: str) -> None:
 
     n_rows = 10000
-    # cuml 25.06 UMAP is unstable for low dimensions
+    # cuml 25.08 UMAP is unstable for low dimensions
     n_cols = 100
     random_state = 42
 
