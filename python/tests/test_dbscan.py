@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,40 +46,81 @@ from .utils import (
 )
 
 
-def test_default_cuml_params() -> None:
-    from cuml import DBSCAN as CumlDBSCAN
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(
+    default_params: bool,
+    tmp_path: str,
+) -> None:
+    from cuml import DBSCAN as cumlDBSCAN
 
-    cuml_params = get_default_cuml_parameters([CumlDBSCAN], ["handle", "output_type"])
-    cuml_params["calc_core_sample_indices"] = False
-    spark_params = DBSCAN()._get_cuml_params_default()
-    assert cuml_params == spark_params
-
-
-def test_params(gpu_number: int, tmp_path: str, caplog: LogCaptureFixture) -> None:
-    # Default constructor
-    default_spark_params: Dict[str, Any] = {}
-    default_cuml_params = {
-        "eps": 0.5,
-        "min_samples": 5,
-        "metric": "euclidean",
-        "verbose": False,
-        "max_mbytes_per_batch": None,
-        "calc_core_sample_indices": False,
+    spark_params = {
+        param.name: value for param, value in DBSCAN().extractParamMap().items()
     }
-    default_dbscan = DBSCAN()
-    assert_params(default_dbscan, default_spark_params, default_cuml_params)
+
+    cuml_params = get_default_cuml_parameters(
+        cuml_classes=[cumlDBSCAN],
+        excludes=[
+            "handle",
+            "output_type",
+            "calc_core_sample_indices",
+        ],
+    )
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert DBSCAN()._get_cuml_params_default() == cuml_params
+
+    with pytest.raises(
+        ValueError, match="Unsupported param 'calc_core_sample_indices'"
+    ):
+        dbscan_dummy = DBSCAN(calc_core_sample_indices=True)
+
+    if default_params:
+        dbscan = DBSCAN()
+    else:
+        nondefault_params = {
+            "eps": 0.4,
+            "metric": "cosine",
+            "min_samples": 4,
+        }
+        dbscan = DBSCAN(**nondefault_params)  # type: ignore
+        cuml_params.update(nondefault_params)
+        spark_params.update(nondefault_params)
+
+    cuml_params["calc_core_sample_indices"] = (
+        False  # we override this param to False internally
+    )
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(dbscan, spark_params, cuml_params)
+    assert dbscan.cuml_params == cuml_params
 
     # Estimator persistence
     path = tmp_path + "/dbscan_tests"
     estimator_path = f"{path}/dbscan"
-    default_dbscan.write().overwrite().save(estimator_path)
+    dbscan.write().overwrite().save(estimator_path)
     loaded_dbscan = DBSCAN.load(estimator_path)
-    assert_params(loaded_dbscan, default_spark_params, default_cuml_params)
+    assert_params(loaded_dbscan, spark_params, cuml_params)
+    assert loaded_dbscan.cuml_params == cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(DBSCAN)
+
+
+def test_dbscan_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Dict[str, Any]] = [
+        {"eps": 0.7},
+        {"min_samples": 10},
+        {"metric": "cosine"},
+        {"algorithm": "rbc"},
+        {"max_mbytes_per_batch": 1000},
+        {"verbose": True},
+    ]
+    for param in param_list:
+        _test_est_copy(DBSCAN, param, param)
 
 
 def test_dbscan_basic(
@@ -202,7 +243,7 @@ def test_dbscan(
         metric=metric,
         algorithm=algorithm,
         output_type="numpy",
-        verbose=7,
+        verbose=6,
     )
 
     import cudf
@@ -230,7 +271,7 @@ def test_dbscan(
             eps=eps,
             min_samples=min_samples,
             metric=metric,
-            verbose=7,
+            verbose=6,
         ).setFeaturesCol(features_col)
 
         dbscan_model = dbscan.fit(df)
@@ -264,3 +305,25 @@ def test_dbscan(
                 assert cluster_dict[label_rapids] == label_cuml
             else:
                 cluster_dict[label_rapids] = label_cuml
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    # Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        est = DBSCAN()
+
+        # Parameters should be picked up from Spark confs
+        assert est._input_kwargs["verbose"] == 5
+        assert est._input_kwargs["float32_inputs"] is False
+        assert est._input_kwargs["num_workers"] == 3

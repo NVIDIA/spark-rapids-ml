@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,6 +43,9 @@ pip install -r requirements_dev.txt && pip install -e .
 
 # benchmark
 ./run_benchmark.sh $bench_args
+
+# plugin tests
+./run_plugin_test.sh
 
 # check compatibility with Spark 3.3 in nightly run
 # also push draft release docs to gh-pages

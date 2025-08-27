@@ -1,16 +1,28 @@
-# Spark Rapids ML (Python)
+# Spark Rapids ML (Python) <!-- omit in toc -->
 
 This PySpark-compatible API leverages the RAPIDS cuML python API to provide GPU-accelerated implementations of many common ML algorithms.  These implementations are adapted to use PySpark for distributed training and inference.
+
+## Contents <!-- omit in toc -->
+- [Installation](#installation)
+- [Examples](#examples)
+  - [PySpark shell](#pyspark-shell)
+  - [Jupyter Notebooks](#jupyter-notebooks)
+- [API Compatibility](#api-compatibility)
+- [CLIs Enabling No Package Import Change](#clis-enabling-no-package-import-change)
+- [Spark Rapids ML Connect Plugin](#spark-rapids-ml-connect-plugin)
+- [API Documentation](#api-documentation)
+
+---
 
 ## Installation
 
 For simplicity, the following instructions just use Spark local mode, assuming a server with at least one GPU.
 
-First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 11.8:
+First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 12.0:
 ```bash
-conda create -n rapids-24.08 \
+conda create -n rapids-25.08 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=24.08 python=3.9 cuda-version=11.8
+    cuml=25.08 cuvs=25.08 python=3.10 cuda-version=12.0 numpy~=1.0
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -19,7 +31,7 @@ conda create -n rapids-24.08 \
 
 Once you have the conda environment, activate it and install the required packages.
 ```bash
-conda activate rapids-24.08
+conda activate rapids-25.08
 
 ## for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
@@ -40,7 +52,7 @@ These examples demonstrate the API using toy datasets.  However, GPUs are more e
 
 ### PySpark shell
 
-#### Linear Regression
+#### Linear Regression <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.regression import LinearRegression
@@ -66,7 +78,7 @@ model.coefficients
 # DenseVector([0.5, -0.5])
 ```
 
-#### K-Means
+#### K-Means <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.clustering import KMeans
@@ -107,7 +119,7 @@ rows[2].newPrediction == rows[3].newPrediction
 # True
 ```
 
-#### PCA
+#### PCA <!-- omit in toc -->
 ```python
 ## pyspark --master local[*]
 # from pyspark.ml.feature import PCA
@@ -146,6 +158,7 @@ While the Spark Rapids ML API attempts to mirror the PySpark ML API to minimize 
 - **Unsupported ML Params** - some PySpark ML algorithms have ML Params which do not map directly to their respective cuML implementations.  For these cases, the ML Param default values will be ignored, and if explicitly set by end-user code:
     - a warning will be printed (for non-critical cases that should have minimal impact, e.g. `initSteps`).
     - an exception will be raised (for critical cases that can greatly affect results, e.g. `weightCol`).
+        - this behavior can be changed by setting the Spark config `spark.rapids.ml.cpu.fallback.enabled` (default=`false`) to `true` to cause the corresponding `fit` or `transform` operations to fallback to using baseline CPU Spark MLlib. 
 - **Unsupported methods** - some PySpark ML methods may not map to the underlying cuML implementations, or may not be meaningful for GPUs.  In these cases, an error will be raised if the method is invoked.
 - **cuML parameters** - there may be additional cuML-specific parameters which might be useful for optimizing GPU performance.  These can be supplied to the various class constructors, but they are _not_ exposed via getters and setters to avoid any confusion with the PySpark ML Params.  If needed, they can be observed via the `cuml_params` attribute.
 - **Algorithmic Results** - again, since the GPU implementations are entirely different from their PySpark ML CPU counterparts, there may be slight differences in the produced results.  This can be due to various reasons, including different optimizations, randomized initializations, or algorithm design.  While these differences should be relatively minor, they should still be reviewed in the context of your specific use case to see if they are within acceptable limits.
@@ -181,6 +194,31 @@ print(centers)  # slightly different results
 # [[8.5, 8.5], [0.5, 0.5]]
 # PySpark: [array([0.5, 0.5]), array([8.5, 8.5])]
 ```
+
+## CLIs Enabling No Package Import Change
+
+Using some experimental CLIs included in `spark_rapids_ml`, pyspark application scripts importing estimators and models from `pyspark.ml` can be accelerated without the need for changing the package import statements to use `spark_rapids_ml` as in the above examples.  
+
+In the case of direct invocation of self-contained pyspark applications, the following can be used:
+```bash
+python -m spark_rapids_ml spark_enabled_application.py <application options>
+```
+and if the app is deployed using `spark-submit` the following included CLI (installed with the original `pip install spark-rapids-ml`) can be used:
+```bash
+spark-rapids-submit --master <master> <other spark submit options> application.py <application options>
+```
+
+A similar `spark_rapids_ml` enabling CLI is included for `pyspark` shell:
+```bash
+pyspark-rapids --master <master> <other pyspark options>
+```
+
+For the time being, any methods or attributes not supported by the corresponding accelerated `spark_rapids_ml` objects will result in errors, or, in the case of unsupported parameters, if `spark.rapids.ml.cpu.fallback.enabled` is set to `true`, will fallback to baseline Spark MLlib running on CPU.
+
+Nearly similar functionality can be enabled in [notebooks](../notebooks/README.md#no-import-change).
+
+## Spark Rapids ML Connect Plugin
+Another way to use Spark Rapids ML no-code change acceleration of Spark MLlib applications is over Spark Connect, via the [Spark Rapids ML Connect Plugin](../jvm).  A prebuilt plugin jar compatible with Spark Connect 4.0 is bundled with the `spark-rapids-ml` pip package.   See the getting-started [guide](../jvm/README.md) for more information.
 
 ## API Documentation
 

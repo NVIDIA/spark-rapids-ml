@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,13 +33,23 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pyspark.ml.classification import DecisionTreeClassificationModel
+from pyspark.ml.classification import (
+    DecisionTreeClassificationModel,
+)
 from pyspark.ml.classification import (
     RandomForestClassificationModel as SparkRandomForestClassificationModel,
 )
 from pyspark.ml.linalg import Vector
-from pyspark.ml.param.shared import HasFeaturesCol, HasLabelCol
-from pyspark.ml.regression import DecisionTreeRegressionModel
+from pyspark.ml.param.shared import (
+    HasFeaturesCol,
+    HasLabelCol,
+    Param,
+    Params,
+    TypeConverters,
+)
+from pyspark.ml.regression import (
+    DecisionTreeRegressionModel,
+)
 from pyspark.ml.regression import (
     RandomForestRegressionModel as SparkRandomForestRegressionModel,
 )
@@ -148,8 +158,57 @@ class _RandomForestCumlParams(
     HasFeaturesCols,
     HasLabelCol,
 ):
+
+    n_streams = Param(
+        Params._dummy(),
+        "n_streams",
+        "The n_streams parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
+    min_samples_split = Param(
+        Params._dummy(),
+        "min_samples_split",
+        "The min_sample_split parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
+    max_samples = Param(
+        Params._dummy(),
+        "max_samples",
+        "The max_samples parameter to use for cuml.",
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    max_leaves = Param(
+        Params._dummy(),
+        "max_leaves",
+        "The max_leaves parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
+    min_impurity_decrease = Param(
+        Params._dummy(),
+        "min_impurity_decrease",
+        "The min_impurity_decrease parameter to use for cuml.",
+        typeConverter=TypeConverters.toFloat,
+    )
+
+    max_batch_size = Param(
+        Params._dummy(),
+        "max_batch_size",
+        "The max_batch_size parameter to use for cuml.",
+        typeConverter=TypeConverters.toInt,
+    )
+
     def __init__(self) -> None:
         super().__init__()
+        self._setDefault(n_streams=4)
+        self._setDefault(min_samples_split=2)
+        self._setDefault(max_samples=1.0)
+        self._setDefault(max_leaves=-1)
+        self._setDefault(min_impurity_decrease=0.0)
+        self._setDefault(max_batch_size=4096)
         # restrict default seed to max value of 32-bit signed integer for CuML
         self._setDefault(seed=hash(type(self).__name__) & 0x07FFFFFFF)
 
@@ -325,6 +384,7 @@ class _RandomForestEstimator(
             else:
                 from cuml import RandomForestRegressor as cuRf
 
+            import treelite
             from pyspark import BarrierTaskContext
 
             context = BarrierTaskContext.get()
@@ -335,7 +395,7 @@ class _RandomForestEstimator(
                 rf.fit(X, y, convert_dtype=False)
 
                 # serialized_model is Dictionary type
-                serialized_model = rf._get_serialized_model()
+                serialized_model = rf._serialize_treelite_bytes()
                 pickled_model = pickle.dumps(serialized_model)
                 msg = base64.b64encode(pickled_model).decode("utf-8")
                 trees = rf.get_json()
@@ -354,16 +414,26 @@ class _RandomForestEstimator(
                         mod_jsons.append(data["model_json"])
 
                     all_tl_mod_handles = [
-                        rf._tl_handle_from_bytes(i) for i in mod_bytes
+                        treelite.Model.deserialize_bytes(i) for i in mod_bytes
                     ]
-                    rf._concatenate_treelite_handle(all_tl_mod_handles)
 
-                    from cuml.fil.fil import TreeliteModel
+                    # tree concatenation raises a non-user friendly error if some workers didn't get all label values
+                    try:
+                        rf._deserialize_from_treelite(
+                            treelite.Model.concatenate(all_tl_mod_handles)
+                        )
+                    except RuntimeError as err:
+                        import traceback
 
-                    for tl_handle in all_tl_mod_handles:
-                        TreeliteModel.free_treelite_model(tl_handle)
+                        exc_str = traceback.format_exc()
+                        if "different num_class than the first model object" in exc_str:
+                            raise RuntimeError(
+                                "Some GPU workers did not receive all label values.  Rerun with fewer workers or shuffle input data."
+                            )
+                        else:
+                            raise err
 
-                    final_model_bytes = pickle.dumps(rf._get_serialized_model())
+                    final_model_bytes = pickle.dumps(rf._serialize_treelite_bytes())
                     final_model = base64.b64encode(final_model_bytes).decode("utf-8")
                     result = {
                         "treelite_model": final_model,
@@ -473,12 +543,19 @@ class _RandomForestModel(
     @property
     def featureImportances(self) -> Vector:
         """Estimate the importance of each feature."""
-        return self.cpu().featureImportances
 
-    @property
-    def getNumTrees(self) -> int:
-        """Number of trees in ensemble."""
-        return self.getOrDefault("numTrees")
+        raise ValueError(
+            "'featureImportances' is not yet not supported in Spark Rapids ML"
+        )
+
+    # This is a temporary fix for mypy error: incompatible with definition in base class '_RandomForestParams'
+    # TODO: refactor the code to eliminate the need for this type ignore
+    if not TYPE_CHECKING:
+
+        @property
+        def getNumTrees(self) -> int:
+            """Number of trees in ensemble."""
+            return self.getOrDefault("numTrees")
 
     @property
     def toDebugString(self) -> str:
@@ -577,12 +654,15 @@ class _RandomForestModel(
     ]:
         treelite_model = self._treelite_model
         is_classification = self._is_classification()
+        dtype = self.dtype
 
         def _construct_rf() -> CumlT:
             if is_classification:
                 from cuml import RandomForestClassifier as cuRf
             else:
                 from cuml import RandomForestRegressor as cuRf
+
+            import treelite
 
             rfs = []
             treelite_models = (
@@ -591,7 +671,11 @@ class _RandomForestModel(
             for m in treelite_models:
                 model = pickle.loads(base64.b64decode(m))
                 rf = cuRf()
-                rf._concatenate_treelite_handle([rf._tl_handle_from_bytes(model)])
+                # need this to revert a change in cuML targeting sklearn compat.
+                rf.n_features_in_ = None
+                rf._deserialize_from_treelite(treelite.Model.deserialize_bytes(model))
+                rf.dtype = np.dtype(dtype)
+
                 rfs.append(rf)
 
             return rfs

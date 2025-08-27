@@ -1,4 +1,18 @@
 #! /bin/bash
+# Copyright (c) 2025, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 #
 # Usage: ./run_benchmark.sh cpu|gpu|gpu_etl <mode> [<args>]
 # where <mode> can be:
@@ -6,6 +20,7 @@
 #     dbscan
 #     kmeans
 #     knn
+#     approximate_nearest_neighbors
 #     linear_regression
 #     pca
 #     random_forest_classifier
@@ -29,15 +44,22 @@
 # num_rows=${num_rows:-5000}
 # num_cols=${num_cols:-3000}
 # rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
+# gen_data=${gen_data:-true} (set to true to false to not generate data and reuse existing data)
 #
 # ex:  num_rows=1000000 num_cols=300 ./run_benchmark.sh gpu_etl kmeans,pca 
 # would run gpu based kmeans and pca on respective synthetic datasets with 1m rows and 300 cols
 # and would enable the Spark RAPIDS plugin for gpu accelerated data loading.
+#
+# For remote cluster type, it is assumed that a spark connect server is running on
+# either localhost default port 15002 or the host specified by remote_host env variable.
+# The script does not start up the spark connect server either locally or remotely.
+
 
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-cuda_version=${cuda_version:-11}
+cuda_version=${cuda_version:-12}
 
 cluster_type=${1:-gpu}
+remote_host=sc://${remote_host:-localhost}
 shift
 local_threads=${local_threads:-4}
 num_gpus=1
@@ -47,13 +69,19 @@ if [[ $cluster_type == "gpu" || $cluster_type == "gpu_etl" ]]; then
     if [[ -n $CUDA_VISIBLE_DEVICES ]]; then
         num_gpus=$(( `echo $CUDA_VISIBLE_DEVICES | grep -o ',' | wc -l` + 1 ))
     fi
-elif [[ $cluster_type == "cpu" ]]; then
+elif [[ $cluster_type == "cpu" ]]; then 
     num_cpus=$local_threads
     num_gpus=0
     use_gpu=false
+elif [[ $cluster_type == "remote" ]]; then
+# if remote cluster is configured, only cpu benchmark code is run.
+# if the remote server is configured with gpus and ml plugin is enabled on the server,
+# then benchmark code will run on the server with gpu acceleration.
+    num_cpus=1
+    num_gpus=0
 else
     echo "unknown cluster type $cluster_type"
-    echo "usage: $0 cpu|gpu|gpu_etl mode [extra-args] "
+    echo "usage: $0 cpu|gpu|gpu_etl|remote mode [extra-args] "
     exit 1
 fi
 
@@ -77,7 +105,8 @@ density=${density:-0.1}
 # gen_data_script=${gen_data_script:-./benchmark/gen_data.py}
 # gen_data_root=/tmp/data
 gen_data_script=${gen_data_script:-./benchmark/gen_data_distributed.py}
-gen_data_root=/tmp/distributed
+gen_data_root=${gen_data_root:-/tmp/distributed}
+gen_data=${gen_data:-true}
 
 # if num_rows=1m => output_files=50, scale linearly
 output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
@@ -95,21 +124,36 @@ common_confs=$(
 cat <<EOF 
 --spark_confs spark.sql.execution.arrow.pyspark.enabled=true \
 --spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=$arrow_batch_size \
---spark_confs spark.python.worker.reuse=true \
+--spark_confs spark.rapids.ml.uvm.enabled=true
+EOF
+)
+
+if [[ $cluster_type != "remote" ]]; then
+common_confs=$(
+cat <<EOF
+${common_confs} \
 --spark_confs spark.master=local[$local_threads] \
 --spark_confs spark.driver.memory=128g \
+--spark_confs spark.python.worker.reuse=true
 --spark_confs spark.rapids.ml.uvm.enabled=false \
 --spark_confs spark.rapids.ml.sam.enabled=true \
 --spark_confs spark.rapids.ml.sam.headroom=1g \
 --spark_confs spark.executorEnv.CUPY_ENABLE_SAM=1
 EOF
 )
+else
+common_confs=$(
+cat <<EOF
+$common_confs \
+--spark_confs spark.remote=${remote_host}
+EOF
+)
+fi
 
-
-
+spark_rapids_confs=""
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=24.04.1
+SPARK_RAPIDS_VERSION=25.06.0
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
@@ -122,11 +166,10 @@ spark_rapids_confs=$(
 cat <<EOF 
 --spark_confs spark.executorEnv.PYTHONPATH=${rapids_jar} \
 --spark_confs spark.sql.files.minPartitionNum=${num_gpus} \
---spark_confs spark.rapids.memory.gpu.minAllocFraction=0.0001 \
+--spark_confs spark.rapids.memory.gpu.pool=NONE \
 --spark_confs spark.plugins=com.nvidia.spark.SQLPlugin \
 --spark_confs spark.locality.wait=0s \
 --spark_confs spark.sql.cache.serializer=com.nvidia.spark.ParquetCachedBatchSerializer \
---spark_confs spark.rapids.memory.gpu.pooling.enabled=false \
 --spark_confs spark.rapids.sql.explain=ALL \
 --spark_confs spark.sql.execution.sortBeforeRepartition=false \
 --spark_confs spark.rapids.sql.format.parquet.reader.type=MULTITHREADED \
@@ -146,7 +189,7 @@ fi
     
 # KMeans
 if [[ "${MODE}" =~ "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+    if [[ $gen_data == "true" && ! -d "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script default \
             --num_rows $num_rows \
             --num_cols $num_cols \
@@ -177,7 +220,7 @@ fi
 
 # KNearestNeighbors
 if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" ]]; then
+    if [[ $gen_data == "true" && ! -d "${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script blobs \
             --num_rows $knn_num_rows \
             --num_cols $num_cols \
@@ -205,9 +248,10 @@ fi
 
 # ApproximateNearestNeighbors
 if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]]; then
-    centers=100
+    algorithm=${algorithm:-"ivfflat"}
+    centers=${centers:-100}
     data_path=${gen_data_root}/blobs/r${knn_num_rows}_c${num_cols}_cts${centers}_float32.parquet
-    if [[ ! -d ${data_path} ]]; then
+    if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
         python $gen_data_script blobs \
             --num_rows ${knn_num_rows} \
             --num_cols ${num_cols} \
@@ -229,10 +273,26 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
     nlist=$(echo "${nvecs_per_gpu}" | awk '{print int(sqrt($1))}')
     nprobe=$(echo "$nlist" | awk '{print int($1 * 0.01 + 0.9999)}')
 
+    algoParams_default="nlist=${nlist},nprobe=${nprobe}"
+    if [ $algorithm = "cagra" ]; then
+        algoParams_default="build_algo=nn_descent"
+    elif [ $algorithm = "ivfpq" ]; then
+        # In IVFPQ, larger M leads to higher recall yet slower runtime. When M is not set, benchmarking script will set its value to 10% of the dimension
+        ivfpq_M=$(echo "$num_cols" | awk '{print int($1 * 0.1 + 0.9999)}')
+        algoParams_default="${algoParams_default},M=${ivfpq_M},n_bits=8"
+    elif [ $algorithm != "ivfflat" ]; then
+        echo "algorithm ${algorithm} is not in the supported list"
+    fi
+    algoParams=${algoParams:-${algoParams_default}}
+
+    gpu_algo_params="algorithm=${algorithm},${algoParams}"
+    if [ -z "$algoParams" ]; then
+        gpu_algo_params="algorithm=${algorithm}"
+    fi
+
     cpu_algo_params='numHashTables=3,bucketLength=2.0' 
-    gpu_algo_params="algorithm=ivfflat,nlist=${nlist},nprobe=${nprobe}"
     python ./benchmark/benchmark_runner.py approximate_nearest_neighbors \
-        --n_neighbors 20 \
+        --k 20 \
         --fraction_sampled_queries ${knn_fraction_sampled_queries} \
         --num_gpus $num_gpus \
         --gpu_algo_params $gpu_algo_params \
@@ -251,7 +311,7 @@ fi
 # TBD standardize datasets to allow better cpu to gpu training accuracy comparison:
 # https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.08/python/src/spark_rapids_ml/regression.py#L519-L520
 if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+    if [[ $gen_data == "true" && ! -d "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
             --num_cols $num_cols \
@@ -312,7 +372,7 @@ fi
 
 # PCA
 if [[ "${MODE}" =~ "pca" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+    if [[ $gen_data == "true" && ! -d "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script low_rank_matrix \
             --num_rows $num_rows \
             --num_cols $num_cols \
@@ -363,7 +423,7 @@ if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
     num_classes=2
     data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
 
-    if [[ ! -d ${data_path} ]]; then
+    if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
         python $gen_data_script classification \
             --n_informative $( expr $num_cols / 3 )  \
             --n_redundant $( expr $num_cols / 3 ) \
@@ -394,7 +454,7 @@ fi
 
 # Random Forest Regression
 if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d ${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet ]]; then
+    if [[ $gen_data == "true" && ! -d ${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet ]]; then
         python $gen_data_script regression \
             --num_rows $num_rows \
             --num_cols $num_cols \
@@ -428,7 +488,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
 
         data_path=${gen_data_root}/classification/r${num_rows}_c${num_cols}_float32_ncls${num_classes}.parquet
 
-        if [[ ! -d ${data_path} ]]; then
+        if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
             python $gen_data_script classification \
                 --n_informative $( expr $num_cols / 3 )  \
                 --n_redundant $( expr $num_cols / 3 ) \
@@ -498,7 +558,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
         for num_classes in ${num_classes_list}; do
             data_path=${gen_data_root}/sparse_logistic_regression/r${num_rows}_c${num_sparse_cols}_float64_ncls${num_classes}.parquet
 
-            if [[ ! -d ${data_path} ]]; then
+            if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
                 python $gen_data_script sparse_regression \
                 --n_informative $( expr $num_cols / 3 )  \
                 --num_rows $num_rows \
@@ -537,7 +597,7 @@ fi
 
 # UMAP
 if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+    if [[ $gen_data == "true" && ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script blobs \
             --num_rows $num_rows \
             --num_cols $num_cols \
@@ -571,7 +631,7 @@ fi
 
 # DBSCAN
 if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
-    if [[ ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
+    if [[ $gen_data == "true" && ! -d "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" ]]; then
         python $gen_data_script blobs \
             --num_rows $num_rows \
             --num_cols $num_cols \

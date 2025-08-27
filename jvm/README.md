@@ -1,121 +1,116 @@
-# Spark Rapids ML (Scala)
+# Spark Rapids ML Connect Plugin
 
-### PCA
+The Spark Rapids ML Connect Plugin is designed to accelerate Spark ML algorithms
+in a Spark Connect environment using the spark-rapids-ml Python package. It enables GPU
+acceleration for machine learning workloads without requiring changes to the user's existing code.
+The plugin requires Spark 4.0.  See [https://spark.apache.org/docs/latest/spark-connect-overview.html](https://spark.apache.org/docs/latest/spark-connect-overview.html) for an overview of Spark Connect, which allows running Spark SQL, DataFrame, and MLlib based applications in thin GRPC protocol clients.
 
-Comparing to the original PCA training API:
+## Getting Started
+### Requirements
+JDK 17, Spark 4.0
 
-```scala
-val pca = new org.apache.spark.ml.feature.PCA()
-  .setInputCol("feature_vector_type")
-  .setOutputCol("feature_value_3d")
-  .setK(3)
-  .fit(vectorDf)
-```
+### Environment Setup
 
-We used a customized class and user will need to do `no code change` to enjoy the GPU acceleration:
+- Install spark-rapids-ml and dependencies
 
-```scala
-val pca = new com.nvidia.spark.ml.feature.PCA()
-  .setInputCol("feature_array_type") // accept ArrayType column, no need to convert it to Vector type
-  .setOutputCol("feature_value_3d")
-  .setK(3)
-  .fit(vectorDf)
-...
-```
+  Follow
+  the [installation guide](../python/README.md#installation)
+  to install the spark-rapids-ml package and dependencies on the server side.    Follow the `## OPTIONAL: for package installation` part of the instructions.
 
-Note: The `setInputCol` is targeting the input column of `Vector` type for training process in `CPU`
-version. But in GPU version, user doesn't need to do the extra preprocess step to convert column of
-`ArrayType` to `Vector` type, the `setInputCol` will accept the raw `ArrayType` column.
+- Setup Spark
 
-## Build
+  Download the Spark 4.0 tgz file with the Spark Connect enabled 'package type'
+  from [spark.apache.org](https://spark.apache.org/downloads.html)
 
-### Build in Docker:
+  Extract the archive and note the directory for reference below.
 
-We provide a Dockerfile to build the project in a container. See [docker](../docker/README.md) for more instructions.
 
-### Prerequisites:
+- Install PySpark Connect Client
 
-1. essential build tools:
-    - [cmake(>=3.23.1)](https://cmake.org/download/),
-    - [ninja(>=1.10)](https://github.com/ninja-build/ninja/releases),
-    - [gcc(>=9.3)](https://gcc.gnu.org/releases.html)
-2. [CUDA Toolkit(>=11.5)](https://developer.nvidia.com/cuda-toolkit)
-3. conda: use [miniconda](https://docs.conda.io/en/latest/miniconda.html) to maintain header files
-and cmake dependecies
-4. [cuDF](https://github.com/rapidsai/cudf):
-    - install cuDF shared library via conda:
-      ```bash
-      conda install -c rapidsai -c conda-forge cudf=22.04 python=3.8 -y
-      ```
-5. [RAFT(22.12)](https://github.com/rapidsai/raft):
-    - raft provides only header files, so no build instructions for it. Note we fix the version to
-      22.12 to avoid potential API compatibility issues in the future.
-      ```bash
-      $ git clone -b branch-22.12 https://github.com/rapidsai/raft.git
-      ```
-6. export RAFT_PATH:
-    ```bash
-    export RAFT_PATH=ABSOLUTE_PATH_TO_YOUR_RAFT_FOLDER
+  To install the PySpark Connect client on the client side, follow these steps:
+
+    ```shell
+    # Create a new conda environment for the client
+    conda create -n pyspark-client python==3.10
+    conda activate pyspark-client
+
+    # Install the PySpark client package
+    pip install pyspark-client
     ```
-Note: For those using other types of GPUs which do not have CUDA forward compatibility (for example, GeForce), CUDA 11.5 or later is required.
 
-### Build target jar
+  This will set up the PySpark client in the pyspark-client conda environment.
 
-Spark-rapids-ml uses [spark-rapids](https://github.com/NVIDIA/spark-rapids) plugin as a dependency.
-To build the _SNAPSHOT_ jar, user needs to build and install the denpendency jar _rapids-4-spark_ first
-because there's no snapshot jar for spark-rapids plugin in public maven repositories.
-See [build instructions](https://github.com/NVIDIA/spark-rapids/blob/branch-23.04/CONTRIBUTING.md#building-a-distribution-for-multiple-versions-of-spark) to get the dependency jar installed.
+### Testing
 
-User can also modify the pom file to use the _release_ version spark-rapids plugin as the dependency. In this case user doesn't need to manually build and install spark-rapids plugin jar by themselves.
+This section outlines the steps to test Spark Connect with the Spark Rapids ML plugin,
+including setting up the server and running client-side tests.
 
-Make sure the _rapids-4-spark_ is installed in your local maven then user can build it directly in
-the _project root path_ with:
+#### Start connect server (server side)
+
+To start the Spark Connect server with Spark Rapids ML support, follow these steps:
+
+```shell
+conda activate rapids-25.08  # from spark-rapids-ml installation
+export SPARK_HOME=<directory where spark was installed above>
+export PYSPARK_PYTHON=$(which python)
+export PLUGIN_JAR=$(pip show spark-rapids-ml | grep Location: | cut -d ' ' -f 2 )/spark_rapids_ml/jars/com.nvidia.rapids.ml-25.08.0.jar
+$SPARK_HOME/sbin/start-connect-server.sh --master local[*] \
+  --jars $PLUGIN_JAR \
+  --conf spark.driver.memory=20G
 ```
-cd jvm
+Notice that the plugin jar is bundled in the pip installed `spark-rapids-ml` python package.
+
+#### Run the tests (client side)
+
+Once the server is running, you can connect to it from a client under the `pyspark-client` environment
+with Spark Connect support.  
+
+Run below to test it:
+
+```shell
+conda activate pyspark-client
+cat <<EOF >test_connect.py
+from pyspark.ml.classification import (LogisticRegression,
+                                       LogisticRegressionModel)
+from pyspark.ml.linalg import Vectors
+from pyspark.sql import SparkSession
+
+spark = (SparkSession.builder.remote("sc://localhost")
+         .config("spark.connect.ml.backend.classes", "com.nvidia.rapids.ml.Plugin")
+         .getOrCreate())
+
+df = spark.createDataFrame([
+        (Vectors.dense([1.0, 2.0]), 1),
+        (Vectors.dense([2.0, -1.0]), 1),
+        (Vectors.dense([-3.0, -2.0]), 0),
+        (Vectors.dense([-1.0, -2.0]), 0),
+        ], schema=['features', 'label'])
+lr = LogisticRegression(maxIter=19, tol=0.0023)
+model = lr.fit(df)
+
+print(f"model.intercept: {model.intercept}")
+print(f"model.coefficients: {model.coefficients}")
+
+model.transform(df).show()
+EOF
+python test_connect.py
+```
+
+## Building the Spark Rapids ML Connect Plugin
+
+To compile the plugin, clone this repo and run the following command in the `jvm` directory:
+
+``` shell
+mvn clean package -DskipTests
+```
+
+if you would like to compile the plugin and run the unit tests, install `spark-rapids-ml` python package and its dependencies per the above instructions and run the following command:
+
+``` shell
+conda activate rapids-25.08
+export PYSPARK_PYTHON=$(which python)
 mvn clean package
 ```
-Then `rapids-4-spark-ml_2.12-24.04.1-SNAPSHOT.jar` will be generated under `target` folder.
 
-Users can also use the _release_ version spark-rapids plugin as the dependency if it's already been
-released in public maven repositories, see [rapids-4-spark maven repository](https://mvnrepository.com/artifact/com.nvidia/rapids-4-spark)
-for release versions. In this case, users don't need to manually build and install spark-rapids
-plugin jar by themselves. Remember to replace the [dependency](https://github.com/NVIDIA/spark-rapids-ml/blob/branch-23.04/pom.xml#L94-L96)
-in pom file.
-
-_Note_: This module contains both native and Java/Scala code. The native library build instructions
-has been added to the pom.xml file so that maven build command will help build native library all
-the way. Make sure the prerequisites are all met, or the build will fail with error messages
-accordingly such as "cmake not found" or "ninja not found" etc.
-
-## How to use
-
-After the building processes, spark-rapids plugin jar will be installed to your local maven
-repository, usually in your `~/.m2/repository`.
-
-Add the artifact jar to the Spark, for example:
-```bash
-ML_JAR="target/rapids-4-spark-ml_2.12-24.04.1-SNAPSHOT.jar"
-PLUGIN_JAR="~/.m2/repository/com/nvidia/rapids-4-spark_2.12/24.04.1/rapids-4-spark_2.12-24.04.1.jar"
-
-$SPARK_HOME/bin/spark-shell --master $SPARK_MASTER \
- --driver-memory 20G \
- --executor-memory 30G \
- --conf spark.driver.maxResultSize=8G \
- --jars ${ML_JAR},${PLUGIN_JAR} \
- --conf spark.plugins=com.nvidia.spark.SQLPlugin \
- --conf spark.rapids.sql.enabled=true \
- --conf spark.task.resource.gpu.amount=0.08 \
- --conf spark.executor.resource.gpu.amount=1 \
- --conf spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh \
- --files ${SPARK_HOME}/examples/src/main/scripts/getGpusResources.sh
-```
-
-### PCA examples
-
-Please refer to
-[PCA examples](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/) for
-more details about example code. We provide both
-[Notebook](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/notebooks/Spark_PCA_End_to_End.ipynb)
-and [jar](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/scala/src/com/nvidia/spark/examples/pca/Main.scala)
- versions there. Instructions to run these examples are described in the
-[README](https://github.com/NVIDIA/spark-rapids-examples/blob/branch-23.04/examples/ML+DL-Examples/Spark-cuML/pca/README.md).
+After compilation, the latest JAR file, `com.nvidia.rapids.ml-<LATEST_VERSION>.jar`, will be
+available in the `target` directory.

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import warnings
-from typing import Any, Dict, List, Tuple, Type, TypeVar, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 import numpy as np
 import pyspark
@@ -27,6 +27,7 @@ if version.parse(pyspark.__version__) < version.parse("3.4.0"):
 else:
     from pyspark.errors import IllegalArgumentException  # type: ignore
 
+from pyspark.ml import Model
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector
@@ -39,6 +40,7 @@ from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 from pyspark.sql.functions import array, col
 from pyspark.sql.types import DoubleType
 
+from spark_rapids_ml.core import _CumlModel
 from spark_rapids_ml.regression import LinearRegression, LinearRegressionModel
 from spark_rapids_ml.tuning import CrossValidator
 
@@ -97,24 +99,54 @@ def train_with_cuml_linear_regression(
     return lr
 
 
-def test_params() -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool) -> None:
     from cuml.linear_model.linear_regression import (
         LinearRegression as CumlLinearRegression,
     )
     from cuml.linear_model.ridge import Ridge
     from cuml.solvers import CD
+    from pyspark.ml.regression import LinearRegression as SparkLinearRegression
+
+    spark_params = {
+        param.name: value
+        for param, value in SparkLinearRegression().extractParamMap().items()
+    }
 
     cuml_params = get_default_cuml_parameters(
-        [CumlLinearRegression, Ridge, CD], ["handle", "output_type"]
+        cuml_classes=[CumlLinearRegression, Ridge, CD],
+        excludes=["handle", "output_type"],
     )
-    spark_params = LinearRegression()._get_cuml_params_default()
 
-    import cuml
-    from packaging import version
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert cuml_params == LinearRegression()._get_cuml_params_default()
 
-    if version.parse(cuml.__version__) < version.parse("23.08.00"):
-        spark_params.pop("copy_X")
-    assert cuml_params == spark_params
+    # Our algorithm overrides the following cuml parameters with their spark defaults:
+    spark_default_overrides = {
+        "alpha": spark_params["regParam"],
+        "l1_ratio": spark_params["elasticNetParam"],
+        "max_iter": spark_params["maxIter"],
+        "normalize": spark_params["standardization"],
+        "tol": spark_params["tol"],
+    }
+
+    cuml_params.update(spark_default_overrides)
+
+    if default_params:
+        lr = LinearRegression()
+    else:
+        lr = LinearRegression(
+            regParam=0.001,
+            maxIter=500,
+        )
+        cuml_params["alpha"] = 0.001
+        cuml_params["max_iter"] = 500
+        spark_params["regParam"] = 0.001
+        spark_params["maxIter"] = 500
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(lr, spark_params, cuml_params)
+    assert cuml_params == lr.cuml_params
 
     # setter/getter
     from .test_common_estimator import _test_input_setter_getter
@@ -144,7 +176,7 @@ def test_linear_regression_params(
         "l1_ratio": 0.0,
         "max_iter": 100,
         "normalize": True,
-        "solver": "eig",
+        "solver": "auto",
     }
     default_lr = LinearRegression()
     assert_params(default_lr, default_spark_params, default_cuml_params)
@@ -179,13 +211,36 @@ def test_linear_regression_params(
 
     # Unsupported value
     spark_params = {"solver": "l-bfgs"}
-    with pytest.raises(ValueError, match="solver given invalid value l-bfgs"):
-        unsupported_lr = LinearRegression(**spark_params)
+    # need a clean spark session since behavior below is spark config based
+    with CleanSparkSession() as spark:
+        with pytest.raises(
+            ValueError, match="solver given an invalid or unsupported value l-bfgs"
+        ):
+            unsupported_lr = LinearRegression(**spark_params)
 
     # make sure no warning when enabling float64 inputs
     lr_float32 = LinearRegression(float32_inputs=False)
     assert "float32_inputs to False" not in caplog.text
     assert not lr_float32._float32_inputs
+
+
+def test_linear_regression_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    # solver supports 'auto', 'normal' and 'eig', but all of them will be mapped to 'eig' in cuML.
+    # loss supports 'squaredError' only,
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"maxIter": 29}, {"max_iter": 29}),
+        ({"regParam": 0.12}, {"alpha": 0.12}),
+        ({"elasticNetParam": 0.23}, {"l1_ratio": 0.23}),
+        ({"fitIntercept": False}, {"fit_intercept": False}),
+        ({"standardization": False}, {"normalize": False}),
+        ({"tol": 0.0132}, {"tol": 0.0132}),
+        ({"verbose": True}, {"verbose": True}),
+    ]
+
+    for pair in param_list:
+        _test_est_copy(LinearRegression, pair[0], pair[1])
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
@@ -353,7 +408,7 @@ def test_linear_regression(
         )
         assert label_col is not None
 
-        slr = LinearRegression(num_workers=gpu_number, verbose=7, **other_params)
+        slr = LinearRegression(num_workers=gpu_number, verbose=6, **other_params)
         slr.setRegParam(alpha)
         slr.setStandardization(
             False
@@ -643,10 +698,12 @@ def test_crossvalidator_linear_regression(
             evaluator=evaluator,
             numFolds=2,
             seed=1,
+            collectSubModels=True,
         )
 
         # without exception
         model: CrossValidatorModel = cv.fit(df)
+        assert all([isinstance(m, _CumlModel) for m in model.subModels[0]])  # type: ignore
 
         spark_cv = SparkCrossValidator(
             estimator=lr,
@@ -688,3 +745,120 @@ def test_parameters_validation() -> None:
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(LinearRegression)
+
+
+@pytest.mark.parametrize("setting_method", ["constructor", "setter"])
+def test_linear_regression_cpu_fallback(setting_method: str) -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+
+        unsupported = [
+            k for k, v in LinearRegression._param_mapping().items() if v is None
+        ]
+        vals_to_try_unsupported = {
+            "weightCol": "weightscol",
+        }
+
+        vals_to_try_unsupported_vals = {
+            "solver": "l-bfgs",  # this one tests value mapping induced fallback
+        }
+
+        assert set(unsupported) == set(vals_to_try_unsupported.keys())
+        # Add weights column to dataframe
+        data = spark.createDataFrame(
+            [
+                (Vectors.dense(1.0, 0.0), 1.0, 1.0),
+                (Vectors.dense(1.0, 1.0), 1.0, 1.0),
+                (Vectors.dense(0.0, 0.0), 0.0, 1.0),
+                (Vectors.dense(0.0, 1.0), 0.0, 1.0),
+            ],
+            ["features", "label", "weightscol"],
+        )
+        # Test constructor params
+        for param, val in {
+            **vals_to_try_unsupported,
+            **vals_to_try_unsupported_vals,
+        }.items():
+            if setting_method == "constructor":
+                gpu_lr = LinearRegression(**{param: val})  # type: ignore
+            else:
+                gpu_lr = LinearRegression()
+                setter_name = "set" + param[0].upper() + param[1:]
+                getattr(gpu_lr, setter_name)(val)  # type: ignore
+            model = gpu_lr.fit(data)
+            getter_name = "get" + param[0].upper() + param[1:]
+            assert getattr(model, getter_name)() == val
+            assert not isinstance(model, _CumlModel) and isinstance(model, Model)
+
+
+def test_cv_cpu_fallback() -> None:
+    with CleanSparkSession({"spark.rapids.ml.cpu.fallback.enabled": "true"}) as spark:
+        from pyspark.ml import Model
+        from pyspark.ml.linalg import Vectors
+
+        from spark_rapids_ml.core import _CumlModel
+
+        data = spark.createDataFrame(
+            [
+                (Vectors.dense(1.0, 0.0), 1.0, 1.0, 1.5),
+                (Vectors.dense(1.0, 1.0), 1.0, 1.0, 1.5),
+                (Vectors.dense(0.0, 0.0), 0.0, 1.0, 1.0),
+                (Vectors.dense(0.0, 1.0), 0.0, 1.0, 1.0),
+            ],
+            ["features", "label", "weightscol1", "weightscol2"],
+        )
+
+        data = data.union(data)
+        data = data.union(data)
+
+        gpu_lr = LinearRegression()
+
+        grid = (
+            ParamGridBuilder()
+            .addGrid(gpu_lr.weightCol, ["weightscol1", "weightscol2"])
+            .build()
+        )
+
+        evaluator = RegressionEvaluator()
+        evaluator.setLabelCol("label")
+
+        cv = CrossValidator(
+            estimator=gpu_lr,
+            estimatorParamMaps=grid,
+            evaluator=evaluator,
+            numFolds=2,
+            seed=1,
+            collectSubModels=True,
+        )
+
+        model = cv.fit(data)
+
+        assert len(model.subModels) == 2  # type: ignore
+        assert len(model.subModels[0]) == 2  # type: ignore
+
+        for fold in range(2):
+            for submodel in model.subModels[fold]:  # type: ignore
+                assert not isinstance(submodel, _CumlModel) and isinstance(
+                    submodel, Model
+                )
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    # Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        est = LinearRegression()
+
+        # Parameters should be picked up from Spark confs
+        assert est._input_kwargs["verbose"] == 5
+        assert est._input_kwargs["float32_inputs"] is False
+        assert est._input_kwargs["num_workers"] == 3

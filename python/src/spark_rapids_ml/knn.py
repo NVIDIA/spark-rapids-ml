@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 #
 
 import asyncio
+import inspect
+import math
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
@@ -60,10 +62,11 @@ from .core import (
     param_alias,
 )
 from .metrics import EvalMetricInfo
-from .params import HasIDCol, P, _CumlClass, _CumlParams
+from .params import DictTypeConverters, HasIDCol, P, _CumlClass, _CumlParams
 from .utils import (
     _concat_and_free,
     _get_class_or_callable_name,
+    _get_default_params_from_func,
     _get_spark_session,
     get_logger,
 )
@@ -151,6 +154,17 @@ class _NearestNeighborsCumlParams(
         """
         self._set_params(idCol=value)
         return self
+
+    def getInputCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
+        """
+        if self.isDefined(self.inputCols):
+            return self.getOrDefault(self.inputCols)
+        elif self.isDefined(self.inputCol):
+            return self.getOrDefault(self.inputCol)
+        else:
+            raise RuntimeError("inputCol is not set")
 
     def _ensureIdCol(self, df: DataFrame) -> DataFrame:
         """
@@ -313,6 +327,7 @@ class NearestNeighbors(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         if not self._input_kwargs.get("float32_inputs", True):
             get_logger(self.__class__).warning(
                 "This estimator does not support double precision inputs. Setting float32_inputs to False will be ignored."
@@ -599,7 +614,20 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
             alias.label, lit(self._label_isquery)
         )
 
-        union_df = self._processed_item_df.union(processed_query_df)
+        def select_cols_for_cuml_fit(df_origin: DataFrame) -> DataFrame:
+            cols_for_nns = [self._getIdColOrDefault(), alias.label]
+            input_col, input_cols = self._get_input_columns()
+            if input_col is not None:
+                cols_for_nns.append(input_col)
+            else:
+                assert input_cols is not None
+                cols_for_nns += input_cols
+
+            return df_origin.select(cols_for_nns)
+
+        df_item_for_nns = select_cols_for_cuml_fit(self._processed_item_df)
+        df_query_for_nns = select_cols_for_cuml_fit(processed_query_df)
+        union_df = df_item_for_nns.union(df_query_for_nns)
 
         pipelinedrdd = self._call_cuml_fit_func(union_df, partially_collect=False)
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
@@ -806,17 +834,6 @@ class ApproximateNearestNeighborsClass(_CumlClass):
         return None
 
 
-class DictTypeConverters(TypeConverters):
-    @staticmethod
-    def _toDict(value: Any) -> Dict[str, Any]:
-        """
-        Convert a value to a Dict type for Param typeConverter, if possible.
-        """
-        if isinstance(value, Dict):
-            return {TypeConverters.toString(k): v for k, v in value.items()}
-        raise TypeError("Could not convert %s to Dict[str, Any]" % value)
-
-
 class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
     def __init__(self) -> None:
         super().__init__()
@@ -849,7 +866,11 @@ class _ApproximateNearestNeighborsParams(_NearestNeighborsCumlParams):
         """
         Sets the value of `algorithm`.
         """
-        assert value == "ivfflat", "Only IVFFLAT algorithm is currently supported"
+        assert value in {
+            "ivfflat",
+            "ivfpq",
+            "cagra",
+        }, "Only ivfflat, ivfpq, and cagra are currently supported"
         self._set_params(algorithm=value)
         return self
 
@@ -892,43 +913,76 @@ class ApproximateNearestNeighbors(
     """
     ApproximateNearestNeighbors retrieves k approximate nearest neighbors (ANNs) in item vectors for each query.
     The key APIs are similar to the NearestNeighbor class which returns the exact k nearest neighbors.
-    The ApproximateNearestNeighbors is currently built on the IVFFLAT and IVFPQ algorithms of cuML, and is expected to support
-    more algorithms in the future.
+    The ApproximateNearestNeighbors is currently implemented using cuvs. It supports the IVFFLAT, IVFPQ, and
+    CAGRA (graph-based) algorithms and follows the API conventions of cuML.
+
+    The current implementation build index independently on each data partition of item_df. Queries will be broadcast to all GPUs,
+    then every query probes closest centers on individual index. Local topk results will be aggregated to obtain global topk ANNs.
+
+    CAGRA is a graph-based algorithm designed to construct a nearest neighbors graph index using either "ivf_pq" or "nn_descent" method.
+    This index is then utilized to efficiently answer approximate nearest neighbor (ANN) queries. Graph-based algorithms have consistently
+    demonstrated superior performance in ANN search, offering the fastest search speeds with minimal loss in search quality. Due to the high
+    computational complexity involved in graph construction, these algorithms are particularly well-suited for GPU acceleration.
 
     IVFFLAT algorithm trains a set of kmeans centers, then partition every item vector to the closest center. In the query processing
     phase, a query will be partitioned into a number of closest centers, and probe all the items associated with those centers. In
     the end the top k closest items will be returned as the approximate nearest neighbors.
 
-    The current implementation build kmeans index independently on  each data partition (or maxRecordsPerBatch if Arrow is enabled) of item_df.
-    Queries will be broadcast to all GPUs, then every query probes closest centers on individual index. Local topk results will be aggregated to obtain
-    global topk ANNs.
-
+    The IVFPQ algorithm employs product quantization to compress high-dimensional vectors into compact bit representations,
+    enabling rapid distance computation between vectors. While IVFPQ typically delivers faster search speeds compared to IVFFLAT,
+    it does so with a tradeoff in search quality, such as reduced recall. It is important to note that the distances returned by IVFPQ
+    are approximate and do not represent the exact distances in the original high-dimensional space.
 
     Parameters
     ----------
     k: int (default = 5)
         the default number of approximate nearest neighbors to retrieve for each query.
 
+        If fewer than k neighbors are found for a query (for example, due to a small nprobe value):
+        (1)In ivfflat and ivfpq:
+            (a) If no item vector is probed, the indices are filled with long_max (9,223,372,036,854,775,807) and distances are set to infinity.
+            (b) If at least one item vector is probed, the indices are filled with the top-1 neighbor's ID, and distances are filled with infinity.
+        (2) cagra does not have this problem, as at least itopk_size (where itopk_size ≥ k) items are always probed.
+
     algorithm: str (default = 'ivfflat')
-        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat' or 'ivfpq'. Other algorithms are expected to be supported later.
+        the algorithm parameter to be passed into cuML. It currently must be 'ivfflat', 'ivfpq' or 'cagra'. Other algorithms are expected to be supported later.
 
     algoParams: Optional[Dict[str, Any]] (default = None)
         if set, algoParam is used to configure the algorithm, on each data partition (or maxRecordsPerBatch if Arrow is enabled) of the item_df.
         Note this class constructs the kmeans index independently on individual data partition (or maxRecordPerBatch if Arrow is enabled).
+        When algorithm is 'cagra', parameters for index construction:
+
+            - build_algo: (str, default = 'ivf_pq') algorithm to build graph index, can be either 'ivf_pq' or 'nn_descent'. nn_descent is expected to be generally faster than ivf_pq.
+            - intermediate_graph_degree: (int, default = 128) an intermediate variable used during graph index construction.
+            - graph_degree: (int, default = 64) the degree of each node in the final graph index.
+
+        When algorithm is 'cagra', parameters for search (full list in `cuvs python API documentation <https://docs.rapids.ai/api/cuvs/stable/python_api/neighbors_cagra/#cuvs.neighbors.cagra.SearchParams>`_):
+
+            - itopk_size: (int, default = 64) number of intermediate search results retained during the search. Larger value improves the search accuracy but increases the search time. cuVS internally increases the value to be multiple of 32 and expects the internal value to be larger than or equal to k.
+            - max_iterations (int, default = 0) maximum number of search iterations. 0 means auto select.
+            - min_iterations (int, default = 0) minimum number of search iterations. 0 means auto select.
+            - search_width: (int, default = 1) number of graph nodes as the initial set of search points in each iteration.
+            - num_random_samplings: (int, default = 1) number of iterations for selecting initial random seed nodes.
 
         When algorithm is 'ivfflat':
-            * nlist: (int) number of kmeans clusters to partition the dataframe into.
-            * nprobe: (int) number of closest clusters to probe for topk ANNs.
+
+            - nlist: (int) number of kmeans clusters to partition the dataframe into.
+            - nprobe: (int) number of closest clusters to probe for topk ANNs.
 
         When algorithm is 'ivfpq':
-            * nlist: (int) number of kmeans clusters to partition the dataframe into.
-            * nprobe: (int) number of closest clusters to probe for topk ANNs.
-            * M: (int) number of subquantizers
-            * n_bits: (int) number of bits allocated per subquantizer
+
+            - nlist: (int) number of kmeans clusters to partition the dataframe into.
+            - nprobe: (int) number of closest clusters to probe for topk ANNs.
+            - M: (int) number of subquantizers
+            - n_bits: (int) number of bits allocated per subquantizer
+
             Note cuml requires M * n_bits to be multiple of 8 for the best efficiency.
 
     metric: str (default = "euclidean")
-        the distance metric to use. 'ivfflat' algorithm supports ['euclidean', 'sqeuclidean', 'l2', 'inner_product'].
+        the distance metric to use with the default set to "euclidean" (following cuml conventions, though cuvs defaults to "sqeuclidean").
+        The 'ivfflat' and 'ivfpq' algorithms support ['euclidean', 'sqeuclidean', 'l2', 'inner_product', 'cosine'].
+        The 'cagra' algorithm supports ['sqeuclidean'], and when using 'cagra' as an algorithm,
+        the metric must be explicitly set to 'sqeuclidean'.
 
     inputCol: str or List[str]
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
@@ -1061,11 +1115,19 @@ class ApproximateNearestNeighbors(
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         assert algorithm in {
             "ivfflat",
             "ivfpq",
-        }, "currently only ivfflat and ivfpq are supported"
+            "cagra",
+        }, "currently only ivfflat, ivfpq, and cagra are supported"
+        if not self._input_kwargs.get("float32_inputs", True):
+            get_logger(self.__class__).warning(
+                "This estimator supports only float32 inputs on GPU and will convert all other data types to float32. Setting float32_inputs to False will be ignored."
+            )
+            self._input_kwargs.pop("float32_inputs")
+
         self._set_params(**self._input_kwargs)
 
     def _fit(self, item_df: DataFrame) -> "ApproximateNearestNeighborsModel":  # type: ignore
@@ -1234,6 +1296,88 @@ class ApproximateNearestNeighborsModel(
 
         return global_knn_df
 
+    @classmethod
+    def _cal_cagra_params_and_check(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        assert (
+            metric == "sqeuclidean"
+        ), "when using 'cagra' algorithm, the metric must be explicitly set to 'sqeuclidean'."
+
+        cagra_index_params: Dict[str, Any] = {"metric": metric}
+        cagra_search_params: Dict[str, Any] = {}
+
+        if algoParams is None:
+            return (cagra_index_params, cagra_search_params)
+
+        for p in algoParams:
+            if p in {
+                "intermediate_graph_degree",
+                "graph_degree",
+                "build_algo",
+                "compression",
+            }:
+                cagra_index_params[p] = algoParams[p]
+            else:
+                cagra_search_params[p] = algoParams[p]
+
+        # check cagra params
+        itopk_size = (
+            64
+            if "itopk_size" not in cagra_search_params
+            else cagra_search_params["itopk_size"]
+        )
+        internal_topk_size = math.ceil(itopk_size / 32) * 32
+        if internal_topk_size < topk:
+            raise ValueError(
+                f"cagra increases itopk_size to be closest multiple of 32 and expects the value, i.e. {internal_topk_size}, to be larger than or equal to k, i.e. {topk})."
+            )
+
+        return (cagra_index_params, cagra_search_params)
+
+    @classmethod
+    def _cal_cuvs_ivf_flat_params_and_check(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        ivfflat_index_params: Dict[str, Any] = {"metric": metric}
+        ivfflat_search_params: Dict[str, Any] = {}
+
+        # support both cuml names (nlist, nprobe) and cuvs names (n_lists, n_probes)
+        if algoParams is not None:
+            for p in algoParams:
+                if p in {"n_probes", "nprobe"}:
+                    ivfflat_search_params["n_probes"] = algoParams[p]
+                elif p in {"n_lists", "nlist"}:
+                    ivfflat_index_params["n_lists"] = algoParams[p]
+                else:
+                    ivfflat_index_params[p] = algoParams[p]
+
+        return (ivfflat_index_params, ivfflat_search_params)
+
+    @classmethod
+    def _cal_cuvs_ivf_pq_params_and_check(
+        cls, algoParams: Optional[Dict[str, Any]], metric: str, topk: int
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        pq_index_params: Dict[str, Any] = {"metric": metric}
+        pq_search_params: Dict[str, Any] = {}
+
+        if algoParams is not None:
+            for p in algoParams:
+                if p in {"n_probes", "nprobe"}:
+                    pq_search_params["n_probes"] = algoParams[p]
+                elif p in {"lut_dtype", "internal_distance_dtype"}:
+                    pq_search_params[p] = algoParams[p]
+                elif p in {"n_lists", "nlist"}:
+                    pq_index_params["n_lists"] = algoParams[p]
+                elif p in {"M", "pq_dim"}:
+                    pq_index_params["pq_dim"] = algoParams[p]
+                elif p in {"n_bits", "pq_bits"}:
+                    pq_index_params["pq_bits"] = algoParams[p]
+                else:
+                    pq_index_params[p] = algoParams[p]
+
+        return (pq_index_params, pq_search_params)
+
     def kneighbors(
         self, query_df: DataFrame, sort_knn_df_by_query_id: bool = True
     ) -> Tuple[DataFrame, DataFrame, DataFrame]:
@@ -1318,15 +1462,41 @@ class ApproximateNearestNeighborsModel(
             "sqeuclidean",
             "inner_product",
             "l2",
+            "cosine",
         }
+
+        if (
+            cuml_alg_params["algorithm"] != "brute"
+        ):  # brute links to CPUNearestNeighborsModel of benchmark.bench_nearest_neighbors
+            if cuml_alg_params["algorithm"] == "cagra":
+                check_fn = self._cal_cagra_params_and_check
+            elif cuml_alg_params["algorithm"] in {"ivf_flat", "ivfflat"}:
+                check_fn = self._cal_cuvs_ivf_flat_params_and_check
+            else:
+                assert cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}
+                check_fn = self._cal_cuvs_ivf_pq_params_and_check
+
+            index_params, search_params = check_fn(
+                algoParams=self.cuml_params["algo_params"],
+                metric=self.cuml_params["metric"],
+                topk=cuml_alg_params["n_neighbors"],
+            )
 
         def _construct_sgnn() -> CumlT:
 
-            from cuml.neighbors import NearestNeighbors as SGNN
+            if cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}:
+                from cuvs.neighbors import ivf_pq
 
-            nn_object = SGNN(output_type="cupy", **cuml_alg_params)
+                return ivf_pq
+            elif cuml_alg_params["algorithm"] in {"ivfflat" or "ivf_flat"}:
+                from cuvs.neighbors import ivf_flat
 
-            return nn_object
+                return ivf_flat
+            else:
+                assert cuml_alg_params["algorithm"] == "cagra"
+                from cuvs.neighbors import cagra
+
+                return cagra
 
         row_number_col = alias.row_number
         input_col, input_cols = self._get_input_columns()
@@ -1344,21 +1514,23 @@ class ApproximateNearestNeighborsModel(
             nn_object: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.DataFrame:
 
-            item_row_number = df[row_number_col].to_numpy()
+            item_row_number = df[row_number_col].to_numpy(dtype=np.int64)
             item = df.drop(row_number_col, axis=1)  # type: ignore
             if input_col is not None:
                 assert len(item.columns) == 1
                 item = np.array(list(item[item.columns[0]]), order="C")
 
-            if len(item) == 0:
-                return pd.DataFrame(
+            if len(item) == 0 or len(bcast_qfeatures.value) == 0:
+                res = pd.DataFrame(
                     {
-                        f"query_{id_col_name}": [],
-                        "indices": [],
-                        "distances": [],
+                        f"query_{id_col_name}": pd.Series(dtype="int64"),
+                        "indices": pd.Series(dtype="object"),
+                        "distances": pd.Series(dtype="object"),
                     }
                 )
+                return res
 
+            import cupy as cp
             from pyspark import TaskContext
 
             ctx = TaskContext.get()
@@ -1370,30 +1542,111 @@ class ApproximateNearestNeighborsModel(
 
             start_time = time.time()
 
-            nn_object.fit(item)
+            if not inspect.ismodule(
+                nn_object
+            ):  # derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+                nn_object.fit(item)
+            else:  # cuvs ivf_flat or cagra
+                build_params = nn_object.IndexParams(**index_params)
+
+                # cuvs does not take pd.DataFrame as input
+                if isinstance(item, pd.DataFrame):
+                    item = cp.array(item.to_numpy(), order="C", dtype="float32")
+                if isinstance(item, np.ndarray):
+                    item = cp.array(item, dtype="float32")
+
+                try:
+                    index_obj = nn_object.build(build_params, item)
+                except Exception as e:
+                    if "k must be less than topk::kMaxCapacity (256)" in str(e):
+                        from cuvs.neighbors import cagra
+
+                        assert nn_object == cagra
+                        assert (
+                            "build_algo" not in index_params
+                            or index_params["build_algo"] == "ivf_pq"
+                        )
+
+                        intermediate_graph_degree = (
+                            build_params.intermediate_graph_degree
+                        )
+                        assert intermediate_graph_degree >= 256
+
+                        error_msg = f"cagra with ivf_pq build_algo expects intermediate_graph_degree ({intermediate_graph_degree}) to be smaller than 256"
+                        raise ValueError(error_msg)
+                    else:
+                        from cuvs.neighbors import cagra
+
+                        if nn_object == cagra and (
+                            "build_algo" not in index_params
+                            or index_params["build_algo"] == "ivf_pq"
+                        ):
+                            logger.error(
+                                f"The 'cagra' algorithm is being used with 'build_algo' 'ivf_pq', which may lead to instability. "
+                                "Consider using 'build_algo=nn_descent' as a more reliable alternative."
+                            )
+
+                        raise e
 
             logger.info(
                 f"partition {pid} indexing finished in {time.time() - start_time} seconds."
             )
 
             start_time = time.time()
-            import cupy as cp
 
-            distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
+            if not inspect.ismodule(
+                nn_object
+            ):  # derived class (e.g. benchmark.bench_nearest_neighbors.CPUNearestNeighborsModel)
+                distances, indices = nn_object.kneighbors(bcast_qfeatures.value)
+            else:  # cuvs ivf_flat cagra ivf_pq
+                gpu_qfeatures = cp.array(
+                    bcast_qfeatures.value, order="C", dtype="float32"
+                )
 
-            # Note cuML kneighbors applys an extra square root on the l2 distances.
-            # Here applies square to obtain the actual l2 distances.
-            if cuml_alg_params["algorithm"] in {"ivfflat", "ivfpq"}:
-                if (
-                    cuml_alg_params["metric"] == "euclidean"
-                    or cuml_alg_params["metric"] == "l2"
-                ):
-                    distances = distances * distances
+                assert cuml_alg_params["n_neighbors"] <= len(
+                    item
+                ), "k is larger than the number of item vectors on a GPU. Please increase the dataset size or use less GPUs"
+
+                distances, indices = nn_object.search(
+                    nn_object.SearchParams(**search_params),
+                    index_obj,
+                    gpu_qfeatures,
+                    cuml_alg_params["n_neighbors"],
+                )
+
+                if cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}:
+                    from cuvs.neighbors import refine
+
+                    distances, indices = refine(
+                        dataset=item,
+                        queries=gpu_qfeatures,
+                        candidates=indices,
+                        k=cuml_alg_params["n_neighbors"],
+                        metric=cuml_alg_params["metric"],
+                    )
+
+                distances = cp.asarray(distances)
+                indices = cp.asarray(indices)
+
+                # in case refine API reset inf distances to 0.
+                if cuml_alg_params["algorithm"] in {"ivf_pq", "ivfpq"}:
+                    distances[indices >= len(item)] = float("inf")
+
+                    # for the case top-1 nn got filled into indices
+                    top1_ind = indices[:, 0]
+                    rest_indices = indices[:, 1:]
+                    rest_distances = distances[:, 1:]
+                    rest_distances[rest_indices == top1_ind[:, cp.newaxis]] = float(
+                        "inf"
+                    )
 
             if isinstance(distances, cp.ndarray):
                 distances = distances.get()
 
+            # in case a query did not probe any items, indices are filled with int64 max and distances are filled with inf
+            item_row_number = np.append(item_row_number, np.iinfo("int64").max)
             if isinstance(indices, cp.ndarray):
+                indices[indices >= len(item)] = len(item)
                 indices = indices.get()
 
             indices_global = item_row_number[indices]

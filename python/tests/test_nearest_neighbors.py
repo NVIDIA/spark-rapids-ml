@@ -1,10 +1,26 @@
-from typing import List, Tuple, Union
+# Copyright (c) 2025, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pyspark.ml.linalg import VectorUDT
 from pyspark.sql import DataFrame
+from pyspark.sql.types import LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
@@ -18,6 +34,7 @@ from spark_rapids_ml.knn import (
 from .sparksession import CleanSparkSession
 from .utils import (
     array_equal,
+    assert_params,
     create_pyspark_dataframe,
     get_default_cuml_parameters,
     idfn,
@@ -28,15 +45,21 @@ NNEstimator = Union[NearestNeighbors, ApproximateNearestNeighbors]
 NNModel = Union[NearestNeighborsModel, ApproximateNearestNeighborsModel]
 
 
-def test_params(caplog: LogCaptureFixture) -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     from cuml import NearestNeighbors as CumlNearestNeighbors
     from cuml.neighbors.nearest_neighbors_mg import (
         NearestNeighborsMG,  # to include the batch_size parameter that exists in the MG class
     )
 
+    spark_params = {
+        param.name: value
+        for param, value in NearestNeighbors().extractParamMap().items()
+    }
+
     cuml_params = get_default_cuml_parameters(
-        [CumlNearestNeighbors, NearestNeighborsMG],
-        [
+        cuml_classes=[CumlNearestNeighbors, NearestNeighborsMG],
+        excludes=[
             "handle",
             "algorithm",
             "metric",
@@ -45,10 +68,21 @@ def test_params(caplog: LogCaptureFixture) -> None:
             "metric_expanded",
             "metric_params",
             "output_type",
+            "n_jobs",
         ],
     )
-    spark_params = NearestNeighbors()._get_cuml_params_default()
-    assert cuml_params == spark_params
+    assert cuml_params == NearestNeighbors()._get_cuml_params_default()
+
+    if default_params:
+        knn = NearestNeighbors()
+    else:
+        knn = NearestNeighbors(k=7)
+        cuml_params["n_neighbors"] = 7
+        spark_params["k"] = 7
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(knn, spark_params, cuml_params)
+    assert knn.cuml_params == cuml_params
 
     # float32_inputs warn, NearestNeighbors only accepts float32
     nn_float32 = NearestNeighbors(float32_inputs=False)
@@ -59,6 +93,20 @@ def test_params(caplog: LogCaptureFixture) -> None:
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(NearestNeighbors)
+
+
+def test_knn_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]]]] = [
+        ({"k": 37}, {"n_neighbors": 37}),
+        ({"verbose": True}, {"verbose": True}),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        _test_est_copy(NearestNeighbors, spark_param, cuml_param)
 
 
 def func_test_example_no_id(
@@ -107,9 +155,16 @@ def func_test_example_no_id(
         with pytest.raises(NotImplementedError):
             gpu_model.save(tmp_path + "/knn_model")
 
+        # test kneighbors on empty query dataframe
+        df_empty = spark.createDataFrame([], schema="features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         (item_df_withid, query_df_withid, knn_df) = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+        knn_df = knn_df.cache()
         knn_df.show()
 
         # check knn results
@@ -161,6 +216,7 @@ def func_test_example_no_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -250,6 +306,9 @@ def func_test_example_no_id(
         (_, _, knn_df_v2) = gpu_model_v2.kneighbors(query_df)
         assert knn_df_v2.collect() == knn_df.collect()
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
+
         return gpu_knn, gpu_model
 
 
@@ -296,9 +355,18 @@ def func_test_example_with_id(
         gpu_knn = gpu_knn.setK(topk)
 
         gpu_model = gpu_knn.fit(data_df)
+
+        # test kneighbors on empty query dataframe with id column
+        df_empty = spark.createDataFrame([], schema="id long, features array<float>")
+        (_, _, knn_df_empty) = gpu_model.kneighbors(df_empty)
+        knn_df_empty.show()
+
+        # test kneighbors on normal query dataframe
         item_df_withid, query_df_withid, knn_df = gpu_model.kneighbors(query_df)
         item_df_withid.show()
         query_df_withid.show()
+
+        knn_df = knn_df.cache()
         knn_df.show()
 
         distances_df = knn_df.select("distances")
@@ -322,6 +390,7 @@ def func_test_example_with_id(
         else:
             knnjoin_df = gpu_model.approxSimilarityJoin(query_df, distCol="distCol")
 
+        knnjoin_df = knnjoin_df.cache()
         knnjoin_df.show()
 
         assert len(knnjoin_df.dtypes) == 3
@@ -345,6 +414,8 @@ def func_test_example_with_id(
         reconstructed_query_ids = [r.query_id for r in reconstructed_rows]
         assert reconstructed_query_ids == [201, 202, 203, 204, 205]
 
+        knn_df.unpersist()
+        knnjoin_df.unpersist()
         return (gpu_knn, gpu_model)
 
 
@@ -619,3 +690,25 @@ def reconstruct_knn_df(
 
     knn_df = knn_df.sort(f"query_{row_identifier_col}")
     return knn_df
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    # Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        for est in [NearestNeighbors(), ApproximateNearestNeighbors()]:
+
+            # Parameters should be picked up from Spark confs, except for float32_inputs which is not supported
+            assert est._input_kwargs["verbose"] == 5
+            assert "float32_inputs" not in est._input_kwargs
+            assert est._input_kwargs["num_workers"] == 3

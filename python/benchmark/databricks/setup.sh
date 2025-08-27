@@ -1,4 +1,18 @@
 #!/bin/bash -xe
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 # copies files to dbfs 
 
@@ -46,7 +60,7 @@ popd
 # create workspace directory
 databricks workspace mkdirs ${INIT_SCRIPT_DIR} --profile ${DB_PROFILE} ${DB_OVERWRITE}
 # point cpu and gpu cluster init scripts to new files and upload
-for init_script in init-pip-cuda-11.8.sh init-cpu.sh
+for init_script in init-pip-cuda-12.0.sh init-cpu.sh
 do
 # NOTE: on linux delete the .bu after -i
     if base64 --help | grep '\-w'; then

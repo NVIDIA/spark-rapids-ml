@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,12 +52,20 @@ PCAType = TypeVar("PCAType", Type[SparkPCA], Type[PCA])
 PCAModelType = TypeVar("PCAModelType", Type[SparkPCAModel], Type[PCAModel])
 
 
-def test_params(caplog: LogCaptureFixture) -> None:
+@pytest.mark.parametrize("default_params", [True, False])
+def test_params(default_params: bool, caplog: LogCaptureFixture) -> None:
     from cuml import PCA as CumlPCA
+    from pyspark.ml.feature import PCA as SparkPCA
+
+    spark_params = {
+        param.name: value for param, value in SparkPCA().extractParamMap().items()
+    }
+    # Ignore output col, as it is linked to the object id by default (e.g., 'PCA_ac9c581af6b3__output')
+    spark_params.pop("outputCol", None)
 
     cuml_params = get_default_cuml_parameters(
-        [CumlPCA],
-        [
+        cuml_classes=[CumlPCA],
+        excludes=[
             "copy",
             "handle",
             "iterated_power",
@@ -66,8 +74,20 @@ def test_params(caplog: LogCaptureFixture) -> None:
             "tol",
         ],
     )
-    spark_params = PCA()._get_cuml_params_default()
-    assert cuml_params == spark_params
+
+    # Ensure internal cuml defaults match actual cuml defaults
+    assert cuml_params == PCA()._get_cuml_params_default()
+
+    if default_params:
+        pca = PCA()
+    else:
+        pca = PCA(k=4)
+        cuml_params["n_components"] = 4
+        spark_params["k"] = 4
+
+    # Ensure both Spark API params and internal cuml_params are set correctly
+    assert_params(pca, spark_params, cuml_params)
+    assert cuml_params == pca.cuml_params
 
     # make sure no warning when enabling float64 inputs
     pca_float32 = PCA(float32_inputs=False)
@@ -78,6 +98,20 @@ def test_params(caplog: LogCaptureFixture) -> None:
     from .test_common_estimator import _test_input_setter_getter
 
     _test_input_setter_getter(PCA)
+
+
+def test_pca_copy() -> None:
+    from .test_common_estimator import _test_est_copy
+
+    param_list = [
+        ({"k": 42}, {"n_components": 42}),
+        ({"verbose": 42},),
+    ]
+
+    for pair in param_list:
+        spark_param = pair[0]
+        cuml_param = spark_param if len(pair) == 1 else pair[1]
+        _test_est_copy(PCA, spark_param, cuml_param)
 
 
 def test_fit(gpu_number: int) -> None:
@@ -317,7 +351,7 @@ def test_pca(
 
     n_components = 3
 
-    cu_pca = cuPCA(n_components=n_components, output_type="numpy", verbose=7)
+    cu_pca = cuPCA(n_components=n_components, output_type="numpy", verbose=6)
     cu_model = cu_pca.fit(X)
 
     # Spark does not remove the mean from the transformed data
@@ -459,3 +493,25 @@ def test_parameters_validation() -> None:
 
         with pytest.raises(IllegalArgumentException, match="k given invalid value -1"):
             PCA().setK(-1).fit(df)
+
+
+def test_handle_param_spark_confs() -> None:
+    """
+    Test _handle_param_spark_confs method that reads Spark configuration values
+    for parameters when they are not set in the constructor.
+    """
+    # Parameters are NOT set in constructor (should be picked up from Spark confs)
+    with CleanSparkSession(
+        {
+            "spark.rapids.ml.verbose": "5",
+            "spark.rapids.ml.float32_inputs": "false",
+            "spark.rapids.ml.num_workers": "3",
+        }
+    ) as spark:
+        # Create estimator without setting these parameters
+        est = PCA()
+
+        # Parameters should be picked up from Spark confs
+        assert est._input_kwargs["verbose"] == 5
+        assert est._input_kwargs["float32_inputs"] is False
+        assert est._input_kwargs["num_workers"] == 3

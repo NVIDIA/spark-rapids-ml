@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -102,6 +102,17 @@ class _PCACumlParams(_CumlParams, _PCAParams, HasInputCols):
         """
         return self._set_params(outputCol=value)
 
+    def getInputCol(self) -> Union[str, List[str]]:  # type:ignore
+        """
+        Gets the value of :py:attr:`inputCol` or :py:attr:`inputCols`
+        """
+        if self.isDefined(self.inputCols):
+            return self.getOrDefault(self.inputCols)
+        elif self.isDefined(self.inputCol):
+            return self.getOrDefault(self.inputCol)
+        else:
+            raise RuntimeError("inputCol is not set")
+
 
 class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
     """
@@ -196,6 +207,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 
@@ -403,6 +415,9 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
             from cuml.decomposition.pca_mg import PCAMG as CumlPCAMG
 
             pca = CumlPCAMG(output_type="numpy", **cuml_alg_params)
+
+            # need this to revert a change in cuML targeting sklearn compat.
+            pca.n_features_in_ = None
 
             # Compatible with older cuml versions (before 23.02)
             pca._n_components = pca.n_components

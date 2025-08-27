@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,13 +16,17 @@
 
 from collections import namedtuple
 from functools import lru_cache
-from typing import Any, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
+import pandas as pd
 import pyspark
+from pyspark.ml import Estimator, Model
 from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import array
+from pyspark.sql.types import Row
 from sklearn.datasets import make_classification, make_regression
 from sklearn.model_selection import train_test_split
 
@@ -80,9 +84,16 @@ def create_pyspark_dataframe(
     dtype: np.dtype,
     data: np.ndarray,
     label: Optional[np.ndarray] = None,
+    label_dtype: Optional[np.dtype] = None,  # type: ignore
 ) -> Tuple[pyspark.sql.DataFrame, Union[str, List[str]], Optional[str]]:
     """Construct a dataframe based on features and label data."""
     assert feature_type in pyspark_supported_feature_types
+
+    # in case cp.ndarray get passed in
+    if not isinstance(data, np.ndarray):
+        data = data.get()
+    if label is not None and not isinstance(label, np.ndarray):
+        label = label.get()
 
     m, n = data.shape
 
@@ -92,17 +103,31 @@ def create_pyspark_dataframe(
     label_col = None
 
     if label is not None:
+        label_dtype = dtype if label_dtype is None else label_dtype
+        label = label.astype(label_dtype)
+        label_pyspark_type = dtype_to_pyspark_type(label_dtype)
+
         label_col = "label_col"
-        schema.append(f"{label_col} {pyspark_type}")
+        schema.append(f"{label_col} {label_pyspark_type}")
+
+        pdf = pd.DataFrame(data, dtype=dtype, columns=feature_cols)
+        pdf[label_col] = label.astype(label_dtype)
         df = spark.createDataFrame(
-            np.concatenate((data, label.reshape(m, 1)), axis=1).tolist(),
+            pdf,
             ",".join(schema),
         )
     else:
         df = spark.createDataFrame(data.tolist(), ",".join(schema))
 
     if feature_type == feature_types.array:
-        df = df.withColumn("features", array(*feature_cols)).drop(*feature_cols)
+        # avoid calling df.withColumn here because runtime slowdown is observed when df has many columns (e.g. 3000).
+        from pyspark.sql.functions import col
+
+        selected_col = [array(*feature_cols).alias("features")]
+        if label_col:
+            selected_col.append(col(label_col).alias(label_col))
+        df = df.select(selected_col)
+
         feature_cols = "features"
     elif feature_type == feature_types.vector:
         df = (
@@ -113,6 +138,11 @@ def create_pyspark_dataframe(
             .drop(*feature_cols)
         )
         feature_cols = "features"
+    else:
+        # When df has many columns (e.g. 3000), and was created by calling spark.createDataFrame on a pandas DataFrame,
+        # calling df.withColumn can lead to noticeable runtime slowdown.
+        # Using select here can significantly reduce the runtime and improve the performance.
+        df = df.select("*")
 
     return df, feature_cols, label_col
 
@@ -197,3 +227,34 @@ def get_default_cuml_parameters(
     for cuml_cls in cuml_classes:
         params.update(_get_default_params_from_func(cuml_cls, excludes))
     return params
+
+
+def get_toy_model(EstimatorCLS: Callable, spark: SparkSession) -> Model:
+    data = [
+        Row(id=0, label=1.0, weight=1.0, features=Vectors.dense([0.0, 0.0, 1.0])),
+        Row(id=1, label=1.0, weight=1.0, features=Vectors.dense([0.0, 1.0, 0.0])),
+        Row(id=2, label=0.0, weight=1.0, features=Vectors.dense([1.0, 0.0, 0.0])),
+        Row(id=3, label=0.0, weight=1.0, features=Vectors.dense([2.0, 0.0, -1.0])),
+    ]
+    train_df = spark.createDataFrame(data)
+
+    if "spark_rapids_ml" in EstimatorCLS.__module__:
+        est = EstimatorCLS(num_workers=1)
+    else:
+        est = EstimatorCLS()
+
+    if est.hasParam("inputCol"):
+        est.setInputCol("features")
+    elif est.hasParam("featuresCol"):
+        est.setFeaturesCol("features")
+    else:
+        assert False, "an Estimator must contain inputCol or featuresCol"
+
+    if est.hasParam("labelCol"):
+        est.setLabelCol("label")
+
+    if est.hasParam("idCol"):
+        est.setIdCol("id")
+
+    model = est.fit(train_df)
+    return model

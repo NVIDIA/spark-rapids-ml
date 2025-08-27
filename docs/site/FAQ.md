@@ -9,8 +9,8 @@ nav_order: 4
 
 ### What versions of Apache Spark are supported?
 
-Apache Spark version 3.2.1 or higher.
+Apache Spark version 3.3.1 or higher.
 
 ### What versions of Python are supported
 
-Python 3.8 or higher.
+Python 3.10 or higher.

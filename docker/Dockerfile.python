@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,19 +14,27 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=11.8.0
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
+ARG CUDA_VERSION=12.0.1
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
-ARG CUML_VERSION=24.08
+ARG CUML_VERSION=25.08
 
+# ubuntu22
+RUN sed -i -e 's|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
+           -e 's|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g' \
+           /etc/apt/sources.list
+# ubuntu24+
+RUN find /etc/apt/sources.list.d/ -name '*.sources' -exec sed -i \
+           -e "s|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g" \
+           -e "s|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g" {} +
 # Install packages to build spark-rapids-ml
 RUN apt update -y \
-    && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk \
+    && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-17-jdk \
     && apt install -y git numactl software-properties-common wget zip \
     && rm -rf /var/lib/apt/lists
 
 # Config JAVA_HOME
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-1.17.0-openjdk-amd64
 
 # Install conda
 ENV PATH="/root/miniconda3/bin:${PATH}"
@@ -34,11 +42,12 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linu
     && mkdir /root/.conda \
     && bash Miniconda3-py38_4.10.3-Linux-x86_64.sh -b \
     && rm -f Miniconda3-py38_4.10.3-Linux-x86_64.sh \
+    && conda tos accept --override-channels -c conda-forge -c defaults \
     && conda init
 
 # install cuML
 
-RUN conda install -y -c rapidsai -c conda-forge -c nvidia python=3.9 cuda-version=11.8 cuml=$CUML_VERSION \
+RUN conda install -y -c rapidsai -c conda-forge -c nvidia python=3.10 cuda-version=12.0 cuml=$CUML_VERSION numpy~=1.0 \
     && conda clean --all -f -y
 
 # install python dependencies

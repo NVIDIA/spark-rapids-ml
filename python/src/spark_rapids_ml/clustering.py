@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,9 +113,9 @@ class KMeansClass(_CumlClass):
             "max_iter": 300,
             "tol": 0.0001,
             "verbose": False,
-            "random_state": 1,
+            "random_state": None,
             "init": "scalable-k-means++",
-            "n_init": 1,
+            "n_init": "auto",
             "oversampling_factor": 2.0,
             "max_samples_per_batch": 32768,
         }
@@ -179,17 +179,17 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
 
     Parameters
     ----------
-    k: int (default = 8)
+    k: int (default = 2)
         the number of centers. Set this parameter to enable KMeans to learn k centers from input vectors.
 
     initMode: str (default = "k-means||")
         the algorithm to select initial centroids. It can be "k-means||" or "random".
 
-    maxIter: int (default = 300)
+    maxIter: int (default = 20)
         the maximum iterations the algorithm will run to learn the k centers.
         More iterations help generate more accurate centers.
 
-    seed: int (default = 1)
+    seed: int (default = None)
         the random seed used by the algorithm to initialize a set of k random centers to start with.
 
     tol: float (default = 1e-4)
@@ -295,8 +295,19 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
+        # if user doesn't override this cuML parameter, set it to 1 to match Spark behavior.
+        if not "n_init" in kwargs:
+            kwargs["n_init"] = 1
+
         self._set_params(**self._input_kwargs)
+
+    def setInitMode(self, value: str) -> "KMeans":
+        """
+        Sets the value of :py:attr:`initMode`.
+        """
+        return self._set_params(initMode=value)
 
     def setK(self, value: int) -> "KMeans":
         """
@@ -481,9 +492,11 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
             kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
+            # need this to revert a change in cuML targeting sklearn compat.
+            kmeans.n_features_in_ = None
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
-            kmeans.n_cols = n_cols
+            kmeans.n_features_in_ = n_cols
             kmeans.dtype = np.dtype(dtype)
             kmeans.cluster_centers_ = cudf_to_cuml_array(
                 np.array(cluster_centers_).astype(dtype), order=array_order
@@ -493,7 +506,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _transform_internal(
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
-            res = list(kmeans.predict(df, normalize_weights=False).to_numpy())
+            res = list(kmeans.predict(df).to_numpy())
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal, None
@@ -512,7 +525,6 @@ class DBSCANClass(_CumlClass):
             "algorithm": "brute",
             "verbose": False,
             "max_mbytes_per_batch": None,
-            "calc_core_sample_indices": False,
         }
 
     def _pyspark_class(self) -> Optional[ABCMeta]:
@@ -528,7 +540,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             metric="euclidean",
             algorithm="brute",
             max_mbytes_per_batch=None,
-            calc_core_sample_indices=True,
             idCol=alias.row_number,
         )
 
@@ -576,16 +587,6 @@ class _DBSCANCumlParams(_CumlParams, HasFeaturesCol, HasFeaturesCols, HasIDCol):
             f"If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device."
         ),
         typeConverter=TypeConverters.toInt,
-    )
-
-    calc_core_sample_indices = Param(
-        Params._dummy(),
-        "calc_core_sample_indices",
-        (
-            f"Indicates whether the indices of the core samples should be calculated."
-            f"Setting this to False will avoid unnecessary kernel launches"
-        ),
-        typeConverter=TypeConverters.toBoolean,
     )
 
     idCol = Param(
@@ -645,12 +646,12 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
     Parameters
     ----------
-    featuresCol: str or List[str]
+    featuresCol: str or List[str] (default = "features")
         The feature column names, spark-rapids-ml supports vector, array and columnar as the input.\n
             * When the value is a string, the feature columns must be assembled into 1 column with vector or array type.
             * When the value is a list of strings, the feature columns must be numeric types.
 
-    predictionCol: str
+    predictionCol: str (default = "prediction")
         the name of the column that stores cluster indices of input vectors. predictionCol should be set when users expect to apply the transform function of a learned model.
 
     num_workers:
@@ -687,13 +688,11 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         This enables the trade-off between runtime and memory usage for making the N^2 pairwise distance computations more tractable for large numbers of samples.
         If you are experiencing out of memory errors when running DBSCAN, you can set this value based on the memory size of your device.
 
-    calc_core_sample_indices(optional): boolean (default = True)
-        Indicates whether the indices of the core samples should be calculated.
-        Setting this to False will avoid unnecessary kernel launches
-
     idCol: str (default = 'unique_id')
         The internal unique id column name for label matching, will not reveal in the output.
         Need to be set to a name that does not conflict with an existing column name in the original input data.
+
+    Note: We currently do not support calculating and storing the indices of the core samples via the parameter calc_core_sample_indices=True.
 
     Examples
     ----------
@@ -765,10 +764,10 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         metric: str = "euclidean",
         algorithm: str = "brute",
         max_mbytes_per_batch: Optional[int] = None,
-        calc_core_sample_indices: bool = True,
         verbose: Union[int, bool] = False,
         **kwargs: Any,
     ) -> None:
+        self._handle_param_spark_confs()
         super().__init__()
         self._set_params(**self._input_kwargs)
 
@@ -778,8 +777,7 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
         assert max_records_per_batch_str is not None
         self.max_records_per_batch = int(max_records_per_batch_str)
         self.BROADCAST_LIMIT = 8 << 30
-
-        self.verbose = verbose
+        self.cuml_params["calc_core_sample_indices"] = False  # currently not supported
 
     def setEps(self: P, value: float) -> P:
         return self._set_params(eps=value)
@@ -811,12 +809,6 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
     def getMaxMbytesPerBatch(self) -> Optional[int]:
         return self.getOrDefault("max_mbytes_per_batch")
 
-    def setCalcCoreSampleIndices(self: P, value: bool) -> P:
-        return self._set_params(calc_core_sample_indices=value)
-
-    def getCalcCoreSampleIndices(self) -> bool:
-        return self.getOrDefault("calc_core_sample_indices")
-
     def _fit(self, dataset: DataFrame) -> _CumlModel:
         if self.getMetric() == "precomputed":
             raise ValueError(
@@ -825,10 +817,11 @@ class DBSCAN(DBSCANClass, _CumlEstimator, _DBSCANCumlParams):
 
         # Create parameter-copied model without accessing the input dataframe
         # All information will be retrieved from Model and transform
-        model = DBSCANModel(verbose=self.verbose, n_cols=0, dtype="")
+        model = DBSCANModel(n_cols=0, dtype="")
 
         model._num_workers = self.num_workers
         self._copyValues(model)
+        self._copy_cuml_params(model)  # type: ignore
 
         return model
 
@@ -856,7 +849,6 @@ class DBSCANModel(
         self,
         n_cols: int,
         dtype: str,
-        verbose: Union[int, bool],
     ):
         super(DBSCANClass, self).__init__()
         super(_CumlModelWithPredictionCol, self).__init__(n_cols=n_cols, dtype=dtype)
@@ -866,7 +858,6 @@ class DBSCANModel(
             idCol=alias.row_number,
         )
 
-        self.verbose = verbose
         self.BROADCAST_LIMIT = 8 << 30
         self._dbscan_spark_model = None
 
@@ -976,13 +967,7 @@ class DBSCANModel(
             dbscan = CumlDBSCANMG(
                 handle=params[param_alias.handle],
                 output_type="cudf",
-                eps=self.getOrDefault("eps"),
-                min_samples=self.getOrDefault("min_samples"),
-                metric=self.getOrDefault("metric"),
-                algorithm=self.getOrDefault("algorithm"),
-                max_mbytes_per_batch=self.getOrDefault("max_mbytes_per_batch"),
-                calc_core_sample_indices=self.getOrDefault("calc_core_sample_indices"),
-                verbose=self.verbose,
+                **params[param_alias.cuml_init],
             )
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)
@@ -1012,9 +997,7 @@ class DBSCANModel(
         _TransformFunc,
         Optional[_EvaluateFunc],
     ]:
-        raise NotImplementedError(
-            "DBSCAN does not can not have a separate transform UDF"
-        )
+        raise NotImplementedError("DBSCAN does not have a separate transform UDF")
 
     def _transform(self, dataset: DataFrame) -> DataFrame:
         logger = get_logger(self.__class__)
@@ -1086,7 +1069,6 @@ class DBSCANModel(
         rdd = self._call_cuml_fit_func(
             dataset=dataset,
             partially_collect=False,
-            paramMaps=None,
         )
         rdd = rdd.repartition(default_num_partitions)
 
@@ -1095,12 +1077,3 @@ class DBSCANModel(
         # JOIN the transformed label column into the original input dataset
         # and discard the internal idCol for row matching
         return dataset.join(pred_df, idCol_name).drop(idCol_name)
-
-    def _get_model_attributes(self) -> Optional[Dict[str, Any]]:
-        """
-        Override parent method to bring broadcast variables to driver before JSON serialization.
-        """
-
-        self._model_attributes["verbose"] = self.verbose
-
-        return self._model_attributes

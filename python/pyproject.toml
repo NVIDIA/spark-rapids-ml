@@ -1,6 +1,20 @@
+# Copyright (c) 2025, NVIDIA CORPORATION.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 [project]
 name = "spark-rapids-ml"
-version = "24.8.0"
+version = "25.08.0"
 authors = [
   { name="Jinfeng Li", email="jinfeng@nvidia.com" },
   { name="Bobby Wang", email="bobwang@nvidia.com" },
@@ -9,18 +23,35 @@ authors = [
 ]
 description = "Apache Spark integration with RAPIDS and cuML"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Environment :: GPU :: NVIDIA CUDA :: 11",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.4",
     "Environment :: GPU :: NVIDIA CUDA :: 11.5",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.6",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.7",
+    "Environment :: GPU :: NVIDIA CUDA :: 11.8",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.0",
+    "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.1",
+    "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.2",
+    "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.3",
+    "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.4",
+    "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.5",
 ]
+
+[project.scripts]
+spark-rapids-submit = "spark_rapids_ml.spark_rapids_submit:main_cli"
+pyspark-rapids = "spark_rapids_ml.pyspark_rapids:main_cli"
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"spark_rapids_ml.jars" = ["*.jar"]

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023, NVIDIA CORPORATION.
+# Copyright (c) 2023-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,9 +35,17 @@
 #
 ###
 
-ARG CUDA_VERSION=11.5.2
+ARG CUDA_VERSION=12.0.1
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
+# ubuntu22
+RUN sed -i -e 's|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
+           -e 's|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g' \
+           /etc/apt/sources.list
+# ubuntu24+
+RUN find /etc/apt/sources.list.d/ -name '*.sources' -exec sed -i \
+           -e "s|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g" \
+           -e "s|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g" {} +
 # Install packages to build spark-rapids-ml jars
 RUN apt update -y && \
     DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y openjdk-8-jdk wget git zip
@@ -83,6 +91,7 @@ RUN wget --quiet \
     && mkdir /root/.conda \
     && bash Miniconda3-py38_4.10.3-Linux-x86_64.sh -b \
     && rm -f Miniconda3-py38_4.10.3-Linux-x86_64.sh \
+    && conda tos accept --override-channels -c conda-forge -c defaults \
     && conda init
 
 # install cuDF dependency, Fall back to use cudf 22.04 due to issue:

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 import time
 from typing import Any, Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+import pyspark.sql.functions as F
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.functions import array_to_vector, vector_to_array
 from pyspark.sql import DataFrame, SparkSession
@@ -25,7 +27,7 @@ from pyspark.sql.functions import array, col, sum
 from pyspark.sql.types import DoubleType, StructField, StructType
 
 from .base import BenchmarkBase
-from .utils import inspect_default_params_from_func, with_benchmark
+from .utils import inspect_default_params_from_func, is_remote, with_benchmark
 
 
 class BenchmarkKMeans(BenchmarkBase):
@@ -86,13 +88,10 @@ class BenchmarkKMeans(BenchmarkBase):
 
         """
 
-        sc = transformed_df.rdd.context
-        centers_bc = sc.broadcast(centers)
-
         def partition_score_udf(
             pdf_iter: Iterator[pd.DataFrame],
         ) -> Iterator[pd.DataFrame]:
-            local_centers = centers_bc.value.astype(np.float64)
+            local_centers = centers.astype(np.float64)
             partition_score = 0.0
             for pdf in pdf_iter:
                 input_vecs = np.array(list(pdf[features_col]), dtype=np.float64)
@@ -136,8 +135,10 @@ class BenchmarkKMeans(BenchmarkBase):
             input_cols = [c for c in train_df.schema.names]
         output_col = "cluster_idx"
 
-        if num_gpus > 0:
+        if num_gpus > 0 and not is_remote():
             from spark_rapids_ml.clustering import KMeans
+
+            benchmark_string = "Spark Rapids ML KMeans"
 
             assert num_cpus <= 0
             if not no_cache:
@@ -148,7 +149,8 @@ class BenchmarkKMeans(BenchmarkBase):
                     return df
 
                 train_df, prepare_time = with_benchmark(
-                    "prepare dataset", lambda: gpu_cache_df(train_df)
+                    benchmark_string + " prepare dataset:",
+                    lambda: gpu_cache_df(train_df),
                 )
 
             params = self.class_params
@@ -164,17 +166,18 @@ class BenchmarkKMeans(BenchmarkBase):
                 gpu_estimator = gpu_estimator.setFeaturesCols(input_cols)
 
             gpu_model, fit_time = with_benchmark(
-                "gpu fit", lambda: gpu_estimator.fit(train_df)
+                benchmark_string + " fit:", lambda: gpu_estimator.fit(train_df)
             )
 
             transformed_df = gpu_model.setPredictionCol(output_col).transform(train_df)
             # count doesn't trigger compute so do something not too compute intensive
             _, transform_time = with_benchmark(
-                "gpu transform", lambda: transformed_df.agg(sum(output_col)).collect()
+                benchmark_string + " transform:",
+                lambda: transformed_df.agg(sum(output_col)).collect(),
             )
 
             total_time = round(time.time() - func_start_time, 2)
-            print(f"gpu total time: {total_time} sec")
+            print(f"{benchmark_string} total time: {total_time} sec")
 
             df_for_scoring = transformed_df
             feature_col = first_col
@@ -185,13 +188,18 @@ class BenchmarkKMeans(BenchmarkBase):
                 )
             elif is_vector_col:
                 df_for_scoring = transformed_df.select(
-                    vector_to_array(col(feature_col)), output_col
+                    vector_to_array(col(feature_col)).alias(feature_col), output_col
                 )
 
             cluster_centers = gpu_model.cluster_centers_
 
-        if num_cpus > 0:
+        if num_cpus > 0 or is_remote():
             from pyspark.ml.clustering import KMeans as SparkKMeans
+
+            if is_remote():
+                benchmark_string = "remote Spark ML KMeans"
+            else:
+                benchmark_string = "Spark ML KMeans"
 
             assert num_gpus <= 0
             if is_array_col:
@@ -215,7 +223,8 @@ class BenchmarkKMeans(BenchmarkBase):
                     return df
 
                 vector_df, prepare_time = with_benchmark(
-                    "prepare dataset", lambda: cpu_cache_df(vector_df)
+                    benchmark_string + " prepare dataset",
+                    lambda: cpu_cache_df(vector_df),
                 )
 
             params = self.class_params
@@ -228,12 +237,14 @@ class BenchmarkKMeans(BenchmarkBase):
             )
 
             cpu_model, fit_time = with_benchmark(
-                "cpu fit", lambda: cpu_estimator.fit(vector_df)
+                benchmark_string + " fit", lambda: cpu_estimator.fit(vector_df)
             )
 
-            print(
-                f"spark ML: iterations: {cpu_model.summary.numIter}, inertia: {cpu_model.summary.trainingCost}"
-            )
+            # remote models don't have summary
+            if cpu_model.hasSummary:
+                print(
+                    f"{benchmark_string}: iterations: {cpu_model.summary.numIter}, inertia: {cpu_model.summary.trainingCost}"
+                )
 
             def cpu_transform(df: DataFrame) -> None:
                 transformed_df = cpu_model.transform(df)
@@ -241,11 +252,11 @@ class BenchmarkKMeans(BenchmarkBase):
                 return transformed_df
 
             transformed_df, transform_time = with_benchmark(
-                "cpu transform", lambda: cpu_transform(vector_df)
+                benchmark_string + " transform", lambda: cpu_transform(vector_df)
             )
 
             total_time = time.time() - func_start_time
-            print(f"cpu total took: {total_time} sec")
+            print(f"{benchmark_string} total took: {total_time} sec")
 
             feature_col = first_col
             df_for_scoring = transformed_df.select(

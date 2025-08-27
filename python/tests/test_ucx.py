@@ -71,6 +71,13 @@ def test_ucx_over_nccl(
                 enable=True,
                 require_ucx=True,
             ) as cc:
+                # pyspark uses sighup to kill python workers gracefully, and for some reason
+                # the signal handler for sighup needs to be explicitly reset at this point
+                # to avoid having SIGHUP be swallowed during a usleep call in the nccl library.
+                # this helps avoid zombie surviving python workers when some workers fail.
+                import signal
+
+                signal.signal(signal.SIGHUP, signal.SIG_DFL)
 
                 async def do_allGather() -> List[str]:
                     loop = asyncio.get_running_loop()

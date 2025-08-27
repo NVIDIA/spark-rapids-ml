@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,6 +28,7 @@ from typing import (
 )
 
 from pyspark import SparkContext
+from pyspark.ml import Estimator, Model
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
@@ -128,6 +129,36 @@ class HasIDCol(Params):
         return df_withid
 
 
+class VerboseTypeConverters(TypeConverters):
+    @staticmethod
+    def _toIntOrBool(value: Any) -> Union[int, bool]:
+        if isinstance(value, bool):
+            return value
+
+        if TypeConverters._is_integer(value):
+            return int(value)
+
+        raise TypeError("Could not convert %s to Union[int, bool]" % value)
+
+
+class HasVerboseParam(Params):
+    """
+    Parameter to enable displaying verbose messages from cuml.
+    Refer to the cuML documentation for details on verbosity levels.
+    """
+
+    verbose: "Param[Union[int, bool]]" = Param(
+        Params._dummy(),
+        "verbose",
+        "cuml verbosity level (False, True or an integer between 0 and 6).",
+        typeConverter=VerboseTypeConverters._toIntOrBool,
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._setDefault(verbose=False)
+
+
 class _CumlClass(object):
     """
     Base class for all _CumlEstimator and _CumlModel implemenations.
@@ -144,6 +175,9 @@ class _CumlClass(object):
         If the Spark Param has no equivalent cuML parameter, the cuML name can be set to:
         - empty string, if a defined Spark Param should just be silently ignored, or
         - None, if a defined Spark Param should raise an error.
+
+        For algorithms without a Spark equivalent, the mapping can be left empty, with the exception
+        of parameters for which we override the cuML default value with our own: these should include an identity mapping, e.g. {"param": "param"}.
 
         Note: standard Spark column Params, e.g. inputCol, featureCol, etc, should not be listed
         in this mapping, since they are handled differently.
@@ -211,8 +245,19 @@ class _CumlClass(object):
         run on the driver side without rapids dependencies"""
         raise NotImplementedError()
 
+    @abstractmethod
+    def _pyspark_class(self) -> Optional[ABCMeta]:
+        """
+        Subclass should override to return corresponding pyspark.ml class
+        Ex. logistic regression should return pyspark.ml.classification.LogisticRegression
+        Return None if no corresponding class in pyspark, e.g. knn
+        """
+        raise NotImplementedError(
+            "pyspark.ml class corresponding to estimator not specified."
+        )
 
-class _CumlParams(_CumlClass, Params):
+
+class _CumlParams(_CumlClass, HasVerboseParam, Params):
     """
     Mix-in to handle common parameters for all Spark Rapids ML algorithms, along with utilties
     for synchronizing between Spark ML Params and cuML class parameters.
@@ -221,6 +266,66 @@ class _CumlParams(_CumlClass, Params):
     _cuml_params: Dict[str, Any] = {}
     _num_workers: Optional[int] = None
     _float32_inputs: bool = True
+    _fallback_enabled: bool = False
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.logger = get_logger(self.__class__)
+
+        spark = _get_spark_session()
+        fallback_enabled = spark.conf.get(
+            "spark.rapids.ml.cpu.fallback.enabled", "false"
+        )
+        if fallback_enabled == "false":
+            self._fallback_enabled = False
+        elif fallback_enabled == "true":
+            self._fallback_enabled = True
+        else:
+            raise ValueError(
+                f"unknown value {fallback_enabled} for spark.rapids.ml.cpu.fallback.enabled"
+            )
+        # automatically add/override setters for unsupported params currently left undefined
+        pyspark_class = self._pyspark_class()
+        if pyspark_class:
+            unsupported = [p for p, v in self._param_mapping().items() if v is None]
+            for param in unsupported:
+                setter_name = f"set{param[0].upper()}{param[1:]}"
+
+                # for models, unsupported setters are already defined in our code by including pyspark ml mixins
+                # so only modify those and do not add all unsupported estimator param setters
+                if isinstance(self, Estimator) or (
+                    isinstance(self, Model) and hasattr(self, setter_name)
+                ):
+                    # wrapping setter def in function avoids late closure binding issues with param
+                    def create_gpu_setter(
+                        _param: str,
+                    ) -> Callable[[_CumlParams, Any], _CumlParams]:
+                        def gpu_setter(self: _CumlParams, value: Any) -> _CumlParams:
+                            self._set_params(**{_param: value})
+                            return self
+
+                        return gpu_setter
+
+                    gpu_setter = create_gpu_setter(param)
+                    setattr(self, setter_name, gpu_setter.__get__(self))
+
+                    ## below code adds documentation for 'unsupported' setter and param.
+                    cpu_setter = getattr(pyspark_class, setter_name)
+                    gpu_setter.__annotations__["value"] = cpu_setter.__annotations__[
+                        "value"
+                    ]
+                    gpu_setter.__doc__ = f"""
+                    Sets the value of :py:attr:`{param}`.
+                    This parameter is not supported for GPU acceleration.
+                    If this method is invoked with cpu fallback enabled, fit() and transform() will fallback to cpu,
+                    otherwise, an exception will be raised.
+                    """
+
+                    spark_param = self.getParam(param)
+                    spark_param.doc = (
+                        spark_param.doc
+                        + " This parameter is not supported for GPU acceleration, with fall back to cpu fit() and transform() if set."
+                    )
 
     @property
     def cuml_params(self) -> Dict[str, Any]:
@@ -266,25 +371,46 @@ class _CumlParams(_CumlClass, Params):
         self._num_workers = value
 
     def copy(self: P, extra: Optional["ParamMap"] = None) -> P:
+        """
+        Create a copy of the current instance, including its parameters and cuml_params.
+
+        This function extends the default `copy()` method to ensure the `cuml_params` variable
+        is also copied. The default `super().copy()` method only handles `_paramMap` and
+        `_defaultParamMap`.
+
+        Parameters
+        -----------
+        extra : Optional[ParamMap]
+            A dictionary or ParamMap containing additional parameters to set in the copied instance.
+            Note ParamMap = Dict[pyspark.ml.param.Param, Any].
+
+        Returns
+        --------
+        P
+            A new instance of the same type as the current object, with parameters and
+            cuml_params copied.
+
+        Raises
+        -------
+        TypeError
+            If any key in the `extra` dictionary is not an instance of `pyspark.ml.param.Param`.
+        """
         # override this function to update cuml_params if possible
         instance: P = super().copy(extra)
         cuml_params = instance.cuml_params.copy()
 
+        instance._cuml_params = cuml_params
         if isinstance(extra, dict):
             for param, value in extra.items():
                 if isinstance(param, Param):
-                    name = instance._get_cuml_param(param.name, silent=False)
-                    if name is not None:
-                        cuml_params[name] = instance._get_cuml_mapping_value(
-                            name, value
-                        )
+                    instance._set_params(**{param.name: value})
                 else:
                     raise TypeError(
                         "Expecting a valid instance of Param, but received: {}".format(
                             param
                         )
                     )
-        instance._cuml_params = cuml_params
+
         return instance
 
     def _initialize_cuml_params(self) -> None:
@@ -331,9 +457,9 @@ class _CumlParams(_CumlClass, Params):
                 elif isinstance(v, List):
                     self._set(**{"featuresCols": v})
             elif self.hasParam(k):
-                # standard Spark ML Param
+                # Param is declared as a Spark ML Param
                 self._set(**{str(k): v})  # type: ignore
-                self._set_cuml_param(k, v, silent=False)
+                self._set_cuml_param(k, v, silent=self._fallback_enabled)
             elif k in self.cuml_params:
                 # cuml param
                 self._cuml_params[k] = v
@@ -479,6 +605,9 @@ class _CumlParams(_CumlClass, Params):
                 cuml_param = None
 
             return cuml_param
+        elif spark_param in self.cuml_params:
+            # cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents)
+            return spark_param
         else:
             return None
 
@@ -486,6 +615,8 @@ class _CumlParams(_CumlClass, Params):
         self, spark_param: str, spark_value: Any, silent: bool = True
     ) -> None:
         """Set a cuml_params parameter for a given Spark Param and value.
+        The Spark Param may be a cuML param that is declared as a Spark param (e.g., for algos w/out Spark equivalents),
+        in which case the cuML param will be returned from _get_cuml_param.
 
         Parameters
         ----------
@@ -509,13 +640,16 @@ class _CumlParams(_CumlClass, Params):
             try:
                 self._set_cuml_value(cuml_param, spark_value)
             except ValueError:
-                # create more informative message
-                param_ref_str = (
-                    cuml_param + " or " + spark_param
-                    if cuml_param != spark_param
-                    else spark_param
-                )
-                raise ValueError(f"{param_ref_str} given invalid value {spark_value}")
+                if not self._fallback_enabled:
+                    # create more informative message
+                    param_ref_str = (
+                        cuml_param + " or " + spark_param
+                        if cuml_param != spark_param
+                        else spark_param
+                    )
+                    raise ValueError(
+                        f"{param_ref_str} given an invalid or unsupported value {spark_value}"
+                    )
 
     def _get_cuml_mapping_value(self, k: str, v: Any) -> Any:
         value_map = self._param_value_mapping()
@@ -552,3 +686,34 @@ class _CumlParams(_CumlClass, Params):
         """
         value_map = self._get_cuml_mapping_value(k, v)
         self._cuml_params[k] = value_map
+
+    def _use_cpu_fallback(self, params: Optional[Dict[Param, Any]] = None) -> bool:
+        param_mapping = self._param_mapping()
+        param_value_mapping = self._param_value_mapping()
+        fallback = False
+        for param, value in (params if params else self.extractParamMap()).items():
+            if param.name in param_mapping:
+                mapped_param = param_mapping[param.name]
+                if (not mapped_param and (self.isSet(param) or params)) or (
+                    mapped_param
+                    and mapped_param in param_value_mapping
+                    and param_value_mapping[mapped_param](value) is None
+                ):
+                    msg = f"Setting Spark Param '{param.name}' to '{value}' is not supported on GPU.  Will fall back to CPU."
+                    logger = get_logger(self.__class__)
+                    logger.warning(msg)
+                    fallback = True
+
+        return fallback
+
+
+class DictTypeConverters(TypeConverters):
+    @staticmethod
+    def _toDict(value: Any) -> Dict[str, Any]:
+        """
+        Convert a value to a Dict type for Param typeConverter, if possible.
+        Used to support Dict types with the Spark ML Param API.
+        """
+        if isinstance(value, Dict):
+            return {TypeConverters.toString(k): v for k, v in value.items()}
+        raise TypeError("Could not convert %s to Dict[str, Any]" % value)
