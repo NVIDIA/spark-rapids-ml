@@ -928,7 +928,9 @@ class DBSCANModel(
             == "true"
         )
         if cuda_managed_mem_enabled and cuda_system_mem_enabled:
-            raise ValueError("Both CUDA managed memory and system allocated memory cannot be enabled at the same time.")
+            raise ValueError(
+                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+            )
 
         idCol_bc = self.idCols_
         raw_data_bc = self.raw_data_

@@ -45,6 +45,7 @@
 # num_cols=${num_cols:-3000}
 # rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 # gen_data=${gen_data:-true} (set to true to false to not generate data and reuse existing data)
+# sam=${sam:-false} (set to true to enable system allocated memory, otherwise uvm will be enabled)
 #
 # ex:  num_rows=1000000 num_cols=300 ./run_benchmark.sh gpu_etl kmeans,pca 
 # would run gpu based kmeans and pca on respective synthetic datasets with 1m rows and 300 cols
@@ -128,17 +129,28 @@ cat <<EOF
 EOF
 )
 
+sam=${sam:-false}
+mem_confs="--spark_confs spark.rapids.ml.uvm.enabled=true"
+if [[ $sam == "true" ]]; then
+    mem_confs=$(
+        cat <<EOF
+        --spark_confs spark.rapids.ml.uvm.enabled=false \
+        --spark_confs spark.rapids.ml.sam.enabled=true \
+        --spark_confs spark.rapids.ml.sam.headroom=1g \
+        --spark_confs spark.executorEnv.CUPY_ENABLE_SAM=1 \
+        --spark_confs spark.driverEnv.CUPY_ENABLE_SAM=1
+EOF
+    )
+fi
+
 if [[ $cluster_type != "remote" ]]; then
 common_confs=$(
 cat <<EOF
 ${common_confs} \
 --spark_confs spark.master=local[$local_threads] \
 --spark_confs spark.driver.memory=128g \
---spark_confs spark.python.worker.reuse=true
---spark_confs spark.rapids.ml.uvm.enabled=false \
---spark_confs spark.rapids.ml.sam.enabled=true \
---spark_confs spark.rapids.ml.sam.headroom=1g \
---spark_confs spark.executorEnv.CUPY_ENABLE_SAM=1
+--spark_confs spark.python.worker.reuse=true \
+${mem_confs}
 EOF
 )
 else

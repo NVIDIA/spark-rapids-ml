@@ -59,6 +59,7 @@ from pyspark.sql.types import (
     StructType,
 )
 from pyspark.util import _parse_memory
+
 from spark_rapids_ml.core import FitInputType, _CumlModel
 
 from .core import (
@@ -1080,13 +1081,21 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             == "true"
         )
         if cuda_managed_mem_enabled and cuda_system_mem_enabled:
-            raise ValueError("Both CUDA managed memory and system allocated memory cannot be enabled at the same time.")
+            raise ValueError(
+                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+            )
         if cuda_system_mem_enabled:
             get_logger(cls).info("CUDA system allocated memory enabled.")
-        cuda_system_mem_headroom = _get_spark_session().conf.get("spark.rapids.ml.sam.headroom", None)
-        if cuda_system_mem_enabled and cuda_system_mem_headroom is not None:
-            cuda_system_mem_headroom = _parse_memory(cuda_system_mem_headroom) << 20
-            get_logger(cls).info(f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}.")
+        _cuda_system_mem_headroom = _get_spark_session().conf.get(
+            "spark.rapids.ml.sam.headroom", None
+        )
+        if cuda_system_mem_enabled and _cuda_system_mem_headroom is not None:
+            cuda_system_mem_headroom = _parse_memory(_cuda_system_mem_headroom) << 20
+            get_logger(cls).info(
+                f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}."
+            )
+        else:
+            cuda_system_mem_headroom = None
 
         # parameters passed to subclass
         params: Dict[str, Any] = {
@@ -1125,13 +1134,20 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             _CumlCommon._set_gpu_device(context, is_local)
 
             # must do after setting gpu device
-            _configure_memory_resource(cuda_managed_mem_enabled)
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+            )
             if cuda_system_mem_enabled:
                 import rmm
+
                 if cuda_system_mem_headroom is None:
                     mr = rmm.mr.SystemMemoryResource()
                 else:
-                    mr = rmm.mr.SamHeadroomMemoryResource(headroom=cuda_system_mem_headroom)
+                    mr = rmm.mr.SamHeadroomMemoryResource(
+                        headroom=cuda_system_mem_headroom
+                    )
                 rmm.mr.set_current_device_resource(mr)
 
             # handle the input
@@ -1150,7 +1166,9 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 else:
                     # dense input
                     features = np.array(list(pdf[alias.data]), order=array_order)
-                if (cuda_managed_mem_enabled or cuda_system_mem_enabled) and not use_sparse_array:
+                if (
+                    cuda_managed_mem_enabled or cuda_system_mem_enabled
+                ) and not use_sparse_array:
                     features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None

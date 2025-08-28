@@ -239,14 +239,16 @@ class BenchmarkBase:
             self._args.spark_confs, shutdown=(not self._args.no_shutdown)
         ) as spark:
             cuda_system_mem_enabled = (
-                    spark.conf.get("spark.rapids.ml.sam.enabled", "false")
-                    == "true"
+                spark.conf.get("spark.rapids.ml.sam.enabled", "false") == "true"
             )
             if cuda_system_mem_enabled:
-                def configure_numpy_allocator():
+
+                def configure_numpy_allocator() -> List[bool]:
+                    import ctypes
+
                     import cupy._core.numpy_allocator as ac
                     import numpy_allocator
-                    import ctypes
+
                     lib = ctypes.CDLL(ac.__file__)
 
                     class my_allocator(metaclass=numpy_allocator.type):
@@ -258,7 +260,11 @@ class BenchmarkBase:
                     my_allocator.__enter__()  # change the allocator globally
                     print("Custom numpy allocator setup on all executors")
                     return [True]
-                spark.sparkContext.runJob(spark.sparkContext.parallelize([1]), lambda _: configure_numpy_allocator())
+
+                spark.sparkContext.runJob(
+                    spark.sparkContext.parallelize([1]),
+                    lambda _: configure_numpy_allocator(),
+                )
 
             for _ in range(self._args.num_runs):
                 train_df, features_col, label_col = self.input_dataframe(

@@ -156,10 +156,29 @@ def _get_gpu_id(task_context: TaskContext) -> int:
     return gpu_id
 
 
-def _configure_memory_resource(uvm_enabled: bool = False) -> None:
+def _configure_memory_resource(
+    uvm_enabled: bool = False,
+    sam_enabled: bool = False,
+    sam_headroom: Optional[int] = None,
+) -> None:
     import cupy as cp
     import rmm
     from rmm.allocators.cupy import rmm_cupy_allocator
+
+    if uvm_enabled and sam_enabled:
+        raise ValueError(
+            "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+        )
+
+    if sam_enabled:
+        if not type(rmm.mr.get_current_device_resource()) == type(
+            rmm.mr.SystemMemoryResource()
+        ):
+            if sam_headroom is None:
+                mr = rmm.mr.SystemMemoryResource()
+            else:
+                mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
+            rmm.mr.set_current_device_resource(mr)
 
     if uvm_enabled:
         if not type(rmm.mr.get_current_device_resource()) == type(
@@ -167,6 +186,7 @@ def _configure_memory_resource(uvm_enabled: bool = False) -> None:
         ):
             rmm.mr.set_current_device_resource(rmm.mr.ManagedMemoryResource())
 
+    if sam_enabled or uvm_enabled:
         if not cp.cuda.get_allocator().__name__ == rmm_cupy_allocator.__name__:
             cp.cuda.set_allocator(rmm_cupy_allocator)
 
