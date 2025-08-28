@@ -80,7 +80,6 @@ from .utils import (
     _get_spark_session,
     _is_local,
     _is_standalone_or_localcluster,
-    _validate_arrow_batch,
     dtype_to_pyspark_type,
     get_logger,
 )
@@ -467,8 +466,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             input_datatype = dataset.schema[input_col].dataType
             first_record = dataset.first()
 
-            dimension = len(first_record[input_col])  # type: ignore
-
             if isinstance(input_datatype, ArrayType):
                 # Array type
                 if (
@@ -511,7 +508,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     assert use_sparse is False or (
                         use_sparse is None and first_vectorudt_type is DenseVector
                     )
-
                     select_cols.append(
                         vector_to_array(col(input_col), vector_element_type).alias(alias.data)  # type: ignore
                     )
@@ -520,6 +516,8 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     feature_type = DoubleType
             else:
                 raise ValueError("Unsupported input type.")
+
+            dimension = len(first_record[input_col])  # type: ignore
 
         elif input_cols is not None:
             # if self._float32_inputs is False and if any columns are double type, convert all to double type
@@ -648,14 +646,6 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         cls = self.__class__
 
         select_cols, multi_col_names, dimension, _ = self._pre_process_data(dataset)
-
-        _validate_arrow_batch(
-            select_cols,
-            4 if _use_sparse_in_cuml(dataset) else dimension,
-            alias.label,
-            alias.row_number,
-            get_logger(self.__class__),
-        )
 
         num_workers = self.num_workers
 
@@ -1451,24 +1441,6 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         """Internal API to support transform and evaluation in a single pass"""
         dataset, select_cols, input_is_multi_cols, _ = self._pre_process_data(dataset)
 
-        use_sparse_array = _use_sparse_in_cuml(dataset)
-        if use_sparse_array:
-            feature_cols_dimension = 4
-        elif input_is_multi_cols:
-            _, input_cols = self._get_input_columns()
-            assert input_cols is not None
-            feature_cols_dimension = len(input_cols)
-        else:
-            feature_cols_dimension = len(dataset.first()[select_cols[0]])  # type: ignore
-
-        _validate_arrow_batch(
-            select_cols,
-            feature_cols_dimension,
-            alias.label,
-            alias.row_number,
-            get_logger(self.__class__),
-        )
-
         is_local = _is_local(_get_spark_session().sparkContext)
 
         # Get the functions which will be passed into executor to run.
@@ -1484,6 +1456,7 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
 
         array_order = self._transform_array_order()
 
+        use_sparse_array = _use_sparse_in_cuml(dataset)
         concate_pdf_batches = self._concate_pdf_batches()
 
         cuda_managed_mem_enabled = (

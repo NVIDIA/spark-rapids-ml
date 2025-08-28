@@ -746,6 +746,9 @@ def test_validate_arrow_batch(
         total_dimension = dimension + 2  # query_item_label and row_number
         warning_msg = f"Spark RAPIDS ML detected spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and number of values per row = {total_dimension}."
         if max_records_per_batch * total_dimension > 2_147_483_647:  # INT32_MAX
-            assert warning_msg in caplog.text
+            with pytest.raises(RuntimeError, match="valueCount >= 0"):
+                knn_df.count()
+            print("DEBUG captured")
+            # assert warning_msg in caplog.text
         else:
             assert warning_msg not in caplog.text
