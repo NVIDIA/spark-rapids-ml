@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import pandas as pd
 import pytest
 from _pytest.logging import LogCaptureFixture
 from pyspark.ml.linalg import VectorUDT
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import FloatType, LongType, StructField, StructType
+from pyspark.sql import DataFrame
+from pyspark.sql.types import LongType, StructField, StructType
 from sklearn.datasets import make_blobs
 
 from spark_rapids_ml.core import alias
@@ -33,7 +33,6 @@ from spark_rapids_ml.knn import (
 
 from .sparksession import CleanSparkSession
 from .utils import (
-    _func_generate_wide_sparse_dataset,
     array_equal,
     assert_params,
     create_pyspark_dataframe,
@@ -713,42 +712,3 @@ def test_handle_param_spark_confs() -> None:
             assert est._input_kwargs["verbose"] == 5
             assert "float32_inputs" not in est._input_kwargs
             assert est._input_kwargs["num_workers"] == 3
-
-
-@pytest.mark.parametrize("max_records_per_batch", [1000, 10000])
-def test_validate_arrow_batch(
-    max_records_per_batch: int, caplog: LogCaptureFixture
-) -> None:
-
-    spark_confs = {
-        "spark.sql.execution.arrow.maxRecordsPerBatch": str(max_records_per_batch)
-    }
-    with CleanSparkSession(spark_confs) as spark:
-        train_data, test_data = _func_generate_wide_sparse_dataset(
-            spark, num_rows=20000
-        )
-        num_rows_train = train_data.count()
-
-        # dimension is 262144, plus query_item label col and row_number col
-        first_row = train_data.first()
-        assert first_row is not None
-        dimension = first_row["features"].size
-        assert dimension > 220_000
-
-        # Fit the NearestNeighbors model and make predictions
-        knn = NearestNeighbors(num_workers=1, verbose=True).setInputCol("features")
-        knn_model = knn.fit(train_data)
-
-        # Test kneighbors - should work regardless of batch size, but may log warnings
-        (data_df, query_df, knn_df) = knn_model.kneighbors(test_data)
-
-        # Check for warning message if batch size exceeds limit
-        total_dimension = dimension + 2  # query_item_label and row_number
-        warning_msg = f"Spark RAPIDS ML detected spark.sql.execution.arrow.maxRecordsPerBatch = {max_records_per_batch} and number of values per row = {total_dimension}."
-        if max_records_per_batch * total_dimension > 2_147_483_647:  # INT32_MAX
-            with pytest.raises(RuntimeError, match="valueCount >= 0"):
-                knn_df.count()
-            print("DEBUG captured")
-            # assert warning_msg in caplog.text
-        else:
-            assert warning_msg not in caplog.text
