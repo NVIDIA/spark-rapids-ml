@@ -1118,6 +1118,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         chunk_size = self.max_records_per_batch
 
         def _train_udf(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             from pyspark import TaskContext
 
             logger = get_logger(cls)

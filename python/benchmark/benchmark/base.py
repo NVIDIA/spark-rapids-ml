@@ -101,7 +101,7 @@ class BenchmarkBase:
         self._parser.add_argument(
             "--verbose",
             action="store_const",
-            const=7,
+            const=6,
             default=0,
             help="set cuml logging to max verbose level",
         )

@@ -728,6 +728,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             import cupy as cp
             import cupyx
             from pyspark import BarrierTaskContext
@@ -1519,6 +1525,12 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             cuda_system_mem_headroom = None
 
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             from pyspark import TaskContext
 
             context = TaskContext.get()
@@ -1733,6 +1745,12 @@ class _CumlModelWithColumns(_CumlModel):
 
         @pandas_udf(output_schema)  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             from pyspark import TaskContext
 
             context = TaskContext.get()

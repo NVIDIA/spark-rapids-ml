@@ -38,7 +38,7 @@
 #
 # The following environment variables can be set on the command-line to control behavior with the indicated
 # defaults:
-# cuda_version=${cuda_version:-11}
+# cuda_version=${cuda_version:-12}
 # cluster_type=${1:-gpu}
 # local_threads=${local_threads:-4}
 # num_rows=${num_rows:-5000}
@@ -136,9 +136,7 @@ if [[ $sam == "true" ]]; then
         cat <<EOF
         --spark_confs spark.rapids.ml.uvm.enabled=false \
         --spark_confs spark.rapids.ml.sam.enabled=true \
-        --spark_confs spark.rapids.ml.sam.headroom=1g \
-        --spark_confs spark.executorEnv.CUPY_ENABLE_SAM=1 \
-        --spark_confs spark.driverEnv.CUPY_ENABLE_SAM=1
+        --spark_confs spark.rapids.ml.sam.headroom=1g
 EOF
     )
 fi

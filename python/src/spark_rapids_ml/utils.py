@@ -170,14 +170,16 @@ def _configure_memory_resource(
             "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
         )
 
-    if sam_enabled:
+    if sam_enabled and sam_headroom is None:
         if not type(rmm.mr.get_current_device_resource()) == type(
             rmm.mr.SystemMemoryResource()
         ):
-            if sam_headroom is None:
-                mr = rmm.mr.SystemMemoryResource()
-            else:
-                mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
+            mr = rmm.mr.SystemMemoryResource()
+    elif sam_enabled and sam_headroom is not None:
+        if not type(rmm.mr.get_current_device_resource()) == type(
+            rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
+        ):
+            mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
             rmm.mr.set_current_device_resource(mr)
 
     if uvm_enabled:
