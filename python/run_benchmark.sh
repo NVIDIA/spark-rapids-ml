@@ -46,6 +46,7 @@
 # rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 # gen_data=${gen_data:-true} (set to true to false to not generate data and reuse existing data)
 # sam=${sam:-false} (set to true to enable system allocated memory, otherwise uvm will be enabled)
+# sam_headroom=${sam_headroom:-1g} (set to the headroom for system allocated memory)
 #
 # ex:  num_rows=1000000 num_cols=300 ./run_benchmark.sh gpu_etl kmeans,pca 
 # would run gpu based kmeans and pca on respective synthetic datasets with 1m rows and 300 cols
@@ -136,7 +137,7 @@ if [[ $sam == "true" ]]; then
         cat <<EOF
         --spark_confs spark.rapids.ml.uvm.enabled=false \
         --spark_confs spark.rapids.ml.sam.enabled=true \
-        --spark_confs spark.rapids.ml.sam.headroom=1g
+        --spark_confs spark.rapids.ml.sam.headroom=${sam_headroom}
 EOF
     )
 fi

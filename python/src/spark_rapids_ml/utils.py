@@ -156,30 +156,6 @@ def _get_gpu_id(task_context: TaskContext) -> int:
     return gpu_id
 
 
-def _configure_numpy_allocator() -> None:
-    """Configure numpy allocator to use cupy allocator for use when SAM is enabled"""
-    # only configure once per process
-    import sys
-
-    if "numpy_allocator" in sys.modules:
-        return
-
-    import ctypes
-
-    import cupy._core.numpy_allocator as ac
-    import numpy_allocator
-
-    lib = ctypes.CDLL(ac.__file__)
-
-    class my_allocator(metaclass=numpy_allocator.type):
-        _calloc_ = ctypes.addressof(lib._calloc)
-        _malloc_ = ctypes.addressof(lib._malloc)
-        _realloc_ = ctypes.addressof(lib._realloc)
-        _free_ = ctypes.addressof(lib._free)
-
-    my_allocator.__enter__()  # change the allocator globally
-
-
 def _configure_memory_resource(
     uvm_enabled: bool = False,
     sam_enabled: bool = False,
@@ -199,6 +175,7 @@ def _configure_memory_resource(
             rmm.mr.SystemMemoryResource()
         ):
             mr = rmm.mr.SystemMemoryResource()
+            rmm.mr.set_current_device_resource(mr)
     elif sam_enabled and sam_headroom is not None:
         if not type(rmm.mr.get_current_device_resource()) == type(
             rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
@@ -217,7 +194,7 @@ def _configure_memory_resource(
             cp.cuda.set_allocator(rmm_cupy_allocator)
 
     if sam_enabled:
-        _configure_numpy_allocator()
+        import spark_rapids_ml.numpy_allocator
 
 
 def _get_default_params_from_func(
