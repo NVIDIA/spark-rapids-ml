@@ -137,7 +137,7 @@ if [[ $sam == "true" ]]; then
         cat <<EOF
         --spark_confs spark.rapids.ml.uvm.enabled=false \
         --spark_confs spark.rapids.ml.sam.enabled=true \
-        --spark_confs spark.rapids.ml.sam.headroom=${sam_headroom}
+        --spark_confs spark.rapids.ml.sam.headroom=${sam_headroom:-1g}
 EOF
     )
 fi
