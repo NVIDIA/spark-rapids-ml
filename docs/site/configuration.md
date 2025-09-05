@@ -17,3 +17,5 @@ The following configurations can be supplied as Spark properties.
 | spark.rapids.ml.float32_inputs | None | if set to a boolean value (true/false), controls whether input data should be converted to float32 precision before being passed to cuML algorithms. Setting this to true can reduce memory usage and potentially improve performance, but may affect numerical precision. This parameter can be set globally in Spark configuration and will be used if not explicitly set in the estimator constructor. |
 | spark.rapids.ml.num_workers | None | if set to an integer value greater than 0, specifies the number of workers to use for distributed training. This parameter can be set globally in Spark configuration and will be used if not explicitly set in the estimator constructor. |
 
+Since the algorithms rely heavily on Pandas UDFs, we also require `spark.sql.execution.arrow.pyspark.enabled=true` to ensure efficient data transfer between the JVM and Python processes.
+

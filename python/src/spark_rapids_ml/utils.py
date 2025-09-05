@@ -163,7 +163,18 @@ def _configure_memory_resource(
 ) -> None:
     import cupy as cp
     import rmm
+    from cuda.bindings import runtime
     from rmm.allocators.cupy import rmm_cupy_allocator
+
+    _SYSTEM_MEMORY_SUPPORTED = rmm._cuda.gpu.getDeviceAttribute(
+        runtime.cudaDeviceAttr.cudaDevAttrPageableMemoryAccess,
+        rmm._cuda.gpu.getDevice(),
+    )
+
+    if not _SYSTEM_MEMORY_SUPPORTED and sam_enabled:
+        raise ValueError(
+            "System allocated memory is not supported on this GPU. Please disable system allocated memory."
+        )
 
     if uvm_enabled and sam_enabled:
         raise ValueError(
