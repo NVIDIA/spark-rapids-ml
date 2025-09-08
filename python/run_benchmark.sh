@@ -56,7 +56,7 @@
 
 
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-cuda_version=${cuda_version:-11}
+cuda_version=${cuda_version:-12}
 
 cluster_type=${1:-gpu}
 remote_host=sc://${remote_host:-localhost}
@@ -149,7 +149,7 @@ fi
 spark_rapids_confs=""
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=25.04.0
+SPARK_RAPIDS_VERSION=25.06.0
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"

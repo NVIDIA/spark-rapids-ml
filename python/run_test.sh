@@ -28,8 +28,20 @@ fi
 python -m spark_rapids_ml tests_no_import_change/test_no_import_change.py 0.2
 # runs on cpu
 python tests_no_import_change/test_no_import_change.py 0.2
-# runs on gpu with spark-submit (note: local[1] for spark-rapids-submit hangs probably due to barrier rdd timer threads. TBD root cause)
+
+# runs on gpu with spark-submit (note: local[1] and pyspark<3.5.6 for spark-rapids-submit hangs probably due to barrier rdd timer threads. TBD root cause)
+pip install pyspark==3.5.6
 spark-rapids-submit --master local-cluster[1,1,1024] tests_no_import_change/test_no_import_change.py 0.2
+# test that failure mode returns non-zero exit code
+set +e
+spark-rapids-submit --master local-cluster[1,1,1024] tests_no_import_change/test_no_import_change.py -0.2
+if [ $? -eq 0 ]; then
+    echo "test should have returned non-zero exit code"
+    exit 1
+fi
+set -e
+pip install -r requirements_dev.txt
+
 # runs on cpu with spark-submit
 spark-submit --master local-cluster[1,1,1024] tests_no_import_change/test_no_import_change.py 0.2
 
