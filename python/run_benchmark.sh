@@ -109,10 +109,10 @@ gen_data_root=${gen_data_root:-/tmp/distributed}
 gen_data=${gen_data:-true}
 
 # if num_rows=1m => output_files=50, scale linearly
-output_num_files=$(( ( $num_rows * $num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
+output_num_files=$(( ( num_rows * num_cols + 3000 * 20000 - 1 ) / ( 3000 * 20000 ) ))
 
 # if num_cols=3000 => arrow_batch_size=20000, scale linearly for smaller number of columns
-arrow_batch_size=$(( 20000 * ( ( $num_cols + 3000 - 1 ) / $num_cols ) ))
+arrow_batch_size=$(( 20000 * ( ( num_cols + 3000 - 1 ) / num_cols ) ))
 
 
 # stop on first fail
@@ -421,8 +421,8 @@ if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
 
     if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
         python $gen_data_script classification \
-            --n_informative $( expr $num_cols / 3 )  \
-            --n_redundant $( expr $num_cols / 3 ) \
+            --n_informative $(( num_cols / 3 ))  \
+            --n_redundant $(( num_cols / 3 )) \
             --n_classes ${num_classes} \
             --num_rows $num_rows \
             --num_cols $num_cols \
@@ -486,8 +486,8 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
 
         if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
             python $gen_data_script classification \
-                --n_informative $( expr $num_cols / 3 )  \
-                --n_redundant $( expr $num_cols / 3 ) \
+                --n_informative $(( num_cols / 3 ))  \
+                --n_redundant $(( num_cols / 3 )) \
                 --n_classes ${num_classes} \
                 --num_rows $num_rows \
                 --num_cols $num_cols \
@@ -556,7 +556,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
 
             if [[ $gen_data == "true" && ! -d ${data_path} ]]; then
                 python $gen_data_script sparse_regression \
-                --n_informative $( expr $num_cols / 3 )  \
+                --n_informative $(( num_cols / 3 ))  \
                 --num_rows $num_rows \
                 --num_cols $num_sparse_cols \
                 --output_num_files $output_num_files \
@@ -643,7 +643,7 @@ if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
     spark_rapids_confs_dbscan="$spark_rapids_confs --spark_confs spark.driver.maxResultSize=0"
 
     # Compute score when datasize is suitable
-    if (($num_rows * $num_cols < 50000000)); then
+    if (( num_rows * num_cols < 50000000)); then
         spark_rapids_confs_dbscan="$spark_rapids_confs_dbscan --compute_score"
     fi
 
