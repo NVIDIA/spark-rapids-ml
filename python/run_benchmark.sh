@@ -89,7 +89,7 @@ num_runs=1
 
 MODE=${1:-all}
 shift
-EXTRA_ARGS=$@
+EXTRA_ARGS=("$@")
 
 unset SPARK_HOME
 
@@ -211,7 +211,7 @@ if [[ "${MODE}" =~ "kmeans" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/default/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_kmeans_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # KNearestNeighbors
@@ -239,7 +239,7 @@ if [[ "${MODE}" =~ "knn" ]] || [[ "${MODE}" == "all" ]]; then
         --report_path "report_knn_${cluster_type}.csv" \
         --spark_confs "spark.driver.maxResultSize=0" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # ApproximateNearestNeighbors
@@ -300,7 +300,7 @@ if [[ "${MODE}" =~ "approximate_nearest_neighbors" ]] || [[ "${MODE}" == "all" ]
         --report_path "report_approximate_nearest_neighbors_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
         --spark_confs spark.driver.maxResultSize=0 \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # Linear Regression
@@ -331,7 +331,7 @@ if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_linear_regression_noreg_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
     
     echo "$sep algo: linear regression - elasticnet regularization $sep"
     python ./benchmark/benchmark_runner.py linear_regression \
@@ -347,7 +347,7 @@ if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_linear_regression_elastic_net_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
     
     echo "$sep algo: linear regression - ridge regularization $sep"
     python ./benchmark/benchmark_runner.py linear_regression \
@@ -363,7 +363,7 @@ if [[ "${MODE}" =~ "linear_regression" ]] || [[ "${MODE}" == "all" ]]; then
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_linear_regression_ridge_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # PCA
@@ -389,7 +389,7 @@ if [[ "${MODE}" =~ "pca" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/low_rank_matrix/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_pca_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 
 #    # standalone mode
 #    SPARK_MASTER=spark://hostname:port
@@ -445,7 +445,7 @@ if [[ "${MODE}" =~ "random_forest_classifier" ]] || [[ "${MODE}" == "all" ]]; th
         --transform_path "${data_path}" \
         --report_path "report_rf_classifier_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # Random Forest Regression
@@ -473,7 +473,7 @@ if [[ "${MODE}" =~ "random_forest_regressor" ]] || [[ "${MODE}" == "all" ]]; the
         --transform_path "${gen_data_root}/regression/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_rf_regressor_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # Logistic Regression Classification
@@ -517,7 +517,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             --transform_path ${data_path} \
             --report_path "report_logistic_regression_${cluster_type}.csv" \
             $common_confs $spark_rapids_confs \
-            ${EXTRA_ARGS}
+            "${EXTRA_ARGS[@]}"
     done
 
     for num_classes in ${num_classes_list}; do
@@ -543,7 +543,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
             --transform_path ${data_path} \
             --report_path "report_logistic_regression_${cluster_type}.csv" \
             $common_confs $spark_rapids_confs \
-            ${EXTRA_ARGS}
+            "${EXTRA_ARGS[@]}"
     done
     
     # Logistic Regression with sparse vector dataset
@@ -586,7 +586,7 @@ if [[ "${MODE}" =~ "logistic_regression" ]] || [[ "${MODE}" == "all" ]]; then
                 --transform_path ${data_path} \
                 --report_path "report_sparse_logistic_regression_${cluster_type}.csv" \
                 $common_confs $spark_rapids_confs \
-                ${EXTRA_ARGS}
+                "${EXTRA_ARGS[@]}"
         done
     fi
 fi
@@ -622,7 +622,7 @@ if [[ "${MODE}" =~ "umap" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_umap_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs_umap \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
 
 # DBSCAN
@@ -662,5 +662,5 @@ if [[ "${MODE}" =~ "dbscan" ]] || [[ "${MODE}" == "all" ]]; then
         --train_path "${gen_data_root}/blobs/r${num_rows}_c${num_cols}_float32.parquet" \
         --report_path "report_dbscan_${cluster_type}.csv" \
         $common_confs $spark_rapids_confs_dbscan \
-        ${EXTRA_ARGS}
+        "${EXTRA_ARGS[@]}"
 fi
