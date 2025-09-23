@@ -22,5 +22,5 @@ then
 else
     # https://github.com/apache/spark/blob/master/examples/src/main/scripts/getGpusResources.sh
     ADDRS=`nvidia-smi --query-gpu=index --format=csv,noheader | sed -e ':a' -e 'N' -e'$!ba' -e 's/\n/","/g'`
-    echo {\"name\": \"gpu\", \"addresses\":[\"$ADDRS\"]}
+    echo "{\"name\": \"gpu\", \"addresses\":[\"$ADDRS\"]}"
 fi
