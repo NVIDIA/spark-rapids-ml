@@ -365,7 +365,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
 
             kmeans_object = CumlKMeansMG(
                 handle=params[param_alias.handle],
-                output_type="cudf",
+                output_type="cupy",
                 **params[param_alias.cuml_init],
             )
             df_list = [x for (x, _, _) in dfs]
@@ -387,9 +387,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             )
 
             return {
-                "cluster_centers_": [
-                    kmeans_object.cluster_centers_.to_numpy().tolist()
-                ],
+                "cluster_centers_": [kmeans_object.cluster_centers_.get().tolist()],
                 "n_cols": params[param_alias.num_cols],
                 "dtype": str(kmeans_object.dtype.name),
             }
@@ -491,7 +489,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _construct_kmeans() -> CumlT:
             from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
 
-            kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
+            kmeans = CumlKMeansMG(output_type="cupy", **cuml_alg_params)
             # need this to revert a change in cuML targeting sklearn compat.
             kmeans.n_features_in_ = None
             from spark_rapids_ml.utils import cudf_to_cuml_array
@@ -506,7 +504,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _transform_internal(
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
-            res = list(kmeans.predict(df).to_numpy())
+            res = list(kmeans.predict(df).get())
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal, None
@@ -957,6 +955,11 @@ class DBSCANModel(
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
                 if cuda_managed_mem_enabled or cuda_system_mem_enabled:
+                    # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                    if cuda_system_mem_enabled and isinstance(features, np.ndarray):
+                        cp.cuda.runtime.memAdvise(
+                            features.ctypes.data, features.nbytes, 3, -1
+                        )
                     features = cp.array(features)
 
                 inputs.append(features)
@@ -968,7 +971,7 @@ class DBSCANModel(
 
             dbscan = CumlDBSCANMG(
                 handle=params[param_alias.handle],
-                output_type="cudf",
+                output_type="cupy",
                 **params[param_alias.cuml_init],
             )
             dbscan.n_cols = params[param_alias.num_cols]
@@ -976,7 +979,7 @@ class DBSCANModel(
 
             # Set out_dtype tp 64bit to get larger indexType in cuML for avoiding overflow
             out_dtype = np.int32 if data_size < 2147000000 else np.int64
-            res = list(dbscan.fit_predict(concated, out_dtype=out_dtype).to_numpy())
+            res = list(dbscan.fit_predict(concated, out_dtype=out_dtype).get())
 
             # Only node 0 from cuML will contain the correct label output
             if partition_id == 0:

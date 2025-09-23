@@ -160,6 +160,7 @@ def _configure_memory_resource(
     uvm_enabled: bool = False,
     sam_enabled: bool = False,
     sam_headroom: Optional[int] = None,
+    force_sam_headroom: bool = False,
 ) -> None:
     import cupy as cp
     import rmm
@@ -188,7 +189,7 @@ def _configure_memory_resource(
             mr = rmm.mr.SystemMemoryResource()
             rmm.mr.set_current_device_resource(mr)
     elif sam_enabled and sam_headroom is not None:
-        if not type(rmm.mr.get_current_device_resource()) == type(
+        if force_sam_headroom or not type(rmm.mr.get_current_device_resource()) == type(
             rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
         ):
             mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)

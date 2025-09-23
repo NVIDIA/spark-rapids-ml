@@ -125,8 +125,7 @@ sep="=================="
 common_confs=$( 
 cat <<EOF 
 --spark_confs spark.sql.execution.arrow.pyspark.enabled=true \
---spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=$arrow_batch_size \
---spark_confs spark.rapids.ml.uvm.enabled=true
+--spark_confs spark.sql.execution.arrow.maxRecordsPerBatch=$arrow_batch_size
 EOF
 )
 

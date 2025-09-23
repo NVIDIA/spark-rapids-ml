@@ -1140,21 +1140,18 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             _CumlCommon._set_gpu_device(context, is_local)
 
             # must do after setting gpu device
+            # pad sam headroom during data loading
+            # to later allow rmm device allocations in fit
+            # e.g. for kmeans cluster centers
             _configure_memory_resource(
                 cuda_managed_mem_enabled,
                 cuda_system_mem_enabled,
-                cuda_system_mem_headroom,
+                (
+                    2 * cuda_system_mem_headroom
+                    if cuda_system_mem_headroom is not None
+                    else None
+                ),
             )
-            if cuda_system_mem_enabled:
-                import rmm
-
-                if cuda_system_mem_headroom is None:
-                    mr = rmm.mr.SystemMemoryResource()
-                else:
-                    mr = rmm.mr.SamHeadroomMemoryResource(
-                        headroom=cuda_system_mem_headroom
-                    )
-                rmm.mr.set_current_device_resource(mr)
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
@@ -1175,6 +1172,11 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 if (
                     cuda_managed_mem_enabled or cuda_system_mem_enabled
                 ) and not use_sparse_array:
+                    # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                    if cuda_system_mem_enabled and isinstance(features, np.ndarray):
+                        cp.cuda.runtime.memAdvise(
+                            features.ctypes.data, features.nbytes, 3, -1
+                        )
                     features = cp.array(features)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
@@ -1196,6 +1198,14 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                         (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
                         for row in inputs
                     ]
+
+            # reduce sam reserved memory to targeted amount
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+                force_sam_headroom=True,
+            )
 
             # call the cuml fit function
             # *note*: cuml_fit_func may delete components of inputs to free

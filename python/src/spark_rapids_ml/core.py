@@ -746,10 +746,17 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             _CumlCommon._set_gpu_device(context, is_local)
 
             # must do after setting gpu device
+            # pad sam headroom during data loading
+            # to later allow rmm device allocations in fit
+            # e.g. for kmeans cluster centers
             _configure_memory_resource(
                 cuda_managed_mem_enabled,
                 cuda_system_mem_enabled,
-                cuda_system_mem_headroom,
+                (
+                    2 * cuda_system_mem_headroom
+                    if cuda_system_mem_headroom is not None
+                    else None
+                ),
             )
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
@@ -796,6 +803,11 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     if (
                         cuda_managed_mem_enabled or cuda_system_mem_enabled
                     ) and use_sparse_array is False:
+                        # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                        if cuda_system_mem_enabled and isinstance(features, np.ndarray):
+                            cp.cuda.runtime.memAdvise(
+                                features.ctypes.data, features.nbytes, 3, -1
+                            )
                         features = cp.array(features)
 
                     label = pdf[alias.label] if alias.label in pdf.columns else None
@@ -845,6 +857,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 import signal
 
                 signal.signal(signal.SIGHUP, signal.SIG_DFL)
+
+                # reduce sam reserved memory to targeted amount
+                _configure_memory_resource(
+                    cuda_managed_mem_enabled,
+                    cuda_system_mem_enabled,
+                    cuda_system_mem_headroom,
+                    force_sam_headroom=True,
+                )
 
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free

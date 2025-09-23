@@ -233,7 +233,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
 
             pca_object = CumlPCAMG(
                 handle=params[param_alias.handle],
-                output_type="cudf",
+                output_type="cupy",
                 **params[param_alias.cuml_init],
             )
 
@@ -252,12 +252,10 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
                 _transform=False,
             )
 
-            cpu_mean = pca_object.mean_.to_arrow().to_pylist()
-            cpu_pc = pca_object.components_.to_numpy().tolist()
-            cpu_explained_variance = (
-                pca_object.explained_variance_ratio_.to_numpy().tolist()
-            )
-            cpu_singular_values = pca_object.singular_values_.to_numpy().tolist()
+            cpu_mean = pca_object.mean_.get().tolist()
+            cpu_pc = pca_object.components_.get().tolist()
+            cpu_explained_variance = pca_object.explained_variance_ratio_.get().tolist()
+            cpu_singular_values = pca_object.singular_values_.get().tolist()
 
             return {
                 "mean_": [cpu_mean],
