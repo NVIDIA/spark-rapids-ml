@@ -158,10 +158,24 @@ pred = Pred("prediction", "probability", "model_index", "raw_prediction")
 # Global parameter alias used by core and subclasses.
 ParamAlias = namedtuple(
     "ParamAlias",
-    ("cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"),
+    (
+        "cuml_init",
+        "handle",
+        "num_cols",
+        "part_sizes",
+        "loop",
+        "fit_multiple_params",
+        "mem_config",
+    ),
 )
 param_alias = ParamAlias(
-    "cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"
+    "cuml_init",
+    "handle",
+    "num_cols",
+    "part_sizes",
+    "loop",
+    "fit_multiple_params",
+    "mem_config",
 )
 
 CumlModel = TypeVar("CumlModel", bound="_CumlModel")
@@ -804,11 +818,20 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         cuda_managed_mem_enabled or cuda_system_mem_enabled
                     ) and use_sparse_array is False:
                         # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                        # TODO: revise for non-concatenating algos PCA and LinearRegression which should advise these to device as much as possible
                         if cuda_system_mem_enabled and isinstance(features, np.ndarray):
                             cp.cuda.runtime.memAdvise(
                                 features.ctypes.data, features.nbytes, 3, -1
                             )
                         features = cp.array(features)
+
+                    # for sam sparse case, pin numpy subarrays to host to avoid observed page migration to device during later concatenation
+                    # TODO: revise for non-concatenating algos PCA and LinearRegression
+                    if cuda_system_mem_enabled and isinstance(features, csr_matrix):
+                        for arr in [features.data, features.indptr, features.indices]:
+                            cp.cuda.runtime.memAdvise(
+                                arr.ctypes.data, arr.nbytes, 3, -1
+                            )
 
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
@@ -858,13 +881,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                 signal.signal(signal.SIGHUP, signal.SIG_DFL)
 
-                # reduce sam reserved memory to targeted amount
-                _configure_memory_resource(
-                    cuda_managed_mem_enabled,
-                    cuda_system_mem_enabled,
-                    cuda_system_mem_headroom,
-                    force_sam_headroom=True,
-                )
+                # pass in to fit func to be used just before cuml fit
+                params[param_alias.mem_config] = {
+                    "cuda_managed_mem_enabled": cuda_managed_mem_enabled,
+                    "cuda_system_mem_enabled": cuda_system_mem_enabled,
+                    "cuda_system_mem_headroom": cuda_system_mem_headroom,
+                }
 
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free

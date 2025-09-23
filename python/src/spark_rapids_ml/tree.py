@@ -77,6 +77,7 @@ from .metrics import EvalMetricInfo
 from .params import HasFeaturesCols, P, _CumlClass, _CumlParams
 from .utils import (
     _concat_and_free,
+    _configure_memory_resource,
     _get_spark_session,
     _str_or_numerical,
     java_uid,
@@ -391,6 +392,24 @@ class _RandomForestEstimator(
             part_id = context.partitionId()
 
             def _single_fit(rf: cuRf) -> Dict[str, Any]:
+                # if enabled, reduce same reserved memory to targeted amount
+                cuda_managed_mem_enabled = params[param_alias.mem_config][
+                    "cuda_managed_mem_enabled"
+                ]
+                cuda_system_mem_enabled = params[param_alias.mem_config][
+                    "cuda_system_mem_enabled"
+                ]
+                cuda_system_mem_headroom = params[param_alias.mem_config][
+                    "cuda_system_mem_headroom"
+                ]
+
+                _configure_memory_resource(
+                    cuda_managed_mem_enabled,
+                    cuda_system_mem_enabled,
+                    cuda_system_mem_headroom,
+                    force_sam_headroom=True,
+                )
+
                 # Fit a random forest model on the dataset (X, y)
                 rf.fit(X, y, convert_dtype=False)
 

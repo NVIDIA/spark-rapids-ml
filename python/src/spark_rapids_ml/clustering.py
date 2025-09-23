@@ -58,6 +58,7 @@ from .params import HasFeaturesCols, HasIDCol, P, _CumlClass, _CumlParams
 from .utils import (
     _ArrayOrder,
     _concat_and_free,
+    _configure_memory_resource,
     _get_spark_session,
     get_logger,
     java_uid,
@@ -374,6 +375,24 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             else:
                 # features are either cp or np arrays here
                 concated = _concat_and_free(df_list, order=array_order)
+
+            # if enabled, reduce same reserved memory to targeted amount
+            cuda_managed_mem_enabled = params[param_alias.mem_config][
+                "cuda_managed_mem_enabled"
+            ]
+            cuda_system_mem_enabled = params[param_alias.mem_config][
+                "cuda_system_mem_enabled"
+            ]
+            cuda_system_mem_headroom = params[param_alias.mem_config][
+                "cuda_system_mem_headroom"
+            ]
+
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+                force_sam_headroom=True,
+            )
 
             kmeans_object.fit(
                 concated,
@@ -917,19 +936,6 @@ class DBSCANModel(
         pred_name = self._get_prediction_name()
         idCol_name = self.getIdCol()
 
-        cuda_managed_mem_enabled = (
-            _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
-            == "true"
-        )
-        cuda_system_mem_enabled = (
-            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
-            == "true"
-        )
-        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
-            raise ValueError(
-                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
-            )
-
         idCol_bc = self.idCols_
         raw_data_bc = self.raw_data_
         data_size = self.data_size
@@ -948,6 +954,17 @@ class DBSCANModel(
                 if len(idCol_bc) == 1
                 else np.concatenate([chunk.value for chunk in idCol_bc])
             )
+
+            # if enabled, reduce same reserved memory to targeted amount
+            cuda_managed_mem_enabled = params[param_alias.mem_config][
+                "cuda_managed_mem_enabled"
+            ]
+            cuda_system_mem_enabled = params[param_alias.mem_config][
+                "cuda_system_mem_enabled"
+            ]
+            cuda_system_mem_headroom = params[param_alias.mem_config][
+                "cuda_system_mem_headroom"
+            ]
 
             for pdf_bc in raw_data_bc:
                 features = pdf_bc.value
@@ -976,6 +993,13 @@ class DBSCANModel(
             )
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)
+
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+                force_sam_headroom=True,
+            )
 
             # Set out_dtype tp 64bit to get larger indexType in cuML for avoiding overflow
             out_dtype = np.int32 if data_size < 2147000000 else np.int64
