@@ -32,8 +32,10 @@ jobs:
         uses: NVIDIA/spark-rapids-common/shell-check@main
         with:
           excluded_codes:
-            SC2181
+            SC2181,
+            SC1090
 
           # code explanation:
           # SC2181: note: Check exit code directly with e.g. 'if mycmd;', not indirectly with $?.
+          # SC1090: warning: ShellCheck can't follow non-constant source. Use a directive to specify location. [SC1090]
           

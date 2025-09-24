@@ -82,7 +82,7 @@ run_bm() {
 
     algorithm=$1
 
-    params_delimited=$( echo $@ | sed -e 's/^/"/g' | sed -e 's/$/"/g' | sed -e 's/ /", "/g' )
+    params_delimited=$( echo "$@" | sed -e 's/^/"/g' | sed -e 's/$/"/g' | sed -e 's/ /", "/g' )
 
 json_string=`cat <<EOF
 {
@@ -132,7 +132,7 @@ EOF
         echo -n "."
         if [[ $TIME_LIMIT != "" ]] && (( duration > TIME_LIMIT ))
         then
-            echo "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run"
+            printf "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run\n"
             databricks jobs cancel-run $run_id --profile $DB_PROFILE
         fi
         sleep 10
