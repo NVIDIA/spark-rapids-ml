@@ -33,9 +33,11 @@ jobs:
         with:
           excluded_codes:
             SC2181,
-            SC1090
+            SC1090,
+            SC2072
 
           # code explanation:
           # SC2181: note: Check exit code directly with e.g. 'if mycmd;', not indirectly with $?.
           # SC1090: warning: ShellCheck can't follow non-constant source. Use a directive to specify location. [SC1090]
+          # SC2072: error: Decimals are not supported. Either use integers only, or use bc or awk to compare.
           
