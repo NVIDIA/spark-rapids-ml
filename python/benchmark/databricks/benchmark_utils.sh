@@ -132,7 +132,7 @@ EOF
         echo -n "."
         if [[ $TIME_LIMIT != "" ]] && (( duration > TIME_LIMIT ))
         then
-            printf "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run\n"
+            echo -e "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run\n"
             databricks jobs cancel-run $run_id --profile $DB_PROFILE
         fi
         sleep 10
