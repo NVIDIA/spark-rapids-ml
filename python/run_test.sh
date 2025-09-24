@@ -54,9 +54,9 @@ if [ ${CUDA_VISIBLE_DEVICES} ]; then
 fi
 GPU_MEM_PARALLEL=`nvidia-smi ${NVIDIA_SMI_ARGS} --query-gpu=memory.free --format=csv,noheader | awk 'NR == 1 { MIN = $1 } { if ($1 < MIN) { MIN = $1 } } END { print int((MIN - 2 * 1024) / ((3 * 1024) + 750)) }'`
 CPU_CORES=`nproc`
-TMP_PARALLEL=$(( $GPU_MEM_PARALLEL > $CPU_CORES ? $CPU_CORES : $GPU_MEM_PARALLEL ))
-TMP_PARALLEL=$(( $TMP_PARALLEL > $MAX_PARALLEL ? $MAX_PARALLEL : $TMP_PARALLEL ))
-if  (( $TMP_PARALLEL <= 1 )); then
+TMP_PARALLEL=$(( GPU_MEM_PARALLEL > CPU_CORES ? CPU_CORES : GPU_MEM_PARALLEL ))
+TMP_PARALLEL=$(( TMP_PARALLEL > MAX_PARALLEL ? MAX_PARALLEL : TMP_PARALLEL ))
+if  (( TMP_PARALLEL <= 1 )); then
         TEST_PARALLEL=1
     else
         TEST_PARALLEL=$TMP_PARALLEL
