@@ -1,4 +1,5 @@
-# Copyright (c) 2024, NVIDIA CORPORATION.
+#!/bin/bash
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +82,7 @@ run_bm() {
 
     algorithm=$1
 
-    params_delimited=$( echo $@ | sed -e 's/^/"/g' | sed -e 's/$/"/g' | sed -e 's/ /", "/g' )
+    params_delimited=$( echo "$@" | sed -e 's/^/"/g' | sed -e 's/$/"/g' | sed -e 's/ /", "/g' )
 
 json_string=`cat <<EOF
 {
@@ -129,13 +130,13 @@ EOF
     duration=0
     while [[ $status != "TERMINATED" ]] && [[ $status != "ERROR" ]]; do
         echo -n "."
-        if [[ $TIME_LIMIT != "" ]] && (( $duration > $TIME_LIMIT ))
+        if [[ $TIME_LIMIT != "" ]] && (( duration > TIME_LIMIT ))
         then
-            echo "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run"
+            echo -e "\ntime limit of $TIME_LIMIT minutes exceeded, canceling run\n"
             databricks jobs cancel-run $run_id --profile $DB_PROFILE
         fi
         sleep 10
-        duration=$(( $duration + 10 ))
+        duration=$(( duration + 10 ))
         get_run_status
     done
 
