@@ -1,4 +1,5 @@
-# Copyright (c) 2024, NVIDIA CORPORATION.
+#!/bin/bash
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +16,7 @@
 # needed for bm script arguments
 cat <<EOF
 {
-    "num_workers": $(( $num_cpus / 8)),
+    "num_workers": $(( num_cpus / 8)),
     "cluster_name": "$cluster_name",
     "spark_version": "${db_version}.x-cpu-ml-scala2.12",
     "spark_conf": {},
