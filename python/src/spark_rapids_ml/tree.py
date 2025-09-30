@@ -404,8 +404,7 @@ class _RandomForestEstimator(
                 serialized_model = rf._treelite_model_bytes
                 pickled_model = pickle.dumps(serialized_model)
                 msg = base64.b64encode(pickled_model).decode("utf-8")
-                # trees = rf.as_treelite().dump_as_json()
-                data = {"model_bytes": msg}  # , "model_json": trees}
+                data = {"model_bytes": msg}
                 messages = context.allGather(json.dumps(data))
 
                 # concatenate the random forest in the worker0
