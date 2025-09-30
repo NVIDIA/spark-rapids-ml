@@ -361,11 +361,11 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             import cupy as cp
-            from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
+            from cuml.cluster.kmeans import KMeans as CumlKMeans
 
-            kmeans_object = CumlKMeansMG(
+            kmeans_object = CumlKMeans(
                 handle=params[param_alias.handle],
-                output_type="cudf",
+                output_type="cupy",
                 **params[param_alias.cuml_init],
             )
             df_list = [x for (x, _, _) in dfs]
@@ -375,9 +375,10 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 # features are either cp or np arrays here
                 concated = _concat_and_free(df_list, order=array_order)
 
-            kmeans_object.fit(
+            kmeans_object._fit(
                 concated,
                 sample_weight=None,
+                multigpu=True,
             )
 
             logger = get_logger(cls)
@@ -387,11 +388,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             )
 
             return {
-                "cluster_centers_": [
-                    kmeans_object.cluster_centers_.to_numpy().tolist()
-                ],
+                "cluster_centers_": [kmeans_object.cluster_centers_.get().tolist()],
                 "n_cols": params[param_alias.num_cols],
-                "dtype": str(kmeans_object.dtype.name),
+                "dtype": str(kmeans_object.cluster_centers_.dtype.name),
             }
 
         return _cuml_fit
@@ -489,11 +488,9 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         array_order = self._transform_array_order()
 
         def _construct_kmeans() -> CumlT:
-            from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeansMG
+            from cuml.cluster.kmeans import KMeans as CumlKMeans
 
-            kmeans = CumlKMeansMG(output_type="cudf", **cuml_alg_params)
-            # need this to revert a change in cuML targeting sklearn compat.
-            kmeans.n_features_in_ = None
+            kmeans = CumlKMeans(output_type="cudf", **cuml_alg_params)
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_features_in_ = n_cols

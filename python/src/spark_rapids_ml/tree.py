@@ -80,7 +80,7 @@ from .utils import (
     _get_spark_session,
     _str_or_numerical,
     java_uid,
-    translate_trees,
+    translate_tree,
 )
 
 if TYPE_CHECKING:
@@ -394,24 +394,28 @@ class _RandomForestEstimator(
                 # Fit a random forest model on the dataset (X, y)
                 rf.fit(X, y, convert_dtype=False)
 
+                if is_classification:
+                    if rf.classes_.max() != rf.n_classes_ - 1:
+                        raise RuntimeError(
+                            "A GPU worker did not receive all label values.  Rerun with fewer workers or shuffle input data."
+                        )
+
                 # serialized_model is Dictionary type
-                serialized_model = rf._serialize_treelite_bytes()
+                serialized_model = rf._treelite_model_bytes
                 pickled_model = pickle.dumps(serialized_model)
                 msg = base64.b64encode(pickled_model).decode("utf-8")
-                trees = rf.get_json()
-                data = {"model_bytes": msg, "model_json": trees}
+                # trees = rf.as_treelite().dump_as_json()
+                data = {"model_bytes": msg}  # , "model_json": trees}
                 messages = context.allGather(json.dumps(data))
 
                 # concatenate the random forest in the worker0
                 if part_id == 0:
                     mod_bytes = []
-                    mod_jsons = []
                     for msg in messages:
                         data = json.loads(msg)
                         mod_bytes.append(
                             pickle.loads(base64.b64decode(data["model_bytes"]))
                         )
-                        mod_jsons.append(data["model_json"])
 
                     all_tl_mod_handles = [
                         treelite.Model.deserialize_bytes(i) for i in mod_bytes
@@ -419,9 +423,11 @@ class _RandomForestEstimator(
 
                     # tree concatenation raises a non-user friendly error if some workers didn't get all label values
                     try:
-                        rf._deserialize_from_treelite(
-                            treelite.Model.concatenate(all_tl_mod_handles)
+                        _concatenated_model = treelite.Model.concatenate(
+                            all_tl_mod_handles
                         )
+                        _treelite_model_bytes = _concatenated_model.serialize_bytes()
+                        _treelite_model_json = _concatenated_model.dump_as_json()
                     except RuntimeError as err:
                         import traceback
 
@@ -433,17 +439,17 @@ class _RandomForestEstimator(
                         else:
                             raise err
 
-                    final_model_bytes = pickle.dumps(rf._serialize_treelite_bytes())
+                    final_model_bytes = pickle.dumps(_treelite_model_bytes)
                     final_model = base64.b64encode(final_model_bytes).decode("utf-8")
                     result = {
                         "treelite_model": final_model,
-                        "dtype": rf.dtype.name,
-                        "n_cols": rf.n_cols,
-                        "model_json": mod_jsons,
+                        "dtype": X.dtype.name,
+                        "n_cols": X.shape[1] if len(X.shape) > 1 else 1,
+                        "model_json": _treelite_model_json,
                     }
 
                     if is_classification:
-                        result["num_classes"] = rf.num_classes
+                        result["num_classes"] = rf.n_classes_
 
                     return result
                 else:
@@ -490,7 +496,7 @@ class _RandomForestEstimator(
             StructField("treelite_model", StringType(), False),
             StructField("n_cols", IntegerType(), False),
             StructField("dtype", StringType(), False),
-            StructField("model_json", ArrayType(StringType()), False),
+            StructField("model_json", StringType(), False),
         ]
         if self._is_classification():
             fields.append(StructField("num_classes", IntegerType(), False))
@@ -513,7 +519,7 @@ class _RandomForestModel(
         n_cols: int,
         dtype: str,
         treelite_model: Union[str, List[str]],
-        model_json: Union[List[str], List[List[str]]] = [],  # type: ignore
+        model_json: Union[str, List[str]] = [],  # type: ignore
         num_classes: int = -1,  # only for classification
     ):
         if self._is_classification():
@@ -605,13 +611,12 @@ class _RandomForestModel(
         assert sc._gateway is not None
 
         # This function shouldn't be called for the multiple models scenario.
-        model_json = cast(List[str], self._model_json)
+        model_json = cast(str, self._model_json)
 
         # Convert cuml trees to Spark trees
         trees = [
-            translate_trees(sc, impurity, trees)
-            for trees_json in model_json
-            for trees in json.loads(trees_json)
+            translate_tree(sc, impurity, tree)
+            for tree in json.loads(model_json)["trees"]
         ]
 
         if self._is_classification():
@@ -655,6 +660,7 @@ class _RandomForestModel(
         treelite_model = self._treelite_model
         is_classification = self._is_classification()
         dtype = self.dtype
+        num_classes = self._num_classes
 
         def _construct_rf() -> CumlT:
             if is_classification:
@@ -662,6 +668,8 @@ class _RandomForestModel(
             else:
                 from cuml import RandomForestRegressor as cuRf
 
+            import cupy as cp
+            import numpy as np
             import treelite
 
             rfs = []
@@ -671,10 +679,9 @@ class _RandomForestModel(
             for m in treelite_models:
                 model = pickle.loads(base64.b64decode(m))
                 rf = cuRf()
-                # need this to revert a change in cuML targeting sklearn compat.
-                rf.n_features_in_ = None
-                rf._deserialize_from_treelite(treelite.Model.deserialize_bytes(model))
-                rf.dtype = np.dtype(dtype)
+                rf.n_classes_ = num_classes
+                rf.classes_ = cp.arange(num_classes, dtype=np.int32)
+                rf._treelite_model_bytes = treelite.Model.deserialize_bytes(model)
 
                 rfs.append(rf)
 

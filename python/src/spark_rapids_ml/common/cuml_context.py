@@ -23,8 +23,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 import psutil
 
 if TYPE_CHECKING:
-    # need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
-    from ucp import Endpoint
+    # need this first to load shared ucx shared libraries from ucxx instead of raft-dask
+    import ucxx
     from pylibraft.common import Handle  # isort: split
     from raft_dask.common import UCX
     from raft_dask.common.nccl import nccl
@@ -49,7 +49,7 @@ class CumlContext:
         3. if require_ucx is true, initialize ucx and inject ucx together with nccl into a handle
         """
         # need this first to load shared ucx shared libraries from ucx-py instead of raft-dask
-        from ucp import Endpoint
+        import ucxx
         from pylibraft.common import Handle  # isort: split
         from raft_dask.common import UCX
         from raft_dask.common.nccl import nccl
@@ -96,7 +96,14 @@ class CumlContext:
                 except ValueError:
                     pass
 
-            self._ucx = UCX.get()
+            # ucxx seems to require creating listener in a couroutine, otherwise a timeout error is raised
+            self._loop = asyncio.get_event_loop()
+
+            async def start_ucx() -> "UCX":
+                return UCX.get()
+
+            self._ucx = self._loop.run_until_complete(start_ucx())
+
             self._ucx_port = self._ucx.listener_port()
             msgs = context.allGather(json.dumps((nccl_uid, self._ucx_port)))
             self._nccl_unique_id = base64.b64decode(json.loads(msgs[0])[0])
@@ -122,9 +129,7 @@ class CumlContext:
             inject_comms_on_handle_coll_only(
                 self._handle, self._nccl_comm, self._nranks, self._rank, True
             )
-        else:
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
+        elif self._loop is not None:
             self._ucx_eps = self._loop.run_until_complete(
                 asyncio.ensure_future(
                     CumlContext._ucp_create_endpoints(
@@ -138,13 +143,16 @@ class CumlContext:
             inject_comms_on_handle(
                 self._handle,
                 self._nccl_comm,
-                False,  # is_ucxx - TODO: migrate to ucxx from ucp
+                True,  # is_ucxx = True
                 self._ucx.get_worker(),  # type: ignore
                 self._ucx_eps,
                 self._nranks,
                 self._rank,
                 True,
             )
+        else:
+            raise RuntimeError("asyncio loop needed for ucxis not initialized")
+
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -180,9 +188,9 @@ class CumlContext:
         ucx_worker: "UCX",
         target_ip_ports: List[Tuple[str, int]],
         additional_timeout: float = 0.1,
-    ) -> "Endpoint":
+    ) -> Any:
         """
-        ucp initialization may require a larger additional_timeout a complex network environment
+        ucxx initialization may require a larger additional_timeout in a complex network environment
         """
         eps = [None] * len(target_ip_ports)
         for i in range(len(eps)):
