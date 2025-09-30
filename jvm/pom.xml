@@ -21,7 +21,7 @@
 
     <groupId>com.nvidia.rapids</groupId>
     <artifactId>ml</artifactId>
-    <version>25.08.0</version>
+    <version>25.10.0</version>
     <packaging>jar</packaging>
 
     <properties>
