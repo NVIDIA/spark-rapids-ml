@@ -69,6 +69,7 @@ def inspect_default_params_from_func(
             filtered_params_dict[parameter.name] = parameter.default
     return filtered_params_dict
 
+
 def is_remote() -> bool:
     try:
         # pyspark.sql.utils.is_remote is not available in older versions of pyspark in which case remote is not supported
