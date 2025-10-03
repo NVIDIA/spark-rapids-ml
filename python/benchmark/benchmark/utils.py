@@ -70,6 +70,15 @@ def inspect_default_params_from_func(
     return filtered_params_dict
 
 
+def to_bool(literal: str) -> bool:
+    if literal in ["true", "yes", "y", "on", "1"]:
+        return True
+    elif literal in ["false", "no", "n", "off", "0"]:
+        return False
+    else:
+        raise ValueError(f"Invalid boolean literal: {literal}")
+
+
 def is_remote() -> bool:
     try:
         # pyspark.sql.utils.is_remote is not available in older versions of pyspark in which case remote is not supported
