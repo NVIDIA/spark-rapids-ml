@@ -71,9 +71,10 @@ def inspect_default_params_from_func(
 
 
 def to_bool(literal: str) -> bool:
-    if literal in ["true", "yes", "y", "on", "1"]:
+    _literal = literal.lower()
+    if _literal in ["true", "yes", "y", "on", "1"]:
         return True
-    elif literal in ["false", "no", "n", "off", "0"]:
+    elif _literal in ["false", "no", "n", "off", "0"]:
         return False
     else:
         raise ValueError(f"Invalid boolean literal: {literal}")
