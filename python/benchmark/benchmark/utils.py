@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import inspect
-from distutils.util import strtobool
 from time import time
 from typing import Any, Callable, Dict, List
 
@@ -69,11 +68,6 @@ def inspect_default_params_from_func(
         ):
             filtered_params_dict[parameter.name] = parameter.default
     return filtered_params_dict
-
-
-def to_bool(literal: str) -> bool:
-    return bool(strtobool(literal))
-
 
 def is_remote() -> bool:
     try:
