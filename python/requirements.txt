@@ -13,5 +13,6 @@
 # limitations under the License.
 
 numpy_allocator
+psutil
 pyspark>=3.2.1,<3.5
 scikit-learn>=1.2.1
