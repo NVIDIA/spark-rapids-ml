@@ -392,7 +392,7 @@ class _RandomForestEstimator(
             part_id = context.partitionId()
 
             def _single_fit(rf: cuRf) -> Dict[str, Any]:
-                # if enabled, reduce same reserved memory to targeted amount
+                # if enabled, reduce sam reserved memory to targeted amount
                 cuda_managed_mem_enabled = params[param_alias.mem_config][
                     "cuda_managed_mem_enabled"
                 ]

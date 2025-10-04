@@ -1039,7 +1039,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 else:
                     labels = _concat_and_free(label_list, order=array_order)
 
-                # if enabled, reduce same reserved memory to targeted amount
+                # if enabled, reduce sam reserved memory to targeted amount
                 _configure_memory_resource(
                     cuda_managed_mem_enabled,
                     cuda_system_mem_enabled,
@@ -1049,7 +1049,7 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
 
                 umap_model = umap_object.fit(concated, y=labels)
             else:
-                # if enabled, reduce same reserved memory to targeted amount
+                # if enabled, reduce sam reserved memory to targeted amount
                 _configure_memory_resource(
                     cuda_managed_mem_enabled,
                     cuda_system_mem_enabled,

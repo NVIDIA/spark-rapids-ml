@@ -346,12 +346,19 @@ def _try_allocate_cp_empty_arrays(
     array_order: str,
     has_label: bool,
     logger: logging.Logger,
+    cuda_system_mem_enabled: bool,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"]]:
     import cupy as cp
 
     device = cp.cuda.Device(gpu_id)
     free_mem, total_mem = device.mem_info
     nbytes_per_row = (dimension + 1 if has_label else 0) * np.dtype(dtype).itemsize
+
+    # if sam is enabled, use the available host memory as well
+    if cuda_system_mem_enabled:
+        import psutil
+
+        free_mem += psutil.virtual_memory().available
 
     target_mem = int(free_mem * gpu_mem_ratio_for_data)
     while target_mem >= 1_000_000:
@@ -387,6 +394,7 @@ def _concat_with_reserved_gpu_mem(
     array_order: str,
     multi_col_names: Optional[List[str]],
     logger: logging.Logger,
+    cuda_system_mem_enabled: bool,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
     # TODO: support sparse matrix
     # TODO: support row number
@@ -432,6 +440,7 @@ def _concat_with_reserved_gpu_mem(
                 array_order,
                 has_label,
                 logger,
+                cuda_system_mem_enabled,
             )
 
         np_rows = np_features.shape[0]

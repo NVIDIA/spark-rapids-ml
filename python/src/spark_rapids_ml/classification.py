@@ -1088,7 +1088,7 @@ class LogisticRegression(
                 if is_sparse and pdesc.partition_max_nnz > nnz_limit_for_int32:  # type: ignore
                     logistic_regression._convert_index = np.int64
 
-                # if enabled, reduce same reserved memory to targeted amount
+                # if enabled, reduce sam reserved memory to targeted amount
                 cuda_managed_mem_enabled = params[param_alias.mem_config][
                     "cuda_managed_mem_enabled"
                 ]

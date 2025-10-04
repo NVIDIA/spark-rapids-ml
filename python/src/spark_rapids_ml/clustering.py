@@ -376,7 +376,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 # features are either cp or np arrays here
                 concated = _concat_and_free(df_list, order=array_order)
 
-            # if enabled, reduce same reserved memory to targeted amount
+            # if enabled, reduce sam reserved memory to targeted amount
             cuda_managed_mem_enabled = params[param_alias.mem_config][
                 "cuda_managed_mem_enabled"
             ]
@@ -955,7 +955,7 @@ class DBSCANModel(
                 else np.concatenate([chunk.value for chunk in idCol_bc])
             )
 
-            # if enabled, reduce same reserved memory to targeted amount
+            # if enabled, reduce sam reserved memory to targeted amount
             cuda_managed_mem_enabled = params[param_alias.mem_config][
                 "cuda_managed_mem_enabled"
             ]

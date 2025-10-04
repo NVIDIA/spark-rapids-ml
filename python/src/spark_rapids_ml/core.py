@@ -763,6 +763,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             # pad sam headroom during data loading
             # to later allow rmm device allocations in fit
             # e.g. for kmeans cluster centers
+            # TODO: tune this padding per algorithm and/or allow separate config(s)
             _configure_memory_resource(
                 cuda_managed_mem_enabled,
                 cuda_system_mem_enabled,
@@ -797,6 +798,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         array_order,
                         multi_col_names,
                         logger,
+                        cuda_system_mem_enabled,
                     )
                 ]
                 sizes = [inputs[0][0].shape[0]]
