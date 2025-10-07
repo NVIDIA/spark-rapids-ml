@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-pip install pyspark~=4.0
+pip install pyspark==4.0.0
 pushd ../jvm
 mvn clean test
 popd

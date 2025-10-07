@@ -904,10 +904,8 @@ def test_fit_multiple_in_single_pass(
         def get_num_trees(
             model: Union[RandomForestClassificationModel, RandomForestRegressionModel],
         ) -> int:
-            model_jsons = cast(List[str], model._model_json)
-            trees = [
-                None for trees_json in model_jsons for trees in json.loads(trees_json)
-            ]
+            model_json = cast(str, model._model_json)
+            trees = [None for tree in json.loads(model_json)["trees"]]
             return len(trees)
 
         for i, param_map in enumerate(param_maps):

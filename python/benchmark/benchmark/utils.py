@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import inspect
-from distutils.util import strtobool
 from time import time
 from typing import Any, Callable, Dict, List
 
@@ -72,7 +71,13 @@ def inspect_default_params_from_func(
 
 
 def to_bool(literal: str) -> bool:
-    return bool(strtobool(literal))
+    _literal = literal.lower()
+    if _literal in ["true", "yes", "y", "on", "1"]:
+        return True
+    elif _literal in ["false", "no", "n", "off", "0"]:
+        return False
+    else:
+        raise ValueError(f"Invalid boolean literal: {literal}")
 
 
 def is_remote() -> bool:
