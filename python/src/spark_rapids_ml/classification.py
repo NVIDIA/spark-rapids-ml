@@ -540,7 +540,7 @@ class RandomForestClassificationModel(
         n_cols: int,
         dtype: str,
         treelite_model: Union[str, List[str]],
-        model_json: Union[List[str], List[List[str]]],
+        model_json: Union[str, List[str]],
         num_classes: int,
     ):
         super().__init__(

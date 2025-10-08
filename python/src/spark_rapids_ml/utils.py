@@ -629,68 +629,122 @@ def _create_leaf_node(sc: SparkContext, impurity: str, model: Dict[str, Any]):  
     return java_leaf_node
 
 
-def translate_trees(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
-    """Translate Cuml RandomForest trees to PySpark trees
+def translate_tree(sc: SparkContext, impurity: str, model: Dict[str, Any]):  # type: ignore
+    """Translate Treelite JSON representation to PySpark trees
 
-    Cuml trees
-    [
-      {
-        "nodeid": 0,
-        "split_feature": 3,
-        "split_threshold": 0.827687974732221,
-        "gain": 0.41999999999999998,
-        "instance_count": 10,
-        "yes": 1,
-        "no": 2,
-        "children": [
-          {
-            "nodeid": 1,
-            "leaf_value": [
-              1,
-              0
-            ],
-            "instance_count": 7
-          },
-          {
-            "nodeid": 2,
-            "leaf_value": [
-              0,
-              1
-            ],
-            "instance_count": 3
-          }
-        ]
-      }
-    ]
+    Converts Treelite JSON format to Spark MLlib tree format.
+    
+    Args:
+        sc: SparkContext
+        impurity: Impurity type ("gini", "entropy", or "variance")
+        model: Treelite JSON model portion representing a single tree
+        
+    Returns:
+        Spark tree 
+        
+ (see https://treelite.readthedocs.io/en/latest/tutorials/builder.html#example-regressor)
+    Example TreeliteJson Tree:
+    {
+        "num_nodes": 5,
+        "has_categorical_split": false,
+        "nodes": [{
+                "node_id": 0,
+                "split_feature_id": 0,
+                "default_left": true,
+                "node_type": "numerical_test_node",
+                "comparison_op": "<",
+                "threshold": 5.0,
+                "left_child": 1,
+                "right_child": 2
+            }, {
+                "node_id": 1,
+                "split_feature_id": 2,
+                "default_left": false,
+                "node_type": "numerical_test_node",
+                "comparison_op": "<",
+                "threshold": -3.0,
+                "left_child": 3,
+                "right_child": 4
+            }, {
+                "node_id": 2,
+                "leaf_value": 0.6000000238418579
+            }, {
+                "node_id": 3,
+                "leaf_value": -0.4000000059604645
+            }, {
+                "node_id": 4,
+                "leaf_value": 1.2000000476837159
+            }]
+    }
 
-    Spark trees,
+    Spark tree,
              InternalNode {split{featureIndex=3, threshold=0.827687974732221}, gain = 0.41999999999999998}
              /         \
            left        right
            /             \
     LeafNode           LeafNode
     """
-    if "split_feature" in model:
-        left_child_id = model["yes"]
-        right_child_id = model["no"]
+    tree = model
 
-        for child in model["children"]:
-            if child["nodeid"] == left_child_id:
-                left_child = child
-            elif child["nodeid"] == right_child_id:
-                right_child = child
-            else:
-                raise ValueError("Unexpected node id")
+    root_id = 0
+    nodes = tree["nodes"]
 
-        return _create_internal_node(
-            sc,
-            impurity,
-            model,
-            translate_trees(sc, impurity, left_child),
-            translate_trees(sc, impurity, right_child),
-        )
-    elif "leaf_value" in model:
-        return _create_leaf_node(sc, impurity, model)
+    # Create a mapping from node_id to node data
+    node_map = {node["node_id"]: node for node in nodes}
+
+    # Convert the tree starting from root
+    spark_tree = _convert_treelite_node(sc, impurity, node_map, root_id)
+    # spark_trees.append(spark_tree)
+
+    return spark_tree
+
+
+def _convert_treelite_node(sc: SparkContext, impurity: str, node_map: Dict[int, Dict[str, Any]], node_id: int):  # type: ignore
+    """Convert a single Treelite node to Spark MLlib node
+
+    Args:
+        sc: SparkContext
+        impurity: Impurity type
+        node_map: Dictionary mapping node_id to node data
+        node_id: ID of the node to convert
+
+    Returns:
+        Spark MLlib node (InternalNode or LeafNode)
+    """
+    node = node_map[node_id]
+
+    # Check if this is a leaf node
+    if "leaf_value" in node:
+        # Convert leaf node
+        leaf_model = {
+            "leaf_value": (
+                node["leaf_value"]
+                if isinstance(node["leaf_value"], list)
+                else [node["leaf_value"]]
+            ),
+            "instance_count": node.get("instance_count", 1),
+        }
+        return _create_leaf_node(sc, impurity, leaf_model)
+
+    # This is an internal node
+    left_child_id = node["left_child"]
+    right_child_id = node["right_child"]
+
+    # Convert children recursively
+    left_child = _convert_treelite_node(sc, impurity, node_map, left_child_id)
+    right_child = _convert_treelite_node(sc, impurity, node_map, right_child_id)
+
+    # Create internal node model in the format expected by _create_internal_node
+    internal_model = {
+        "split_feature": node["split_feature_id"],
+        "split_threshold": node["threshold"],
+        "gain": node.get("gain", 0.0),  # Treelite doesn't always provide gain
+        "instance_count": node.get("instance_count", 1),
+        "yes": left_child_id,
+        "no": right_child_id,
+    }
+
+    return _create_internal_node(sc, impurity, internal_model, left_child, right_child)
 
 
 # to the XGBOOST _get_unwrap_udt_fn in https://github.com/dmlc/xgboost/blob/master/python-package/xgboost/spark/core.py

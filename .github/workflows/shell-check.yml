@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, NVIDIA CORPORATION.
+# Copyright (c) 2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,39 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A workflow to check copyright/license header
-name: license header check
+# A workflow to check shell script syntax
+name: shell check
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  license-header-check:
+  shell-check:
     runs-on: ubuntu-latest
     if: "!contains(github.event.pull_request.title, '[bot]')"
     steps:
-      - name: Get checkout depth
-        run: |
-          echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 10 ))" >> $GITHUB_ENV
-
       - name: Checkout code
         uses: NVIDIA/spark-rapids-common/checkout@main
-        with:
-          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
 
-      - name: license-header-check
-        uses: NVIDIA/spark-rapids-common/license-header-check@main
+      
+      - name: Run ShellCheck
+        uses: NVIDIA/spark-rapids-common/shell-check@main
         with:
-          included_file_patterns: |
-            *.sh,
-            *.py,
-            *.toml,
-            *.cfg,
-            *Dockerfile*,
-            *Jenkinsfile*,
-            *.yml,
-            *.txt,
-            *.xml
-          excluded_file_patterns: |
-            thirdparty/*
+          excluded_codes:
+            SC2181,
+            SC1090,
+            SC2072
+
+          # code explanation:
+          # SC2181: note: Check exit code directly with e.g. 'if mycmd;', not indirectly with $?.
+          # SC1090: warning: ShellCheck can't follow non-constant source. Use a directive to specify location. [SC1090]
+          # SC2072: error: Decimals are not supported. Either use integers only, or use bc or awk to compare.
+          

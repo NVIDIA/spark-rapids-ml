@@ -687,8 +687,6 @@ def test_umap_build_algo(gpu_number: int, metric: str) -> None:
             metric=metric,
         ).setFeaturesCol("features")
 
-        # TODO: cuml nn_descent currently relies on the RAFT implementation (only supports L2/euclidean);
-        # once they move to cuvs, it should also support cosine
         if metric not in ["l2", "euclidean", "cosine"]:
             try:
                 umap.fit(df)
