@@ -509,7 +509,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _construct_kmeans() -> CumlT:
             from cuml.cluster.kmeans import KMeans as CumlKMeans
 
-            kmeans = CumlKMeans(output_type="cudf", **cuml_alg_params)
+            kmeans = CumlKMeans(output_type="cupy", **cuml_alg_params)
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_features_in_ = n_cols
