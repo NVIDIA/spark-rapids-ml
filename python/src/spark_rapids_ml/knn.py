@@ -65,6 +65,7 @@ from .metrics import EvalMetricInfo
 from .params import DictTypeConverters, HasIDCol, P, _CumlClass, _CumlParams
 from .utils import (
     _concat_and_free,
+    _configure_memory_resource,
     _get_class_or_callable_name,
     _get_default_params_from_func,
     _get_spark_session,
@@ -734,6 +735,24 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
                 query_parts_to_ranks += [(m_rank, size) for size in m_query_size]
             item_nrows = sum(pair[1] for pair in item_parts_to_ranks)
             query_nrows = sum(pair[1] for pair in query_parts_to_ranks)
+
+            # if enabled, reduce sam reserved memory to targeted amount
+            cuda_managed_mem_enabled = params[param_alias.mem_config][
+                "cuda_managed_mem_enabled"
+            ]
+            cuda_system_mem_enabled = params[param_alias.mem_config][
+                "cuda_system_mem_enabled"
+            ]
+            cuda_system_mem_headroom = params[param_alias.mem_config][
+                "cuda_system_mem_headroom"
+            ]
+
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+                force_sam_headroom=True,
+            )
 
             res_tuple: Tuple[List[np.ndarray], List[np.ndarray]] = nn_object.kneighbors(
                 index=item,

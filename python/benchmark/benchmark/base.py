@@ -101,7 +101,7 @@ class BenchmarkBase:
         self._parser.add_argument(
             "--verbose",
             action="store_const",
-            const=7,
+            const=6,
             default=0,
             help="set cuml logging to max verbose level",
         )
@@ -238,6 +238,7 @@ class BenchmarkBase:
         with WithSparkSession(
             self._args.spark_confs, shutdown=(not self._args.no_shutdown)
         ) as spark:
+
             for _ in range(self._args.num_runs):
                 train_df, features_col, label_col = self.input_dataframe(
                     spark, *self._args.train_path

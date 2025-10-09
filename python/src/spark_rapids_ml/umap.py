@@ -58,6 +58,10 @@ from pyspark.sql.types import (
     StructField,
     StructType,
 )
+from pyspark.util import _parse_memory
+from scipy.sparse import csr_matrix
+
+from spark_rapids_ml.core import FitInputType, _CumlModel
 
 from .core import (
     CumlT,
@@ -1011,6 +1015,16 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 **params[param_alias.cuml_init],
             )
 
+            cuda_managed_mem_enabled = params[param_alias.mem_config][
+                "cuda_managed_mem_enabled"
+            ]
+            cuda_system_mem_enabled = params[param_alias.mem_config][
+                "cuda_system_mem_enabled"
+            ]
+            cuda_system_mem_headroom = params[param_alias.mem_config][
+                "cuda_system_mem_headroom"
+            ]
+
             df_list = [x for (x, _, _) in dfs]
             if isinstance(df_list[0], pd.DataFrame):
                 concated = pd.concat(df_list)
@@ -1024,8 +1038,25 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     labels = pd.concat(label_list)
                 else:
                     labels = _concat_and_free(label_list, order=array_order)
+
+                # if enabled, reduce sam reserved memory to targeted amount
+                _configure_memory_resource(
+                    cuda_managed_mem_enabled,
+                    cuda_system_mem_enabled,
+                    cuda_system_mem_headroom,
+                    force_sam_headroom=True,
+                )
+
                 umap_model = umap_object.fit(concated, y=labels)
             else:
+                # if enabled, reduce sam reserved memory to targeted amount
+                _configure_memory_resource(
+                    cuda_managed_mem_enabled,
+                    cuda_system_mem_enabled,
+                    cuda_system_mem_headroom,
+                    force_sam_headroom=True,
+                )
+
                 # Call unsupervised fit
                 umap_model = umap_object.fit(concated)
 
@@ -1073,6 +1104,27 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         if cuda_managed_mem_enabled:
             get_logger(cls).info("CUDA managed memory enabled.")
 
+        cuda_system_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
+            raise ValueError(
+                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+            )
+        if cuda_system_mem_enabled:
+            get_logger(cls).info("CUDA system allocated memory enabled.")
+        _cuda_system_mem_headroom = _get_spark_session().conf.get(
+            "spark.rapids.ml.sam.headroom", None
+        )
+        if cuda_system_mem_enabled and _cuda_system_mem_headroom is not None:
+            cuda_system_mem_headroom = _parse_memory(_cuda_system_mem_headroom) << 20
+            get_logger(cls).info(
+                f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}."
+            )
+        else:
+            cuda_system_mem_headroom = None
+
         # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
@@ -1094,6 +1146,12 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
         chunk_size = self.max_records_per_batch
 
         def _train_udf(pdf_iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             from pyspark import TaskContext
 
             logger = get_logger(cls)
@@ -1110,7 +1168,18 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
             _CumlCommon._set_gpu_device(context, is_local)
 
             # must do after setting gpu device
-            _configure_memory_resource(cuda_managed_mem_enabled)
+            # pad sam headroom during data loading
+            # to later allow rmm device allocations in fit
+            # e.g. for kmeans cluster centers
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                (
+                    2 * cuda_system_mem_headroom
+                    if cuda_system_mem_headroom is not None
+                    else None
+                ),
+            )
 
             # handle the input
             # inputs = [(X, Optional(y)), (X, Optional(y))]
@@ -1128,8 +1197,20 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 else:
                     # dense input
                     features = np.array(list(pdf[alias.data]), order=array_order)
-                if cuda_managed_mem_enabled and not use_sparse_array:
+                if (
+                    cuda_managed_mem_enabled or cuda_system_mem_enabled
+                ) and not use_sparse_array:
+                    # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                    if cuda_system_mem_enabled and isinstance(features, np.ndarray):
+                        cp.cuda.runtime.memAdvise(
+                            features.ctypes.data, features.nbytes, 3, -1
+                        )
                     features = cp.array(features)
+
+                # for sam sparse case, pin numpy subarrays to host to avoid observed page migration to device during later concatenation
+                if cuda_system_mem_enabled and isinstance(features, csr_matrix):
+                    for arr in [features.data, features.indptr, features.indices]:
+                        cp.cuda.runtime.memAdvise(arr.ctypes.data, arr.nbytes, 3, -1)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
@@ -1150,6 +1231,13 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                         (cupyx.scipy.sparse.csr_matrix(row[0]), row[1], row[2])
                         for row in inputs
                     ]
+
+            # pass in to fit func to be used just before cuml fit
+            params[param_alias.mem_config] = {
+                "cuda_managed_mem_enabled": cuda_managed_mem_enabled,
+                "cuda_system_mem_enabled": cuda_system_mem_enabled,
+                "cuda_system_mem_headroom": cuda_system_mem_headroom,
+            }
 
             # call the cuml fit function
             # *note*: cuml_fit_func may delete components of inputs to free

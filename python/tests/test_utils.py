@@ -174,8 +174,15 @@ def test_concat_with_reserved_gpu_mem(
 
     logger = logging.getLogger("test_utils")
     logger.setLevel(logging.INFO)
+    # False for cuda_system_mem_enabled, TODO: test with True
     cp_features, cp_labels, np_row_numbers = _concat_with_reserved_gpu_mem(
-        gpu_id, pdf_iter, gpu_mem_ratio_for_data, array_order, multi_col_names, logger
+        gpu_id,
+        pdf_iter,
+        gpu_mem_ratio_for_data,
+        array_order,
+        multi_col_names,
+        logger,
+        False,
     )
 
     assert isinstance(cp_features, cp.ndarray)

@@ -156,10 +156,44 @@ def _get_gpu_id(task_context: TaskContext) -> int:
     return gpu_id
 
 
-def _configure_memory_resource(uvm_enabled: bool = False) -> None:
+def _configure_memory_resource(
+    uvm_enabled: bool = False,
+    sam_enabled: bool = False,
+    sam_headroom: Optional[int] = None,
+    force_sam_headroom: bool = False,
+) -> None:
     import cupy as cp
     import rmm
+    from cuda.bindings import runtime
     from rmm.allocators.cupy import rmm_cupy_allocator
+
+    _SYSTEM_MEMORY_SUPPORTED = rmm._cuda.gpu.getDeviceAttribute(
+        runtime.cudaDeviceAttr.cudaDevAttrPageableMemoryAccess,
+        rmm._cuda.gpu.getDevice(),
+    )
+
+    if not _SYSTEM_MEMORY_SUPPORTED and sam_enabled:
+        raise ValueError(
+            "System allocated memory is not supported on this GPU. Please disable system allocated memory."
+        )
+
+    if uvm_enabled and sam_enabled:
+        raise ValueError(
+            "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+        )
+
+    if sam_enabled and sam_headroom is None:
+        if not type(rmm.mr.get_current_device_resource()) == type(
+            rmm.mr.SystemMemoryResource()
+        ):
+            mr = rmm.mr.SystemMemoryResource()
+            rmm.mr.set_current_device_resource(mr)
+    elif sam_enabled and sam_headroom is not None:
+        if force_sam_headroom or not type(rmm.mr.get_current_device_resource()) == type(
+            rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
+        ):
+            mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
+            rmm.mr.set_current_device_resource(mr)
 
     if uvm_enabled:
         if not type(rmm.mr.get_current_device_resource()) == type(
@@ -167,8 +201,12 @@ def _configure_memory_resource(uvm_enabled: bool = False) -> None:
         ):
             rmm.mr.set_current_device_resource(rmm.mr.ManagedMemoryResource())
 
+    if sam_enabled or uvm_enabled:
         if not cp.cuda.get_allocator().__name__ == rmm_cupy_allocator.__name__:
             cp.cuda.set_allocator(rmm_cupy_allocator)
+
+    if sam_enabled:
+        import spark_rapids_ml.numpy_allocator
 
 
 def _get_default_params_from_func(
@@ -308,12 +346,19 @@ def _try_allocate_cp_empty_arrays(
     array_order: str,
     has_label: bool,
     logger: logging.Logger,
+    cuda_system_mem_enabled: bool,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"]]:
     import cupy as cp
 
     device = cp.cuda.Device(gpu_id)
     free_mem, total_mem = device.mem_info
     nbytes_per_row = (dimension + 1 if has_label else 0) * np.dtype(dtype).itemsize
+
+    # if sam is enabled, use the available host memory as well
+    if cuda_system_mem_enabled:
+        import psutil
+
+        free_mem += psutil.virtual_memory().available
 
     target_mem = int(free_mem * gpu_mem_ratio_for_data)
     while target_mem >= 1_000_000:
@@ -349,6 +394,7 @@ def _concat_with_reserved_gpu_mem(
     array_order: str,
     multi_col_names: Optional[List[str]],
     logger: logging.Logger,
+    cuda_system_mem_enabled: bool,
 ) -> Tuple["cp.ndarray", Optional["cp.ndarray"], Optional[np.ndarray]]:
     # TODO: support sparse matrix
     # TODO: support row number
@@ -394,6 +440,7 @@ def _concat_with_reserved_gpu_mem(
                 array_order,
                 has_label,
                 logger,
+                cuda_system_mem_enabled,
             )
 
         np_rows = np_features.shape[0]

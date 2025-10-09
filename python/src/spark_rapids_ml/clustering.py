@@ -58,6 +58,7 @@ from .params import HasFeaturesCols, HasIDCol, P, _CumlClass, _CumlParams
 from .utils import (
     _ArrayOrder,
     _concat_and_free,
+    _configure_memory_resource,
     _get_spark_session,
     get_logger,
     java_uid,
@@ -375,6 +376,24 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 # features are either cp or np arrays here
                 concated = _concat_and_free(df_list, order=array_order)
 
+            # if enabled, reduce sam reserved memory to targeted amount
+            cuda_managed_mem_enabled = params[param_alias.mem_config][
+                "cuda_managed_mem_enabled"
+            ]
+            cuda_system_mem_enabled = params[param_alias.mem_config][
+                "cuda_system_mem_enabled"
+            ]
+            cuda_system_mem_headroom = params[param_alias.mem_config][
+                "cuda_system_mem_headroom"
+            ]
+
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+                force_sam_headroom=True,
+            )
+
             kmeans_object._fit(
                 concated,
                 sample_weight=None,
@@ -490,7 +509,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _construct_kmeans() -> CumlT:
             from cuml.cluster.kmeans import KMeans as CumlKMeans
 
-            kmeans = CumlKMeans(output_type="cudf", **cuml_alg_params)
+            kmeans = CumlKMeans(output_type="cupy", **cuml_alg_params)
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_features_in_ = n_cols
@@ -503,7 +522,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _transform_internal(
             kmeans: CumlT, df: Union[pd.DataFrame, np.ndarray]
         ) -> pd.Series:
-            res = list(kmeans.predict(df).to_numpy())
+            res = list(kmeans.predict(df).get())
             return pd.Series(res)
 
         return _construct_kmeans, _transform_internal, None
@@ -916,11 +935,6 @@ class DBSCANModel(
         pred_name = self._get_prediction_name()
         idCol_name = self.getIdCol()
 
-        cuda_managed_mem_enabled = (
-            _get_spark_session().conf.get("spark.rapids.ml.uvm.enabled", "false")
-            == "true"
-        )
-
         idCol_bc = self.idCols_
         raw_data_bc = self.raw_data_
         data_size = self.data_size
@@ -940,12 +954,28 @@ class DBSCANModel(
                 else np.concatenate([chunk.value for chunk in idCol_bc])
             )
 
+            # if enabled, reduce sam reserved memory to targeted amount
+            cuda_managed_mem_enabled = params[param_alias.mem_config][
+                "cuda_managed_mem_enabled"
+            ]
+            cuda_system_mem_enabled = params[param_alias.mem_config][
+                "cuda_system_mem_enabled"
+            ]
+            cuda_system_mem_headroom = params[param_alias.mem_config][
+                "cuda_system_mem_headroom"
+            ]
+
             for pdf_bc in raw_data_bc:
                 features = pdf_bc.value
 
                 # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                 # invoking cupy array on the list
-                if cuda_managed_mem_enabled:
+                if cuda_managed_mem_enabled or cuda_system_mem_enabled:
+                    # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                    if cuda_system_mem_enabled and isinstance(features, np.ndarray):
+                        cp.cuda.runtime.memAdvise(
+                            features.ctypes.data, features.nbytes, 3, -1
+                        )
                     features = cp.array(features)
 
                 inputs.append(features)
@@ -957,15 +987,22 @@ class DBSCANModel(
 
             dbscan = CumlDBSCANMG(
                 handle=params[param_alias.handle],
-                output_type="cudf",
+                output_type="cupy",
                 **params[param_alias.cuml_init],
             )
             dbscan.n_cols = params[param_alias.num_cols]
             dbscan.dtype = np.dtype(dtype)
 
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+                force_sam_headroom=True,
+            )
+
             # Set out_dtype tp 64bit to get larger indexType in cuML for avoiding overflow
             out_dtype = np.int32 if data_size < 2147000000 else np.int64
-            res = list(dbscan.fit_predict(concated, out_dtype=out_dtype).to_numpy())
+            res = list(dbscan.fit_predict(concated, out_dtype=out_dtype).get())
 
             # Only node 0 from cuML will contain the correct label output
             if partition_id == 0:
