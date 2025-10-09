@@ -101,6 +101,7 @@ from .utils import (
     PartitionDescriptor,
     _ArrayOrder,
     _concat_and_free,
+    _configure_memory_resource,
     _get_spark_session,
     get_logger,
     java_uid,
@@ -1086,6 +1087,24 @@ class LogisticRegression(
 
                 if is_sparse and pdesc.partition_max_nnz > nnz_limit_for_int32:  # type: ignore
                     logistic_regression._convert_index = np.int64
+
+                # if enabled, reduce sam reserved memory to targeted amount
+                cuda_managed_mem_enabled = params[param_alias.mem_config][
+                    "cuda_managed_mem_enabled"
+                ]
+                cuda_system_mem_enabled = params[param_alias.mem_config][
+                    "cuda_system_mem_enabled"
+                ]
+                cuda_system_mem_headroom = params[param_alias.mem_config][
+                    "cuda_system_mem_headroom"
+                ]
+
+                _configure_memory_resource(
+                    cuda_managed_mem_enabled,
+                    cuda_system_mem_enabled,
+                    cuda_system_mem_headroom,
+                    force_sam_headroom=True,
+                )
 
                 logistic_regression.fit(
                     [(concated, concated_y)],

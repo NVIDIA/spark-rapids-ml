@@ -16,6 +16,7 @@
 import json
 import os
 import threading
+import time
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import (
@@ -68,6 +69,7 @@ from pyspark.sql.types import (
     Row,
     StructType,
 )
+from pyspark.util import _parse_memory
 from scipy.sparse import csr_matrix
 
 from .common.cuml_context import CumlContext
@@ -156,10 +158,24 @@ pred = Pred("prediction", "probability", "model_index", "raw_prediction")
 # Global parameter alias used by core and subclasses.
 ParamAlias = namedtuple(
     "ParamAlias",
-    ("cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"),
+    (
+        "cuml_init",
+        "handle",
+        "num_cols",
+        "part_sizes",
+        "loop",
+        "fit_multiple_params",
+        "mem_config",
+    ),
 )
 param_alias = ParamAlias(
-    "cuml_init", "handle", "num_cols", "part_sizes", "loop", "fit_multiple_params"
+    "cuml_init",
+    "handle",
+    "num_cols",
+    "part_sizes",
+    "loop",
+    "fit_multiple_params",
+    "mem_config",
 )
 
 CumlModel = TypeVar("CumlModel", bound="_CumlModel")
@@ -673,6 +689,27 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             assert gpu_mem_ratio_for_data > 0.0 and gpu_mem_ratio_for_data < 1.0
         support_gpuMemRatioForData = self._support_gpuMemRatioForData()
 
+        cuda_system_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
+            raise ValueError(
+                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+            )
+        if cuda_system_mem_enabled:
+            get_logger(cls).info("CUDA system allocated memory enabled.")
+        _cuda_system_mem_headroom = _get_spark_session().conf.get(
+            "spark.rapids.ml.sam.headroom", None
+        )
+        if cuda_system_mem_enabled and _cuda_system_mem_headroom is not None:
+            cuda_system_mem_headroom = _parse_memory(_cuda_system_mem_headroom) << 20
+            get_logger(cls).info(
+                f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}."
+            )
+        else:
+            cuda_system_mem_headroom = None
+
         # parameters passed to subclass
         params: Dict[str, Any] = {
             param_alias.cuml_init: self.cuml_params,
@@ -705,6 +742,12 @@ class _CumlCaller(_CumlParams, _CumlCommon):
         (enable_nccl, require_ucx) = self._require_nccl_ucx()
 
         def _train_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             import cupy as cp
             import cupyx
             from pyspark import BarrierTaskContext
@@ -717,7 +760,19 @@ class _CumlCaller(_CumlParams, _CumlCommon):
             _CumlCommon._set_gpu_device(context, is_local)
 
             # must do after setting gpu device
-            _configure_memory_resource(cuda_managed_mem_enabled)
+            # pad sam headroom during data loading
+            # to later allow rmm device allocations in fit
+            # e.g. for kmeans cluster centers
+            # TODO: tune this padding per algorithm and/or allow separate config(s)
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                (
+                    2 * cuda_system_mem_headroom
+                    if cuda_system_mem_headroom is not None
+                    else None
+                ),
+            )
 
             _CumlCommon._initialize_cuml_logging(cuml_verbose)
 
@@ -743,6 +798,7 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         array_order,
                         multi_col_names,
                         logger,
+                        cuda_system_mem_enabled,
                     )
                 ]
                 sizes = [inputs[0][0].shape[0]]
@@ -760,8 +816,24 @@ class _CumlCaller(_CumlParams, _CumlCommon):
 
                     # experiments indicate it is faster to convert to numpy array and then to cupy array than directly
                     # invoking cupy array on the list
-                    if cuda_managed_mem_enabled and use_sparse_array is False:
+                    if (
+                        cuda_managed_mem_enabled or cuda_system_mem_enabled
+                    ) and use_sparse_array is False:
+                        # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
+                        # TODO: revise for non-concatenating algos PCA and LinearRegression which should advise these to device as much as possible
+                        if cuda_system_mem_enabled and isinstance(features, np.ndarray):
+                            cp.cuda.runtime.memAdvise(
+                                features.ctypes.data, features.nbytes, 3, -1
+                            )
                         features = cp.array(features)
+
+                    # for sam sparse case, pin numpy subarrays to host to avoid observed page migration to device during later concatenation
+                    # TODO: revise for non-concatenating algos PCA and LinearRegression
+                    if cuda_system_mem_enabled and isinstance(features, csr_matrix):
+                        for arr in [features.data, features.indptr, features.indices]:
+                            cp.cuda.runtime.memAdvise(
+                                arr.ctypes.data, arr.nbytes, 3, -1
+                            )
 
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (
@@ -771,7 +843,9 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                     )
                     inputs.append((features, label, row_number))
 
-            if cuda_managed_mem_enabled and use_sparse_array is True:
+            if (
+                cuda_managed_mem_enabled or cuda_system_mem_enabled
+            ) and use_sparse_array is True:
                 concated_nnz = sum(triplet[0].nnz for triplet in inputs)  # type: ignore
                 if concated_nnz > np.iinfo(np.int32).max:
                     logger.warn(
@@ -808,6 +882,13 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                 import signal
 
                 signal.signal(signal.SIGHUP, signal.SIG_DFL)
+
+                # pass in to fit func to be used just before cuml fit
+                params[param_alias.mem_config] = {
+                    "cuda_managed_mem_enabled": cuda_managed_mem_enabled,
+                    "cuda_system_mem_enabled": cuda_system_mem_enabled,
+                    "cuda_system_mem_headroom": cuda_system_mem_headroom,
+                }
 
                 # call the cuml fit function
                 # *note*: cuml_fit_func may delete components of inputs to free
@@ -1466,7 +1547,34 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
         if cuda_managed_mem_enabled:
             get_logger(self.__class__).info("CUDA managed memory enabled.")
 
+        cuda_system_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
+            raise ValueError(
+                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+            )
+        if cuda_system_mem_enabled:
+            get_logger(self.__class__).info("CUDA system allocated memory enabled.")
+        _cuda_system_mem_headroom = _get_spark_session().conf.get(
+            "spark.rapids.ml.sam.headroom", None
+        )
+        if cuda_system_mem_enabled and _cuda_system_mem_headroom is not None:
+            cuda_system_mem_headroom = _parse_memory(_cuda_system_mem_headroom) << 20
+            get_logger(self.__class__).info(
+                f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}."
+            )
+        else:
+            cuda_system_mem_headroom = None
+
         def _transform_udf(pdf_iter: Iterator[pd.DataFrame]) -> pd.DataFrame:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             from pyspark import TaskContext
 
             context = TaskContext.get()
@@ -1474,7 +1582,11 @@ class _CumlModel(Model, _CumlParams, _CumlCommon):
             _CumlCommon._set_gpu_device(context, is_local, True)
 
             # must do after setting gpu device
-            _configure_memory_resource(cuda_managed_mem_enabled)
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+            )
 
             # Construct the cuml counterpart object
             cuml_instance = construct_cuml_object_func()
@@ -1654,14 +1766,45 @@ class _CumlModelWithColumns(_CumlModel):
         if cuda_managed_mem_enabled:
             get_logger(self.__class__).info("CUDA managed memory enabled.")
 
+        cuda_system_mem_enabled = (
+            _get_spark_session().conf.get("spark.rapids.ml.sam.enabled", "false")
+            == "true"
+        )
+        if cuda_managed_mem_enabled and cuda_system_mem_enabled:
+            raise ValueError(
+                "Both CUDA managed memory and system allocated memory cannot be enabled at the same time."
+            )
+        if cuda_system_mem_enabled:
+            get_logger(self.__class__).info("CUDA system allocated memory enabled.")
+        _cuda_system_mem_headroom = _get_spark_session().conf.get(
+            "spark.rapids.ml.sam.headroom", None
+        )
+        if cuda_system_mem_enabled and _cuda_system_mem_headroom is not None:
+            cuda_system_mem_headroom = _parse_memory(_cuda_system_mem_headroom) << 20
+            get_logger(self.__class__).info(
+                f"CUDA system allocated memory headroom set to {cuda_system_mem_headroom}."
+            )
+        else:
+            cuda_system_mem_headroom = None
+
         @pandas_udf(output_schema)  # type: ignore
         def predict_udf(iterator: Iterator[pd.DataFrame]) -> Iterator[pd.Series]:
+            import os
+
+            # must be done before importing cupy if SAM is enabled
+            if cuda_system_mem_enabled:
+                os.environ["CUPY_ENABLE_UMP"] = "1"
+
             from pyspark import TaskContext
 
             context = TaskContext.get()
             _CumlCommon._set_gpu_device(context, is_local, True)
             # must do after setting gpu device
-            _configure_memory_resource(cuda_managed_mem_enabled)
+            _configure_memory_resource(
+                cuda_managed_mem_enabled,
+                cuda_system_mem_enabled,
+                cuda_system_mem_headroom,
+            )
             cuml_objects = construct_cuml_object_func()
             cuml_object = (
                 cuml_objects[0] if isinstance(cuml_objects, list) else cuml_objects

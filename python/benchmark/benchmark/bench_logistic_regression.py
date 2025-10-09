@@ -64,7 +64,9 @@ class BenchmarkLogisticRegression(BenchmarkBase):
         if self.args.num_gpus > 0 and not is_remote():
             from spark_rapids_ml.classification import LogisticRegression
 
-            lr = LogisticRegression(num_workers=self.args.num_gpus, **params)
+            lr = LogisticRegression(
+                num_workers=self.args.num_gpus, verbose=self.args.verbose, **params
+            )
             benchmark_string = "Spark Rapids ML LogisticRegression"
 
         else:
@@ -137,7 +139,6 @@ class BenchmarkLogisticRegression(BenchmarkBase):
             .setLabelCol(label_name)
         )
 
-        # TODO: add l1 regularization penalty term to full objective for when we support it
         log_loss = evaluator_train.evaluate(train_df_with_preds)
         coefficients = (
             np.array(model.coefficients)
