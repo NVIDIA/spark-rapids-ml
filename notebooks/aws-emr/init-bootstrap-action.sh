@@ -27,7 +27,7 @@ sudo bash -c "wget https://www.python.org/ftp/python/3.10.9/Python-3.10.9.tgz &&
 tar xzf Python-3.10.9.tgz && cd Python-3.10.9 && \
 ./configure --enable-optimizations && make altinstall"
 
-RAPIDS_VERSION=25.8.0
+RAPIDS_VERSION=25.10.0
 
 sudo /usr/local/bin/pip3.10 install --upgrade pip
 
