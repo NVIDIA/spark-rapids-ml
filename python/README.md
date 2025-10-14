@@ -20,9 +20,9 @@ For simplicity, the following instructions just use Spark local mode, assuming a
 
 First, install RAPIDS cuML per [these instructions](https://rapids.ai/start.html).   Example for CUDA Toolkit 12.0:
 ```bash
-conda create -n rapids-25.08 \
+conda create -n rapids-25.10 \
     -c rapidsai -c conda-forge -c nvidia \
-    cuml=25.08 cuvs=25.08 python=3.10 cuda-version=12.0 numpy~=1.0
+    cuml=25.10 cuvs=25.10 python=3.10 cuda-version=12.0 numpy~=1.0
 ```
 
 **Note**: while testing, we recommend using conda or docker to simplify installation and isolate your environment while experimenting.  Once you have a working environment, you can then try installing directly, if necessary.
@@ -31,7 +31,7 @@ conda create -n rapids-25.08 \
 
 Once you have the conda environment, activate it and install the required packages.
 ```bash
-conda activate rapids-25.08
+conda activate rapids-25.10
 
 ## for development access to notebooks, tests, and benchmarks
 git clone --branch main https://github.com/NVIDIA/spark-rapids-ml.git
