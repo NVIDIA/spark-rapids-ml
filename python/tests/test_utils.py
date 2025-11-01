@@ -14,8 +14,9 @@
 # limitations under the License.
 #
 
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
+import cupy as cp
 import numpy as np
 import pandas as pd
 import pytest
@@ -200,3 +201,43 @@ def test_concat_with_reserved_gpu_mem(
     assert (
         "Reserved" in caplog.text and "GB GPU memory for training data" in caplog.text
     )
+
+
+def test_standardize_data() -> None:
+    from spark_rapids_ml.utils import PartitionDescriptor, _standardize_dataset
+
+    from .sparksession import CleanSparkSession
+
+    def test_udf(iter: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+        data = [
+            (
+                np.array([[1.0, 2.0], [3.0, 4.0]] * 100, dtype=np.float32),
+                np.array([1.0, 2.0] * 100, dtype=np.float32),
+                None,
+            )
+        ]
+        pdesc = PartitionDescriptor(200, 2, 0, [(200, 2)])
+        mean, stddev = _standardize_dataset(data, pdesc, True)  # type: ignore
+
+        assert isinstance(data[0][0], cp.ndarray)
+        assert isinstance(data[0][1], cp.ndarray)
+
+        # not exact due to unbiased vs. sample variance calculation
+        assert all(np.isclose(mean.get(), np.array([2.0, 3.0, 1.5]), atol=1e-2))  # type: ignore
+        assert all(np.isclose(stddev.get(), np.array([1.0, 1.0, 0.5]), atol=1e-2))  # type: ignore
+
+        assert all(
+            np.isclose(
+                data[0][0].get().reshape(-1),  # type: ignore
+                np.array([[-1.0, -1.0], [1.0, 1.0]] * 100).reshape(-1),
+                atol=1e-2,
+            )
+        )
+        assert all(np.isclose(data[0][1].get(), np.array([-1.0, 1.0] * 100), atol=1e-2))  # type: ignore
+
+        for df in iter:
+            yield df
+
+    with CleanSparkSession() as spark:
+        df = spark.range(1).repartition(1).mapInPandas(test_udf, schema="id int")
+        df.rdd.barrier().mapPartitions(lambda x: x).collect()

@@ -1011,53 +1011,14 @@ class LogisticRegression(
             # Use cupy to standardize dataset as a workaround to gain better numeric stability
             standarization_with_cupy = standardization and not is_sparse
             if standarization_with_cupy is True:
-                import cupy as cp
+                from .utils import _standardize_dataset
 
-                if isinstance(concated, np.ndarray):
-                    concated = cp.array(concated)
-                elif isinstance(concated, pd.DataFrame):
-                    concated = cp.array(concated.values)
-                else:
-                    assert isinstance(
-                        concated, cp.ndarray
-                    ), "only numpy array, cupy array, and pandas dataframe are supported when standardization_with_cupy is on"
-
-                mean_partial = concated.sum(axis=0) / pdesc.m
-
-                import json
-
-                from pyspark import BarrierTaskContext
-
-                context = BarrierTaskContext.get()
-
-                def all_gather_then_sum(
-                    cp_array: cp.ndarray, dtype: Union[np.float32, np.float64]
-                ) -> cp.ndarray:
-                    msgs = context.allGather(json.dumps(cp_array.tolist()))
-                    arrays = [json.loads(p) for p in msgs]
-                    array_sum = np.sum(arrays, axis=0).astype(dtype)
-                    return cp.array(array_sum)
-
-                mean = all_gather_then_sum(mean_partial, concated.dtype)
-                concated -= mean
-
-                l2 = cp.linalg.norm(concated, ord=2, axis=0)
-
-                var_partial = l2 * l2 / (pdesc.m - 1)
-                var = all_gather_then_sum(var_partial, concated.dtype)
-
-                assert cp.all(
-                    var >= 0
-                ), "numeric instable detected when calculating variance. Got negative variance"
-
-                stddev = cp.sqrt(var)
-
-                stddev_inv = cp.where(stddev != 0, 1.0 / stddev, 1.0)
-
-                if fit_intercept is False:
-                    concated += mean
-
-                concated *= stddev_inv
+                # TODO: fix for multiple param sweep that change standardization and/or fit intercept (unlikely scenario) since
+                # data modification effects all params.  currently not invoked in these cases by fitMultiple (see fitMultiple)
+                _tmp_data = [(concated, None, None)]
+                # this will modify concated in place through _tmp_data
+                mean, stddev = _standardize_dataset(_tmp_data, pdesc, fit_intercept)
+                concated = _tmp_data[0][0]
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
                 if standarization_with_cupy is True:

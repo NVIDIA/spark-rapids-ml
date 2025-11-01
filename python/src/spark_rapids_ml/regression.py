@@ -191,7 +191,7 @@ class LinearRegressionClass(_CumlClass):
             "maxIter": "max_iter",
             "regParam": "alpha",
             "solver": "solver",
-            "standardization": "normalize",
+            "standardization": "normalize",  # TODO: standardization is carried out in cupy not cuml so need a new type of param mapped value to indicate that.
             "tol": "tol",
             "weightCol": None,
         }
@@ -309,9 +309,9 @@ class LinearRegression(
 
     Notes
     -----
-        Results for spark ML and spark rapids ml fit() will currently match in all regularization
-        cases only if features and labels are standardized in the input dataframe.  Otherwise,
-        they will match only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
+        Results for spark ML and spark rapids ml fit() will currently be close in all regularization
+        cases only if features and labels are standardized in the input dataframe or when standardization is enabled.  Otherwise,
+        they will be close only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
 
     Parameters
     ----------
@@ -513,6 +513,10 @@ class LinearRegression(
         [FitInputType, Dict[str, Any]],
         Dict[str, Any],
     ]:
+
+        standardization = self.getStandardization()
+        fit_intercept = self.getFitIntercept()
+
         def _linear_regression_fit(
             dfs: FitInputType,
             params: Dict[str, Any],
@@ -521,6 +525,20 @@ class LinearRegression(
             pdesc = PartitionDescriptor.build(
                 params[param_alias.part_sizes], params[param_alias.num_cols]
             )
+
+            pdesc_labels = PartitionDescriptor.build(params[param_alias.part_sizes], 1)
+
+            if standardization:
+                from .utils import _standardize_dataset
+
+                # this modifies dfs in place by copying to gpu and standardazing in place on gpu
+                # TODO: fix for multiple param sweep that change standardization and/or fit intercept (unlikely scenario) since
+                # data modification effects all params.  currently not invoked in these cases by fitMultiple (see fitMultiple)
+                mean, stddev = _standardize_dataset(dfs, pdesc, fit_intercept)
+                stddev_label = stddev[-1]
+                stddev_features = stddev[:-1]
+                mean_label = mean[-1]
+                mean_features = mean[:-1]
 
             def _single_fit(init_parameters: Dict[str, Any]) -> Dict[str, Any]:
                 if init_parameters["alpha"] == 0:
@@ -532,7 +550,6 @@ class LinearRegression(
                     supported_params = [
                         "algorithm",
                         "fit_intercept",
-                        "normalize",
                         "verbose",
                         "copy_X",
                     ]
@@ -547,18 +564,19 @@ class LinearRegression(
                             "alpha",
                             "solver",
                             "fit_intercept",
-                            "normalize",
                             "verbose",
                         ]
                         # spark ML normalizes sample portion of objective by the number of examples
                         # but cuml does not for RidgeRegression (l1_ratio=0).   Induce similar behavior
                         # to spark ml by scaling up the reg parameter by the number of examples.
                         # With this, spark ML and spark rapids ML results match closely when features
-                        # and label columns are all standardized.
+                        # and label columns are all standardized, or when standardization is enabled.
                         init_parameters = init_parameters.copy()
                         if "alpha" in init_parameters.keys():
                             init_parameters["alpha"] *= (float)(pdesc.m)
-
+                            if standardization:
+                                # key to matching mllib when standardization is enabled
+                                init_parameters["alpha"] /= stddev_label
                     else:
                         # LR + L1, or LR + L1 + L2
                         # Cuml uses Coordinate Descent algorithm to implement Lasso and ElasticNet
@@ -575,11 +593,14 @@ class LinearRegression(
                             "l1_ratio",
                             "fit_intercept",
                             "max_iter",
-                            "normalize",
                             "tol",
                             "shuffle",
                             "verbose",
                         ]
+
+                        if standardization:
+                            # key to matching mllib when standardization is enabled
+                            init_parameters["alpha"] /= stddev_label
 
                 # filter only supported params
                 final_init_parameters = {
@@ -604,9 +625,28 @@ class LinearRegression(
                     pdesc.rank,
                 )
 
+                coef_ = linear_regression.coef_
+                intercept_ = linear_regression.intercept_
+
+                if standardization is True:
+                    import cupy as cp
+
+                    coef_ = cp.where(
+                        stddev_features > 0,
+                        (coef_ / stddev_features) * stddev_label,
+                        coef_,
+                    )
+                    if init_parameters["fit_intercept"] is True:
+
+                        intercept_ = (
+                            intercept_ * stddev_label
+                            - cp.dot(coef_, mean_features)
+                            + mean_label
+                        ).tolist()
+
                 return {
-                    "coef_": linear_regression.coef_.get().tolist(),
-                    "intercept_": linear_regression.intercept_,
+                    "coef_": coef_.tolist(),
+                    "intercept_": intercept_,
                     "dtype": linear_regression.dtype.name,
                     "n_cols": linear_regression.n_cols,
                 }

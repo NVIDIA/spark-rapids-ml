@@ -542,6 +542,25 @@ def test_linear_regression_spark_compat(
         assert model.transform(df).take(1) == model2.transform(df).take(1)
         assert model.numFeatures == 2
 
+        lr.setRegParam(2.0)
+        lr.setMaxIter(200)
+        lr.setElasticNetParam(0.0)
+        model = lr.fit(df)
+        coefficients = model.coefficients.toArray()
+        expected_coefficients = [92.22569365, 12.84336458]
+        # TODO: investigate why relatively large tol (2 % - 10 %) is needed to match mllib
+        # (though much closer than before adding standardization)
+        assert all(np.isclose(coefficients, expected_coefficients, rtol=0.02))
+        assert np.isclose(model.intercept, 1.76595778134947, rtol=0.1)
+
+        lr.setElasticNetParam(0.5)
+        model = lr.fit(df)
+        coefficients = model.coefficients.toArray()
+        expected_coefficients = [91.9070094, 11.23076474]
+        # TODO: investigate why relatively large tol is needed to match mllib
+        assert all(np.isclose(coefficients, expected_coefficients, rtol=0.02))
+        assert np.isclose(model.intercept, 3.138371491598421, rtol=0.1)
+
 
 @pytest.mark.parametrize("params_exception", params_exception)
 def test_fail_run_on_1_col(
@@ -597,64 +616,88 @@ def test_lr_fit_multiple_in_single_pass(
 
         initial_lr = lr.copy()
 
-        param_maps: List[Dict[Param, Any]] = [
-            # alpha = 0, LinearRegression
-            {
-                lr.tol: 0.00001,
-                lr.standardization: False,
-                lr.loss: "squared_loss",
-                lr.regParam: 0,
-                lr.elasticNetParam: 0,
-                lr.fitIntercept: True,
-                lr.maxIter: 39,
-                lr.solver: "auto",
-            },
-            # Ridge
-            {
-                lr.tol: 0.00002,
-                lr.standardization: True,
-                lr.loss: "squared_loss",
-                lr.regParam: 0.2,
-                lr.elasticNetParam: 0,
-                lr.fitIntercept: True,
-                lr.maxIter: 29,
-                lr.solver: "auto",
-            },
-            # Lasso
-            {
-                lr.tol: 0.00003,
-                lr.standardization: False,
-                lr.loss: "squared_loss",
-                lr.regParam: 0.3,
-                lr.elasticNetParam: 1,
-                lr.fitIntercept: True,
-                lr.maxIter: 59,
-                lr.solver: "auto",
-            },
-            # ElasticNet
-            {
-                lr.tol: 0.00004,
-                lr.standardization: False,
-                lr.loss: "squared_loss",
-                lr.regParam: 0.5,
-                lr.elasticNetParam: 0.6,
-                lr.fitIntercept: False,
-                lr.maxIter: 69,
-                lr.solver: "auto",
-            },
+        param_maps_list: List[List[Dict[Param, Any]]] = [
+            [
+                # alpha = 0, LinearRegression
+                {
+                    lr.tol: 0.00001,
+                    lr.standardization: False,
+                    lr.loss: "squared_loss",
+                    lr.regParam: 0,
+                    lr.elasticNetParam: 0,
+                    lr.fitIntercept: True,
+                    lr.maxIter: 39,
+                    lr.solver: "auto",
+                },
+                # Ridge
+                {
+                    lr.tol: 0.00002,
+                    lr.standardization: True,
+                    lr.loss: "squared_loss",
+                    lr.regParam: 0.2,
+                    lr.elasticNetParam: 0,
+                    lr.fitIntercept: True,
+                    lr.maxIter: 29,
+                    lr.solver: "auto",
+                },
+                # Lasso
+                {
+                    lr.tol: 0.00003,
+                    lr.standardization: False,
+                    lr.loss: "squared_loss",
+                    lr.regParam: 0.3,
+                    lr.elasticNetParam: 1,
+                    lr.fitIntercept: True,
+                    lr.maxIter: 59,
+                    lr.solver: "auto",
+                },
+                # ElasticNet
+                {
+                    lr.tol: 0.00004,
+                    lr.standardization: False,
+                    lr.loss: "squared_loss",
+                    lr.regParam: 0.5,
+                    lr.elasticNetParam: 0.6,
+                    lr.fitIntercept: False,
+                    lr.maxIter: 69,
+                    lr.solver: "auto",
+                },
+            ],
+            [
+                # Ridge
+                {
+                    lr.tol: 0.00002,
+                    lr.loss: "squared_loss",
+                    lr.regParam: 0.2,
+                    lr.elasticNetParam: 0,
+                    lr.maxIter: 29,
+                    lr.solver: "auto",
+                },
+                # ElasticNet
+                {
+                    lr.tol: 0.00004,
+                    lr.loss: "squared_loss",
+                    lr.regParam: 0.5,
+                    lr.elasticNetParam: 0.6,
+                    lr.maxIter: 69,
+                    lr.solver: "auto",
+                },
+            ],
         ]
-        models = lr.fit(train_df, param_maps)
 
-        for i, param_map in enumerate(param_maps):
-            rf = initial_lr.copy()
-            single_model = rf.fit(train_df, param_map)
+        for param_maps in param_maps_list:
+            models = lr.fit(train_df, param_maps)
 
-            assert single_model.coefficients == models[i].coefficients
-            assert single_model.intercept == models[i].intercept
+            for i, param_map in enumerate(param_maps):
+                rf = initial_lr.copy()
+                single_model = rf.fit(train_df, param_map)
 
-            for k, v in param_map.items():
-                assert models[i].getOrDefault(k.name) == v
-                assert single_model.getOrDefault(k.name) == v
+                assert single_model.coefficients == models[i].coefficients
+                assert single_model.intercept == models[i].intercept
+
+                for k, v in param_map.items():
+                    assert models[i].getOrDefault(k.name) == v
+                    assert single_model.getOrDefault(k.name) == v
 
 
 @pytest.mark.parametrize("feature_type", [feature_types.vector])

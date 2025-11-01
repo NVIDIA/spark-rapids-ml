@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Tuple, Union
+from typing import List, Tuple, Union
+from unittest.mock import patch
 
 import numpy as np
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.tuning import CrossValidatorModel, ParamGridBuilder
 
-from spark_rapids_ml.regression import RandomForestRegressor
+from spark_rapids_ml.regression import LinearRegression, RandomForestRegressor
 from spark_rapids_ml.tuning import CrossValidator
 
 from .sparksession import CleanSparkSession
@@ -99,3 +101,49 @@ def test_crossvalidator(
         assert evaluator.evaluate(cv_model.transform(df)) == evaluator.evaluate(
             cv_model_loaded.transform(df)
         )
+
+
+@pytest.mark.parametrize("data_type", [np.float32])
+@pytest.mark.parametrize("standardization_settings", [[False], []])
+def test_crossvalidator_standardization_fallback(
+    data_type: np.dtype, standardization_settings: list[bool], caplog: LogCaptureFixture
+) -> None:
+    """Test that CrossValidator falls back to mllib when standardization is in param maps."""
+    X, _, y, _ = make_regression_dataset(
+        datatype=data_type,
+        nrows=100,
+        ncols=8,
+    )
+
+    with CleanSparkSession() as spark:
+        df, features_col, label_col = create_pyspark_dataframe(
+            spark, feature_types.vector, data_type, X, y
+        )
+        assert label_col is not None
+
+        lr = LinearRegression()
+        lr.setFeaturesCol(features_col)
+        lr.setLabelCol(label_col)
+
+        evaluator = RegressionEvaluator()
+        evaluator.setLabelCol(label_col)
+
+        grid_builder = ParamGridBuilder()
+        if standardization_settings:
+            grid_builder.addGrid(lr.standardization, standardization_settings)
+        grid_builder.addGrid(lr.regParam, [0.01, 0.1])
+        grid = grid_builder.build()
+
+        cv = CrossValidator(
+            estimator=lr,
+            estimatorParamMaps=grid,
+            evaluator=evaluator,
+            numFolds=2,
+            seed=101,
+        )
+
+        cv_model = cv.fit(df)
+        if standardization_settings:
+            assert "Falling back to baseline fitMultiple" in caplog.text
+        else:
+            assert "Falling back to baseline fitMultiple" not in caplog.text
