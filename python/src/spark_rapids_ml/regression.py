@@ -311,7 +311,7 @@ class LinearRegression(
     -----
         Results for spark ML and spark rapids ml fit() will currently be close in all regularization
         cases only if features and labels are standardized in the input dataframe or when standardization is enabled.  Otherwise,
-        they will be close only if regParam = 0 or elastNetParam = 1.0 (aka Lasso).
+        they will be close only if regParam = 0 or elastNeticParam = 1.0 (aka Lasso).
 
     Parameters
     ----------

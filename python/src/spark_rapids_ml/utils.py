@@ -831,7 +831,7 @@ def _standardize_dataset(
     Returns:
         Mean and standard deviation of features and label columns (latter is last element if present)
         Modifies data entries by replacing entries with standardized data on gpu.
-        If data is already on cpu, modifies in place.
+        If data is already on gpu, modifies in place (i.e. no copy is made).
     """
     import cupy as cp
 
