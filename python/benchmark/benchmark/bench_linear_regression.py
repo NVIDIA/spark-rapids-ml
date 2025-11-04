@@ -114,8 +114,8 @@ class BenchmarkLinearRegression(BenchmarkBase):
         )
 
         # note: results for spark ML and spark rapids ml will currently match in all regularization
-        # cases only if features and labels were standardized in the original dataset.  Otherwise,
-        # they will match only if regParam = 0 or elastNeticParam = 1.0 (aka Lasso)
+        # cases only if features and labels were standardized in the original dataset or if standardization is enabled.
+        # Otherwise, they will match only if regParam = 0 or elasticNetParam = 1.0 (aka Lasso)
         print(
             f"RMSE: {rmse}, coefs l1: {coefs_l1}, coefs l2^2: {coefs_l2}, "
             f"full_objective: {full_objective}, intercept: {model.intercept}"
