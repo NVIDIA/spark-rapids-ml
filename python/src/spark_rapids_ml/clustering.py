@@ -1094,6 +1094,12 @@ class DBSCANModel(
 
         default_num_partitions = dataset.rdd.getNumPartitions()
 
+        # we must hash repartition here to create a shuffle boundary for barrier rdd to work in all cases, even if
+        # dataset.rdd.getNumPartitions() == self.num_workers as dataset parents might have different numbers of partitions.
+        # a try around barrier is not possible here since the barrier logic is not executed
+        # until the caller does something with the lazily returned dataframe.
+        dataset = dataset.repartition(self.num_workers)
+
         rdd = self._call_cuml_fit_func(
             dataset=dataset,
             partially_collect=False,

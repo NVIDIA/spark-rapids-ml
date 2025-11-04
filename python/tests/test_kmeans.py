@@ -282,6 +282,33 @@ def test_kmeans_basic(
         ).collect()
 
 
+def test_kmeans_basic_repartition(
+    gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
+) -> None:
+    # reduce the number of GPUs for toy dataset to avoid empty partition
+    gpu_number = min(gpu_number, 2)
+    data = [[1.0, 1.0], [1.0, 2.0], [3.0, 2.0], [4.0, 3.0]]
+
+    with CleanSparkSession() as spark:
+        df = (
+            spark.sparkContext.parallelize(data, gpu_number + 1)
+            .map(lambda row: (row,))
+            .toDF(["features"])
+            .coalesce(gpu_number)
+        )
+        kmeans = (
+            KMeans(num_workers=gpu_number, n_clusters=2)
+            .setFeaturesCol("features")
+            .setSeed(0)
+        )
+
+        kmeans_model = kmeans.fit(df)
+        assert (
+            "Barrier rdd error encountered with input dataset. Retrying with repartitioning."
+            in caplog.text
+        )
+
+
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
 def test_kmeans_numeric_type(gpu_number: int, data_type: str) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition

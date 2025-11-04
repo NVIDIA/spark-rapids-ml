@@ -1192,16 +1192,31 @@ class _CumlEstimator(Estimator, _CumlCaller):
         self, dataset: DataFrame, paramMaps: Optional[Sequence["ParamMap"]]
     ) -> List["_CumlModel"]:
         """Fit multiple models according to the parameters maps"""
-        pipelined_rdd = self._call_cuml_fit_func(
-            dataset=dataset,
-            partially_collect=True,
-            paramMaps=paramMaps,
-        )
 
         self.logger.info(
             f"Training spark-rapids-ml with {self.num_workers} worker(s) ..."
         )
-        rows = pipelined_rdd.collect()
+        try:
+            pipelined_rdd = self._call_cuml_fit_func(
+                dataset=dataset,
+                partially_collect=True,
+                paramMaps=paramMaps,
+            )
+            rows = pipelined_rdd.collect()
+        except Exception as e:
+            if "BarrierJobUnsupportedRDDChainException" in str(e):
+                self.logger.warning(
+                    "Barrier rdd error encountered with input dataset. Retrying with repartitioning."
+                )
+                pipelined_rdd = self._call_cuml_fit_func(
+                    dataset=dataset.repartition(self.num_workers),
+                    partially_collect=True,
+                    paramMaps=paramMaps,
+                )
+                rows = pipelined_rdd.collect()
+            else:
+                raise
+
         self.logger.info("Finished training")
 
         models: List["_CumlModel"] = [None]  # type: ignore
