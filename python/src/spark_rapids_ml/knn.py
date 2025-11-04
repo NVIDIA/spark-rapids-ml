@@ -628,9 +628,16 @@ class NearestNeighborsModel(_CumlCaller, _NNModelBase, NearestNeighborsClass):
 
         df_item_for_nns = select_cols_for_cuml_fit(self._processed_item_df)
         df_query_for_nns = select_cols_for_cuml_fit(processed_query_df)
-        union_df = df_item_for_nns.union(df_query_for_nns)
+
+        # we must hash repartition here to create a shuffle boundary for barrier rdd to work in all cases, even if
+        # union_df.rdd.getNumPartitions() == self.num_workers as union_df parents might have different numbers of partitions.
+        # a try around barrier is not possible here since the barrier logic is not executed
+        # until the caller does something with the lazily returned dataframe.
+        union_df = df_item_for_nns.union(df_query_for_nns).repartition(self.num_workers)
 
         pipelinedrdd = self._call_cuml_fit_func(union_df, partially_collect=False)
+
+        # this creates another shuffle boundary for the barrier rdd to work in all cases.
         pipelinedrdd = pipelinedrdd.repartition(query_default_num_partitions)  # type: ignore
 
         query_id_col_name = f"query_{self._getIdColOrDefault()}"
