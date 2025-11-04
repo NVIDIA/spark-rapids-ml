@@ -1215,7 +1215,7 @@ class _CumlEstimator(Estimator, _CumlCaller):
                 )
                 rows = pipelined_rdd.collect()
             else:
-                raise e
+                raise
 
         self.logger.info("Finished training")
 
