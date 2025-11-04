@@ -24,5 +24,5 @@ Be aware that some Spark Rapids ML algorithms (such as NearestNeighbors) may con
 ### What are some possible causes of low-level CUDA and/or native code errors?
 
   - NaNs or nulls in the input data.   These are currently passed directly into the cuML layer and may trigger such errors.
-  - NCCL communication library does not allow communication between processes on the same GPU.  Check your Spark GPU configs to ensure 1 task per GPU during fit() calls.
+  - NCCL communication library does not allow communication between processes on the same GPU.  [Stage level scheduling](https://nvidia.github.io/spark-rapids-ml/performance.html#stage-level-scheduling) can avoid this but it is not supported in all cases.  Check requirements and adjust your Spark GPU configs to ensure 1 task per GPU during fit() calls if needed.
   - Previously unknown bugs.  Please file an issue.
