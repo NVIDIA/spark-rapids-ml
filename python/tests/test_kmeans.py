@@ -283,7 +283,7 @@ def test_kmeans_basic(
 
 
 def test_kmeans_basic_repartition(
-    gpu_number: int, tmp_path: str  # , caplog: LogCaptureFixture
+    gpu_number: int, tmp_path: str, caplog: LogCaptureFixture
 ) -> None:
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
@@ -303,7 +303,10 @@ def test_kmeans_basic_repartition(
         )
 
         kmeans_model = kmeans.fit(df)
-        # assert("Barrier rdd error encountered with input dataset. Retrying with repartitioning." in caplog.text)
+        assert (
+            "Barrier rdd error encountered with input dataset. Retrying with repartitioning."
+            in caplog.text
+        )
 
 
 @pytest.mark.parametrize("data_type", ["byte", "short", "int", "long"])
