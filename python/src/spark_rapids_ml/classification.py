@@ -418,6 +418,13 @@ class RandomForestClassifier(
     max_batch_size: int (default = 4096)
         Maximum number of nodes that can be processed in a given batch.
 
+    Notes
+    -----
+        The label column is required to be an integer in the range ``0, 1, ..., num_classes - 1``.  Moreover, for fit() to succeed,
+        all values in this range are required to be present in the input data and also each worker must receive the full range of values.
+        If this is not the case, an error will be raised with possible work arounds being to remap the labels to the expected range,
+        increase the number of very rare label occurrences in the input data, rerun with fewer workers, or shuffle the input data.
+
     Examples
     --------
     >>> import numpy
