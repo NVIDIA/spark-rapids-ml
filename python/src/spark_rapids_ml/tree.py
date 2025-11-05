@@ -413,11 +413,13 @@ class _RandomForestEstimator(
                 # Fit a random forest model on the dataset (X, y)
                 rf.fit(X, y, convert_dtype=False)
 
+                missing_labels_error_message = "A GPU worker did not receive all label values in the range 0, 1, ..., num_classes - 1, which is currently required. \
+                            Depending on the root cause, possible work arounds are to remap the labels to the required range, increase the number \
+                            of very rare label occurrences in the input data, rerun with fewer workers, or shuffle the input data."
+
                 if is_classification:
                     if rf.classes_.max() != rf.n_classes_ - 1:
-                        raise RuntimeError(
-                            "A GPU worker did not receive all label values.  Rerun with fewer workers or shuffle input data."
-                        )
+                        raise RuntimeError(missing_labels_error_message)
 
                 # serialized_model is Dictionary type
                 serialized_model = rf._treelite_model_bytes
@@ -451,11 +453,9 @@ class _RandomForestEstimator(
 
                         exc_str = traceback.format_exc()
                         if "different num_class than the first model object" in exc_str:
-                            raise RuntimeError(
-                                "Some GPU workers did not receive all label values.  Rerun with fewer workers or shuffle input data."
-                            )
+                            raise RuntimeError(missing_labels_error_message)
                         else:
-                            raise err
+                            raise
 
                     final_model_bytes = pickle.dumps(_treelite_model_bytes)
                     final_model = base64.b64encode(final_model_bytes).decode("utf-8")
