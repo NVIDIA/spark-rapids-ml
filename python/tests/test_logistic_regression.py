@@ -778,50 +778,66 @@ def test_lr_fit_multiple_in_single_pass(
 
         initial_lr = lr.copy()
 
-        param_maps: List[Dict[Param, Any]] = [
-            {
-                lr.tol: 1,
-                lr.regParam: 0,
-                lr.fitIntercept: True,
-                lr.maxIter: 39,
-            },
-            {
-                lr.tol: 0.01,
-                lr.regParam: 0.5,
-                lr.fitIntercept: False,
-                lr.maxIter: 100,
-            },
-            {
-                lr.tol: 0.03,
-                lr.regParam: 0.7,
-                lr.fitIntercept: True,
-                lr.maxIter: 29,
-            },
-            {
-                lr.tol: 0.0003,
-                lr.regParam: 0.9,
-                lr.fitIntercept: False,
-                lr.maxIter: 89,
-            },
+        param_maps_list: List[List[Dict[Param, Any]]] = [
+            [
+                {
+                    lr.tol: 1,
+                    lr.regParam: 0,
+                    lr.fitIntercept: True,
+                    lr.maxIter: 39,
+                },
+                {
+                    lr.tol: 0.01,
+                    lr.regParam: 0.5,
+                    lr.fitIntercept: False,
+                    lr.maxIter: 100,
+                },
+                {
+                    lr.tol: 0.03,
+                    lr.regParam: 0.7,
+                    lr.fitIntercept: True,
+                    lr.maxIter: 29,
+                },
+                {
+                    lr.tol: 0.0003,
+                    lr.regParam: 0.9,
+                    lr.fitIntercept: False,
+                    lr.maxIter: 89,
+                },
+            ],
+            [
+                {
+                    lr.tol: 0.00001,
+                    lr.regParam: 0,
+                    lr.maxIter: 39,
+                },
+                {
+                    lr.tol: 0.0003,
+                    lr.regParam: 0.9,
+                    lr.maxIter: 89,
+                },
+            ],
         ]
-        models = lr.fit(train_df, param_maps)
 
-        for i, param_map in enumerate(param_maps):
-            rf = initial_lr.copy()
-            single_model = rf.fit(train_df, param_map)
+        for param_maps in param_maps_list:
+            models = lr.fit(train_df, param_maps)
 
-            assert array_equal(
-                single_model.coefficients.toArray(),
-                models[i].coefficients.toArray(),
-                tolerance,
-            )
-            assert array_equal(
-                [single_model.intercept], [models[i].intercept], tolerance
-            )
+            for i, param_map in enumerate(param_maps):
+                rf = initial_lr.copy()
+                single_model = rf.fit(train_df, param_map)
 
-            for k, v in param_map.items():
-                assert models[i].getOrDefault(k.name) == v
-                assert single_model.getOrDefault(k.name) == v
+                assert array_equal(
+                    single_model.coefficients.toArray(),
+                    models[i].coefficients.toArray(),
+                    tolerance,
+                )
+                assert array_equal(
+                    [single_model.intercept], [models[i].intercept], tolerance
+                )
+
+                for k, v in param_map.items():
+                    assert models[i].getOrDefault(k.name) == v
+                    assert single_model.getOrDefault(k.name) == v
 
 
 @pytest.mark.compat

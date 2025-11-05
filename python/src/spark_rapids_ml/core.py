@@ -76,12 +76,15 @@ from .common.cuml_context import CumlContext
 from .metrics import EvalMetricInfo
 from .params import _CumlParams
 from .utils import (
+    FitInputType,
     _ArrayOrder,
     _configure_memory_resource,
     _get_gpu_id,
     _get_spark_session,
     _is_local,
     _is_standalone_or_localcluster,
+    _SingleNpArrayBatchType,
+    _SinglePdDataFrameBatchType,
     dtype_to_pyspark_type,
     get_logger,
 )
@@ -94,14 +97,6 @@ if TYPE_CHECKING:
 CumlT = Any
 
 _CumlParamMap = Dict[str, Any]
-
-_SinglePdDataFrameBatchType = Tuple[
-    pd.DataFrame, Optional[pd.DataFrame], Optional[pd.DataFrame]
-]
-_SingleNpArrayBatchType = Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]
-
-# FitInputType is type of [(feature, label), ...]
-FitInputType = Union[List[_SinglePdDataFrameBatchType], List[_SingleNpArrayBatchType]]
 
 # TransformInput type
 TransformInputType = Union["cudf.DataFrame", np.ndarray]
@@ -1170,6 +1165,8 @@ class _CumlEstimator(Estimator, _CumlCaller):
             using `paramMaps[index]`. `index` values may not be sequential.
         """
 
+        logger = get_logger(self.__class__)
+
         if self._use_cpu_fallback():
             return super().fitMultiple(dataset, paramMaps)
 
@@ -1177,6 +1174,18 @@ class _CumlEstimator(Estimator, _CumlCaller):
             for paramMap in paramMaps:
                 if self._use_cpu_fallback(paramMap):
                     return super().fitMultiple(dataset, paramMaps)
+                # standardization and fitIntercept currently may modify the dataset and is done once outside the param loop.
+                # If either appears in a param map, fall back to regular multiple passfitMultiple.
+                # TODO: sparse logistic regression does not modify data so ok in that case.  Need logic to check dataset to detect that case.
+                # TODO: implement single pass with either of these by processing param maps with no
+                # standardization or fitIntercept before those with standardization or fitIntercept.
+                param_names = [p.name for p in paramMap.keys()]
+                for unsupported in ["standardization", "fitIntercept"]:
+                    if unsupported in param_names:
+                        logger.warning(
+                            f"{unsupported} in param maps not supported for one pass GPU fitMultiple. Falling back to baseline fitMultiple."
+                        )
+                        return super().fitMultiple(dataset, paramMaps)
 
             # reach here if no cpu fallback
             estimator = self.copy()
