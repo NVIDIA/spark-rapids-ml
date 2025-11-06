@@ -478,6 +478,11 @@ samples for each split.    max_samples:</p></li>
 </dl>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>The label column is required to be an integer in the range <code class="docutils literal notranslate"><span class="pre">0,</span> <span class="pre">1,</span> <span class="pre">...,</span> <span class="pre">num_classes</span> <span class="pre">-</span> <span class="pre">1</span></code>.  Moreover, for fit() to succeed,
+all values in this range are required to be present in the input data and also each worker must receive the full range of values.
+If this is not the case, an error will be raised with possible work arounds being to remap the labels to the expected range,
+increase the number of very rare label occurrences in the input data, rerun with fewer workers, or shuffle the input data.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">allclose</span>
