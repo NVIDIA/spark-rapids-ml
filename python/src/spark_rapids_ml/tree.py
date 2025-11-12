@@ -407,7 +407,6 @@ class _RandomForestEstimator(
                     cuda_managed_mem_enabled,
                     cuda_system_mem_enabled,
                     cuda_system_mem_headroom,
-                    force_sam_headroom=True,
                 )
 
                 # Fit a random forest model on the dataset (X, y)

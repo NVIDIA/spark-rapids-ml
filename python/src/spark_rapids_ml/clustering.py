@@ -391,7 +391,6 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 cuda_managed_mem_enabled,
                 cuda_system_mem_enabled,
                 cuda_system_mem_headroom,
-                force_sam_headroom=True,
             )
 
             kmeans_object._fit(
@@ -997,7 +996,6 @@ class DBSCANModel(
                 cuda_managed_mem_enabled,
                 cuda_system_mem_enabled,
                 cuda_system_mem_headroom,
-                force_sam_headroom=True,
             )
 
             # Set out_dtype tp 64bit to get larger indexType in cuML for avoiding overflow

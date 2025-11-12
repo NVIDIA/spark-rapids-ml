@@ -1071,7 +1071,6 @@ class LogisticRegression(
                     cuda_managed_mem_enabled,
                     cuda_system_mem_enabled,
                     cuda_system_mem_headroom,
-                    force_sam_headroom=True,
                 )
 
                 logistic_regression.fit(

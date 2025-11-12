@@ -170,17 +170,21 @@ def _get_gpu_id(task_context: TaskContext) -> int:
 # SAM resource with a smaller headroom.
 _old_memory_resources = []
 
+# keep track of last headroom to check if new sam mr is needed.
+_last_sam_headroom_size = None
+
 
 def _configure_memory_resource(
     uvm_enabled: bool = False,
     sam_enabled: bool = False,
     sam_headroom: Optional[int] = None,
-    force_sam_headroom: bool = False,
 ) -> None:
     import cupy as cp
     import rmm
     from cuda.bindings import runtime
     from rmm.allocators.cupy import rmm_cupy_allocator
+
+    global _last_sam_headroom_size
 
     _SYSTEM_MEMORY_SUPPORTED = rmm._cuda.gpu.getDeviceAttribute(
         runtime.cudaDeviceAttr.cudaDevAttrPageableMemoryAccess,
@@ -202,13 +206,15 @@ def _configure_memory_resource(
             rmm.mr.SystemMemoryResource()
         ):
             _old_memory_resources.append(rmm.mr.get_current_device_resource())
+            _last_sam_headroom_size = None
             mr = rmm.mr.SystemMemoryResource()
             rmm.mr.set_current_device_resource(mr)
     elif sam_enabled and sam_headroom is not None:
-        if force_sam_headroom or not type(rmm.mr.get_current_device_resource()) == type(
-            rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
-        ):
+        if sam_headroom != _last_sam_headroom_size or not type(
+            rmm.mr.get_current_device_resource()
+        ) == type(rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)):
             _old_memory_resources.append(rmm.mr.get_current_device_resource())
+            _last_sam_headroom_size = sam_headroom
             mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
             rmm.mr.set_current_device_resource(mr)
 

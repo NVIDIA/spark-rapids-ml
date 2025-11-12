@@ -1044,7 +1044,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     cuda_managed_mem_enabled,
                     cuda_system_mem_enabled,
                     cuda_system_mem_headroom,
-                    force_sam_headroom=True,
                 )
 
                 umap_model = umap_object.fit(concated, y=labels)
@@ -1054,7 +1053,6 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                     cuda_managed_mem_enabled,
                     cuda_system_mem_enabled,
                     cuda_system_mem_headroom,
-                    force_sam_headroom=True,
                 )
 
                 # Call unsupervised fit
