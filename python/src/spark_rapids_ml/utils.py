@@ -163,6 +163,14 @@ def _get_gpu_id(task_context: TaskContext) -> int:
     return gpu_id
 
 
+# When changing default rmm memory resources we retain the old ones
+# in this global array singleton to so that any (C++) allocations using them can
+# invoke the corresponding deallocate methods.  They will get cleaned up only when
+# the process exits.  This avoids a segfault in the case of creating a new
+# SAM resource with a smaller headroom.
+_old_memory_resources = []
+
+
 def _configure_memory_resource(
     uvm_enabled: bool = False,
     sam_enabled: bool = False,
@@ -193,12 +201,14 @@ def _configure_memory_resource(
         if not type(rmm.mr.get_current_device_resource()) == type(
             rmm.mr.SystemMemoryResource()
         ):
+            _old_memory_resources.append(rmm.mr.get_current_device_resource())
             mr = rmm.mr.SystemMemoryResource()
             rmm.mr.set_current_device_resource(mr)
     elif sam_enabled and sam_headroom is not None:
         if force_sam_headroom or not type(rmm.mr.get_current_device_resource()) == type(
             rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
         ):
+            _old_memory_resources.append(rmm.mr.get_current_device_resource())
             mr = rmm.mr.SamHeadroomMemoryResource(headroom=sam_headroom)
             rmm.mr.set_current_device_resource(mr)
 
@@ -206,6 +216,7 @@ def _configure_memory_resource(
         if not type(rmm.mr.get_current_device_resource()) == type(
             rmm.mr.ManagedMemoryResource()
         ):
+            _old_memory_resources.append(rmm.mr.get_current_device_resource())
             rmm.mr.set_current_device_resource(rmm.mr.ManagedMemoryResource())
 
     if sam_enabled or uvm_enabled:
