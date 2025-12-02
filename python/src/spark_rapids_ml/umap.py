@@ -1509,7 +1509,7 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
 
             internal_model = CumlUMAP(**cuml_alg_params)
             internal_model.n_features_in_ = raw_data_cuml.shape[1]
-            internal_model.embedding_ = cudf_to_cuml_array(cp.array(embedding))
+            internal_model.embedding_ = cudf_to_cuml_array(cp.array(embedding, order="C"), order="C")
             internal_model._raw_data = raw_data_cuml
             internal_model._sparse_data = sparse_fit
             internal_model._n_neighbors = min(raw_data_cuml.shape[0], n_neighbors)
