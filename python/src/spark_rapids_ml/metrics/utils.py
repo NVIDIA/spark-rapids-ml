@@ -1,12 +1,14 @@
-from spark_rapids_ml.classification import LogisticRegressionModel
+from typing import Union
+
+import numpy as np
 from pyspark.ml.classification import (
     LogisticRegressionModel as SparkLogisticRegressionModel,
 )
-from pyspark.sql import DataFrame
-from typing import Union
-import numpy as np
-from pyspark.ml.feature import StandardScaler
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.feature import StandardScaler
+from pyspark.sql import DataFrame
+
+from spark_rapids_ml.classification import LogisticRegressionModel
 
 
 def logistic_regression_objective(

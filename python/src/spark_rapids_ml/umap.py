@@ -1509,15 +1509,18 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
 
             internal_model = CumlUMAP(**cuml_alg_params)
             internal_model.n_features_in_ = raw_data_cuml.shape[1]
-            internal_model.embedding_ = cudf_to_cuml_array(cp.array(embedding, order="C"), order="C")
+            internal_model.embedding_ = cudf_to_cuml_array(
+                cp.array(embedding, order="C"), order="C"
+            )
             internal_model._raw_data = raw_data_cuml
             internal_model._sparse_data = sparse_fit
             internal_model._n_neighbors = min(raw_data_cuml.shape[0], n_neighbors)
-            
+
             if a is None or b is None:
-                #import pyximport
-                #pyximport.install()
+                # import pyximport
+                # pyximport.install()
                 from cuml.manifold.umap import find_ab_params
+
                 internal_model._a, internal_model._b = find_ab_params(spread, min_dist)
             else:
                 internal_model._a = a

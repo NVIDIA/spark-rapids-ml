@@ -507,6 +507,7 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         def _construct_kmeans() -> CumlT:
             import cupy as cp
             from cuml.cluster.kmeans import KMeans as CumlKMeans
+
             from .utils import cudf_to_cuml_array
 
             kmeans = CumlKMeans(output_type="cupy", **cuml_alg_params)
@@ -514,7 +515,8 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
             kmeans.n_features_in_ = n_cols
             kmeans.dtype = np.dtype(dtype)
             kmeans.cluster_centers_ = cudf_to_cuml_array(
-                cp.array(cluster_centers_, dtype=dtype, order=array_order), order=array_order
+                cp.array(cluster_centers_, dtype=dtype, order=array_order),
+                order=array_order,
             )
             return kmeans
 
