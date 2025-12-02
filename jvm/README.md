@@ -50,10 +50,10 @@ including setting up the server and running client-side tests.
 To start the Spark Connect server with Spark Rapids ML support, follow these steps:
 
 ```shell
-conda activate rapids-25.10  # from spark-rapids-ml installation
+conda activate rapids-25.12  # from spark-rapids-ml installation
 export SPARK_HOME=<directory where spark was installed above>
 export PYSPARK_PYTHON=$(which python)
-export PLUGIN_JAR=$(pip show spark-rapids-ml | grep Location: | cut -d ' ' -f 2 )/spark_rapids_ml/jars/com.nvidia.rapids.ml-25.10.0.jar
+export PLUGIN_JAR=$(pip show spark-rapids-ml | grep Location: | cut -d ' ' -f 2 )/spark_rapids_ml/jars/com.nvidia.rapids.ml-25.12.0.jar
 $SPARK_HOME/sbin/start-connect-server.sh --master local[*] \
   --jars $PLUGIN_JAR \
   --conf spark.driver.memory=20G
@@ -107,7 +107,7 @@ mvn clean package -DskipTests
 if you would like to compile the plugin and run the unit tests, install `spark-rapids-ml` python package and its dependencies per the above instructions and run the following command:
 
 ``` shell
-conda activate rapids-25.10
+conda activate rapids-25.12
 export PYSPARK_PYTHON=$(which python)
 mvn clean package
 ```

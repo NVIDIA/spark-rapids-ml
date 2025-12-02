@@ -135,7 +135,6 @@ def main(infile: IO, outfile: IO) -> None:
                 lr_model.n_cols,
                 lr_model.dtype,
                 lr_model.num_iters,
-                lr_model.objective,
             ]
             write_with_length(json.dumps(attributes).encode("utf-8"), outfile)
 

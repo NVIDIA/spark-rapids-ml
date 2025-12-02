@@ -27,7 +27,7 @@ sudo bash -c "wget https://www.python.org/ftp/python/3.10.9/Python-3.10.9.tgz &&
 tar xzf Python-3.10.9.tgz && cd Python-3.10.9 && \
 ./configure --enable-optimizations && make altinstall"
 
-RAPIDS_VERSION=25.10.0
+RAPIDS_VERSION=25.12.0
 
 sudo /usr/local/bin/pip3.10 install --upgrade pip
 
@@ -35,9 +35,13 @@ sudo /usr/local/bin/pip3.10 install --upgrade pip
 sudo /usr/local/bin/pip3.10 install scikit-learn
 
 # install cudf and cuml
-sudo /usr/local/bin/pip3.10 install --no-cache-dir cudf-cu12~=${RAPIDS_VERSION} \
+sudo /usr/local/bin/pip3.10 install --no-cache-dir \
+         cudf-cu12~=${RAPIDS_VERSION} \
          cuml-cu12~=${RAPIDS_VERSION} \
          cuvs-cu12~=${RAPIDS_VERSION} \
+         pylibraft-cu12~=${RAPIDS_VERSION} \
+         raft-dask-cu12~=${RAPIDS_VERSION} \
+         dask-cuda-cu12~=${RAPIDS_VERSION} \
          --extra-index-url=https://pypi.nvidia.com --verbose
 sudo /usr/local/bin/pip3.10 install spark-rapids-ml
 sudo /usr/local/bin/pip3.10 list

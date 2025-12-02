@@ -48,6 +48,8 @@ from pyspark.sql import DataFrame, Row
 from pyspark.sql.functions import array, col, sum, udf
 from pyspark.sql.types import FloatType, LongType
 
+from spark_rapids_ml.metrics.utils import logistic_regression_objective
+
 if version.parse(cuml.__version__) < version.parse("23.08.00"):
     raise ValueError(
         "Logistic Regression requires cuml 23.08.00 or above. Try upgrading cuml or ignoring this file in testing"
@@ -201,6 +203,8 @@ def test_params(tmp_path: str, caplog: LogCaptureFixture) -> None:
         cuml_classes=[CumlLogisticRegression],
         excludes=[
             "class_weight",
+            "penalty_normalized",
+            "lbfgs_memory",
             "linesearch_max_iter",
             "solver",
             "handle",
@@ -438,10 +442,15 @@ def _func_test_classifier(
         reg_param=reg_param, elasticNet_param=elasticNet_param
     )
 
-    cu_lr = cuLR(fit_intercept=fit_intercept, penalty=penalty, C=C, l1_ratio=l1_ratio)
-    cu_lr.solver_model.penalty_normalized = False
-    cu_lr.solver_model.lbfgs_memory = 10
-    cu_lr.solver_model.linesearch_max_iter = 20
+    cu_lr = cuLR(
+        fit_intercept=fit_intercept,
+        penalty=penalty,
+        C=C,
+        l1_ratio=l1_ratio,
+        penalty_normalized=False,
+        lbfgs_memory=10,
+        linesearch_max_iter=20,
+    )
     cu_lr.fit(X_train, y_train)
 
     spark_conf.update(
@@ -484,7 +493,6 @@ def _func_test_classifier(
             assert spark_lr._cuml_params["l1_ratio"] == cu_lr.l1_ratio
         else:
             assert spark_lr._cuml_params["l1_ratio"] == spark_lr.getElasticNetParam()
-            assert cu_lr.l1_ratio == None
 
         spark_lr.setFeaturesCol(features_col)
         spark_lr.setLabelCol(label_col)
@@ -1223,27 +1231,6 @@ def test_quick(
     assert lr._cuml_params["C"] == C
     assert lr._cuml_params["l1_ratio"] == l1_ratio
 
-    from cuml import LogisticRegression as CUMLSG
-
-    sg = CUMLSG(penalty=penalty, C=C, l1_ratio=l1_ratio)
-    l1_strength, l2_strength = sg._get_qn_params()
-    if reg_param == 0.0:
-        assert penalty == None
-        assert l1_strength == 0.0
-        assert l2_strength == 0.0
-    elif elasticNet_param == 0.0:
-        assert penalty == "l2"
-        assert l1_strength == 0.0
-        assert l2_strength == reg_param
-    elif elasticNet_param == 1.0:
-        assert penalty == "l1"
-        assert l1_strength == reg_param
-        assert l2_strength == 0.0
-    else:
-        assert penalty == "elasticnet"
-        assert l1_strength == reg_param * elasticNet_param
-        assert l2_strength == reg_param * (1 - elasticNet_param)
-
 
 @pytest.mark.parametrize("metric_name", ["accuracy", "logLoss", "areaUnderROC"])
 @pytest.mark.parametrize("feature_type", [feature_types.vector])
@@ -1802,9 +1789,11 @@ def test_sparse_nlp20news(
         cpu_model = cpu_lr.fit(df_train)
         cpu_objective = cpu_model.summary.objectiveHistory[-1]
 
+        gpu_model_objective = logistic_regression_objective(df_train, gpu_model)
+
         assert (
-            gpu_model.objective < cpu_objective
-            or abs(gpu_model.objective - cpu_objective) < tolerance
+            gpu_model_objective < cpu_objective
+            or abs(gpu_model_objective - cpu_objective) < tolerance
         )
 
         if standardization is True:
@@ -2329,9 +2318,10 @@ def test_sparse_int64() -> None:
     cpu_est = SparkLogisticRegression(**est_params)
     cpu_model = cpu_est.fit(df)
     cpu_objective = cpu_model.summary.objectiveHistory[-1]
+    gpu_model_objective = logistic_regression_objective(df, gpu_model)
     assert (
-        gpu_model.objective < cpu_objective
-        or abs(gpu_model.objective - cpu_objective) < tolerance
+        gpu_model_objective < cpu_objective
+        or abs(gpu_model_objective - cpu_objective) < tolerance
     )
 
     df_test = df.sample(fraction=fraction_sampled_for_test, seed=0)

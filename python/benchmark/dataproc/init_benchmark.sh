@@ -22,16 +22,20 @@ function get_metadata_attribute() {
   /usr/share/google/get_metadata_value "attributes/${attribute_name}" || echo -n "${default_value}"
 }
 
-RAPIDS_VERSION=$(get_metadata_attribute rapids-version 25.10.0)
+RAPIDS_VERSION=$(get_metadata_attribute rapids-version 25.12.0)
 
 
 # install cudf and cuml
 # using ~= pulls in lates micro version patches
 pip install --upgrade pip
 
-pip install cudf-cu12~=${RAPIDS_VERSION} cuml-cu12~=${RAPIDS_VERSION} cuvs-cu12~=${RAPIDS_VERSION} \
+pip install --no-cache-dir \
+    cudf-cu12~=${RAPIDS_VERSION} \
+    cuml-cu12~=${RAPIDS_VERSION} \
+    cuvs-cu12~=${RAPIDS_VERSION} \
     pylibraft-cu12~=${RAPIDS_VERSION} \
-    rmm-cu12~=${RAPIDS_VERSION} \
+    raft-dask-cu12~=${RAPIDS_VERSION} \
+    dask-cuda-cu12~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install benchmark files

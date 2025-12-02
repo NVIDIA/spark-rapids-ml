@@ -170,7 +170,7 @@ def test_linear_regression_params(
         "tol": 1e-06,
     }
     default_cuml_params = {
-        "algorithm": "eig",
+        "algorithm": "auto",
         "alpha": 0.0,
         "fit_intercept": True,
         "l1_ratio": 0.0,

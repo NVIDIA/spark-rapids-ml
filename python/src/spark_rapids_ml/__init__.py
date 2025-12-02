@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__version__ = "25.10.0"
+__version__ = "25.12.0"
 
 import pandas as pd
 import pyspark

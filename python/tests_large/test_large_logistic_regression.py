@@ -31,6 +31,7 @@ from pyspark.sql.types import (
 )
 
 from spark_rapids_ml.classification import LogisticRegression, LogisticRegressionModel
+from spark_rapids_ml.metrics.utils import logistic_regression_objective
 from tests.test_logistic_regression import compare_model
 
 from .conftest import _spark
@@ -52,9 +53,10 @@ def _compare_with_cpu_estimator(
 
     df_test = df.sample(fraction=fraction_sampled_for_test, seed=0)
 
+    gpu_model_objective = logistic_regression_objective(df, gpu_model)
     assert (
-        gpu_model.objective < cpu_objective
-        or abs(gpu_model.objective - cpu_objective) < tolerance
+        gpu_model_objective < cpu_objective
+        or abs(gpu_model_objective - cpu_objective) < tolerance
     )
 
     compare_model(

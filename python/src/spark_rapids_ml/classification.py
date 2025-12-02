@@ -1046,12 +1046,10 @@ class LogisticRegression(
                 logistic_regression = LogisticRegressionMG(
                     handle=params[param_alias.handle],
                     linesearch_max_iter=20,
+                    penalty_normalized=False,
+                    lbfgs_memory=10,
                     **init_parameters,
                 )
-
-                logistic_regression.solver_model.penalty_normalized = False
-                logistic_regression.solver_model.lbfgs_memory = 10
-                logistic_regression.solver_model.linesearch_max_iter = 20
 
                 if is_sparse and pdesc.partition_max_nnz > nnz_limit_for_int32:  # type: ignore
                     logistic_regression._convert_index = np.int64
@@ -1121,8 +1119,7 @@ class LogisticRegression(
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": n_cols,
                     "dtype": logistic_regression.dtype.name,
-                    "num_iters": logistic_regression.solver_model.num_iters,
-                    "objective": logistic_regression.solver_model.objective,
+                    "num_iters": logistic_regression.n_iter_[0],
                     "index_dtype": index_dtype,
                 }
 
@@ -1199,7 +1196,6 @@ class LogisticRegression(
                 StructField("n_cols", IntegerType(), False),
                 StructField("dtype", StringType(), False),
                 StructField("num_iters", IntegerType(), False),
-                StructField("objective", DoubleType(), False),
                 StructField("index_dtype", StringType(), False),
             ]
         )
@@ -1305,7 +1301,6 @@ class LogisticRegressionModel(
         n_cols: int,
         dtype: str,
         num_iters: int,
-        objective: float,
     ) -> None:
         super().__init__(
             dtype=dtype,
@@ -1314,7 +1309,6 @@ class LogisticRegressionModel(
             intercept_=intercept_,
             classes_=classes_,
             num_iters=num_iters,
-            objective=objective,
         )
         self.coef_ = coef_
         self.intercept_ = intercept_
@@ -1322,7 +1316,6 @@ class LogisticRegressionModel(
         self._lr_spark_model: Optional[SparkLogisticRegressionModel] = None
         self._num_classes = len(self.classes_)
         self.num_iters = num_iters
-        self.objective = objective
         self._this_model = self
 
     def cpu(self) -> SparkLogisticRegressionModel:
@@ -1469,8 +1462,9 @@ class LogisticRegressionModel(
         def _construct_lr() -> CumlT:
             import cupy as cp
             import numpy as np
-            from cuml.internals.input_utils import input_to_cuml_array
             from cuml.linear_model.logistic_regression_mg import LogisticRegressionMG
+
+            from .utils import cudf_to_cuml_array
 
             _intercepts, _coefs = (
                 (intercept_, coef_) if num_models > 1 else ([intercept_], [coef_])
@@ -1479,26 +1473,18 @@ class LogisticRegressionModel(
 
             for i in range(num_models):
                 lr = LogisticRegressionMG(output_type="cupy")
-                # need this to revert a change in cuML targeting sklearn compat.
-                lr.n_features_in_ = None
+
+                lr.n_features_in_ = n_cols
                 lr.n_cols = n_cols
                 lr.dtype = np.dtype(dtype)
 
                 gpu_intercept_ = cp.array(_intercepts[i], order="C", dtype=dtype)
+                gpu_coef_ = cp.array(_coefs[i], order="F", dtype=dtype)
 
-                gpu_coef_ = cp.array(_coefs[i], order="F", dtype=dtype).T
-                gpu_stacked = cp.vstack([gpu_coef_, gpu_intercept_])
-                lr.solver_model._coef_ = input_to_cuml_array(
-                    gpu_stacked, order="C"
-                ).array
+                lr.classes_ = np.array(classes_, order="F").astype(dtype)
+                lr.coef_ = cudf_to_cuml_array(gpu_coef_, order="F")
+                lr.intercept_ = cudf_to_cuml_array(gpu_intercept_, order="C")
 
-                lr.classes_ = input_to_cuml_array(
-                    np.array(classes_, order="F").astype(dtype)
-                ).array.to_output(output_type="numpy")
-                lr._num_classes = len(lr.classes_)
-
-                lr.loss = "sigmoid" if lr._num_classes <= 2 else "softmax"
-                lr.solver_model.qnparams = lr.create_qnparams()
                 lrs.append(lr)
 
             return lrs

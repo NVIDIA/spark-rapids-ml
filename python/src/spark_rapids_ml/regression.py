@@ -79,7 +79,7 @@ from .tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from .utils import PartitionDescriptor, _get_spark_session, cudf_to_cuml_array, java_uid
+from .utils import PartitionDescriptor, _get_spark_session, java_uid
 
 if TYPE_CHECKING:
     import cupy as cp
@@ -216,7 +216,7 @@ class LinearRegressionClass(_CumlClass):
 
     def _get_cuml_params_default(self) -> Dict[str, Any]:
         return {
-            "algorithm": "eig",
+            "algorithm": "auto",
             "fit_intercept": True,
             "copy_X": True,
             "normalize": False,
@@ -787,6 +787,8 @@ class LinearRegressionModel(
         def _construct_lr() -> CumlT:
             from cuml.linear_model.linear_regression_mg import LinearRegressionMG
 
+            from .utils import cudf_to_cuml_array
+
             lrs = []
 
             coefs = coef_ if isinstance(intercept_, list) else [coef_]
@@ -795,7 +797,8 @@ class LinearRegressionModel(
             for i in range(len(coefs)):
                 lr = LinearRegressionMG(output_type="numpy", copy_X=False)
                 # need this to revert a change in cuML targeting sklearn compat.
-                lr.n_features_in_ = None
+                lr.n_features_in_ = n_cols
+                lr.n_cols = n_cols
                 lr.coef_ = cudf_to_cuml_array(
                     np.array(coefs[i], order="F").astype(dtype)
                 )

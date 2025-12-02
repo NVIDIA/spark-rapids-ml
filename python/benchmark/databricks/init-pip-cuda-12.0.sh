@@ -19,7 +19,7 @@ BENCHMARK_ZIP=/dbfs/path/to/benchmark.zip
 # IMPORTANT: specify rapids fully 23.10.0 and not 23.10
 # also, in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 23.8.0 and not 23.08.0)
 # while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.08.2 and not 23.8.2)
-RAPIDS_VERSION=25.10.0
+RAPIDS_VERSION=25.12.0
 SPARK_RAPIDS_VERSION=25.08.0
 
 curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
@@ -38,9 +38,13 @@ ln -s /usr/local/cuda-12.0 /usr/local/cuda
 
 # install cudf and cuml
 # using ~= pulls in micro version patches
-/databricks/python/bin/pip install cudf-cu12~=${RAPIDS_VERSION} \
+/databricks/python/bin/pip install --no-cache-dir \
+    cudf-cu12~=${RAPIDS_VERSION} \
     cuml-cu12~=${RAPIDS_VERSION} \
     cuvs-cu12~=${RAPIDS_VERSION} \
+    pylibraft-cu12~=${RAPIDS_VERSION} \
+    raft-dask-cu12~=${RAPIDS_VERSION} \
+    dask-cuda-cu12~=${RAPIDS_VERSION} \
     --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml

@@ -22,7 +22,7 @@ cat <<EOF
     "spark_conf": {},
     "aws_attributes": {
         "first_on_demand": 1,
-        "availability": "SPOT_WITH_FALLBACK",
+        "availability": "ON_DEMAND",
         "zone_id": "us-west-2a",
         "spot_bid_price_percent": 100,
         "ebs_volume_type": "GENERAL_PURPOSE_SSD",

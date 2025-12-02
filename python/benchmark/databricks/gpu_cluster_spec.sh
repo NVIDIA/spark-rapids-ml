@@ -37,7 +37,7 @@ cat <<EOF
     },
     "aws_attributes": {
         "first_on_demand": 1,
-        "availability": "SPOT_WITH_FALLBACK",
+        "availability": "ON_DEMAND",
         "zone_id": "us-west-2a",
         "spot_bid_price_percent": 100,
         "ebs_volume_count": 0
@@ -55,7 +55,7 @@ cat <<EOF
     "init_scripts": [
         {
             "workspace": {
-                "destination": "${INIT_SCRIPT_DIR}/init-pip-cuda-12.0.sh"
+                "destination": "${INIT_SCRIPT_DIR}/init-pip-cuda-13.0-nightly.sh"
             }
         }
     ],

@@ -362,7 +362,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
             import cupy as cp
-            from cuml.cluster.kmeans import KMeans as CumlKMeans
+            from cuml.cluster.kmeans_mg import KMeansMG as CumlKMeans
 
             kmeans_object = CumlKMeans(
                 handle=params[param_alias.handle],
@@ -393,10 +393,9 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 cuda_system_mem_headroom,
             )
 
-            kmeans_object._fit(
+            kmeans_object.fit(
                 concated,
                 sample_weight=None,
-                multigpu=True,
             )
 
             logger = get_logger(cls)
@@ -506,15 +505,16 @@ class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
         array_order = self._transform_array_order()
 
         def _construct_kmeans() -> CumlT:
+            import cupy as cp
             from cuml.cluster.kmeans import KMeans as CumlKMeans
+            from .utils import cudf_to_cuml_array
 
             kmeans = CumlKMeans(output_type="cupy", **cuml_alg_params)
-            from spark_rapids_ml.utils import cudf_to_cuml_array
 
             kmeans.n_features_in_ = n_cols
             kmeans.dtype = np.dtype(dtype)
             kmeans.cluster_centers_ = cudf_to_cuml_array(
-                np.array(cluster_centers_).astype(dtype), order=array_order
+                cp.array(cluster_centers_, dtype=dtype, order=array_order), order=array_order
             )
             return kmeans
 
