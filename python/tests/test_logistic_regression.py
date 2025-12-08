@@ -1440,32 +1440,8 @@ def test_compat_one_label(
 
         assert label == 1.0 or label == 0.0
 
-        blor_model = blor.fit(bdf)
-
-        if fit_intercept is False:
-            if _LogisticRegression is SparkLogisticRegression:
-                # Got empty caplog.text. Spark prints warning message from jvm
-                assert caplog.text == ""
-            else:
-                assert (
-                    "All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
-                    in caplog.text
-                )
-
-            if label == 1.0:
-                assert array_equal(
-                    blor_model.coefficients.toArray(),
-                    [0.85431526, 0.85431526],
-                    tolerance,
-                )
-            else:
-                assert array_equal(
-                    blor_model.coefficients.toArray(),
-                    [-0.85431526, -0.85431526],
-                    tolerance,
-                )
-            assert blor_model.intercept == 0.0
-        else:
+        if fit_intercept is True:
+            blor_model = blor.fit(bdf)
             if _LogisticRegression is SparkLogisticRegression:
                 # Got empty caplog.text. Spark prints warning message from jvm
                 assert caplog.text == ""
@@ -1474,11 +1450,20 @@ def test_compat_one_label(
                     "All labels are the same value and fitIntercept=true, so the coefficients will be zeros. Training is not needed."
                     in caplog.text
                 )
-
             assert array_equal(blor_model.coefficients.toArray(), [0, 0], 0.0)
             assert blor_model.intercept == (
                 float("inf") if label == 1.0 else float("-inf")
             )
+        else:
+            if _LogisticRegression is SparkLogisticRegression:
+                blor_model = blor.fit(bdf)
+                assert caplog.text == ""
+            else:
+                with pytest.raises(
+                    ValueError,
+                    match="All labels belong to a single class and fitIntercept=false. This is not supported.  Please use fitIntercept=true.",
+                ):
+                    blor_model = blor.fit(bdf)
 
 
 @pytest.mark.compat

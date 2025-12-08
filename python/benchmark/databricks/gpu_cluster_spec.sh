@@ -35,6 +35,9 @@ cat <<EOF
         "spark.sql.files.maxPartitionBytes": "2000000000000",
         "spark.databricks.delta.optimizeWrite.enabled": "false"
     },
+    "spark_env_vars": {
+        "LD_LIBRARY_PATH": "/usr/local/cuda/compat"
+    },
     "aws_attributes": {
         "first_on_demand": 1,
         "availability": "ON_DEMAND",

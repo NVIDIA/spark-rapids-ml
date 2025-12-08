@@ -38,6 +38,9 @@ ln -s /usr/local/cuda-12.0 /usr/local/cuda
 
 # install cudf and cuml
 # using ~= pulls in micro version patches
+# pin numpy to 1.0 for DB < 17.3 as scipy and other library updates will
+# attempt to update it, leading to incompatibility issues with pyspark.
+# TODO revise and test for DB 17.3 and later, which have Spark 4.x.
 /databricks/python/bin/pip install --no-cache-dir \
     cudf-cu12~=${RAPIDS_VERSION} \
     cuml-cu12~=${RAPIDS_VERSION} \
@@ -45,6 +48,7 @@ ln -s /usr/local/cuda-12.0 /usr/local/cuda
     pylibraft-cu12~=${RAPIDS_VERSION} \
     raft-dask-cu12~=${RAPIDS_VERSION} \
     dask-cuda-cu12~=${RAPIDS_VERSION} \
+    numpy~=1.0 \
     --extra-index-url=https://pypi.nvidia.com
 
 # install spark-rapids-ml

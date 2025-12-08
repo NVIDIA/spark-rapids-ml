@@ -1071,16 +1071,57 @@ class LogisticRegression(
                     cuda_system_mem_headroom,
                 )
 
-                logistic_regression.fit(
-                    [(concated, concated_y)],
-                    pdesc.m,
-                    pdesc.n,
-                    pdesc.parts_rank_size,
-                    pdesc.rank,
-                )
+                try:
+                    logistic_regression.fit(
+                        [(concated, concated_y)],
+                        pdesc.m,
+                        pdesc.n,
+                        pdesc.parts_rank_size,
+                        pdesc.rank,
+                    )
+                except ValueError as e:
+                    # cuML now raises an exception if only one label value is observed.
+                    # Here we suppress in that case until later as we can handle it when
+                    # fitIntercept=True.
+                    import traceback
 
-                coef_ = logistic_regression.coef_
-                intercept_ = logistic_regression.intercept_
+                    exc_str = traceback.format_exc()
+                    if not "requires n_classes == 2 (got 1)" in exc_str:
+                        raise
+
+                # check if invalid label exists.  Do this first before handling 1 label value to match apache spark.
+                for class_val in logistic_regression.classes_.tolist():
+                    if class_val < 0:
+                        raise RuntimeError(
+                            f"Labels MUST be in [0, 2147483647), but got {class_val}"
+                        )
+                    elif not class_val.is_integer():
+                        raise RuntimeError(
+                            f"Labels MUST be Integers, but got {class_val}"
+                        )
+
+                n_cols = logistic_regression.n_cols
+
+                if len(logistic_regression.classes_) == 1:
+                    class_val = logistic_regression.classes_[0]
+                    # TODO: match Spark to use max(class_list) to calculate the number of classes
+                    # Cuml currently uses unique(class_list)
+                    if class_val != 1.0 and class_val != 0.0:
+                        raise RuntimeError(
+                            "class value must be either 1. or 0. when dataset has one label"
+                        )
+
+                    import cupy as cp
+
+                    coef_ = cp.zeros(n_cols)
+                    intercept_ = cp.array(
+                        [float("inf") if class_val == 1.0 else float("-inf")]
+                    )
+                    n_iter_ = 0
+                else:
+                    coef_ = logistic_regression.coef_
+                    intercept_ = logistic_regression.intercept_
+                    n_iter_ = logistic_regression.n_iter_[0]
 
                 if standarization_with_cupy is True:
                     import cupy as cp
@@ -1104,8 +1145,6 @@ class LogisticRegression(
                     )
                     intercept_array -= intercept_mean
 
-                n_cols = logistic_regression.n_cols
-
                 # index_dtype is only available in sparse logistic regression. It records the dtype of indices array and indptr array that were used in C++ computation layer. Its value can be 'int32' or 'int64'.
                 index_dtype = (
                     str(logistic_regression.index_dtype)
@@ -1114,40 +1153,18 @@ class LogisticRegression(
                 )
 
                 model = {
-                    "coef_": coef_[:, :n_cols].tolist(),
+                    "coef_": (
+                        coef_[:, :n_cols].tolist()
+                        if coef_.ndim == 2
+                        else [coef_[:n_cols].tolist()]
+                    ),
                     "intercept_": intercept_.tolist(),
                     "classes_": logistic_regression.classes_.tolist(),
                     "n_cols": n_cols,
                     "dtype": logistic_regression.dtype.name,
-                    "num_iters": logistic_regression.n_iter_[0],
+                    "num_iters": n_iter_,
                     "index_dtype": index_dtype,
                 }
-
-                # check if invalid label exists
-                for class_val in model["classes_"]:
-                    if class_val < 0:
-                        raise RuntimeError(
-                            f"Labels MUST be in [0, 2147483647), but got {class_val}"
-                        )
-                    elif not class_val.is_integer():
-                        raise RuntimeError(
-                            f"Labels MUST be Integers, but got {class_val}"
-                        )
-
-                if len(logistic_regression.classes_) == 1:
-                    class_val = logistic_regression.classes_[0]
-                    # TODO: match Spark to use max(class_list) to calculate the number of classes
-                    # Cuml currently uses unique(class_list)
-                    if class_val != 1.0 and class_val != 0.0:
-                        raise RuntimeError(
-                            "class value must be either 1. or 0. when dataset has one label"
-                        )
-
-                    if init_parameters["fit_intercept"] is True:
-                        model["coef_"] = [[0.0] * n_cols]
-                        model["intercept_"] = [
-                            float("inf") if class_val == 1.0 else float("-inf")
-                        ]
 
                 del logistic_regression
                 return model
@@ -1204,8 +1221,8 @@ class LogisticRegression(
         logger = get_logger(self.__class__)
         if len(result["classes_"]) == 1:
             if self.getFitIntercept() is False:
-                logger.warning(
-                    "All labels belong to a single class and fitIntercept=false. It's a dangerous ground, so the algorithm may not converge."
+                raise ValueError(
+                    "All labels belong to a single class and fitIntercept=false. This is not supported.  Please use fitIntercept=true."
                 )
             else:
                 logger.warning(

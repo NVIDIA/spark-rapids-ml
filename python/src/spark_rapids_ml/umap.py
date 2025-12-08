@@ -1517,8 +1517,6 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
             internal_model._n_neighbors = min(raw_data_cuml.shape[0], n_neighbors)
 
             if a is None or b is None:
-                # import pyximport
-                # pyximport.install()
                 from cuml.manifold.umap import find_ab_params
 
                 internal_model._a, internal_model._b = find_ab_params(spread, min_dist)
