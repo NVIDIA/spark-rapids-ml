@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG CUDA_VERSION=12.0.1
+ARG CUDA_VERSION=12.2.2
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 # ubuntu22
@@ -48,5 +48,5 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 
 # install cuML
 ARG RAPIDS_VERSION=25.12
-RUN conda install -y -c rapidsai-nightly -c conda-forge -c nvidia cuml=$RAPIDS_VERSION cuvs=$RAPIDS_VERSION python=3.10 pylibraft=$RAPIDS_VERSION raft-dask=$RAPIDS_VERSION cuda-version=12.0 numpy~=1.0 \
+RUN conda install -y -c rapidsai-nightly -c conda-forge -c nvidia cuml=$RAPIDS_VERSION cuvs=$RAPIDS_VERSION python=3.10 pylibraft=$RAPIDS_VERSION raft-dask=$RAPIDS_VERSION cuda-version=12.2 numpy~=1.0 \
     && conda clean --all -f -y
