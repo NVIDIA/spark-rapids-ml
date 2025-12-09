@@ -69,7 +69,7 @@ cat <<EOF
     "init_scripts": [
         {
             "workspace": {
-                "destination": "${INIT_SCRIPT_DIR}/init-pip-cuda-12.0-nightly.sh"
+                "destination": "${INIT_SCRIPT_DIR}/init-pip-cuda-12.0.sh"
             }
         }
     ],
