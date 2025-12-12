@@ -129,18 +129,14 @@ def test_dbscan_basic(
     # reduce the number of GPUs for toy dataset to avoid empty partition
     gpu_number = min(gpu_number, 2)
     data = [
-        ([0.0, 0.0]),
-        ([1.0, 1.0]),
-        ([9.0, 8.0]),
-        ([8.0, 9.0]),
+        (0, [0.0, 0.0]),
+        (1, [1.0, 1.0]),
+        (2, [9.0, 8.0]),
+        (3, [8.0, 9.0]),
     ]
 
     with CleanSparkSession() as spark:
-        df = (
-            spark.sparkContext.parallelize(data, gpu_number)
-            .map(lambda row: (row,))
-            .toDF(["features"])
-        )
+        df = spark.sparkContext.parallelize(data, gpu_number).toDF(["id", "features"])
         dbscan = DBSCAN(num_workers=gpu_number, min_samples=2, eps=2).setFeaturesCol(
             "features"
         )
@@ -156,10 +152,10 @@ def test_dbscan_basic(
         # test transform function
         dbscan_model.setPredictionCol("prediction")
         label_df = dbscan_model.transform(df)
-        assert ["features", "prediction"] == sorted(label_df.columns)
+        assert ["features", "id", "prediction"] == sorted(label_df.columns)
 
         o_col = dbscan_model.getPredictionCol()
-        labels = [row[o_col] for row in label_df.collect()]
+        labels = [row[o_col] for row in label_df.sort("id").collect()]
 
         assert len(labels) == 4
         assert labels[0] == labels[1]
@@ -169,10 +165,10 @@ def test_dbscan_basic(
         # Test the loaded model
         dbscan_model_loaded.setPredictionCol("prediction")
         label_df = dbscan_model_loaded.transform(df)
-        assert ["features", "prediction"] == sorted(label_df.columns)
+        assert ["features", "id", "prediction"] == sorted(label_df.columns)
 
         o_col = dbscan_model_loaded.getPredictionCol()
-        labels = [row[o_col] for row in label_df.collect()]
+        labels = [row[o_col] for row in label_df.sort("id").collect()]
 
         assert len(labels) == 4
         assert labels[0] == labels[1]
@@ -279,11 +275,9 @@ def test_dbscan(
         transformed = dbscan_model.transform(df)
 
         # Check cluster match
-        label_df = transformed.select("prediction")
-        feature_df = transformed.drop("prediction")
-
-        label_pdf = label_df.toPandas()
-        feature_pdf = feature_df.toPandas()
+        pandas_df = transformed.toPandas()
+        label_pdf = pandas_df["prediction"]
+        feature_pdf = pandas_df[features_col]
 
         label_arr = label_pdf.to_numpy().squeeze()
         feature_matrix = feature_pdf.to_numpy()

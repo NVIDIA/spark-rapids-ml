@@ -22,7 +22,10 @@ def logistic_regression_objective(
         lr_model: Union[LogisticRegressionModel, SparkLogisticRegressionModel]
 
     Returns:
-        Full objective of the logistic regression model
+        Full objective of the logistic regression model:
+        log_loss + reg_param * (0.5 * (1 - elasticnet_param) * ||coefs||_2^2 + elasticnet_param * |coefs|_1)
+        where:
+        log_loss = (1/n) * sum_i(-log(prob(y_i))) for labels y_1, y_2, ..., y_n
     """
     if isinstance(lr_model, LogisticRegressionModel):
         lr_model = lr_model.cpu()
@@ -34,7 +37,7 @@ def logistic_regression_objective(
     label_name = lr_model.getLabelCol()
     features_col = lr_model.getFeaturesCol()
 
-    evaluator_train = (
+    evaluator = (
         MulticlassClassificationEvaluator()
         .setMetricName("logLoss")  # type:ignore
         .setPredictionCol(prediction_col)
@@ -42,7 +45,7 @@ def logistic_regression_objective(
         .setLabelCol(label_name)
     )
 
-    log_loss = evaluator_train.evaluate(df_with_preds)
+    log_loss = evaluator.evaluate(df_with_preds)
     coefficients = (
         np.array(lr_model.coefficients)
         if lr_model.numClasses == 2
