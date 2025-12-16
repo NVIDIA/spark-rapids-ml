@@ -1081,6 +1081,7 @@ class LogisticRegression(
                     )
                 except ValueError as e:
                     # cuML now raises an exception if only one label value is observed.
+                    # see e.g. https://github.com/rapidsai/cuml/blob/f7f175d7ae1c63e8eed3b66e581f328e0fd335be/python/cuml/cuml/solvers/qn.pyx#L96
                     # Here we suppress in that case until later as we can handle it when
                     # fitIntercept=True.
                     import traceback

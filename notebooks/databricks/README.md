@@ -14,7 +14,7 @@ If you already have a Databricks account, you can run the example notebooks on a
   databricks workspace import --format AUTO --file init-pip-cuda-12.sh ${WS_SAVE_DIR}/init-pip-cuda-12.sh --profile ${PROFILE}
   ```
   **Note**: the init script does the following on each Spark node:
-  - updates the CUDA runtime to 12.0 (required for Spark Rapids ML dependencies).
+  - updates the CUDA runtime (required for Spark Rapids ML dependencies).
   - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
   - installs various `cuXX` dependencies via pip.
   - if the cluster environment variable `SPARK_RAPIDS_ML_NO_IMPORT_ENABLED=1` is define (see below), the init script also modifies a Databricks notebook kernel startup script to enable no-import change UX for the cluster.  See [no-import-change](../README.md#no-import-change).

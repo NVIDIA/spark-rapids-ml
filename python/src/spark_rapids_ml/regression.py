@@ -79,7 +79,7 @@ from .tree import (
     _RandomForestEstimator,
     _RandomForestModel,
 )
-from .utils import PartitionDescriptor, _get_spark_session, java_uid
+from .utils import _get_spark_session, java_uid
 
 if TYPE_CHECKING:
     import cupy as cp
@@ -521,6 +521,9 @@ class LinearRegression(
             dfs: FitInputType,
             params: Dict[str, Any],
         ) -> Dict[str, Any]:
+
+            from .utils import PartitionDescriptor
+
             # Step 1, get the PartitionDescriptor
             pdesc = PartitionDescriptor.build(
                 params[param_alias.part_sizes], params[param_alias.num_cols]

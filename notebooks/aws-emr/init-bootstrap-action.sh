@@ -41,7 +41,6 @@ sudo /usr/local/bin/pip3.10 install --no-cache-dir \
          cuvs-cu12~=${RAPIDS_VERSION} \
          pylibraft-cu12~=${RAPIDS_VERSION} \
          raft-dask-cu12~=${RAPIDS_VERSION} \
-         dask-cuda-cu12~=${RAPIDS_VERSION} \
          --extra-index-url=https://pypi.nvidia.com --verbose
 sudo /usr/local/bin/pip3.10 install spark-rapids-ml
 sudo /usr/local/bin/pip3.10 list

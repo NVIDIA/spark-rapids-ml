@@ -42,7 +42,6 @@ ln -s /usr/local/cuda-12.2 /usr/local/cuda
     cuvs-cu12~=${RAPIDS_VERSION} \
     pylibraft-cu12~=${RAPIDS_VERSION} \
     raft-dask-cu12~=${RAPIDS_VERSION} \
-    dask-cuda-cu12~=${RAPIDS_VERSION} \
     numpy~=1.0 \
     --extra-index-url=https://pypi.nvidia.com
 
