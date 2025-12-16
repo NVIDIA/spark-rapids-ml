@@ -263,7 +263,7 @@ class PCA(PCAClass, _CumlEstimator, _PCACumlParams):
                 "explained_variance_ratio_": [cpu_explained_variance],
                 "singular_values_": [cpu_singular_values],
                 "n_cols": params[param_alias.num_cols],
-                "dtype": pca_object.dtype.name,
+                "dtype": pca_object.components_.dtype.name,
             }
 
         return _cuml_fit
@@ -398,7 +398,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
         cuml_alg_params = self.cuml_params.copy()
 
         n_cols = self.n_cols
-        dype = self.dtype
+        dtype = self.dtype
         components = self.components_
         mean = self.mean_
         singular_values = self.singular_values_
@@ -414,8 +414,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
 
             pca = CumlPCAMG(output_type="numpy", **cuml_alg_params)
 
-            # need this to revert a change in cuML targeting sklearn compat.
-            pca.n_features_in_ = None
+            pca.n_features_in_ = n_cols
 
             # Compatible with older cuml versions (before 23.02)
             pca._n_components = pca.n_components
@@ -424,7 +423,7 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
             from spark_rapids_ml.utils import cudf_to_cuml_array
 
             pca.n_cols = n_cols
-            pca.dtype = np.dtype(dype)
+            pca.dtype = np.dtype(dtype)
 
             # TBD: figure out why PCA warns regardless of array order here and for singular values
             pca.components_ = cudf_to_cuml_array(
@@ -437,8 +436,8 @@ class PCAModel(PCAClass, _CumlModelWithColumns, _PCACumlParams):
             return pca
 
         transformed_mean = np.matmul(
-            np.array(self.mean_, self.dtype),
-            np.array(self.components_, self.dtype).T,
+            np.array(mean, dtype),
+            np.array(components, dtype).T,
         )
 
         def _transform_internal(

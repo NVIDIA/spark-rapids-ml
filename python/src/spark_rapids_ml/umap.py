@@ -1396,6 +1396,11 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
         cuml_alg_params = self.cuml_params
         sparse_fit = self._sparse_fit
         n_cols = self.n_cols
+        n_neighbors = self.getNNeighbors()
+        a = self.getA()
+        b = self.getB()
+        spread = self.getSpread()
+        min_dist = self.getMinDist()
 
         def _chunk_and_broadcast(
             sc: pyspark.SparkContext,
@@ -1504,9 +1509,20 @@ class UMAPModel(_CumlModelWithColumns, UMAPClass, _UMAPCumlParams):
 
             internal_model = CumlUMAP(**cuml_alg_params)
             internal_model.n_features_in_ = raw_data_cuml.shape[1]
-            internal_model.embedding_ = cp.array(embedding).data
+            internal_model.embedding_ = cudf_to_cuml_array(
+                cp.array(embedding, order="C"), order="C"
+            )
             internal_model._raw_data = raw_data_cuml
-            internal_model.sparse_fit = sparse_fit
+            internal_model._sparse_data = sparse_fit
+            internal_model._n_neighbors = min(raw_data_cuml.shape[0], n_neighbors)
+
+            if a is None or b is None:
+                from cuml.manifold.umap import find_ab_params
+
+                internal_model._a, internal_model._b = find_ab_params(spread, min_dist)
+            else:
+                internal_model._a = a
+                internal_model._b = b
 
             return internal_model
 

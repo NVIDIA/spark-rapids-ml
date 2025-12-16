@@ -697,7 +697,7 @@ class _RandomForestModel(
                 model = pickle.loads(base64.b64decode(m))
                 rf = cuRf()
                 rf.n_classes_ = num_classes
-                rf.classes_ = cp.arange(num_classes, dtype=np.int32)
+                rf.classes_ = np.arange(num_classes, dtype=np.int32)
                 rf._treelite_model_bytes = treelite.Model.deserialize_bytes(model)
 
                 rfs.append(rf)

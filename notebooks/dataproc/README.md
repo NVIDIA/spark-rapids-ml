@@ -31,7 +31,7 @@ If you already have a Dataproc account, you can run the example notebooks on a D
   If you wish to enable [no-import-change](../README.md#no-import-change) UX for the cluster, change the `spark-rapids-ml-no-import-enabled` metadata value to `1` in the command.  The initialization script `spark_rapids_ml.sh` checks this metadata value and modifies the run time accordingly.
 
   ```
-  export RAPIDS_VERSION=25.10.0
+  export RAPIDS_VERSION=25.12.0
 
   gcloud dataproc clusters create $USER-spark-rapids-ml \
   --image-version=2.2-ubuntu22 \

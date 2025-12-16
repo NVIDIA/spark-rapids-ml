@@ -186,9 +186,9 @@ def _configure_memory_resource(
 
     global _last_sam_headroom_size
 
-    _SYSTEM_MEMORY_SUPPORTED = rmm._cuda.gpu.getDeviceAttribute(
+    _SYSTEM_MEMORY_SUPPORTED = rmm._cuda.gpu.getDeviceAttribute(  # type: ignore
         runtime.cudaDeviceAttr.cudaDevAttrPageableMemoryAccess,
-        rmm._cuda.gpu.getDevice(),
+        rmm._cuda.gpu.getDevice(),  # type: ignore
     )
 
     if not _SYSTEM_MEMORY_SUPPORTED and sam_enabled:
