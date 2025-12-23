@@ -256,14 +256,14 @@ def _memadvise_cpu(data: Any, nbytes: int) -> None:
         cp.cuda.runtime.memAdvise(data, nbytes, 3, -1)
     else:
         from cuda.bindings.runtime import (
+            cudaMemLocation,
+            cudaMemLocationType,
             cudaMemoryAdvise,
-            cudaMemoryLocation,
-            cudaMemoryLocationType,
         )
 
-        mem_location = cudaMemoryLocation()
-        mem_location.type = cudaMemoryLocationType.cudaMemoryLocationHost
-        cuda.bindings.runtime.memAdvise(
+        mem_location = cudaMemLocation()
+        mem_location.type = cudaMemLocationType.cudaMemLocationHost
+        cuda.bindings.runtime.cudaMemAdvise(
             data,
             nbytes,
             cudaMemoryAdvise.cudaMemAdviseSetPreferredLocation,
