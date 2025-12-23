@@ -98,6 +98,13 @@ def _get_spark_session() -> SparkSession:
         raise RuntimeError(
             "_get_spark_session should not be invoked from executor side."
         )
+
+    # avoid the bug https://issues.apache.org/jira/browse/SPARK-38870
+    # in spark < 3.4 when changing run time configs of active sessions
+    active_session = SparkSession.getActiveSession()
+    if active_session is not None:
+        return active_session
+
     return SparkSession.builder.getOrCreate()
 
 
