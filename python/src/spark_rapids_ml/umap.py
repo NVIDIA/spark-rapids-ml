@@ -96,6 +96,7 @@ from .utils import (
     _configure_memory_resource,
     _get_spark_session,
     _is_local,
+    _memadvise_cpu,
     dtype_to_pyspark_type,
     get_logger,
 )
@@ -1200,15 +1201,13 @@ class UMAP(UMAPClass, _CumlEstimatorSupervised, _UMAPCumlParams):
                 ) and not use_sparse_array:
                     # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
                     if cuda_system_mem_enabled and isinstance(features, np.ndarray):
-                        cp.cuda.runtime.memAdvise(
-                            features.ctypes.data, features.nbytes, 3, -1
-                        )
+                        _memadvise_cpu(features.ctypes.data, features.nbytes)
                     features = cp.array(features)
 
                 # for sam sparse case, pin numpy subarrays to host to avoid observed page migration to device during later concatenation
                 if cuda_system_mem_enabled and isinstance(features, csr_matrix):
                     for arr in [features.data, features.indptr, features.indices]:
-                        cp.cuda.runtime.memAdvise(arr.ctypes.data, arr.nbytes, 3, -1)
+                        _memadvise_cpu(arr.ctypes.data, arr.nbytes)
 
                 label = pdf[alias.label] if alias.label in pdf.columns else None
                 row_number = (
