@@ -262,7 +262,7 @@ def _memadvise_cpu(data: Any, nbytes: int) -> None:
         )
 
         mem_location = cudaMemLocation()
-        mem_location.type = cudaMemLocationType.cudaMemLocationHost
+        mem_location.type = cudaMemLocationType.cudaMemLocationTypeHost
         cuda.bindings.runtime.cudaMemAdvise(
             data,
             nbytes,
