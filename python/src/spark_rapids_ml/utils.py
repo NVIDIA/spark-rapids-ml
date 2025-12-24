@@ -240,6 +240,37 @@ def _configure_memory_resource(
         import spark_rapids_ml.numpy_allocator
 
 
+def _memadvise_cpu(data: Any, nbytes: int) -> None:
+    """
+    Advise data referenced by pointer to stay in cpu memory.
+    For use with SAM to prevent migration of partial arrays staged in host memory to device during
+    gpu concatenation.
+    """
+    import cuda
+    import cupy as cp
+    from packaging.version import parse
+
+    # latest cupy 13.6 has a bug in the cuda13 version of the memadvise api so use low level
+    # python bindings from cuda-python for that case.  Once the patch is released, we can revert to using the cupy api.
+    if parse(cuda.bindings.__version__) < parse("13.0.0"):
+        cp.cuda.runtime.memAdvise(data, nbytes, 3, -1)
+    else:
+        from cuda.bindings.runtime import (
+            cudaMemLocation,
+            cudaMemLocationType,
+            cudaMemoryAdvise,
+        )
+
+        mem_location = cudaMemLocation()
+        mem_location.type = cudaMemLocationType.cudaMemLocationTypeHost
+        cuda.bindings.runtime.cudaMemAdvise(
+            data,
+            nbytes,
+            cudaMemoryAdvise.cudaMemAdviseSetPreferredLocation,
+            mem_location,
+        )
+
+
 def _get_default_params_from_func(
     func: Callable, unsupported_set: List[str] = []
 ) -> Dict[str, Any]:

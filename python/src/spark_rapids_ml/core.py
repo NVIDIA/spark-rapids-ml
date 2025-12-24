@@ -83,6 +83,7 @@ from .utils import (
     _get_spark_session,
     _is_local,
     _is_standalone_or_localcluster,
+    _memadvise_cpu,
     _SingleNpArrayBatchType,
     _SinglePdDataFrameBatchType,
     dtype_to_pyspark_type,
@@ -922,18 +923,14 @@ class _CumlCaller(_CumlParams, _CumlCommon):
                         # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
                         # TODO: revise for non-concatenating algos PCA and LinearRegression which should advise these to device as much as possible
                         if cuda_system_mem_enabled and isinstance(features, np.ndarray):
-                            cp.cuda.runtime.memAdvise(
-                                features.ctypes.data, features.nbytes, 3, -1
-                            )
+                            _memadvise_cpu(features.ctypes.data, features.nbytes)
                         features = cp.array(features)
 
                     # for sam sparse case, pin numpy subarrays to host to avoid observed page migration to device during later concatenation
                     # TODO: revise for non-concatenating algos PCA and LinearRegression
                     if cuda_system_mem_enabled and isinstance(features, csr_matrix):
                         for arr in [features.data, features.indptr, features.indices]:
-                            cp.cuda.runtime.memAdvise(
-                                arr.ctypes.data, arr.nbytes, 3, -1
-                            )
+                            _memadvise_cpu(arr.ctypes.data, arr.nbytes)
 
                     label = pdf[alias.label] if alias.label in pdf.columns else None
                     row_number = (

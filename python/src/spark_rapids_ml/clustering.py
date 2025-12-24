@@ -60,6 +60,7 @@ from .utils import (
     _concat_and_free,
     _configure_memory_resource,
     _get_spark_session,
+    _memadvise_cpu,
     get_logger,
     java_uid,
 )
@@ -974,9 +975,7 @@ class DBSCANModel(
                 if cuda_managed_mem_enabled or cuda_system_mem_enabled:
                     # for sam, pin numpy array to host to avoid observed page migration to device during later concatenation
                     if cuda_system_mem_enabled and isinstance(features, np.ndarray):
-                        cp.cuda.runtime.memAdvise(
-                            features.ctypes.data, features.nbytes, 3, -1
-                        )
+                        _memadvise_cpu(features.ctypes.data, features.nbytes)
                     features = cp.array(features)
 
                 inputs.append(features)
