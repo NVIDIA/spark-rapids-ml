@@ -243,7 +243,7 @@ def _configure_memory_resource(
 def _memadvise_cpu(data: Any, nbytes: int) -> None:
     """
     Advise data referenced by pointer to stay in cpu memory.
-    For use with SAM to prevent migration of host memory staged partial matrices to remain on cpu during
+    For use with SAM to prevent migration of partial arrays staged in host memory to device during
     gpu concatenation.
     """
     import cuda
