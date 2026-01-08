@@ -163,7 +163,7 @@ fi
 spark_rapids_confs=""
 if [[ $cluster_type == "gpu_etl" ]]
 then
-SPARK_RAPIDS_VERSION=25.08.0
+SPARK_RAPIDS_VERSION=25.12.0
 rapids_jar=${rapids_jar:-rapids-4-spark_2.12-$SPARK_RAPIDS_VERSION.jar}
 if [ ! -f $rapids_jar ]; then
     echo "downloading spark rapids jar"
