@@ -54,9 +54,14 @@ def logistic_regression_objective(
 
     # account for effects of standardization on the coefficients for regularization penalty
     if lr_model.getStandardization() is True:
+        column_names = df.columns
+        outputCol = "_objective_tmp"
+        while outputCol in column_names:
+            outputCol = "_" + outputCol
+
         scaler = StandardScaler(
             inputCol=features_col,
-            outputCol="scaledFeatures",
+            outputCol=outputCol,
         )
         scaler_model = scaler.fit(df)
         stdev = np.array(scaler_model.std)
