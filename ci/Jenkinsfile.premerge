@@ -1,6 +1,6 @@
 #!/usr/local/env groovy
 /*
- * Copyright (c) 2023-2025, NVIDIA CORPORATION.
+ * Copyright (c) 2023-2026, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ import ipp.blossom.*
 
 def githubHelper // blossom github helper
 def TEMP_IMAGE_BUILD = true
-def IMAGE_PREMERGE = "${common.ARTIFACTORY_NAME}/sw-spark-docker/rapids:ml-ubuntu22-cuda12.2.2-py310"
-def cpuImage = pod.getCPUYAML("${common.ARTIFACTORY_NAME}/sw-spark-docker/spark:rapids-databricks") // tooling image
+def IMAGE_PREMERGE = "${common.ARTIFACTORY_NAME_V2}/sw-spark-docker/rapids:ml-ubuntu22-cuda12.2.2-py310"
+def cpuImage = pod.getCPUYAML("${common.ARTIFACTORY_NAME_V2}/sw-spark-docker/spark:rapids-databricks") // tooling image
 def PREMERGE_DOCKERFILE = 'ci/Dockerfile'
 def PREMERGE_TAG
 def skipped = false
@@ -63,9 +63,11 @@ pipeline {
     environment {
         JENKINS_ROOT = 'jenkins'
         GITHUB_TOKEN = credentials("github-token")
-        ART_CREDS = credentials("urm_creds")
-        ART_URL = "https://${common.ARTIFACTORY_NAME}/artifactory/sw-spark-maven"
-        ARTIFACTORY_NAME = "${common.ARTIFACTORY_NAME}"
+
+        // v2 instance for CI images usage
+        ART_CREDS = credentials("urm_creds_v2")
+        ARTIFACTORY_NAME = "${common.ARTIFACTORY_NAME_V2}"
+
         PVC = credentials("pvc")
         CUSTOM_WORKSPACE = "/home/jenkins/agent/workspace/${BUILD_TAG}"
     }
