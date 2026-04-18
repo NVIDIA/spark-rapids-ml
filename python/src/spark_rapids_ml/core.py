@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2025, NVIDIA CORPORATION.
+# Copyright (c) 2022-2026, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1088,6 +1088,39 @@ class _CumlEstimator(Estimator, _CumlCaller):
         """
         raise NotImplementedError()
 
+    def _merge_model_chunks(
+        self,
+        rows: List[Row],
+        paramMaps: Optional[Sequence["ParamMap"]] = None,
+    ) -> List[Row]:
+        """Normalize collected fit rows before building models.
+
+        Single ``fit`` (``paramMaps is None``): default returns one collected Row unchanged,
+        or raises ``NotImplementedError`` if multiple Rows are present—there is no base
+        implementation for merging sharded model chunks across Rows.
+
+        ``fitMultiple`` (``paramMaps`` set): one Row per param map; default returns them
+        unchanged;
+
+        Very large models can exceed Spark's per-row serialization limit (~2GB BufferHolder)
+        even as ``one Row per model``; estimators that shard a fit result across multiple
+        Rows must override this method to merge chunks. The same limit applies in principle
+        to each ``fitMultiple`` model Row.
+        """
+        if paramMaps is None:
+            n = len(rows)
+            if n == 0:
+                raise ValueError("Expected at least one fit result row but got none")
+            if n == 1:
+                return [rows[0]]
+            raise NotImplementedError(
+                "Merging multiple fit result rows is not implemented for this estimator"
+            )
+        assert len(rows) == len(
+            paramMaps
+        ), f"Expected {len(paramMaps)} rows (one per param map) but got {len(rows)}"
+        return list(rows)
+
     def _handle_param_spark_confs(self) -> None:
         """
         Some parameters can be set globally in spark confs if they are not set in the constructor.
@@ -1224,6 +1257,8 @@ class _CumlEstimator(Estimator, _CumlCaller):
                 raise
 
         self.logger.info("Finished training")
+
+        rows = self._merge_model_chunks(rows, paramMaps)
 
         models: List["_CumlModel"] = [None]  # type: ignore
         if paramMaps is not None:

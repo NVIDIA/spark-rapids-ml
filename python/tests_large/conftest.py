@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022, NVIDIA CORPORATION.
+# Copyright (c) 2022-2026, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ _default_conf = {
     "spark.driver.host": "127.0.0.1",
     "spark.task.maxFailures": "1",
     "spark.driver.memory": "128g",
+    "spark.driver.maxResultSize": "0",  # allow large model collect (e.g. KMeans 100k centers)
     "spark.sql.execution.pyspark.udf.simplifiedTraceback.enabled": "false",
     "spark.sql.pyspark.jvmStacktrace.enabled": "true",
     "spark.sql.execution.arrow.pyspark.enabled": "true",

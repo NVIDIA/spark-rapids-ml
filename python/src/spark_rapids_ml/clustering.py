@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022-2025, NVIDIA CORPORATION.
+# Copyright (c) 2022-2026, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,22 @@
 #
 
 from abc import ABCMeta
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
+
+if TYPE_CHECKING:
+    from pyspark.ml._typing import ParamMap
 
 import numpy as np
 import pandas as pd
@@ -405,10 +420,37 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
                 f"iterations: {kmeans_object.n_iter_}, inertia: {kmeans_object.inertia_}"
             )
 
+            all_centers = kmeans_object.cluster_centers_.get().tolist()
+            n_cols = params[param_alias.num_cols]
+            dtype_str = str(kmeans_object.cluster_centers_.dtype.name)
+
+            # fitMultiple (paramMap): do not chunk; return one row. Single model: chunk below.
+            # TODO: support chunking for fitMultiple in the future
+            if params.get(param_alias.fit_multiple_params):
+                return {
+                    "chunk_id": [0],
+                    "cluster_centers_": [all_centers],
+                    "n_cols": [n_cols],
+                    "dtype": [dtype_str],
+                }
+
+            # Chunk centers so each row stays under Spark BufferHolder limit (~2^31 bytes).
+            # Use 8 bytes per element (double); overestimate for float32 is safe (smaller chunks).
+            max_bytes_per_chunk = 1024**3  # 1GB
+            bytes_per_center = n_cols * 8
+            max_centers_per_chunk = max(1, max_bytes_per_chunk // bytes_per_center)
+
+            chunk_centers = []
+            for start in range(0, len(all_centers), max_centers_per_chunk):
+                end = min(start + max_centers_per_chunk, len(all_centers))
+                chunk_centers.append(all_centers[start:end])
+
+            n_chunks = len(chunk_centers)
             return {
-                "cluster_centers_": [kmeans_object.cluster_centers_.get().tolist()],
-                "n_cols": params[param_alias.num_cols],
-                "dtype": str(kmeans_object.cluster_centers_.dtype.name),
+                "chunk_id": list(range(n_chunks)),
+                "cluster_centers_": chunk_centers,
+                "n_cols": [n_cols] * n_chunks,
+                "dtype": [dtype_str] * n_chunks,
             }
 
         return _cuml_fit
@@ -416,6 +458,7 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
     def _out_schema(self) -> Union[StructType, str]:
         return StructType(
             [
+                StructField("chunk_id", IntegerType(), False),
                 StructField(
                     "cluster_centers_", ArrayType(ArrayType(DoubleType()), False), False
                 ),
@@ -425,7 +468,38 @@ class KMeans(KMeansClass, _CumlEstimator, _KMeansCumlParams):
         )
 
     def _create_pyspark_model(self, result: Row) -> "KMeansModel":
-        return KMeansModel._from_row(result)
+        return KMeansModel(**result.asDict())
+
+    def _merge_model_chunks(
+        self,
+        rows: List[Row],
+        paramMaps: Optional[Sequence["ParamMap"]] = None,
+    ) -> List[Row]:
+        """Override ``_CumlEstimator._merge_model_chunks`` for KMeans (center chunks, drops ``chunk_id``)."""
+
+        def _one_model_row(chunk_rows: List[Row]) -> Row:
+            sorted_rows = sorted(chunk_rows, key=lambda r: r["chunk_id"])
+            merged_centers: List[List[float]] = []
+            for row in sorted_rows:
+                merged_centers.extend(row["cluster_centers_"])
+            n_cols = sorted_rows[0]["n_cols"]
+            dtype = sorted_rows[0]["dtype"]
+            return Row(
+                cluster_centers_=merged_centers,
+                n_cols=n_cols,
+                dtype=dtype,
+            )
+
+        if paramMaps is None:
+            if len(rows) == 0:
+                raise ValueError("Expected at least one fit result row but got none")
+            return [_one_model_row(rows)]
+
+        # fitMultiple case: chunking not supported, just remove chunk_id from each row.
+        assert len(rows) == len(
+            paramMaps
+        ), f"Expected {len(paramMaps)} rows (one per param map) but got {len(rows)}"
+        return [_one_model_row([r]) for r in rows]
 
 
 class KMeansModel(KMeansClass, _CumlModelWithPredictionCol, _KMeansCumlParams):
