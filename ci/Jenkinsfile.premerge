@@ -64,7 +64,7 @@ pipeline {
         JENKINS_ROOT = 'jenkins'
         GITHUB_TOKEN = credentials("github-token")
 
-        // v2 instance for CI images usage
+        // Artifactory credentials and host for CI images
         ART_CREDS = credentials("urm_creds")
         ARTIFACTORY_NAME = "${common.ARTIFACTORY_NAME}"
 
