@@ -15,13 +15,16 @@
 
 set -ex
 
-# IMPORTANT: specify RAPIDS_VERSION fully 23.10.0 and not 23.10
-# also in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 23.8.0 and not 23.08.0)
-# while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.08.2 and not 23.8.2)
-RAPIDS_VERSION=25.12.0
-SPARK_RAPIDS_VERSION=25.12.0
+# IMPORTANT: specify RAPIDS_VERSION fully 26.4.0 and not 26.4
+# also in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 26.4.0 and not 26.04.0)
+# while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 26.04.2 and not 26.4.2)
+# 
+# Note also that sometimes the jar and python packages will have different patch versions published and available at any time,
+# so the versions may not perfectly align. This is expected and should not cause issues.
+RAPIDS_VERSION=26.4.0
+SPARK_RAPIDS_VERSION=26.04.2
 
-curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
+curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.13/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}.jar
 
 # install cudatoolkit 12.2 via runfile approach
 wget https://developer.download.nvidia.com/compute/cuda/12.2.2/local_installers/cuda_12.2.2_535.104.05_linux.run
