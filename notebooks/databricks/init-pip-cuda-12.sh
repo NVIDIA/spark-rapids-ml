@@ -21,8 +21,8 @@ set -ex
 # 
 # Note also that sometimes the jar and python packages will have different patch versions published and available at any time,
 # so the versions may not perfectly align. This is expected and should not cause issues.
-RAPIDS_VERSION=25.12.0
-SPARK_RAPIDS_VERSION=25.12.0
+RAPIDS_VERSION=26.4.0
+SPARK_RAPIDS_VERSION=26.04.2
 
 curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.13/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}.jar
 
