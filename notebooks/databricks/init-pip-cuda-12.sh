@@ -19,9 +19,10 @@ set -ex
 # also in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 26.4.0 and not 26.04.0)
 # while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 26.04.2 and not 26.4.2)
 # 
-# Note also that sometimes the jar and python packages will have different patch versions published and available at any time,
-# so the versions may not perfectly align. This is expected and should not cause issues.
-RAPIDS_VERSION=26.4.0
+# Note that the SPARK_RAPIDS_VERSION will not necessarily match the RAPIDS_VERSION. Check https://nvidia.github.io/spark-rapids/docs/download.html for the latest compatible version of 
+# spark-rapids version that verifies compatibility with your Databricks Runtime. (In this case, Databricks 17.3 ML LTS.) The available versions for RAPIDS_VERSION can be
+# found by executing "pip index versions spark-rapids-ml".   
+RAPIDS_VERSION=25.12.0
 SPARK_RAPIDS_VERSION=26.04.2
 
 curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.13/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}.jar
