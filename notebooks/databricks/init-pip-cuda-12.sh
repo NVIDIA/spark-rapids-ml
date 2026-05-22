@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2025, NVIDIA CORPORATION.
+# Copyright (c) 2026, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,21 +15,17 @@
 
 set -ex
 
-# IMPORTANT: specify RAPIDS_VERSION fully 23.10.0 and not 23.10
-# also in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 23.8.0 and not 23.08.0)
-# while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 23.08.2 and not 23.8.2)
+# IMPORTANT: specify RAPIDS_VERSION fully 26.4.0 and not 26.4
+# also in general, RAPIDS_VERSION (python) fields should omit any leading 0 in month/minor field (i.e. 26.4.0 and not 26.04.0)
+# while SPARK_RAPIDS_VERSION (jar) should have leading 0 in month/minor (e.g. 26.04.2 and not 26.4.2)
+# 
+# Note that the SPARK_RAPIDS_VERSION will not necessarily match the RAPIDS_VERSION. Check https://nvidia.github.io/spark-rapids/docs/download.html for the latest compatible version of 
+# spark-rapids version that verifies compatibility with your Databricks Runtime. (In this case, Databricks 17.3 ML LTS.) The available versions for RAPIDS_VERSION can be
+# found by executing "pip index versions spark-rapids-ml".   
 RAPIDS_VERSION=25.12.0
-SPARK_RAPIDS_VERSION=25.12.0
+SPARK_RAPIDS_VERSION=26.04.2
 
-curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.12-${SPARK_RAPIDS_VERSION}.jar
-
-# install cudatoolkit 12.2 via runfile approach
-wget https://developer.download.nvidia.com/compute/cuda/12.2.2/local_installers/cuda_12.2.2_535.104.05_linux.run
-sh cuda_12.2.2_535.104.05_linux.run --silent --toolkit
-
-# reset symlink and update library loading paths
-rm /usr/local/cuda
-ln -s /usr/local/cuda-12.2 /usr/local/cuda
+curl -L https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.13/${SPARK_RAPIDS_VERSION}/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}-cuda12.jar -o /databricks/jars/rapids-4-spark_2.13-${SPARK_RAPIDS_VERSION}.jar
 
 # upgrade pip
 /databricks/python/bin/pip install --upgrade pip

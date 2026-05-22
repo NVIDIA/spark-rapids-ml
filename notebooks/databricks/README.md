@@ -14,11 +14,10 @@ If you already have a Databricks account, you can run the example notebooks on a
   databricks workspace import --format AUTO --file init-pip-cuda-12.sh ${WS_SAVE_DIR}/init-pip-cuda-12.sh --profile ${PROFILE}
   ```
   **Note**: the init script does the following on each Spark node:
-  - updates the CUDA runtime (required for Spark Rapids ML dependencies).
   - downloads and installs the [Spark-Rapids](https://github.com/NVIDIA/spark-rapids) plugin for accelerating data loading and Spark SQL.
   - installs various `cuXX` dependencies via pip.
   - if the cluster environment variable `SPARK_RAPIDS_ML_NO_IMPORT_ENABLED=1` is define (see below), the init script also modifies a Databricks notebook kernel startup script to enable no-import change UX for the cluster.  See [no-import-change](../README.md#no-import-change).
-- Create a cluster using **Databricks 13.3 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
+- Create a cluster using **Databricks 17.3 LTS ML GPU Runtime** using at least two single-gpu workers and add the following configurations to the **Advanced options**.
   - **Init Scripts**
     - add the workspace path to the uploaded init script `${WS_SAVE_DIR}/init-pip-cuda-12.sh` as set above (but substitute variables manually in the form).
   - **Spark**
@@ -27,7 +26,7 @@ If you already have a Databricks account, you can run the example notebooks on a
       spark.task.resource.gpu.amount 0.125
       spark.databricks.delta.preview.enabled true
       spark.python.worker.reuse true
-      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.12-25.12.0.jar:/databricks/spark/python
+      spark.executorEnv.PYTHONPATH /databricks/jars/rapids-4-spark_2.13-26.04.2.jar:/databricks/spark/python
       spark.sql.execution.arrow.maxRecordsPerBatch 100000
       spark.plugins com.nvidia.spark.SQLPlugin
       spark.locality.wait 0s
